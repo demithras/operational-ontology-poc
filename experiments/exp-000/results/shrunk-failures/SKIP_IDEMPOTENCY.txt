@@ -1,0 +1,15 @@
+bug: SKIP_IDEMPOTENCY
+assertion: invariant violation(s): duplicate idempotency keys applied: ['idem-decision-2']
+
+shrunk minimal failing step sequence (Hypothesis stateful, derandomize=True):
+Failing test case:
+state = Bugged_SKIP_IDEMPOTENCY()
+state.invariants_hold()
+decisions_0 = state.concurrent_transfer_race(actor='planner-1', dst='WH-1', qty1=1, qty2=1, warehouse='WH-2')
+state.invariants_hold()
+state.execute_transfer(decision_id=decisions_0)
+state.invariants_hold()
+state.teardown()
+Explanation:
+    These lines were always and only run by failing test cases:
+        /Users/d_surchis/work/operational-ontology-poc/reference_model/invariants.py:62

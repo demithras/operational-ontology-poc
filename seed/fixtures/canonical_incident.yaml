@@ -1,0 +1,103 @@
+# Canonical incident fixture — docs/experiment/spec/03_domain_scenario.md
+#
+# Time unit: integer hours since experiment epoch T (T = 0). "T+18h" = 18,
+# "T+8h" = 8, "T+5d" = 120 (5 * 24h). This unit choice is a Phase 1
+# implementation decision (spec gives relative offsets only); see
+# reference_model/state.py module docstring.
+
+part:
+  canonical_id: PX-17
+  description: reference part for the canonical incident
+  unit: each
+  criticality: HIGH
+  source_identity_map:
+    ERP: PART-00192
+    MES: COMP-A17
+    WMS: SKU-88429
+
+warehouses:
+  - warehouse_id: WH-A
+    region: region-1
+  - warehouse_id: WH-B
+    region: region-1
+
+# Design choice (not specified numerically in 03_domain_scenario.md):
+# safety_stock for PX-17@WH-B. Recorded here as an explicit experiment
+# design choice so the transfer-vs-safety-stock policy gate is exercised
+# meaningfully by the canonical incident (140 on_hand - 60 transferred = 80,
+# comfortably above 50) and by the dedicated negative fixture below (a
+# larger transfer that *would* breach it).
+policy_config:
+  transfer_approval_threshold_units: 100
+  max_evidence_freshness_s: 5
+  safety_stock:
+    - part: PX-17
+      warehouse: WH-B
+      qty: 50
+
+inventory_lots:
+  - lot_id: LOT-A-PX17
+    part: PX-17
+    warehouse: WH-A
+    on_hand: 20
+    reserved: 0
+    quality_status: OK
+    as_of: 0
+  - lot_id: LOT-B-PX17
+    part: PX-17
+    warehouse: WH-B
+    on_hand: 140
+    reserved: 0
+    quality_status: OK
+    as_of: 0
+
+work_orders:
+  - work_order_id: WO-42
+    status: PLANNED
+    priority: HIGH
+    planned_start: 18       # T+18h
+    warehouse: WH-A
+    requirements:
+      PX-17: 80
+
+purchase_orders:
+  - po_id: PO-991
+    part: PX-17
+    qty: 100
+    destination_warehouse: WH-A
+    expected_at: 8          # T+8h, before delay
+    status: OPEN
+
+# Event applied on top of the initial state above.
+event:
+  type: supplier_delay
+  po_id: PO-991
+  supplier: S-7
+  new_expected_at: 120      # T+5d
+  reason: transport_delay
+
+derived_after_event:
+  work_order_id: WO-42
+  shortage: 60
+  at_risk: true
+
+actors:
+  - actor_id: planner-1
+    role: planner
+    regions: [region-1]
+  - actor_id: junior-1
+    role: junior_planner
+    regions: [region-1]
+  - actor_id: supervisor-1
+    role: supervisor
+    regions: [region-1]
+  - actor_id: agent-1
+    role: agent
+    regions: [region-1]
+    task_grants: []          # no grants by default; grant added per test case
+
+candidate_alternatives:
+  - A: transfer 60+ PX-17 from WH-B to WH-A
+  - B: expedite another PO
+  - C: reschedule WO-42
+  - D: combine actions

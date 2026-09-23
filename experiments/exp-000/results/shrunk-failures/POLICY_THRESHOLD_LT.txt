@@ -1,0 +1,24 @@
+bug: POLICY_THRESHOLD_LT
+assertion: policy_gate mismatch: recorded=REQUIRES_APPROVAL expected=ALLOW qty=100
+
+shrunk minimal failing step sequence (Hypothesis stateful, derandomize=True):
+Failing test case:
+state = Bugged_POLICY_THRESHOLD_LT()
+state.invariants_hold()
+state.receive_inventory(po_id='PO-1', quality='OK')
+state.invariants_hold()
+state.receive_inventory(po_id='PO-1', quality='OK')
+state.invariants_hold()
+state.receive_inventory(po_id='PO-1', quality='OK')
+state.invariants_hold()
+state.receive_inventory(po_id='PO-1', quality='OK')
+state.invariants_hold()
+state.receive_inventory(po_id='PO-1', quality='OK')
+state.invariants_hold()
+decisions_0 = state.propose_transfer(actor='planner-1', dst='WH-1', qty=1, src='WH-1')
+state.invariants_hold()
+state.propose_transfer(actor='planner-1', dst='WH-1', qty=100, src='WH-1')
+state.teardown()
+Explanation:
+    These lines were always and only run by failing test cases:
+        /Users/d_surchis/work/operational-ontology-poc/tests/model/_machine.py:163

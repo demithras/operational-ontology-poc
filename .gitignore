@@ -1,0 +1,18 @@
+# Spec source archive (kept in repo root, not tracked)
+/open-operational-ontology-poc-spec.zip
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.hypothesis/
+*.egg-info/
+.venv/
+.mypy_cache/
+.ruff_cache/
+
+# Generated / non-reproducible seed output
+seed/out/
+
+# OS
+.DS_Store

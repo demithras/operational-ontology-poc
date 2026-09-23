@@ -1,0 +1,14 @@
+bug: SKIP_EXECUTION_RECHECK
+assertion: invariant violation(s): lot ('PX-1', 'WH-2'): on_hand (-1) < reserved (0); lot ('PX-1', 'WH-2'): available < 0 (-1)
+
+shrunk minimal failing step sequence (Hypothesis stateful, derandomize=True):
+Failing test case:
+state = Bugged_SKIP_EXECUTION_RECHECK()
+state.invariants_hold()
+decisions_0 = state.concurrent_transfer_race(actor='planner-1', dst='WH-1', qty1=51, qty2=100, warehouse='WH-2')
+state.invariants_hold()
+state.teardown()
+Explanation:
+    These lines were always and only run by failing test cases:
+        /Users/d_surchis/work/operational-ontology-poc/reference_model/invariants.py:48
+        /Users/d_surchis/work/operational-ontology-poc/reference_model/invariants.py:50

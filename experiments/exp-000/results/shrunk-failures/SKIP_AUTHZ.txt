@@ -1,0 +1,12 @@
+bug: SKIP_AUTHZ
+assertion: authz_gate mismatch: recorded=ALLOW expected=DENY actor=junior-1 src=WH-1
+
+shrunk minimal failing step sequence (Hypothesis stateful, derandomize=True):
+Failing test case:
+state = Bugged_SKIP_AUTHZ()
+state.invariants_hold()
+state.propose_transfer(actor='junior-1', dst='WH-1', qty=1, src='WH-1')
+state.teardown()
+Explanation:
+    These lines were always and only run by failing test cases:
+        /Users/d_surchis/work/operational-ontology-poc/tests/model/_machine.py:152
