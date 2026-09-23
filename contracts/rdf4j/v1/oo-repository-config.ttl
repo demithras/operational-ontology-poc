@@ -1,0 +1,39 @@
+# RDF4J repository config for the "oo" semantic-core repository
+# (phase3.md item 2: "a SHACL-enabled repository (ShaclSail over a
+# native/memory store; the repo config TTL is version-controlled)").
+#
+# Deployed via services/ingestion/bootstrap_rdf4j.py:
+#   PUT {RDF4J_BASE_URL}/repositories/oo   Content-Type: text/turtle
+#
+# Config vocabulary verified empirically against the running
+# eclipse/rdf4j-workbench:6.1.0-tomcat container (RDF4J 6.1.0) during Phase
+# 3 implementation: `tag:rdf4j.org,2023:config/` is the current (RDF4J 5+)
+# config namespace; a bare `[]` blank-node subject is required (a `<#oo>`
+# relative-IRI subject 500s with "Not a valid (absolute) IRI" because the
+# PUT body carries no base IRI). A negative-fixture insert against this
+# exact config returned HTTP 409 with a SHACL ValidationReport body and the
+# offending triple was NOT committed (verified via a follow-up ASK query)
+# — see tests/contracts/test_shacl_rdf4j_transactional.py.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix config: <tag:rdf4j.org,2023:config/> .
+
+[] a config:Repository ;
+  config:rep.id "oo" ;
+  rdfs:label "Operational ontology semantic core (SHACL-enabled native store)" ;
+  config:rep.impl [
+    config:rep.type "openrdf:SailRepository" ;
+    config:sail.impl [
+      config:sail.type "rdf4j:ShaclSail" ;
+      # Governed writes MUST fail the transaction on violation (phase3.md
+      # item 2) — this is ShaclSail's default (validation cannot be
+      # disabled per-transaction from the REST API, only from Java code),
+      # stated explicitly here for documentation.
+      config:shacl.parallelValidation true ;
+      config:shacl.logValidationViolations true ;
+      config:shacl.validationResultsLimitTotal 1000 ;
+      config:delegate [
+        config:sail.type "openrdf:NativeStore" ;
+        config:native.tripleIndexes "spoc,posc"
+      ]
+    ]
+  ] .

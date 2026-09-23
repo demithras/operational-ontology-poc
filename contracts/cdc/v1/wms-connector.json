@@ -1,0 +1,21 @@
+{
+  "name": "oo-poc-wms-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "wms_role",
+    "database.password": "wms_local_pw",
+    "database.dbname": "wms",
+    "topic.prefix": "oo.wms",
+    "plugin.name": "pgoutput",
+    "slot.name": "oo_wms_slot",
+    "publication.name": "oo_wms_pub",
+    "publication.autocreate.mode": "filtered",
+    "table.include.list": "public.warehouses,public.inventory_lots,public.transfers",
+    "tombstones.on.delete": "false",
+    "snapshot.mode": "initial",
+    "heartbeat.interval.ms": "5000",
+    "provide.transaction.metadata": "false"
+  }
+}

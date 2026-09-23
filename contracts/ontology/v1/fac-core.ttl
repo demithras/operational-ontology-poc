@@ -1,0 +1,114 @@
+# contracts/ontology/v1/fac-core.ttl
+#
+# Domain vocabulary for the factory scenario (docs/experiment/spec/03_domain_scenario.md).
+# phase3.md item 3: Supplier, Part, PurchaseOrder, InventoryLot, Warehouse,
+# WorkOrder, ProductionLine, Shipment, with v1 properties incl.
+# fac:availableQuantity per docs/experiment/spec/07_versioning_and_replay.md's
+# V1 migration baseline ("fac:Part / fac:availableQuantity ... V2 breaking
+# change: introduce onHand and reserved").
+#
+# Authoritative-source-per-property (05_ontology_and_contracts.md,
+# "Source-of-truth hierarchy"): Part.description=ERP,
+# InventoryLot.available=WMS, WorkOrder.status=MES — services/ingestion
+# only writes a property from the system implementation-notes.md lists as
+# that property's owner; it never lets another system's CDC event overwrite
+# an authoritative value (see services/ingestion/mapping.py).
+@prefix fac:  <https://example.local/factory/> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+<https://example.local/oo/ontology/v1/fac-core>
+  a owl:Ontology ;
+  owl:versionInfo "1.0.0" ;
+  rdfs:comment "Factory domain vocabulary, v1. See docs/experiment/spec/03_domain_scenario.md." .
+
+#############################################
+## Classes
+#############################################
+
+fac:Supplier       a owl:Class .
+fac:Part           a owl:Class ; rdfs:comment "Canonical part. IRI = part:{canonical_id} (identity-resolved; see contracts/identity/v1/mapping_rules.yaml)." .
+fac:PurchaseOrder  a owl:Class .
+fac:PurchaseOrderLine a owl:Class .
+fac:InventoryLot   a owl:Class .
+fac:Warehouse      a owl:Class .
+fac:WorkOrder      a owl:Class .
+fac:BomRequirement a owl:Class .
+fac:ProductionLine a owl:Class .
+fac:Shipment       a owl:Class ;
+  rdfs:comment "Declared per phase3.md item 3. No Phase 2 source table produces shipment rows yet (WMS models inter-warehouse transfers, not outbound customer shipments) — left unpopulated until a later phase introduces a source for it. See docs/experiment/implementation-notes.md Phase 3 section." .
+
+#############################################
+## Shared identifying / descriptive properties
+#############################################
+
+fac:supplierId    a owl:DatatypeProperty ; rdfs:domain fac:Supplier ; rdfs:range xsd:string .
+fac:partId         a owl:DatatypeProperty ; rdfs:domain fac:Part ; rdfs:range xsd:string ; rdfs:comment "Canonical part id, e.g. PX-0017." .
+fac:poId            a owl:DatatypeProperty ; rdfs:domain fac:PurchaseOrder ; rdfs:range xsd:string .
+fac:lotId            a owl:DatatypeProperty ; rdfs:domain fac:InventoryLot ; rdfs:range xsd:string .
+fac:warehouseId       a owl:DatatypeProperty ; rdfs:domain fac:Warehouse ; rdfs:range xsd:string .
+fac:workOrderId        a owl:DatatypeProperty ; rdfs:domain fac:WorkOrder ; rdfs:range xsd:string .
+fac:lineId               a owl:DatatypeProperty ; rdfs:domain fac:ProductionLine ; rdfs:range xsd:string .
+
+fac:description a owl:DatatypeProperty ; rdfs:domain fac:Part ; rdfs:range xsd:string ; rdfs:comment "authoritative_source: ERP." .
+fac:unit         a owl:DatatypeProperty ; rdfs:domain fac:Part ; rdfs:range xsd:string ; rdfs:comment "authoritative_source: ERP." .
+fac:criticality   a owl:DatatypeProperty ; rdfs:domain fac:Part ; rdfs:range xsd:string ; rdfs:comment "authoritative_source: ERP. LOW | MEDIUM | HIGH | CRITICAL." .
+
+fac:status a owl:DatatypeProperty ; rdfs:comment "Shared status property; allowed literal set is per-domain (Supplier: ACTIVE|SUSPENDED authoritative_source ERP; PurchaseOrder: OPEN|DELAYED|RECEIVED|CANCELLED authoritative_source ERP; WorkOrder: PLANNED|RELEASED|RUNNING|DONE|CANCELLED authoritative_source MES; ProductionLine: ACTIVE|MAINTENANCE authoritative_source MES)." .
+
+#############################################
+## fac:Supplier
+#############################################
+
+fac:leadTimeDays a owl:DatatypeProperty ; rdfs:domain fac:Supplier ; rdfs:range xsd:integer ; rdfs:comment "authoritative_source: ERP." .
+fac:riskClass    a owl:DatatypeProperty ; rdfs:domain fac:Supplier ; rdfs:range xsd:string ; rdfs:comment "authoritative_source: ERP. LOW | MEDIUM | HIGH." .
+
+#############################################
+## fac:PurchaseOrder / fac:PurchaseOrderLine (authoritative_source: ERP)
+#############################################
+
+fac:promisedAt    a owl:DatatypeProperty ; rdfs:domain fac:PurchaseOrder ; rdfs:range xsd:integer .
+fac:expectedAt     a owl:DatatypeProperty ; rdfs:domain fac:PurchaseOrder ; rdfs:range xsd:integer .
+fac:delayReason     a owl:DatatypeProperty ; rdfs:domain fac:PurchaseOrder ; rdfs:range xsd:string .
+fac:suppliedBy       a owl:ObjectProperty   ; rdfs:domain fac:PurchaseOrder ; rdfs:range fac:Supplier .
+fac:hasLine            a owl:ObjectProperty   ; rdfs:domain fac:PurchaseOrder ; rdfs:range fac:PurchaseOrderLine .
+fac:destinationWarehouse a owl:ObjectProperty  ; rdfs:range fac:Warehouse ; rdfs:comment "Used by PurchaseOrderLine (destination for received stock)." .
+fac:quantity              a owl:DatatypeProperty ; rdfs:range xsd:integer ; rdfs:comment "Shared line/requirement quantity (PurchaseOrderLine, BomRequirement)." .
+fac:part                    a owl:ObjectProperty   ; rdfs:range fac:Part ; rdfs:comment "Shared reference-to-Part property (PurchaseOrderLine, InventoryLot)." .
+
+#############################################
+## fac:InventoryLot (authoritative_source: WMS)
+#############################################
+
+fac:warehouse         a owl:ObjectProperty   ; rdfs:domain fac:InventoryLot ; rdfs:range fac:Warehouse .
+fac:onHand             a owl:DatatypeProperty ; rdfs:domain fac:InventoryLot ; rdfs:range xsd:integer .
+fac:reserved            a owl:DatatypeProperty ; rdfs:domain fac:InventoryLot ; rdfs:range xsd:integer .
+fac:availableQuantity    a owl:DatatypeProperty ; rdfs:domain fac:InventoryLot ; rdfs:range xsd:integer ;
+  rdfs:comment "V1 property per 07_versioning_and_replay.md's migration baseline (onHand - reserved, computed by services/ingestion since WMS's GENERATED column is not reliably part of the logical-replication row image across Postgres versions). Superseded in V2 by separate onHand/reserved-only modeling per the spec's documented breaking change (this file already carries onHand/reserved too, so V2 need not add new source columns — only retire this derived property)." .
+fac:qualityStatus         a owl:DatatypeProperty ; rdfs:domain fac:InventoryLot ; rdfs:range xsd:string ; rdfs:comment "OK | QUARANTINE." .
+
+#############################################
+## fac:Warehouse (authoritative_source: WMS)
+#############################################
+
+fac:capacityClass a owl:DatatypeProperty ; rdfs:domain fac:Warehouse ; rdfs:range xsd:string ; rdfs:comment "SMALL | MEDIUM | LARGE." .
+fac:region          a owl:DatatypeProperty ; rdfs:domain fac:Warehouse ; rdfs:range xsd:string .
+
+#############################################
+## fac:WorkOrder / fac:BomRequirement (authoritative_source: MES)
+#############################################
+
+fac:priority        a owl:DatatypeProperty ; rdfs:domain fac:WorkOrder ; rdfs:range xsd:string ; rdfs:comment "LOW | MEDIUM | HIGH." .
+fac:plannedStart      a owl:DatatypeProperty ; rdfs:domain fac:WorkOrder ; rdfs:range xsd:integer .
+fac:plannedFinish       a owl:DatatypeProperty ; rdfs:domain fac:WorkOrder ; rdfs:range xsd:integer .
+fac:productionLine        a owl:ObjectProperty   ; rdfs:domain fac:WorkOrder ; rdfs:range fac:ProductionLine .
+fac:hasRequirement           a owl:ObjectProperty   ; rdfs:domain fac:WorkOrder ; rdfs:range fac:BomRequirement .
+fac:requiresPart               a owl:ObjectProperty   ; rdfs:domain fac:BomRequirement ; rdfs:range fac:Part .
+
+#############################################
+## fac:ProductionLine (authoritative_source: MES)
+#############################################
+
+fac:capabilities a owl:DatatypeProperty ; rdfs:domain fac:ProductionLine ; rdfs:range xsd:string ; rdfs:comment "MES's JSONB capabilities array, stored as its JSON-encoded string form in v1 (no multi-valued modeling yet)." .

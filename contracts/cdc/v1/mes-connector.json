@@ -1,0 +1,21 @@
+{
+  "name": "oo-poc-mes-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "mes_role",
+    "database.password": "mes_local_pw",
+    "database.dbname": "mes",
+    "topic.prefix": "oo.mes",
+    "plugin.name": "pgoutput",
+    "slot.name": "oo_mes_slot",
+    "publication.name": "oo_mes_pub",
+    "publication.autocreate.mode": "filtered",
+    "table.include.list": "public.production_lines,public.work_orders,public.bom_requirements",
+    "tombstones.on.delete": "false",
+    "snapshot.mode": "initial",
+    "heartbeat.interval.ms": "5000",
+    "provide.transaction.metadata": "false"
+  }
+}

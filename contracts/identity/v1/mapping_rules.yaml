@@ -1,0 +1,88 @@
+# Identity mapping rules, v1 — maps source-local part identifiers (ERP
+# PART-xxxxx / MES COMP-xxx / WMS SKU-xxxxx) to canonical part:PX-nn IRIs.
+#
+# docs/experiment/spec/04_architecture.md "Identity resolver": "Every
+# mapping must record: mapping rule/version; source identifiers;
+# confidence/authority; creation/change time. Ambiguous identity is a
+# first-class failure, not silently guessed."
+#
+# Only Part needs cross-system identity resolution in this domain —
+# Supplier/PurchaseOrder/Warehouse/WorkOrder/ProductionLine ids are already
+# global/canonical (docs/experiment/implementation-notes.md Phase 2 "What
+# Phase 3 needs from here").
+#
+# Rules are tried in the order they appear below (highest priority first).
+# services/identity_resolver/resolver.py is the ONLY code that interprets
+# this file — this file itself carries no executable logic.
+version: "1"
+
+rules:
+  # Priority 1: explicit, hand-authored overrides. Always wins over the
+  # generated-index rule below for the same source id — this is how
+  # seed/identity.py's documented ERP id collision at i=192 resolves: ERP
+  # PART-00192 is claimed here by PX-17, so generated-index-v1 never gets a
+  # chance to also claim it for PX-0192 (see seed/out/identity_truth.json:
+  # ERP is `null` for PX-0192, "dropped from ERP for this part").
+  - rule_id: canonical-fixture-v1
+    version: "1"
+    kind: explicit_override
+    authority: fixture-override
+    confidence: 1.0
+    comment: >
+      Hand-authored canonical-incident fixture part
+      (seed/fixtures/canonical_incident.yaml), whose source-local ids do
+      NOT follow the generated-index-v1 pattern (MES id has a letter,
+      canonical id has no zero-padding).
+    entries:
+      - canonical_id: PX-17
+        source_ids:
+          ERP: PART-00192
+          MES: COMP-A17
+          WMS: SKU-88429
+
+  # Priority 2 (test-only): a second explicit-override entry used solely by
+  # tests/component/test_identity_resolver.py's metamorphic check
+  # ("renaming a source-local identifier while preserving identity mapping
+  # should not change canonical result", 08_test_strategy.md). PART-LEGACY-00007
+  # is a synthetic alias for the SAME canonical part as generated-index-v1
+  # would derive from PART-00007 (i=7 -> PX-0007) — proving the resolver's
+  # OUTPUT is stable under a source-id spelling change, independent of
+  # which rule produced it. Not real seed data; never emitted by seed/generators/.
+  - rule_id: legacy-alias-v1
+    version: "1"
+    kind: explicit_override
+    authority: fixture-override
+    confidence: 1.0
+    comment: >
+      TEST FIXTURE ONLY — synthetic alias proving canonical-id stability
+      across a source-id rename, for the metamorphic test in
+      tests/component/test_identity_resolver.py. Not emitted by seed/generators/generate.py.
+    entries:
+      - canonical_id: PX-0007
+        source_ids:
+          ERP: PART-LEGACY-00007
+
+  # Priority 3: the deterministic generated-dataset scheme
+  # (seed/identity.py). i = the shared numeric index across all three
+  # source systems; canonical_id = "PX-{i:04d}".
+  - rule_id: generated-index-v1
+    version: "1"
+    kind: pattern
+    authority: system-generated
+    confidence: 0.95
+    comment: >
+      seed/generators/generate.py's PART-{i:05d} / COMP-{i:05d} /
+      SKU-{100000+i} scheme, i in 0..499. Canonical id has no relation to
+      any single system's own id spelling, by design (04_architecture.md:
+      identity resolution must not just pick one system's id as canonical).
+    # Each pattern has exactly one capture group: the numeric index i
+    # (after subtracting `offset`, so ERP/MES read the index directly and
+    # WMS subtracts its 100000 SKU-range offset). No eval/exec anywhere —
+    # services/identity_resolver/resolver.py only ever does
+    # `int(match.group(1)) - offset`, never interprets an expression from
+    # this file.
+    patterns:
+      ERP: {regex: '^PART-(\d{5})$', offset: 0}
+      MES: {regex: '^COMP-(\d{5})$', offset: 0}
+      WMS: {regex: '^SKU-(\d{6})$',  offset: 100000}
+    canonical_template: 'PX-{i:04d}'

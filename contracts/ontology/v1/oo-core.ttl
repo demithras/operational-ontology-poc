@@ -1,0 +1,97 @@
+# contracts/ontology/v1/oo-core.ttl
+#
+# Governance vocabulary: decisions, evidence, provenance, versioning.
+# docs/experiment/spec/05_ontology_and_contracts.md ("Provenance foundation",
+# "Decision object", "Decision lifecycle") + docs/experiment/spec/14
+# ("Open decision: inference" -> observed/inferred/derived/asserted).
+#
+# Populated starting Phase 5 (decision service). Declared now so
+# contracts/shapes/v1/decision-shape.ttl and its standalone fixtures
+# (tests/contracts/shacl/) can be tested against a real, versioned ontology
+# instead of ad hoc shape-local vocabulary.
+@prefix oo:   <https://example.local/oo/> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+<https://example.local/oo/ontology/v1/oo-core>
+  a owl:Ontology ;
+  owl:versionInfo "1.0.0" ;
+  rdfs:comment "Operational-ontology governance vocabulary (decisions, evidence, provenance, CDC observation), v1. See docs/experiment/spec/05_ontology_and_contracts.md and docs/experiment/spec/14_risks_and_open_questions.md." .
+
+#############################################
+## PROV-O specializations (05: "Provenance foundation")
+#############################################
+
+oo:EvidenceSnapshot   a owl:Class ; rdfs:subClassOf prov:Entity ;
+  rdfs:comment "Content-addressed manifest of the facts/projection rows a decision was evaluated against (spec 04 'Evidence snapshot', spec 14 R5)." .
+
+oo:DecisionActivity   a owl:Class ; rdfs:subClassOf prov:Activity ;
+  rdfs:comment "The act of proposing/gating a Decision." .
+
+oo:ActionExecution    a owl:Class ; rdfs:subClassOf prov:Activity ;
+  rdfs:comment "The act of executing an approved Decision's action against an external system (Phase 6: Temporal). Declared now per phase3.md item 3; populated starting Phase 6." .
+
+oo:Outcome            a owl:Class ; rdfs:subClassOf prov:Entity ;
+  rdfs:comment "The observed real-world result of an ActionExecution, distinct from the command response (spec 04: 'the boundary between we asked and the world changed')." .
+
+oo:HumanActor         a owl:Class ; rdfs:subClassOf prov:Agent .
+oo:SoftwareAgent      a owl:Class ; rdfs:subClassOf prov:SoftwareAgent .
+
+#############################################
+## Decision object (05: "Decision object", exactly-1 cardinalities)
+#############################################
+
+oo:Decision a owl:Class ;
+  rdfs:comment "A governed decision. Immutable once APPROVED (05_ontology_and_contracts.md). Populated starting Phase 5." .
+
+oo:decisionId               a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string .
+oo:decisionType              a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string .
+oo:actor                     a owl:ObjectProperty   ; rdfs:domain oo:Decision ; rdfs:range prov:Agent .
+oo:evidenceSnapshot           a owl:ObjectProperty   ; rdfs:domain oo:Decision ; rdfs:range oo:EvidenceSnapshot .
+oo:ontologyVersion            a owl:DatatypeProperty ; rdfs:range xsd:string .
+oo:shapeSetVersion            a owl:DatatypeProperty ; rdfs:range xsd:string .
+oo:authorizationModelVersion  a owl:DatatypeProperty ; rdfs:range xsd:string .
+oo:policyBundleVersion        a owl:DatatypeProperty ; rdfs:range xsd:string .
+oo:actionType                 a owl:DatatypeProperty ; rdfs:range xsd:string .
+oo:actionVersion              a owl:DatatypeProperty ; rdfs:range xsd:integer .
+oo:createdAt                  a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:dateTime .
+oo:status                     a owl:ObjectProperty   ; rdfs:comment "Range: a skos:Concept in oo:DecisionStatusScheme (Decision) or oo:FactKindScheme (facts) depending on domain; see shapes for the per-target sh:in enumeration." .
+
+#############################################
+## Decision status enumeration (05: "Decision lifecycle").
+## "No state named simply SUCCESS is allowed" -> deliberately absent below;
+## contracts/shapes/v1/decision-shape.ttl's sh:in whitelist enforces it and
+## tests/contracts/shacl/negative/decision-status-success-literal.ttl proves
+## a bare "SUCCESS" status is rejected.
+#############################################
+
+oo:DecisionStatusScheme a skos:ConceptScheme ; skos:prefLabel "Decision lifecycle statuses (v1)" .
+
+oo:Draft                 a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "DRAFT" .
+oo:Proposed               a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "PROPOSED" .
+oo:InsufficientEvidence   a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "INSUFFICIENT_EVIDENCE" .
+oo:DeniedAuthorization    a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "DENIED_AUTHORIZATION" .
+oo:DeniedPolicy           a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "DENIED_POLICY" .
+oo:InvalidConformance     a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "INVALID_CONFORMANCE" .
+oo:RequiresApproval       a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "REQUIRES_APPROVAL" .
+oo:Approved               a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "APPROVED" .
+oo:Executing              a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "EXECUTING" .
+oo:ExecutionFailed        a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "EXECUTION_FAILED" .
+oo:OutcomeUnknown         a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "OUTCOME_UNKNOWN" .
+oo:AwaitingObservation    a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "AWAITING_OBSERVATION" .
+oo:Diverged               a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "DIVERGED" .
+oo:ObservedSuccess        a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "OBSERVED_SUCCESS" .
+
+#############################################
+## ActionExecution parameters (phase3.md item 3; shape in
+## action-execution-shape.ttl: quantity >= 1, source != destination).
+## Populated starting Phase 6; declared now so the shape is testable today.
+#############################################
+
+oo:quantity            a owl:DatatypeProperty ; rdfs:domain oo:ActionExecution ; rdfs:range xsd:integer .
+oo:sourceWarehouse      a owl:ObjectProperty   ; rdfs:domain oo:ActionExecution .
+oo:destinationWarehouse a owl:ObjectProperty   ; rdfs:domain oo:ActionExecution .

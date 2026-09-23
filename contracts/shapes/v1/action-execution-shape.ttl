@@ -1,0 +1,46 @@
+# contracts/shapes/v1/action-execution-shape.ttl
+#
+# docs/experiment/spec/05_ontology_and_contracts.md "SHACL / conformance"
+# examples ("quantity must be positive", "transfer source and destination
+# must differ") + phase3.md item 3 ("quantity >= 1, source != destination
+# (sh:disjoint or SPARQL constraint)"). Targets oo:ActionExecution, which
+# is declared in contracts/ontology/v1/oo-core.ttl now and populated
+# starting Phase 6 (Temporal action runtime) — the shape is testable today
+# via the standalone fixtures below, independent of that runtime existing.
+#
+# Fixtures: tests/contracts/shacl/positive/action-execution-valid.ttl,
+# tests/contracts/shacl/negative/action-execution-negative-quantity.ttl,
+# tests/contracts/shacl/negative/action-execution-source-eq-destination.ttl.
+@prefix sh:  <http://www.w3.org/ns/shacl#> .
+@prefix oo:  <https://example.local/oo/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+oo:ActionExecutionShape
+  a sh:NodeShape ;
+  sh:targetClass oo:ActionExecution ;
+
+  sh:property [
+    sh:path oo:quantity ;
+    sh:minCount 1 ; sh:maxCount 1 ;
+    sh:datatype xsd:integer ;
+    sh:minInclusive 1 ;
+    sh:message "oo:ActionExecution's oo:quantity must be present and >= 1." ;
+  ] ;
+
+  sh:property [
+    sh:path oo:sourceWarehouse ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:message "oo:ActionExecution requires exactly one oo:sourceWarehouse." ;
+  ] ;
+
+  sh:property [
+    sh:path oo:destinationWarehouse ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:message "oo:ActionExecution requires exactly one oo:destinationWarehouse." ;
+  ] ;
+
+  # source != destination: the value sets of oo:sourceWarehouse and
+  # oo:destinationWarehouse for the same focus node must not overlap.
+  sh:property [
+    sh:path oo:sourceWarehouse ;
+    sh:disjoint oo:destinationWarehouse ;
+    sh:message "oo:ActionExecution's oo:sourceWarehouse and oo:destinationWarehouse must differ." ;
+  ] .

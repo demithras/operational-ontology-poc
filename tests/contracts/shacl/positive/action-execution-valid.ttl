@@ -1,0 +1,15 @@
+# Positive fixture: valid oo:ActionExecution (quantity >= 1, distinct
+# source/destination). Must conform under
+# contracts/shapes/v1/action-execution-shape.ttl.
+@prefix oo:    <https://example.local/oo/> .
+@prefix oo-fx: <https://example.local/oo/fixture/> .
+@prefix fac:   <https://example.local/factory/> .
+
+oo-fx:ax-1
+  a oo:ActionExecution ;
+  oo:quantity 60 ;
+  oo:sourceWarehouse oo-fx:wh-b ;
+  oo:destinationWarehouse oo-fx:wh-a .
+
+oo-fx:wh-a a fac:Warehouse .
+oo-fx:wh-b a fac:Warehouse .

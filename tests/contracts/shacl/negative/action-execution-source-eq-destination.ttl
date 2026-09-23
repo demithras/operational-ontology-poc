@@ -1,0 +1,14 @@
+# Negative fixture: oo:ActionExecution with source == destination. Must
+# NOT conform (phase3.md item 3: "source != destination (sh:disjoint or
+# SPARQL constraint)").
+@prefix oo:    <https://example.local/oo/> .
+@prefix oo-fx: <https://example.local/oo/fixture/> .
+@prefix fac:   <https://example.local/factory/> .
+
+oo-fx:ax-same-wh
+  a oo:ActionExecution ;
+  oo:quantity 10 ;
+  oo:sourceWarehouse oo-fx:wh-same ;
+  oo:destinationWarehouse oo-fx:wh-same .
+
+oo-fx:wh-same a fac:Warehouse .

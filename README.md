@@ -21,7 +21,7 @@ Build order and exit criteria: `docs/experiment/spec/12_implementation_plan.md`.
 | 0 | Experiment lock (hypothesis ledger, thresholds, canonical fixtures, ADR template) | done |
 | 1 | Pure domain model (`reference_model/`) — deterministic transitions, invariants, canonical incident, Hypothesis state machine | done |
 | 2 | Fake ERP/MES/WMS source systems | done |
-| 3 | Semantic core (RDF4J, ontology, PROV-O, SHACL) | pending |
+| 3 | Semantic core (RDF4J, ontology, PROV-O, SHACL) + CDC ingestion (Kafka, Debezium) | done |
 | 4 | Hot projection (`work_order_risk`, `transfer_candidates`) | pending |
 | 5 | Decision service + gates (OpenFGA, OPA, SHACL gate capture) | pending |
 | 6 | Durable action runtime (Temporal, WMS action, idempotency, CDC, reconciliation) | pending |
@@ -80,19 +80,26 @@ make down                  # or `make reset` to wipe and start clean
 ```
 
 ERP/MES/WMS are plain FastAPI + Postgres services on host ports 15401/
-15402/15403 (Postgres itself on 15432) — see
+15402/15403 (Postgres itself on 15432). Since Phase 3, `make up` also
+brings up the semantic core + CDC pipeline — Kafka, Debezium Connect,
+RDF4J, and the `services/ingestion` consumer
+(docs/adr/0002-cdc-now-not-deferred.md: CDC is built now, not deferred to
+Phase 6) — and idempotently registers the Debezium connectors + bootstraps
+the RDF4J `oo` repository (ontology + SHACL shapes). See
 `docs/experiment/implementation-notes.md` for the full port/endpoint/design-
 decision log.
 
-Every other mandatory command from the repository contract
-(`make test-contracts`, `make test-faults`, `make test-replay`, `make
-bench`, `make experiment`, `make report`, `make replay DECISION_ID=<id>`)
-prints which phase it belongs to and exits `2` — nothing is faked as
-passing before its phase actually lands. `make test-stateful` is already
-live: it aliases to Phase 1's own Hypothesis stateful/bug-detection tests.
-`make test` runs `tests/model/` always, and `tests/integration/` too if the
-Phase 2 stack is reachable (otherwise it prints a clear skip, per the same
-honesty rule).
+Every other mandatory command from the repository contract (`make
+test-faults`, `make test-replay`, `make bench`, `make experiment`, `make
+report`, `make replay DECISION_ID=<id>`) prints which phase it belongs to
+and exits `2` — nothing is faked as passing before its phase actually
+lands. `make test-stateful` is already live: it aliases to Phase 1's own
+Hypothesis stateful/bug-detection tests. `make test-contracts` (Phase 3) is
+live: SHACL positive/negative fixtures via pyshacl, plus the same shapes
+proven transactionally against the real RDF4J repository. `make test`
+runs `tests/model/` and `tests/contracts/` always, and `tests/component/` +
+`tests/integration/` too if the stack is reachable (otherwise it prints a
+clear skip, per the same honesty rule).
 
 ## What Phase 1 proves (and doesn't)
 

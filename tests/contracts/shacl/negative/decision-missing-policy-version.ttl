@@ -1,0 +1,23 @@
+# Negative fixture: oo:Decision with no oo:policyBundleVersion. Must NOT
+# conform (08_test_strategy.md negative list: "missing policy version").
+@prefix oo:    <https://example.local/oo/> .
+@prefix oo-fx: <https://example.local/oo/fixture/> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+
+oo-fx:es-4 a oo:EvidenceSnapshot .
+
+oo-fx:decision-missing-policy-version
+  a oo:Decision ;
+  oo:decisionId "D-fixture-004" ;
+  oo:decisionType "transfer_inventory" ;
+  oo:actor oo-fx:human-3 ;
+  oo:evidenceSnapshot oo-fx:es-4 ;
+  oo:ontologyVersion "1.0.0" ;
+  oo:shapeSetVersion "1.0.0" ;
+  oo:authorizationModelVersion "1" ;
+  oo:actionType "transfer_inventory" ;
+  oo:actionVersion 1 ;
+  oo:createdAt "2026-09-23T00:00:00Z"^^xsd:dateTime ;
+  oo:status oo:Draft .
+
+oo-fx:human-3 a oo:HumanActor .

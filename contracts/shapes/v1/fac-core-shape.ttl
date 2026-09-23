@@ -1,0 +1,55 @@
+# contracts/shapes/v1/fac-core-shape.ttl
+#
+# Light SHACL coverage for the domain classes CDC ingestion writes
+# (docs/experiment/spec/04_architecture.md "SHACL": "required fields,
+# datatype/cardinality constraints"). Deliberately modest — most business
+# rules for this domain belong in OPA (Phase 5), per
+# docs/experiment/spec/14_risks_and_open_questions.md R3 ("explicitly
+# separate conformance, authority, and contextual policy").
+@prefix sh:  <http://www.w3.org/ns/shacl#> .
+@prefix fac: <https://example.local/factory/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+fac:InventoryLotShape
+  a sh:NodeShape ;
+  sh:targetClass fac:InventoryLot ;
+  sh:property [
+    sh:path fac:onHand ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ;
+    sh:message "fac:InventoryLot.onHand must be a non-negative integer." ;
+  ] ;
+  sh:property [
+    sh:path fac:reserved ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ;
+    sh:message "fac:InventoryLot.reserved must be a non-negative integer." ;
+  ] ;
+  sh:property [
+    sh:path fac:availableQuantity ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ;
+    sh:message "fac:InventoryLot.availableQuantity must be a non-negative integer." ;
+  ] ;
+  sh:property [
+    # Deliberately NOT sh:class fac:Part / fac:Warehouse here (empirically
+    # discovered during Phase 3 implementation, see
+    # docs/experiment/implementation-notes.md): CDC delivers each source
+    # table's rows independently and out of any cross-table dependency
+    # order (F20/F35 already require ingestion not to assume ordering), so
+    # an fac:InventoryLot event can legitimately arrive before its
+    # referenced fac:Warehouse/fac:Part has ever been observed. A sh:class
+    # referential-integrity check would then reject a perfectly valid CDC
+    # event whose only "fault" is arriving first — exactly the SHACL
+    # misuse docs/experiment/spec/14_risks_and_open_questions.md R3 warns
+    # against ("some business rules are better represented in policy code
+    # than graph constraints"). Cardinality is still checked.
+    sh:path fac:part ; sh:maxCount 1 ;
+    sh:message "fac:InventoryLot.part, if present, must be a single value." ;
+  ] ;
+  sh:property [
+    sh:path fac:warehouse ; sh:maxCount 1 ;
+    sh:message "fac:InventoryLot.warehouse, if present, must be a single value." ;
+  ] .
+
+fac:PartShape
+  a sh:NodeShape ;
+  sh:targetClass fac:Part ;
+  sh:property [
+    sh:path fac:partId ; sh:maxCount 1 ; sh:datatype xsd:string ;
+    sh:message "fac:Part.partId must be a single string when present." ;
+  ] .

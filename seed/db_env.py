@@ -59,3 +59,25 @@ def http_base_urls() -> dict[str, str]:
         "mes": f"http://{host}:{os.environ['MES_HTTP_PORT']}",
         "wms": f"http://{host}:{os.environ['WMS_HTTP_PORT']}",
     }
+
+
+# --- Phase 3 (docs/adr/0002-cdc-now-not-deferred.md) --------------------
+
+
+def rdf4j_server_url() -> str:
+    """Host-reachable RDF4J server base (repositories live under
+    ``{this}/repositories/{id}``). services/ingestion (running inside
+    docker-compose) instead uses RDF4J_BASE_URL=http://rdf4j:8080/rdf4j-server
+    directly, set in docker-compose.yml."""
+    host = os.environ.get("OO_SERVICE_HOST", "localhost")
+    return f"http://{host}:{os.environ['RDF4J_HOST_PORT']}/rdf4j-server"
+
+
+def connect_rest_url() -> str:
+    host = os.environ.get("OO_SERVICE_HOST", "localhost")
+    return f"http://{host}:{os.environ['CONNECT_HOST_PORT']}"
+
+
+def ingestion_health_url() -> str:
+    host = os.environ.get("OO_SERVICE_HOST", "localhost")
+    return f"http://{host}:{os.environ['INGESTION_HEALTH_PORT']}"

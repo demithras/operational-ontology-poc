@@ -1,0 +1,28 @@
+# Negative fixture: oo:evidenceSnapshot points at a real IRI, but that IRI
+# is never typed oo:EvidenceSnapshot in the graph. Must NOT conform — this
+# is the sh:class check in decision-shape.ttl that goes beyond bare
+# cardinality (phase3.md item 3: "an Approved decision must reference an
+# evidence snapshot", i.e. a real one, not just any IRI in that slot).
+@prefix oo:    <https://example.local/oo/> .
+@prefix oo-fx: <https://example.local/oo/fixture/> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+
+# Deliberately NOT typed oo:EvidenceSnapshot.
+oo-fx:not-a-snapshot a oo:HumanActor .
+
+oo-fx:decision-evidence-wrong-type
+  a oo:Decision ;
+  oo:decisionId "D-fixture-006" ;
+  oo:decisionType "transfer_inventory" ;
+  oo:actor oo-fx:human-5 ;
+  oo:evidenceSnapshot oo-fx:not-a-snapshot ;
+  oo:ontologyVersion "1.0.0" ;
+  oo:shapeSetVersion "1.0.0" ;
+  oo:authorizationModelVersion "1" ;
+  oo:policyBundleVersion "supply-v1" ;
+  oo:actionType "transfer_inventory" ;
+  oo:actionVersion 1 ;
+  oo:createdAt "2026-09-23T00:00:00Z"^^xsd:dateTime ;
+  oo:status oo:Approved .
+
+oo-fx:human-5 a oo:HumanActor .

@@ -1,0 +1,21 @@
+{
+  "name": "oo-poc-erp-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "erp_role",
+    "database.password": "erp_local_pw",
+    "database.dbname": "erp",
+    "topic.prefix": "oo.erp",
+    "plugin.name": "pgoutput",
+    "slot.name": "oo_erp_slot",
+    "publication.name": "oo_erp_pub",
+    "publication.autocreate.mode": "filtered",
+    "table.include.list": "public.suppliers,public.parts,public.purchase_orders,public.purchase_order_lines",
+    "tombstones.on.delete": "false",
+    "snapshot.mode": "initial",
+    "heartbeat.interval.ms": "5000",
+    "provide.transaction.metadata": "false"
+  }
+}

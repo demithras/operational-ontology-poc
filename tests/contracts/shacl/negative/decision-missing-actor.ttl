@@ -1,0 +1,22 @@
+# Negative fixture: oo:Decision with no oo:actor. Must NOT conform
+# (docs/experiment/spec/08_test_strategy.md "SHACL tests" negative list:
+# "missing actor").
+@prefix oo:    <https://example.local/oo/> .
+@prefix oo-fx: <https://example.local/oo/fixture/> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+
+oo-fx:es-2 a oo:EvidenceSnapshot .
+
+oo-fx:decision-missing-actor
+  a oo:Decision ;
+  oo:decisionId "D-fixture-002" ;
+  oo:decisionType "transfer_inventory" ;
+  oo:evidenceSnapshot oo-fx:es-2 ;
+  oo:ontologyVersion "1.0.0" ;
+  oo:shapeSetVersion "1.0.0" ;
+  oo:authorizationModelVersion "1" ;
+  oo:policyBundleVersion "supply-v1" ;
+  oo:actionType "transfer_inventory" ;
+  oo:actionVersion 1 ;
+  oo:createdAt "2026-09-23T00:00:00Z"^^xsd:dateTime ;
+  oo:status oo:Draft .

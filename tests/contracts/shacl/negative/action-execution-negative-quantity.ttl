@@ -1,0 +1,15 @@
+# Negative fixture: oo:ActionExecution with quantity 0 (not >= 1). Must
+# NOT conform (08_test_strategy.md negative list: "negative quantity";
+# phase3.md item 3: "quantity >= 1").
+@prefix oo:    <https://example.local/oo/> .
+@prefix oo-fx: <https://example.local/oo/fixture/> .
+@prefix fac:   <https://example.local/factory/> .
+
+oo-fx:ax-neg-qty
+  a oo:ActionExecution ;
+  oo:quantity 0 ;
+  oo:sourceWarehouse oo-fx:wh-b2 ;
+  oo:destinationWarehouse oo-fx:wh-a2 .
+
+oo-fx:wh-a2 a fac:Warehouse .
+oo-fx:wh-b2 a fac:Warehouse .

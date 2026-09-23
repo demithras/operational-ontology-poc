@@ -1,0 +1,27 @@
+# Negative fixture: oo:Decision whose oo:status is the bare literal
+# "SUCCESS" rather than one of the v1 DecisionStatusScheme concepts. Must
+# NOT conform (05_ontology_and_contracts.md: "No state named simply
+# SUCCESS is allowed for governed actions" — 08_test_strategy.md negative
+# list: "malformed state transition").
+@prefix oo:    <https://example.local/oo/> .
+@prefix oo-fx: <https://example.local/oo/fixture/> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+
+oo-fx:es-5 a oo:EvidenceSnapshot .
+
+oo-fx:decision-status-success-literal
+  a oo:Decision ;
+  oo:decisionId "D-fixture-005" ;
+  oo:decisionType "transfer_inventory" ;
+  oo:actor oo-fx:human-4 ;
+  oo:evidenceSnapshot oo-fx:es-5 ;
+  oo:ontologyVersion "1.0.0" ;
+  oo:shapeSetVersion "1.0.0" ;
+  oo:authorizationModelVersion "1" ;
+  oo:policyBundleVersion "supply-v1" ;
+  oo:actionType "transfer_inventory" ;
+  oo:actionVersion 1 ;
+  oo:createdAt "2026-09-23T00:00:00Z"^^xsd:dateTime ;
+  oo:status "SUCCESS" .
+
+oo-fx:human-4 a oo:HumanActor .

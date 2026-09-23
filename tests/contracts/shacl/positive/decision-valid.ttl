@@ -1,0 +1,26 @@
+# Positive fixture: a structurally valid oo:Decision (all 12 required
+# properties present, exactly once each; evidenceSnapshot resolves to a
+# real oo:EvidenceSnapshot; status is a valid v1 lifecycle concept).
+# Must conform under contracts/shapes/v1/decision-shape.ttl.
+@prefix oo:   <https://example.local/oo/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix oo-fx: <https://example.local/oo/fixture/> .
+
+oo-fx:es-1 a oo:EvidenceSnapshot .
+
+oo-fx:decision-1
+  a oo:Decision ;
+  oo:decisionId "D-fixture-001" ;
+  oo:decisionType "transfer_inventory" ;
+  oo:actor oo-fx:human-1 ;
+  oo:evidenceSnapshot oo-fx:es-1 ;
+  oo:ontologyVersion "1.0.0" ;
+  oo:shapeSetVersion "1.0.0" ;
+  oo:authorizationModelVersion "1" ;
+  oo:policyBundleVersion "supply-v1" ;
+  oo:actionType "transfer_inventory" ;
+  oo:actionVersion 1 ;
+  oo:createdAt "2026-09-23T00:00:00Z"^^xsd:dateTime ;
+  oo:status oo:Draft .
+
+oo-fx:human-1 a oo:HumanActor .

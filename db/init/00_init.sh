@@ -42,7 +42,26 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<-EOSQL
 	GRANT CONNECT ON DATABASE ${WMS_DB_NAME} TO ${WMS_DB_USER};
 	GRANT CONNECT ON DATABASE ${ONTOLOGY_HOT_DB_NAME} TO ${ONTOLOGY_HOT_DB_USER};
 	GRANT CONNECT ON DATABASE ${BASELINE_DB_NAME} TO ${BASELINE_DB_USER};
+
+	-- Phase 3 (docs/adr/0002-cdc-now-not-deferred.md): Debezium's Postgres
+	-- connector opens a logical-replication connection per source database
+	-- using that database's OWN role (never the bootstrap superuser), so
+	-- each source role needs the REPLICATION attribute. wal_level=logical
+	-- was already set from Phase 2 (docker-compose.yml postgres command:)
+	-- for exactly this. ontology_hot/baseline are not CDC sources.
+	ALTER ROLE ${ERP_DB_USER} WITH REPLICATION;
+	ALTER ROLE ${MES_DB_USER} WITH REPLICATION;
+	ALTER ROLE ${WMS_DB_USER} WITH REPLICATION;
 EOSQL
+
+# pg_hba's "all" database keyword does not match the "replication"
+# pseudo-database (PostgreSQL docs are explicit about this) — a dedicated
+# entry is required or Debezium's replication-protocol connection is
+# refused even though the role has REPLICATION and correct password.
+# Appended (not overwriting the image-generated pg_hba.conf) so it applies
+# alongside whatever POSTGRES_HOST_AUTH_METHOD-driven auth the base image
+# already configured for ordinary connections.
+echo "host replication all all scram-sha-256" >> "${PGDATA}/pg_hba.conf"
 
 # Lock down the public schema of each system DB to only that DB's own role
 # (belt-and-suspenders alongside the CONNECT revoke above).

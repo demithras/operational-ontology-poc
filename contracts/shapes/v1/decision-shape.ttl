@@ -1,0 +1,88 @@
+# contracts/shapes/v1/decision-shape.ttl
+#
+# docs/experiment/spec/05_ontology_and_contracts.md "Decision object":
+# oo:DecisionShape, exactly-1 cardinality on all 12 listed properties.
+# Loaded into RDF4J's reserved SHACL shapes graph
+# (http://rdf4j.org/schema/rdf4j#SHACLShapeGraph) by
+# services/ingestion/bootstrap_rdf4j.py so governed writes to the "oo"
+# repository that violate this shape fail the transaction (verified: see
+# oo-repository-config.ttl's header comment).
+#
+# Positive/negative fixtures: tests/contracts/shacl/positive/decision-valid.ttl,
+# tests/contracts/shacl/negative/decision-missing-*.ttl,
+# tests/contracts/shacl/negative/decision-status-success-literal.ttl,
+# tests/contracts/shacl/negative/decision-evidence-snapshot-wrong-type.ttl.
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix oo:   <https://example.local/oo/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+oo:DecisionShape
+  a sh:NodeShape ;
+  sh:targetClass oo:Decision ;
+
+  sh:property [
+    sh:path oo:decisionId ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+    sh:message "oo:Decision requires exactly one oo:decisionId." ;
+  ] ;
+  sh:property [
+    sh:path oo:decisionType ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+    sh:message "oo:Decision requires exactly one oo:decisionType." ;
+  ] ;
+  sh:property [
+    sh:path oo:actor ; sh:minCount 1 ; sh:maxCount 1 ; sh:class prov:Agent ;
+    sh:message "oo:Decision requires exactly one oo:actor (a prov:Agent)." ;
+  ] ;
+  sh:property [
+    # sh:class (not just minCount/maxCount) so a Decision that merely
+    # *points at* an IRI lacking any oo:EvidenceSnapshot typing still
+    # fails — this is the distinct, stronger check phase3.md item 3 calls
+    # out separately from bare cardinality ("an Approved decision must
+    # reference an evidence snapshot"): the reference must resolve to a
+    # real EvidenceSnapshot, not merely exist as a property value.
+    sh:path oo:evidenceSnapshot ; sh:minCount 1 ; sh:maxCount 1 ; sh:class oo:EvidenceSnapshot ;
+    sh:message "oo:Decision requires exactly one oo:evidenceSnapshot, typed oo:EvidenceSnapshot." ;
+  ] ;
+  sh:property [
+    sh:path oo:ontologyVersion ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+    sh:message "oo:Decision requires exactly one oo:ontologyVersion." ;
+  ] ;
+  sh:property [
+    sh:path oo:shapeSetVersion ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+    sh:message "oo:Decision requires exactly one oo:shapeSetVersion." ;
+  ] ;
+  sh:property [
+    sh:path oo:authorizationModelVersion ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+    sh:message "oo:Decision requires exactly one oo:authorizationModelVersion." ;
+  ] ;
+  sh:property [
+    sh:path oo:policyBundleVersion ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+    sh:message "oo:Decision requires exactly one oo:policyBundleVersion." ;
+  ] ;
+  sh:property [
+    sh:path oo:actionType ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+    sh:message "oo:Decision requires exactly one oo:actionType." ;
+  ] ;
+  sh:property [
+    sh:path oo:actionVersion ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ;
+    sh:message "oo:Decision requires exactly one oo:actionVersion." ;
+  ] ;
+  sh:property [
+    sh:path oo:createdAt ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:dateTime ;
+    sh:message "oo:Decision requires exactly one oo:createdAt." ;
+  ] ;
+  sh:property [
+    # Structural transition check (phase3.md item 3, "status-transition
+    # structural checks"): the status must be exactly one of the v1
+    # lifecycle vocabulary's concepts. oo:DecisionStatusScheme
+    # (contracts/ontology/v1/oo-core.ttl) deliberately has no concept
+    # notated bare "SUCCESS" (05_ontology_and_contracts.md: "No state
+    # named simply SUCCESS is allowed for governed actions") — sh:in
+    # enforces that by construction, not by a separate negative rule.
+    sh:path oo:status ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:in ( oo:Draft oo:Proposed oo:InsufficientEvidence oo:DeniedAuthorization
+            oo:DeniedPolicy oo:InvalidConformance oo:RequiresApproval oo:Approved
+            oo:Executing oo:ExecutionFailed oo:OutcomeUnknown oo:AwaitingObservation
+            oo:Diverged oo:ObservedSuccess ) ;
+    sh:message "oo:Decision requires exactly one oo:status from the v1 DecisionStatusScheme (bare 'SUCCESS' is not a valid status)." ;
+  ] .

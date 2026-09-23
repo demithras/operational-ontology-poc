@@ -1,0 +1,25 @@
+# Negative fixture: oo:Decision with no oo:evidenceSnapshot. Must NOT
+# conform (08_test_strategy.md negative list: "missing evidence"; also the
+# spec 05 rule phase3.md item 3 calls out explicitly: "an Approved decision
+# must reference an evidence snapshot" — here even a DRAFT lacks one, which
+# the unconditional exactly-1 cardinality in decision-shape.ttl already
+# forbids for every status, not only APPROVED).
+@prefix oo:    <https://example.local/oo/> .
+@prefix oo-fx: <https://example.local/oo/fixture/> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+
+oo-fx:decision-missing-evidence
+  a oo:Decision ;
+  oo:decisionId "D-fixture-003" ;
+  oo:decisionType "transfer_inventory" ;
+  oo:actor oo-fx:human-2 ;
+  oo:ontologyVersion "1.0.0" ;
+  oo:shapeSetVersion "1.0.0" ;
+  oo:authorizationModelVersion "1" ;
+  oo:policyBundleVersion "supply-v1" ;
+  oo:actionType "transfer_inventory" ;
+  oo:actionVersion 1 ;
+  oo:createdAt "2026-09-23T00:00:00Z"^^xsd:dateTime ;
+  oo:status oo:Approved .
+
+oo-fx:human-2 a oo:HumanActor .
