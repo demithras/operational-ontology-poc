@@ -1,0 +1,117 @@
+name: oo-poc
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_SUPERUSER}
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD}
+      POSTGRES_DB: postgres
+      ERP_DB_NAME: ${ERP_DB_NAME}
+      ERP_DB_USER: ${ERP_DB_USER}
+      ERP_DB_PASSWORD: ${ERP_DB_PASSWORD}
+      MES_DB_NAME: ${MES_DB_NAME}
+      MES_DB_USER: ${MES_DB_USER}
+      MES_DB_PASSWORD: ${MES_DB_PASSWORD}
+      WMS_DB_NAME: ${WMS_DB_NAME}
+      WMS_DB_USER: ${WMS_DB_USER}
+      WMS_DB_PASSWORD: ${WMS_DB_PASSWORD}
+      ONTOLOGY_HOT_DB_NAME: ${ONTOLOGY_HOT_DB_NAME}
+      ONTOLOGY_HOT_DB_USER: ${ONTOLOGY_HOT_DB_USER}
+      ONTOLOGY_HOT_DB_PASSWORD: ${ONTOLOGY_HOT_DB_PASSWORD}
+      BASELINE_DB_NAME: ${BASELINE_DB_NAME}
+      BASELINE_DB_USER: ${BASELINE_DB_USER}
+      BASELINE_DB_PASSWORD: ${BASELINE_DB_PASSWORD}
+    # wal_level=logical is not needed until Phase 6 (Debezium CDC) but is
+    # set from Phase 2 on so no later phase needs a data-losing `make reset`
+    # just to flip it (phase2.md item 1).
+    command:
+      - "postgres"
+      - "-c"
+      - "wal_level=logical"
+      - "-c"
+      - "max_replication_slots=4"
+      - "-c"
+      - "max_wal_senders=4"
+    ports:
+      - "${POSTGRES_HOST_PORT}:5432"
+    volumes:
+      - oo-poc-pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_SUPERUSER} -d postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  erp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["uvicorn", "services.erp.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      SERVICE_DB_HOST: postgres
+      SERVICE_DB_PORT: "5432"
+      SERVICE_DB_NAME: ${ERP_DB_NAME}
+      SERVICE_DB_USER: ${ERP_DB_USER}
+      SERVICE_DB_PASSWORD: ${ERP_DB_PASSWORD}
+      OO_TEST_MODE: ${OO_TEST_MODE}
+    ports:
+      - "${ERP_HTTP_PORT}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  mes:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["uvicorn", "services.mes.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      SERVICE_DB_HOST: postgres
+      SERVICE_DB_PORT: "5432"
+      SERVICE_DB_NAME: ${MES_DB_NAME}
+      SERVICE_DB_USER: ${MES_DB_USER}
+      SERVICE_DB_PASSWORD: ${MES_DB_PASSWORD}
+      OO_TEST_MODE: ${OO_TEST_MODE}
+    ports:
+      - "${MES_HTTP_PORT}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  wms:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["uvicorn", "services.wms.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      SERVICE_DB_HOST: postgres
+      SERVICE_DB_PORT: "5432"
+      SERVICE_DB_NAME: ${WMS_DB_NAME}
+      SERVICE_DB_USER: ${WMS_DB_USER}
+      SERVICE_DB_PASSWORD: ${WMS_DB_PASSWORD}
+      OO_TEST_MODE: ${OO_TEST_MODE}
+    ports:
+      - "${WMS_HTTP_PORT}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  oo-poc-pgdata:

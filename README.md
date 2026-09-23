@@ -20,7 +20,7 @@ Build order and exit criteria: `docs/experiment/spec/12_implementation_plan.md`.
 |---|---|---|
 | 0 | Experiment lock (hypothesis ledger, thresholds, canonical fixtures, ADR template) | done |
 | 1 | Pure domain model (`reference_model/`) — deterministic transitions, invariants, canonical incident, Hypothesis state machine | done |
-| 2 | Fake ERP/MES/WMS source systems | pending |
+| 2 | Fake ERP/MES/WMS source systems | done |
 | 3 | Semantic core (RDF4J, ontology, PROV-O, SHACL) | pending |
 | 4 | Hot projection (`work_order_risk`, `transfer_candidates`) | pending |
 | 5 | Decision service + gates (OpenFGA, OPA, SHACL gate capture) | pending |
@@ -68,13 +68,31 @@ make test          # pytest tests/model — Phase 1 reference-model suite
 SEED=42 make seed  # deterministic seed dataset into seed/out/ (gitignored)
 ```
 
+To also bring up Phase 2's fake ERP/MES/WMS source systems (requires
+Docker):
+
+```bash
+cp .env.example .env       # local-only docker-compose credentials (gitignored)
+make up                    # postgres:16 + erp/mes/wms, waits for health
+SEED=42 make seed          # generate + load into the running services
+make test-integration      # tests/integration/ against the real stack
+make down                  # or `make reset` to wipe and start clean
+```
+
+ERP/MES/WMS are plain FastAPI + Postgres services on host ports 15401/
+15402/15403 (Postgres itself on 15432) — see
+`docs/experiment/implementation-notes.md` for the full port/endpoint/design-
+decision log.
+
 Every other mandatory command from the repository contract
-(`make up`, `make down`, `make reset`, `make test-contracts`,
-`make test-integration`, `make test-faults`, `make test-replay`, `make
+(`make test-contracts`, `make test-faults`, `make test-replay`, `make
 bench`, `make experiment`, `make report`, `make replay DECISION_ID=<id>`)
 prints which phase it belongs to and exits `2` — nothing is faked as
 passing before its phase actually lands. `make test-stateful` is already
 live: it aliases to Phase 1's own Hypothesis stateful/bug-detection tests.
+`make test` runs `tests/model/` always, and `tests/integration/` too if the
+Phase 2 stack is reachable (otherwise it prints a clear skip, per the same
+honesty rule).
 
 ## What Phase 1 proves (and doesn't)
 

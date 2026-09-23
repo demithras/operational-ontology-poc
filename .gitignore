@@ -14,5 +14,8 @@ __pycache__/
 # Generated / non-reproducible seed output
 seed/out/
 
+# Local docker-compose credentials (copy .env.example -> .env)
+.env
+
 # OS
 .DS_Store
