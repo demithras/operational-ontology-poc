@@ -1,6 +1,6 @@
 .PHONY: up down reset seed test test-unit test-contracts test-component test-integration \
         test-stateful test-faults test-replay bench experiment report replay \
-        ensure-env wait-healthy
+        ensure-env wait-healthy rebuild-projections
 
 SHELL := /usr/bin/env bash
 VENV_PY := .venv/bin/python
@@ -107,6 +107,15 @@ test-contracts:
 test-component:
 	$(VENV_PY) -m pytest tests/component -q
 
+## docs/experiment/spec/07_versioning_and_replay.md "Projection rebuild":
+# truncate + reconstruct all four hot-projection tables from the semantic
+# core and prove hash(rebuilt) == hash(before) over deterministic business
+# fields (tests/integration/test_projection_rebuild.py is the pass/fail
+# authority; this target also fails loudly on its own — see
+# services/projection_builder/rebuild.py).
+rebuild-projections: ensure-env
+	$(VENV_PY) -m services.projection_builder.rebuild
+
 # ---------------------------------------------------------------------------
 # Not implemented yet — never fake success. Each prints which phase
 # (docs/experiment/spec/12_implementation_plan.md) is responsible and exits
@@ -121,9 +130,14 @@ test-replay:
 	@echo "not implemented yet — Phase 7 (see docs/experiment/spec/12_implementation_plan.md)"
 	@exit 2
 
-bench:
-	@echo "not implemented yet — Phase 4 (see docs/experiment/spec/12_implementation_plan.md)"
-	@exit 2
+## docs/experiment/spec/08_test_strategy.md "Performance methodology" /
+# docs/experiment/spec/01_hypotheses.md H6 (partial: hot-projection read
+# path only — gate evaluation / decision proposal latency are Phase 5+).
+# Writes experiments/exp-000/results/bench-phase4.json. Exits non-zero ONLY
+# if the locked hot_read_p95_ms SLO (experiments/exp-000/manifest.yaml)
+# fails — never tuned post hoc.
+bench: ensure-env
+	$(VENV_PY) tests/performance/bench_phase4.py
 
 experiment:
 	@echo "not implemented yet — Phase 10 (see docs/experiment/spec/12_implementation_plan.md)"

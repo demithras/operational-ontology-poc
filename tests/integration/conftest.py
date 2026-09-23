@@ -14,13 +14,17 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import time
+
 import httpx
+import psycopg
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
 from seed import db_env  # noqa: E402
+from services.common.rdf4j_client import RDF4JClient  # noqa: E402
 
 db_env.load_dotenv()
 BASE_URLS = db_env.http_base_urls()
@@ -81,6 +85,55 @@ def wms_faults_reset(wms_client: httpx.Client):
     wms_client.post("/_test/faults/reset")
     yield
     wms_client.post("/_test/faults/reset")
+
+
+# --- Phase 4: hot projections (docs/experiment/briefs/phase4.md) ---------
+
+
+@pytest.fixture(scope="session")
+def rdf4j_reachable() -> bool:
+    try:
+        r = httpx.get(f"{db_env.rdf4j_server_url()}/repositories/oo/size", timeout=2.0)
+        return r.status_code == 200
+    except httpx.HTTPError:
+        return False
+
+
+@pytest.fixture()
+def rdf4j_client(rdf4j_reachable: bool):
+    if not rdf4j_reachable:
+        pytest.skip("RDF4J 'oo' repository not reachable — run 'make up' first")
+    client = RDF4JClient(base_url=db_env.rdf4j_server_url(), repository="oo")
+    yield client
+    client.close()
+
+
+@pytest.fixture()
+def ontology_hot_conn():
+    """A fresh connection per test (never shared/pooled) to the ontology_hot
+    database, via the host-mapped Postgres port — same convention as
+    seed/load.py. Explicitly SKIPPED (never erroring inscrutably) if
+    unreachable, matching this file's `erp_client`/etc. pattern."""
+    try:
+        conn = psycopg.connect(db_env.ontology_hot_dsn(), connect_timeout=3, autocommit=True)
+    except psycopg.OperationalError as e:
+        pytest.skip(f"ontology_hot database not reachable ({e}) — run 'make up' first")
+    yield conn
+    conn.close()
+
+
+def wait_until(predicate, timeout_s: float = 20.0, interval_s: float = 0.5):
+    """Polls `predicate()` (a zero-arg callable returning a truthy value on
+    success) until it succeeds or `timeout_s` elapses, then returns its
+    final (possibly falsy) result — used to wait for
+    services/projection_builder's poll loop to converge after driving a
+    change through the real ERP/MES/WMS APIs, never a fixed `time.sleep`."""
+    deadline = time.monotonic() + timeout_s
+    result = predicate()
+    while not result and time.monotonic() < deadline:
+        time.sleep(interval_s)
+        result = predicate()
+    return result
 
 
 def get_lot(client: httpx.Client, part: str, warehouse_id: str) -> dict:

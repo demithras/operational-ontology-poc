@@ -1,0 +1,26 @@
+# contracts/projections/v1/transfer_candidates.yaml
+#
+# docs/experiment/spec/03_domain_scenario.md candidate alternative A
+# ("transfer 60+ PX-17 from WH-B to WH-A"). One row per (at-risk work
+# order, shortfall part, candidate source warehouse) where the source
+# warehouse holds available stock of that part and is not the work order's
+# own warehouse. candidate_quantity = min(available_at_source, shortage) —
+# a *candidate*, not a policy-approved amount (safety-stock/threshold
+# gating is Phase 5's OPA layer, per
+# docs/experiment/spec/14_risks_and_open_questions.md R3: this projection
+# is descriptive, not a gate).
+#
+# Built from services/projection_builder's already-computed work_order_risk
+# rows (this cycle's in-memory result, not a second Postgres read) joined
+# against the same inventory_available RDF facts pulled for work_order_risk
+# — no new SPARQL query is needed beyond what work_order_risk.yaml already
+# defines, so this file's own `queries` block is empty; its sha256 still
+# gives this projection its own independent version/hash identity distinct
+# from work_order_risk's.
+name: transfer_candidates
+version: "1"
+description: >
+  Candidate inter-warehouse transfers that could reduce or eliminate an
+  at-risk work order's shortage, ranked by nothing beyond availability —
+  no policy/authorization evaluation happens here.
+queries: {}

@@ -22,7 +22,7 @@ Build order and exit criteria: `docs/experiment/spec/12_implementation_plan.md`.
 | 1 | Pure domain model (`reference_model/`) — deterministic transitions, invariants, canonical incident, Hypothesis state machine | done |
 | 2 | Fake ERP/MES/WMS source systems | done |
 | 3 | Semantic core (RDF4J, ontology, PROV-O, SHACL) + CDC ingestion (Kafka, Debezium) | done |
-| 4 | Hot projection (`work_order_risk`, `transfer_candidates`) | pending |
+| 4 | Hot projections (`work_order_risk`, `transfer_candidates`, `current_inventory`, `action_eligibility_summary`) in PostgreSQL, derived from the semantic core via SPARQL | done |
 | 5 | Decision service + gates (OpenFGA, OPA, SHACL gate capture) | pending |
 | 6 | Durable action runtime (Temporal, WMS action, idempotency, CDC, reconciliation) | pending |
 | 7 | Contract versioning / replay | pending |
@@ -89,8 +89,19 @@ the RDF4J `oo` repository (ontology + SHACL shapes). See
 `docs/experiment/implementation-notes.md` for the full port/endpoint/design-
 decision log.
 
+Since Phase 4, `make up` also brings up `services/projection_builder`
+(short-poll loop, `OO_PROJECTION_POLL_INTERVAL_S`, default 3s), which
+derives the four hot-projection tables in `ontology_hot` — `work_order_risk`,
+`transfer_candidates`, `current_inventory`, `action_eligibility_summary` —
+from SPARQL queries against RDF4J only (never the source Postgres
+databases). `make rebuild-projections` truncates and reconstructs them and
+proves `hash(rebuilt) == hash(before)` over deterministic business fields.
+`make bench` measures hot-projection read latency (warm/cold) against the
+locked `hot_read_p95_ms` SLO plus a counter-test (the same information via
+direct SPARQL), writing `experiments/exp-000/results/bench-phase4.json`.
+
 Every other mandatory command from the repository contract (`make
-test-faults`, `make test-replay`, `make bench`, `make experiment`, `make
+test-faults`, `make test-replay`, `make experiment`, `make
 report`, `make replay DECISION_ID=<id>`) prints which phase it belongs to
 and exits `2` — nothing is faked as passing before its phase actually
 lands. `make test-stateful` is already live: it aliases to Phase 1's own

@@ -221,6 +221,38 @@ services:
       timeout: 5s
       retries: 60
 
+  # --- Phase 4: hot projections (docs/experiment/briefs/phase4.md) -------
+
+  projection_builder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["python3", "-m", "services.projection_builder.main"]
+    environment:
+      SERVICE_DB_HOST: postgres
+      SERVICE_DB_PORT: "5432"
+      SERVICE_DB_NAME: ${ONTOLOGY_HOT_DB_NAME}
+      SERVICE_DB_USER: ${ONTOLOGY_HOT_DB_USER}
+      SERVICE_DB_PASSWORD: ${ONTOLOGY_HOT_DB_PASSWORD}
+      RDF4J_BASE_URL: http://rdf4j:8080/rdf4j-server
+      RDF4J_REPOSITORY: oo
+      OO_PROJECTION_POLL_INTERVAL_S: ${OO_PROJECTION_POLL_INTERVAL_S}
+      OO_PROJECTION_HEALTH_PORT: "8091"
+    ports:
+      - "${PROJECTION_BUILDER_HEALTH_PORT}:8091"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rdf4j:
+        condition: service_healthy
+      ingestion:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8091/health', timeout=2)"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+
 volumes:
   oo-poc-pgdata:
   oo-poc-rdf4j-data:

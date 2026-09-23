@@ -116,6 +116,21 @@ _register(
             FieldSpec("part_id", FAC.part, "part_ref"),
             FieldSpec("qty", FAC.quantity, "integer"),
             FieldSpec("destination_warehouse", FAC.destinationWarehouse, "ref", ref_class="Warehouse"),
+            # Phase 4 gap fix (docs/experiment/implementation-notes.md Phase 4
+            # section): the row's own po_id column was never mapped, so
+            # Phase 4's work_order_risk projection had no way to find a
+            # PurchaseOrder's lines via SPARQL. A plain forward "ref" (this
+            # row's own subject -> its owning PurchaseOrder), same as every
+            # other ref field here — NOT an inverse/backlink stored on the
+            # PurchaseOrder's own subject: store.py's upsert-by-subject
+            # retracts a subject's ENTIRE triple set whenever THAT subject's
+            # own row is reprocessed, so a backlink written on the PARENT's
+            # subject gets silently wiped the next time the parent's own row
+            # event is applied (an inverse_ref kind was tried first and hit
+            # exactly this — non-deterministically, depending on CDC
+            # snapshot delivery order between the two tables; see
+            # implementation-notes.md for the empirical finding).
+            FieldSpec("po_id", FAC.purchaseOrder, "ref", ref_class="PurchaseOrder"),
         ),
     )
 )
@@ -161,6 +176,13 @@ _register(
         fields=(
             FieldSpec("part_id", FAC.requiresPart, "part_ref"),
             FieldSpec("qty", FAC.quantity, "integer"),
+            # Same Phase 4 gap fix as purchase_order_lines.po_id above: a
+            # forward ref (this row -> its owning WorkOrder) so
+            # work_order_risk can find a work order's requirements by SPARQL
+            # instead of reading MES's database directly. See the comment on
+            # purchase_order_lines.po_id above for why this is a forward
+            # ref, not a backlink stored on the WorkOrder's own subject.
+            FieldSpec("work_order_id", FAC.workOrder, "ref", ref_class="WorkOrder"),
         ),
     )
 )

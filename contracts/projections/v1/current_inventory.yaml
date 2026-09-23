@@ -1,0 +1,42 @@
+# contracts/projections/v1/current_inventory.yaml
+#
+# Phase 4 hot projection (docs/experiment/spec/04_architecture.md
+# "PostgreSQL hot projections"). Every row of the SQL table this projection
+# writes to is stamped with this file's name/version/sha256 (computed over
+# this file's raw bytes at load time by services/projection_builder) plus
+# the ontology contract version — see docs/experiment/implementation-notes.md
+# Phase 4 section for the full traceability-column list.
+#
+# This projection is a direct, un-aggregated read of fac:InventoryLot
+# facts from RDF4J's observed graph — no correlated aggregation is needed,
+# so the single query below (against RDF4J's SPARQL endpoint, never the
+# WMS Postgres database directly) is the complete definition.
+name: current_inventory
+version: "1"
+description: >
+  One row per (part, warehouse) currently observed InventoryLot, mirroring
+  WMS's operational shape but sourced exclusively from the semantic core.
+queries:
+  # ?lot/?partUri/?whUri are returned as full IRIs, not id literals: the
+  # reader (services/projection_builder/rdf_reader.py) extracts each
+  # entity's local id from its own IRI (the same
+  # https://example.local/factory/instance/{Class}/{localId} scheme
+  # services/ingestion/mapping.py mints them with) rather than joining out
+  # to a separate fac:partId/fac:warehouseId literal triple. This avoids a
+  # spurious dependency on that OTHER system having already been ingested
+  # (e.g. an inventory lot for a part ERP hasn't produced a `parts` row for
+  # yet must still appear in current_inventory — only its own WMS facts are
+  # required).
+  inventory_lots: |
+    PREFIX fac: <https://example.local/factory/>
+    SELECT ?lot ?partUri ?whUri ?onHand ?reserved ?available ?qualityStatus WHERE {
+      GRAPH <https://example.local/oo/graph/observed> {
+        ?lot a fac:InventoryLot ;
+             fac:part ?partUri ;
+             fac:warehouse ?whUri ;
+             fac:onHand ?onHand ;
+             fac:reserved ?reserved ;
+             fac:availableQuantity ?available ;
+             fac:qualityStatus ?qualityStatus .
+      }
+    }

@@ -48,6 +48,14 @@ def mes_dsn() -> str:
     return host_dsn("MES_DB_NAME", "MES_DB_USER", "MES_DB_PASSWORD")
 
 
+def ontology_hot_dsn() -> str:
+    """Phase 4: host-side DSN for the ontology_hot database (services/
+    projection_builder connects via SERVICE_DB_* container env vars instead
+    — this is for host-run scripts: rebuild.py, bench_phase4.py, and
+    tests/integration/ reading hot-projection rows directly)."""
+    return host_dsn("ONTOLOGY_HOT_DB_NAME", "ONTOLOGY_HOT_DB_USER", "ONTOLOGY_HOT_DB_PASSWORD")
+
+
 def wms_dsn() -> str:
     return host_dsn("WMS_DB_NAME", "WMS_DB_USER", "WMS_DB_PASSWORD")
 

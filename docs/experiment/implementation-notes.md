@@ -549,3 +549,255 @@ so `tests/model` and `tests/contracts` never share a process there. Anyone
 invoking bare `pytest` (or explicitly `pytest tests/model tests/contracts`
 together) should expect this and run `pytest tests/model` separately if
 those two specific parametrizations matter in isolation.
+
+## Phase 4 — Hot projections
+
+Tag `poc-v0.4-projections`. Spec: `docs/experiment/spec/01` (H6), `04`
+(PostgreSQL hot projections, consistency model), `07` (projection rebuild),
+`08` (performance methodology), `09` (F26/F27), `14` (R8).
+
+### Ports
+
+| Service | Host port | Notes |
+|---|---|---|
+| `services/projection_builder` health | 15485 | `GET /health` — build counters, F38-style visibility |
+
+### Design: poll-based, full-rebuild-every-cycle
+
+`services/projection_builder/main.py` runs as a docker-compose service
+(shared root `Dockerfile`, `command: python3 -m services.projection_builder.main`),
+polling every `OO_PROJECTION_POLL_INTERVAL_S` (default 3s — phase4.md item
+1's "triggered by ingestion updates or a short poll", short-poll option
+chosen over wiring a second Kafka consumer group off the ingestion topics).
+Each cycle calls `services/projection_builder/builder.py::build_all`, which:
+
+1. Runs the SPARQL queries in `contracts/projections/v1/*.yaml` against
+   RDF4J (never against ERP/MES/WMS's Postgres databases — the ONLY input
+   is the semantic core, per item 1's explicit requirement).
+2. Computes all four projections in pure Python
+   (`services/projection_builder/compute.py`) from the raw SPARQL rows.
+3. `TRUNCATE`s and re-`INSERT`s all four `ontology_hot` tables inside ONE
+   transaction (`services/projection_builder/writer.py`), so a concurrent
+   hot reader under READ COMMITTED only ever sees the fully-old or
+   fully-new state, never a half-rebuilt one.
+
+`build_all` is the exact same function used by the live poll loop, `make
+rebuild-projections` (`services/projection_builder/rebuild.py`), and the
+differential/rebuild tests — "one poll tick" and "full rebuild from
+scratch" are provably the same code path, which is what item 3's projection
+rebuild requirement is really asking for.
+
+**Why shortage/incoming aggregation is Python, not one SPARQL query**: the
+"incoming before deadline" sum is a per-work-order CORRELATED filter (only
+purchase-order lines whose PurchaseOrder's `expectedAt` is `<=` THIS work
+order's `plannedStart` count) — SPARQL 1.1 has no clean way to express a
+`GROUP BY` whose threshold varies per outer row without re-running the
+subquery per row. Forcing that into one mega-query would be exactly the
+"business rules better represented in policy code than graph constraints"
+misuse R3 warns against. The four `work_order_risk.yaml` queries pull RAW
+FACTS from RDF4J (work orders, requirements, inventory, incoming PO lines);
+`compute.py::compute_work_order_risk` re-implements
+`reference_model/derive.py`'s exact formula independently (not a shared
+import), so the differential test is a genuine two-implementation
+comparison.
+
+### Phase 3 gap found and fixed: BomRequirement/PurchaseOrderLine were never linked to their parent
+
+`services/ingestion/mapping.py`'s `bom_requirements` and
+`purchase_order_lines` `TableSpec`s never mapped their own `work_order_id`/
+`po_id` FK columns — `fac:hasRequirement` (WorkOrder->BomRequirement) and
+`fac:hasLine` (PurchaseOrder->PurchaseOrderLine) were declared in
+`fac-core.ttl` since Phase 3 but had NO writer, so work_order_risk had no
+way to find a work order's requirements or a PO's lines via SPARQL.
+
+**First fix attempt (reverted, kept as a documented cautionary tale)**: an
+`inverse_ref` `FieldSpec` kind that wrote the triple from the REFERENCED
+parent's subject (`WorkOrder --hasRequirement--> BomRequirement`). This is
+unsound: `services/ingestion/store.py::apply_event`'s upsert-by-subject
+retracts a subject's ENTIRE triple set whenever THAT subject's own row is
+reprocessed. Since `work_orders`/`purchase_orders` are independent CDC
+streams from `bom_requirements`/`purchase_order_lines`, any later
+reprocessing of the PARENT's own row (a legitimate, ordinary event) silently
+wipes the backlink — and whether this manifests depends on CDC snapshot
+delivery order between the two tables, which varies non-deterministically
+run to run. Empirically: `fac:hasRequirement`/`fac:hasLine` populated fully
+(201/1997 triples) on one `make reset && make seed`, and came back at
+201/**0** on the very next one with identical code and `SEED=42`.
+
+**Actual fix**: a forward `ref` (the row's OWN subject -> its owning
+parent) — `fac:workOrder` on `BomRequirement` and `fac:purchaseOrder` on
+`PurchaseOrderLine`, using the SAME `"ref"` `FieldSpec` kind every other
+FK-like column already uses. This is safe under any delivery order because
+the triple's subject is the CHILD row's own entity — it only gets
+retracted/rewritten when THAT row's own CDC event is reprocessed, exactly
+matching the upsert semantics `store.py` already implements correctly for
+every other field. `fac:hasRequirement`/`fac:hasLine` are kept declared in
+`fac-core.ttl` as `owl:inverseOf` documentation only (RDF4J's `ShaclSail`
+runs no OWL inference, so this has zero runtime effect) — a future phase
+adding real inference would need to assert these explicitly, not assume
+they come for free. The `inverse_ref` `FieldSpec` kind was removed from
+`services/ingestion/mapping.py` entirely rather than left available for a
+future author to fall into the same trap.
+
+Verified: `fac:workOrder`/`fac:purchaseOrder` triple counts (201/1997)
+matched the source row counts across every subsequent `make reset && make
+seed` performed during this phase's implementation.
+
+### Second bug found (via `make rebuild-projections` against the real seeded dataset, not caught by any hand-written fixture): duplicate BomRequirement rows for the same part
+
+MES's `bom_requirements` table has no `UNIQUE(work_order_id, part_id)`
+constraint. The `SEED=42` generated dataset genuinely produces at least one
+work order (`WO-0146`) with TWO separate requirement rows for the SAME part
+(`PX-0251`) — not a theoretical edge case, an empirical one. The original
+`compute_work_order_risk` evaluated each requirement row independently
+against the SAME available/incoming supply (double-counting it) and,
+whenever that work order became at-risk, `compute_transfer_candidates`
+emitted the SAME `(work_order, part, source_warehouse)` `candidate_id`
+twice — a Postgres `UniqueViolation` on `transfer_candidates_pkey` that
+first surfaced from `make rebuild-projections`, not from any test written
+against the canonical fixture (which only has one requirement per work
+order). Fixed by grouping requirement rows by PART first (summing
+`qty` across duplicates) before computing shortage per part — matching
+`reference_model.state.WorkOrder.requirements`'s own `part -> qty` MAPPING
+semantics, which implicitly assumes exactly this kind of de-duplication.
+Regression-tested without Docker in
+`tests/component/test_projection_compute.py` (synthetic duplicate-row
+input, asserts both the summed shortage AND that no duplicate
+`candidate_id` is ever produced).
+
+### Hot projections (`contracts/projections/v1/*.yaml`, `services/projection_builder/`)
+
+Four tables in `ontology_hot` (`services/projection_builder/schema.sql`):
+
+- **`work_order_risk`**: `work_order_id`, `warehouse`, `shortage`,
+  `at_risk`, `severity` (`CRITICAL` while at-risk, `MITIGATED` once
+  shortage hits zero — `severity` has no reference_model equivalent, it is
+  a projection-only UI-friendly label derived purely from `at_risk`).
+- **`transfer_candidates`**: per (at-risk work order, shortfall part,
+  candidate source warehouse != the work order's own warehouse with
+  `available > 0`), `candidate_quantity = min(available_at_source,
+  shortfall)`. Descriptive only — no policy/authorization evaluation (R3;
+  that is Phase 5's OPA layer).
+- **`current_inventory`**: direct, un-aggregated `fac:InventoryLot` read —
+  the one projection whose SPARQL definition needs no Python aggregation.
+- **`action_eligibility_summary`**: pure aggregation over this cycle's
+  `work_order_risk` + `transfer_candidates` results (no new SPARQL query);
+  `mitigation_feasible = (not at_risk) or (total_candidate_quantity >=
+  shortage)`.
+
+Every row carries (`services/projection_builder/writer.py`):
+`source_positions` (JSONB list of `{system, table, pk, lsn, version,
+observed_at}` for every contributing entity, looked up from `oo:SourcePosition`
+via `services/projection_builder/provenance.py::CLASS_TO_SOURCE` —
+deliberately excludes `fac:Part`, since `oo:SourcePosition` for `erp.parts`
+is keyed by ERP's pre-resolution LOCAL id, not the canonical id these rows
+reference), `projection_definition_name/version/sha256` (sha256 computed
+over the RAW BYTES of the matching `contracts/projections/v1/*.yaml` file
+at load time — never hardcoded, so it can't drift from the file on disk),
+`ontology_contract_version` (`services/common/contract_versions.py`,
+currently the constant `"v1"` — matches the single ontology contract
+directory that exists so far), `computed_at` (wall-clock build time), and
+`as_of` (the LATEST `observed_at` among contributing source positions — a
+row's evidence freshness, not when it happened to be recomputed).
+
+### Freshness (F26) and consistency (F27)
+
+`services/projection_builder/freshness.py`: FRESH/STALE is evaluated at
+READ time (`evaluate(as_of, now, max_age_s=5)`), never stored as a column —
+a column would itself go stale as wall-clock time passes without a new
+build. This is also what makes F26 testable without a real 30-second wait:
+`tests/integration/test_projection_staleness.py` pushes a real row's
+`as_of` back via direct SQL and asserts `evaluate()` reports STALE
+immediately.
+
+`services/projection_builder/consistency.py` (F27): every row's
+`content_hash` (`services/projection_builder/hashing.py::row_content_hash`)
+is a sha256 over exactly that table's declared `BUSINESS_COLUMNS` — never
+`computed_at`/`as_of`/`source_positions`/the three
+`projection_definition_*` columns/`ontology_contract_version` (these are
+documented as EXCLUDED per item 3's "documented exclusions for
+timestamp/technical columns", and the SAME `BUSINESS_COLUMNS` map is reused
+by `hashing.py::table_hash` for the whole-table rebuild-hash comparison).
+`tests/integration/test_projection_consistency.py` tampers a business field
+directly via SQL (bypassing `writer.py`, which always recomputes
+`content_hash` together with the fields it hashes) and asserts the checker
+catches the mismatch.
+
+### `make rebuild-projections` / `make bench`
+
+`rebuild-projections` (`services/projection_builder/rebuild.py`) applies
+`schema.sql` idempotently, hashes all four tables (`hashing.py::table_hash`,
+business columns only), calls `build_all`, hashes again, and prints
+MATCH/MISMATCH per table (exits 1 on any mismatch) — the pytest authority
+for the same claim is `tests/integration/test_projection_rebuild.py`.
+
+**Concurrency finding**: `build_all` must run on a connection WITHOUT
+`autocommit` (the default) when called directly by a test/script, because
+the LIVE poll-loop container is continuously doing the same TRUNCATE+INSERT
+cycle every few seconds. Under `autocommit=True`, each statement is its own
+transaction, so the live poller's `TRUNCATE` can land in between two of a
+second caller's individual `INSERT`s and produce a spurious
+`UniqueViolation` — caught empirically when `tests/integration/`'s shared
+`ontology_hot_conn` fixture (autocommit, kept that way for read-polling
+convenience elsewhere) was reused to call `build_all` directly.
+`TRUNCATE`'s `ACCESS EXCLUSIVE` lock correctly serializes two PROPERLY
+TRANSACTIONAL full-rebuilds against each other (second blocks until the
+first commits) — `rebuild.py` already opened its connection without
+autocommit by default; only the test needed a dedicated connection.
+
+`bench` (`tests/performance/bench_phase4.py`) measures `work_order_risk`
+point reads warm (one reused connection) and cold (fresh connection per
+sample), plus the H6 counter-test (the equivalent requirement+inventory
+SPARQL query run directly against RDF4J for the same work order). Writes
+`experiments/exp-000/results/bench-phase4.json` with environment metadata
+(OS/CPU/RAM via `sysctl`/`platform`, docker version). The SLO
+(`hot_read_p95_ms` from the LOCKED `experiments/exp-000/manifest.yaml`,
+never redefined here) is evaluated against the WARM p95 specifically (the
+steady-state hot-path number H6 is actually claiming); COLD is reported
+alongside for transparency but is not the pass/fail gate. Measured on this
+machine: warm p95 ≈0.2-0.3ms, cold p95 ≈5-12ms (one 199ms cold outlier
+observed once, attributable to host contention during implementation, not
+reflected in the SLO gate), semantic-core-direct SPARQL warm p95 ≈1.1-1.3ms
+— i.e. the projection's warm read is roughly 4-6x faster than querying
+RDF4J directly for the same information, which is the whole point of H6's
+counter-test. **SLO: PASS** (measured warm p95 well under the 200ms
+threshold on every run performed).
+
+### Environment finding: this session's shared Docker daemon was reset by an external process throughout Phase 4 implementation
+
+Repeatedly observed (`docker ps --format '{{.RunningFor}}'` showing ALL
+`oo-poc-*` containers recreated simultaneously, at a fresh "N seconds/
+minutes ago", with no `make reset`/`docker compose down` issued by this
+agent in between) during this implementation session: the ENTIRE `oo-poc`
+compose project got torn down and reseeded from an external source roughly
+every 2-8 minutes, independent of anything this agent did. Symptoms this
+caused, all eventually traced to it (not to Phase 4 code) and NOT
+representative of any lasting defect: `hasLine`/`hasRequirement` (later
+`workOrder`/`purchaseOrder`) counts fluctuating between 0 and the full
+expected value across successive checks; `work_order_risk` briefly showing
+`shortage=0` for WO-42 immediately after a wipe (RDF4J re-empty, requirement/
+incoming-line data not yet re-ingested, so the shortage formula correctly
+computed 0 from an incomplete input — not a compute.py bug); two
+`test_projection_differential.py` runs failing with "never converged"
+because the entire stack was mid-reset under the running test. The FINAL
+`make test` run recorded in this section's summary (see phase4-report.md)
+was captured in a confirmed-stable window (`docker ps` showed no container
+recreation for 3+ minutes before AND immediately after the run). Anyone
+re-running this phase's suite against the SAME shared host should expect
+occasional unrelated flakiness from this cause and should verify container
+uptimes before attributing a failure to the code.
+
+### What Phase 5 (decision service) needs from here
+
+- Hot-projection reads are plain psycopg SELECTs
+  (`services/projection_builder/reader.py`) — there is no HTTP API for
+  `ontology_hot` yet; the Decision API is exactly the thing Phase 5 adds on
+  top of this (per `04_architecture.md`'s component diagram, "Decision API
+  / MCP" sits above "PostgreSQL hot state").
+- `transfer_candidates` is intentionally policy-free (R3) — Phase 5's OPA
+  layer is where "is this candidate actually approvable" belongs.
+- `freshness.evaluate(as_of, now, max_age_s)` is reusable as-is for a
+  Phase 5 evidence-freshness gate (F08/staleness policy).
+- `services/common/contract_versions.ONTOLOGY_CONTRACT_VERSION` is the
+  single source for the ontology-version string Decision records will need
+  to cite (H1's required field list).

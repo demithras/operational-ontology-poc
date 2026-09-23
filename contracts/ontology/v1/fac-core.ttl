@@ -73,7 +73,11 @@ fac:promisedAt    a owl:DatatypeProperty ; rdfs:domain fac:PurchaseOrder ; rdfs:
 fac:expectedAt     a owl:DatatypeProperty ; rdfs:domain fac:PurchaseOrder ; rdfs:range xsd:integer .
 fac:delayReason     a owl:DatatypeProperty ; rdfs:domain fac:PurchaseOrder ; rdfs:range xsd:string .
 fac:suppliedBy       a owl:ObjectProperty   ; rdfs:domain fac:PurchaseOrder ; rdfs:range fac:Supplier .
-fac:hasLine            a owl:ObjectProperty   ; rdfs:domain fac:PurchaseOrder ; rdfs:range fac:PurchaseOrderLine .
+fac:hasLine            a owl:ObjectProperty   ; rdfs:domain fac:PurchaseOrder ; rdfs:range fac:PurchaseOrderLine ;
+  owl:inverseOf fac:purchaseOrder ;
+  rdfs:comment "Declared for symmetry/documentation only — NOT populated by services/ingestion. See fac:purchaseOrder's comment (Phase 4 finding: a triple whose subject is the PARENT gets silently wiped whenever the parent's own CDC row event is reprocessed, non-deterministically depending on snapshot delivery order between the two tables)." .
+fac:purchaseOrder a owl:ObjectProperty ; rdfs:domain fac:PurchaseOrderLine ; rdfs:range fac:PurchaseOrder ;
+  rdfs:comment "authoritative_source: ERP purchase_order_lines.po_id. The ACTUALLY POPULATED direction (row's own subject -> owning PurchaseOrder) — see docs/experiment/implementation-notes.md Phase 4 section for why the inverse (fac:hasLine) is not populated." .
 fac:destinationWarehouse a owl:ObjectProperty  ; rdfs:range fac:Warehouse ; rdfs:comment "Used by PurchaseOrderLine (destination for received stock)." .
 fac:quantity              a owl:DatatypeProperty ; rdfs:range xsd:integer ; rdfs:comment "Shared line/requirement quantity (PurchaseOrderLine, BomRequirement)." .
 fac:part                    a owl:ObjectProperty   ; rdfs:range fac:Part ; rdfs:comment "Shared reference-to-Part property (PurchaseOrderLine, InventoryLot)." .
@@ -104,7 +108,11 @@ fac:priority        a owl:DatatypeProperty ; rdfs:domain fac:WorkOrder ; rdfs:ra
 fac:plannedStart      a owl:DatatypeProperty ; rdfs:domain fac:WorkOrder ; rdfs:range xsd:integer .
 fac:plannedFinish       a owl:DatatypeProperty ; rdfs:domain fac:WorkOrder ; rdfs:range xsd:integer .
 fac:productionLine        a owl:ObjectProperty   ; rdfs:domain fac:WorkOrder ; rdfs:range fac:ProductionLine .
-fac:hasRequirement           a owl:ObjectProperty   ; rdfs:domain fac:WorkOrder ; rdfs:range fac:BomRequirement .
+fac:hasRequirement           a owl:ObjectProperty   ; rdfs:domain fac:WorkOrder ; rdfs:range fac:BomRequirement ;
+  owl:inverseOf fac:workOrder ;
+  rdfs:comment "Declared for symmetry/documentation only — NOT populated by services/ingestion. See fac:purchaseOrder's comment on fac:PurchaseOrderLine above for why (same Phase 4 finding, same fix)." .
+fac:workOrder a owl:ObjectProperty ; rdfs:domain fac:BomRequirement ; rdfs:range fac:WorkOrder ;
+  rdfs:comment "authoritative_source: MES bom_requirements.work_order_id. The ACTUALLY POPULATED direction (row's own subject -> owning WorkOrder)." .
 fac:requiresPart               a owl:ObjectProperty   ; rdfs:domain fac:BomRequirement ; rdfs:range fac:Part .
 
 #############################################

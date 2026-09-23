@@ -1,0 +1,76 @@
+# contracts/projections/v1/work_order_risk.yaml
+#
+# docs/experiment/spec/03_domain_scenario.md "Derived operational fact" /
+# docs/experiment/spec/01_hypotheses.md H6. Per open work order: shortage,
+# at_risk, severity (CRITICAL while at_risk, MITIGATED once shortage hits
+# zero — docs/experiment/spec/03's "projection changes from critical to
+# mitigated").
+#
+# shortage/incoming-before-deadline aggregation deliberately happens in
+# Python (services/projection_builder/compute.py::compute_work_order_risk),
+# NOT as a single SPARQL aggregate: the "incoming" sum is a per-work-order
+# CORRELATED subquery (only purchase-order lines whose PurchaseOrder's
+# fac:expectedAt is <= THIS work order's fac:plannedStart count), and SPARQL
+# 1.1 has no clean way to express a GROUP BY whose filter threshold varies
+# per outer row without re-running the subquery per row. Forcing that into
+# one mega-query would be exactly the kind of SHACL/SPARQL misuse
+# docs/experiment/spec/14_risks_and_open_questions.md R3 warns against for
+# business rules ("some business rules are better represented in policy
+# code than graph constraints") — the constraint here is a business
+# aggregation rule, not a conformance/authority rule, so it belongs in the
+# projection builder's own versioned code, operating on RAW FACTS pulled
+# from RDF4J by the three queries below (never from ERP/MES/WMS's Postgres
+# databases directly, per item 1's requirement). The algorithm itself is a
+# deliberate re-implementation of reference_model/derive.py's formula
+# (independent of that module, not a shared import) so the differential
+# test in tests/integration/test_projection_differential.py is a genuine
+# two-implementation comparison, not the same function compared to itself.
+name: work_order_risk
+version: "1"
+description: >
+  shortage = max(0, sum(required - available_at_wo_warehouse -
+  incoming_before_planned_start)) per part in the work order's
+  requirements; at_risk = shortage > 0; severity = CRITICAL if at_risk else
+  MITIGATED. Open work orders only (status not in DONE/CANCELLED).
+queries:
+  work_orders: |
+    PREFIX fac: <https://example.local/factory/>
+    SELECT ?wo ?status ?plannedStart ?whUri WHERE {
+      GRAPH <https://example.local/oo/graph/observed> {
+        ?wo a fac:WorkOrder ;
+            fac:status ?status ;
+            fac:plannedStart ?plannedStart ;
+            fac:warehouse ?whUri .
+      }
+    }
+  # ?req -> fac:workOrder -> ?wo (forward from the CHILD row, not
+  # fac:hasRequirement/?wo -> ?req backwards from the parent — see
+  # contracts/ontology/v1/fac-core.ttl's fac:workOrder comment and
+  # docs/experiment/implementation-notes.md Phase 4 section for why the
+  # backlink direction is unsafe under CDC's independent per-table delivery).
+  requirements: |
+    PREFIX fac: <https://example.local/factory/>
+    SELECT ?wo ?req ?partUri ?qty WHERE {
+      GRAPH <https://example.local/oo/graph/observed> {
+        ?req a fac:BomRequirement ; fac:workOrder ?wo ; fac:requiresPart ?partUri ; fac:quantity ?qty .
+      }
+    }
+  inventory_available: |
+    PREFIX fac: <https://example.local/factory/>
+    SELECT ?lot ?partUri ?whUri ?available WHERE {
+      GRAPH <https://example.local/oo/graph/observed> {
+        ?lot a fac:InventoryLot ;
+             fac:part ?partUri ;
+             fac:warehouse ?whUri ;
+             fac:availableQuantity ?available .
+      }
+    }
+  incoming_purchase_lines: |
+    PREFIX fac: <https://example.local/factory/>
+    SELECT ?po ?status ?expectedAt ?line ?partUri ?destWhUri ?qty WHERE {
+      GRAPH <https://example.local/oo/graph/observed> {
+        ?line a fac:PurchaseOrderLine ; fac:purchaseOrder ?po ;
+              fac:part ?partUri ; fac:destinationWarehouse ?destWhUri ; fac:quantity ?qty .
+        ?po fac:status ?status ; fac:expectedAt ?expectedAt .
+      }
+    }
