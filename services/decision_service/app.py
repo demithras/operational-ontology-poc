@@ -204,7 +204,7 @@ def decisions_approve(decision_id: str, body: ApproveRequest):
                 status_code=409,
                 detail="decision_content_hash mismatch — the decision has changed since this approval was prepared (F33)",
             )
-        action = get_action_type(row["action_type"])
+        action = get_action_type(row["action_type"], row.get("action_version_dir") or "v1")
         object_ref = (row.get("authorization_result") or {}).get("object")
         if action is None or object_ref is None:
             raise HTTPException(status_code=409, detail="cannot approve: no recorded authorization object")

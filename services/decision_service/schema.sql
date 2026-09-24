@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS decisions (
     policy_bundle_version             TEXT NOT NULL,
     decision_content_hash              TEXT,
     action_pinned_sha256                TEXT,
+    action_version_dir                  TEXT,
     evidence_snapshot_id                TEXT NOT NULL,
     evidence_snapshot                    JSONB NOT NULL,
     authorization_result                  JSONB,
@@ -57,6 +58,13 @@ CREATE INDEX IF NOT EXISTS idx_decisions_action_type ON decisions (action_type);
 -- column show up on the next decision_service restart without a
 -- data-losing reset.
 ALTER TABLE decisions ADD COLUMN IF NOT EXISTS action_pinned_sha256 TEXT;
+
+-- Phase 7 (docs/experiment/spec/07_versioning_and_replay.md) — same
+-- ALTER-TABLE-on-an-already-running-stack pattern as action_pinned_sha256
+-- above. NULL on any pre-Phase-7 row; services/action_worker/activities.py
+-- treats NULL as "v1" (every decision before this column existed was
+-- necessarily pinned against contracts/actions/v1/).
+ALTER TABLE decisions ADD COLUMN IF NOT EXISTS action_version_dir TEXT;
 
 -- F22-style "the proposal never even became a governed Decision" record
 -- (RDF4J was unreachable, so no SHACL-validated Decision write was even

@@ -52,7 +52,11 @@ from services.decision_service.action_types import ActionType
 from services.common.sparql_escape import escape_sparql_literal
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-POLICY_DATA_PATH = REPO_ROOT / "contracts" / "policies" / "v1" / "data.json"
+POLICIES_ROOT = REPO_ROOT / "contracts" / "policies"
+# Backward-compatible constant (unused internally after Phase 7 — kept for
+# any external reference); _load_safety_stock now resolves the version-
+# specific path itself.
+POLICY_DATA_PATH = POLICIES_ROOT / "v1" / "data.json"
 
 FAC_PREFIX = "PREFIX fac: <https://example.local/factory/>"
 
@@ -90,12 +94,25 @@ class EvidenceResult:
         return self.route_protection_status == "PROTECTED"
 
 
-def _load_safety_stock(part: str, warehouse: str) -> int:
-    data = json.loads(POLICY_DATA_PATH.read_text())
-    per_part = data.get("safety_stock", {}).get(part, {})
+def _load_safety_stock(part: str, warehouse: str, action_version_dir: str = "v1") -> int:
+    """Phase 7 V2 'changed safety-stock policy': V2+ reads
+    contracts/policies/v2/data.json's `safety_stock_v2`/`default_safety_stock_v2`
+    keys instead of v1's `safety_stock`/`default_safety_stock` — a
+    genuinely different (higher) number for the same (part, warehouse), see
+    that file's header comment. `action_version_dir` is the ActionType's OWN
+    contract directory (services/decision_service/action_types.py's
+    `version_dir`), never the global deployed_version pointer directly —
+    this function must use whatever version the CALLING action was actually
+    loaded from, so a historical V1 evaluation (replay) never accidentally
+    reads V2 numbers."""
+    key = "safety_stock" if action_version_dir == "v1" else "safety_stock_v2"
+    default_key = "default_safety_stock" if action_version_dir == "v1" else "default_safety_stock_v2"
+    data_path = POLICIES_ROOT / action_version_dir / "data.json"
+    data = json.loads(data_path.read_text())
+    per_part = data.get(key, {}).get(part, {})
     if warehouse in per_part:
         return int(per_part[warehouse])
-    return int(data.get("default_safety_stock", 0))
+    return int(data.get(default_key, 0))
 
 
 def _fetch_ingestion_watermark(http_clients: dict[str, httpx.Client], system: str) -> datetime | None:
@@ -300,7 +317,19 @@ def gather_transfer_inventory_evidence(
                 observed_ats.append(dest_row["as_of"])
 
     if "safety_stock" in action.closure_required:
-        result.facts_used["safety_stock"] = _load_safety_stock(part, source_warehouse)
+        result.facts_used["safety_stock"] = _load_safety_stock(part, source_warehouse, action.version_dir)
+
+    # Phase 7 V2 'new required evidence field': reservation_ok (V2+ only —
+    # contracts/actions/v2/transfer_inventory.yaml's closure.required).
+    # Always resolvable once src_row exists (both on_hand and reserved are
+    # already part of every current_inventory row, V1 and V2 alike); only
+    # ever missing when src_row itself couldn't be resolved (already
+    # recorded as source_available/source_quality_status above).
+    if "reservation_ok" in action.closure_required:
+        if src_row is None:
+            result.missing.append("reservation_ok")
+        else:
+            result.facts_used["reservation_ok"] = bool(src_row["on_hand"] >= src_row["reserved"])
 
     declared_wo_row = None
     if work_order_id:

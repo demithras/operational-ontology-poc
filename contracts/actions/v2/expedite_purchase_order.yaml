@@ -1,0 +1,63 @@
+# contracts/actions/v1/expedite_purchase_order.yaml
+#
+# Candidate alternative B in docs/experiment/spec/03_domain_scenario.md's
+# canonical incident. Execution stays a 501 stub through Phase 5/6 for this
+# action (Phase 6 brief only names transfer_inventory's WMS wiring as
+# mandatory) — the propose/gate pipeline is fully real for it, only
+# `external_operation` has no live ERP endpoint wired yet
+# (services/erp/app.py has no "expedite" endpoint; POST
+# /purchase_orders/{po_id}/delay is the only mutation ERP exposes today).
+name: expedite_purchase_order
+version: 1
+
+parameters:
+  po_id:
+    type: PurchaseOrder
+  expedite_fee:
+    type: integer
+    min: 0
+
+reads:
+  - PurchaseOrder
+
+authorization:
+  relation: can_transfer_inventory
+  object_binding: po_id
+  approval_relation: can_approve_large_transfer
+
+policy:
+  package: factory.purchase_order.expedite
+  approval_threshold_cost: 500
+
+evidence_requirements:
+  - current_po_status
+
+closure:
+  required:
+    - po_status
+  if_missing: insufficient_evidence
+  max_evidence_freshness_s: 5
+
+preconditions:
+  - po_status not in [RECEIVED, CANCELLED]
+
+expected_effects:
+  - purchase_order.expected_at decreases
+
+external_operation:
+  system: ERP
+  operation: expedite_purchase_order
+
+idempotency:
+  key: action_execution_id
+
+observation:
+  source: ERP_CDC
+  timeout: PT30S
+
+compensation:
+  mode: manual_recovery_required
+
+audit:
+  decision_required: true
+  approval_if_policy_requires: true

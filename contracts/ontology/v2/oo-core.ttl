@@ -77,8 +77,6 @@ oo:identityMappingVersion          a owl:DatatypeProperty ; rdfs:domain oo:Decis
 oo:projectionDefinitionVersion     a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string .
 oo:reconciliationPredicateVersion  a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string .
 oo:openfgaAuthorizationModelId     a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string .
-oo:actionVersionDir                a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string ;
-  rdfs:comment "Phase 7: which contracts/actions/<this>/ directory oo:actionPinnedSha256 was computed from — F34 re-verification needs this to know which file to re-hash." .
 oo:status                     a owl:ObjectProperty   ; rdfs:comment "Range: a skos:Concept in oo:DecisionStatusScheme (Decision) or oo:FactKindScheme (facts) depending on domain; see shapes for the per-target sh:in enumeration." .
 
 #############################################

@@ -1,0 +1,27 @@
+# contracts/shapes/v1/evidence-snapshot-shape.ttl
+#
+# Phase 5 addition. docs/experiment/spec/14_risks_and_open_questions.md R5
+# "hybrid manifest with hashes + immutable required facts" — the minimum
+# structural guarantee for every oo:EvidenceSnapshot referenced by a
+# oo:Decision (decision-shape.ttl already requires oo:evidenceSnapshot to be
+# sh:class oo:EvidenceSnapshot; this shape constrains what THAT instance
+# itself must carry).
+#
+# Fixtures: tests/contracts/shacl/positive/evidence-snapshot-valid.ttl,
+# tests/contracts/shacl/negative/evidence-snapshot-missing-content-hash.ttl.
+@prefix sh:  <http://www.w3.org/ns/shacl#> .
+@prefix oo:  <https://example.local/oo/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+oo:EvidenceSnapshotShape
+  a sh:NodeShape ;
+  sh:targetClass oo:EvidenceSnapshot ;
+
+  sh:property [
+    sh:path oo:snapshotContentHash ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+    sh:message "oo:EvidenceSnapshot requires exactly one oo:snapshotContentHash (R5 content-addressed manifest)." ;
+  ] ;
+  sh:property [
+    sh:path oo:snapshotObservedAt ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:dateTime ;
+    sh:message "oo:EvidenceSnapshot requires exactly one oo:snapshotObservedAt." ;
+  ] .

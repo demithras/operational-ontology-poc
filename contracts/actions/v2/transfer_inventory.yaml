@@ -1,0 +1,106 @@
+# contracts/actions/v2/transfer_inventory.yaml
+#
+# Phase 7 (docs/experiment/spec/07_versioning_and_replay.md) V2 BREAKING
+# CHANGE, per the spec's own example bullet list, all four applied together:
+#   - fac:availableQuantity retired -> onHand/reserved are now the
+#     operative evidence fields (contracts/ontology/v2/fac-core.ttl);
+#   - changed safety-stock policy (contracts/policies/v2/transfer_inventory.rego:
+#     safety_stock now read from data.json's safety_stock_v2 block, and a
+#     NEW hard_deny rule requires reserved <= on_hand);
+#   - new required evidence field: `reservation_ok` (bool, computed by
+#     services/decision_service/evidence.py as on_hand >= reserved) is now
+#     CLOSURE-REQUIRED — a V2 proposal with no resolvable reservation state
+#     is INSUFFICIENT_EVIDENCE, never silently allowed;
+#   - updated action schema: this file (version: 2), a genuinely different
+#     byte sequence pinned by services/decision_service/propose_flow.py's
+#     action_pinned_sha256, distinct from contracts/actions/v1/transfer_inventory.yaml.
+#
+# Otherwise identical to v1 (same parameters/authorization/observation/
+# compensation shape) — diff against contracts/actions/v1/transfer_inventory.yaml
+# for the exact delta.
+name: transfer_inventory
+version: 2
+
+parameters:
+  source_warehouse:
+    type: Warehouse
+  destination_warehouse:
+    type: Warehouse
+  part:
+    type: Part
+  quantity:
+    type: integer
+    min: 1
+  work_order:
+    type: WorkOrder
+    required: false
+
+context:
+  work_order_id:
+    type: WorkOrder
+    required_for_evidence: [linked_work_order_risk]
+
+reads:
+  - InventoryLot
+  - Warehouse
+  - WorkOrder
+
+authorization:
+  relation: can_transfer_inventory
+  object_binding: source_warehouse
+  approval_relation: can_approve_large_transfer
+  protected_relation: can_mitigate_high_priority
+
+policy:
+  package: factory.inventory.transfer_v2
+  # V2 lowers the auto-approve threshold from V1's 100 (a genuine,
+  # deliberate behavior change — used by the counterfactual `reevaluate
+  # --under current` demonstration to show a decision that was auto-ALLOWED
+  # under V1 now landing in REQUIRES_APPROVAL under V2's own rules, without
+  # ever rewriting the original V1 decision).
+  approval_threshold_units: 80
+
+evidence_requirements:
+  - current_source_inventory
+  - current_destination_compatibility
+  - linked_work_order_risk
+  - safety_stock
+  - reservation_ok
+
+closure:
+  required:
+    - source_available
+    - source_quality_status
+    - safety_stock
+    - destination_exists
+    # New in V2 (spec 07's "add required evidence field").
+    - reservation_ok
+  if_missing: insufficient_evidence
+  max_evidence_freshness_s: 5
+
+preconditions:
+  - source != destination
+  - source_available >= quantity
+
+expected_effects:
+  - source.available decreases by quantity
+  - destination.available increases by quantity
+
+external_operation:
+  system: WMS
+  operation: create_transfer
+
+idempotency:
+  key: action_execution_id
+
+observation:
+  source: WMS_CDC
+  timeout: PT30S
+
+compensation:
+  mode: compensatable
+  operation: reverse_transfer
+
+audit:
+  decision_required: true
+  approval_if_policy_requires: true

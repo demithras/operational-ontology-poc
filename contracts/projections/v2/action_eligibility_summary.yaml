@@ -1,0 +1,19 @@
+# contracts/projections/v1/action_eligibility_summary.yaml
+#
+# docs/experiment/spec/04_architecture.md's fourth listed hot projection.
+# Pure aggregation over this cycle's already-computed work_order_risk and
+# transfer_candidates rows (no new RDF4J query): per work order, whether a
+# mitigating transfer is even FEASIBLE given currently observed inventory
+# (mitigation_feasible = sum of candidate quantities >= shortage). This is
+# deliberately NOT a policy/authorization verdict — it never touches OPA or
+# OpenFGA (Phase 5) — it only tells a caller whether the *facts* leave room
+# for a transfer_inventory action to exist at all, per
+# docs/experiment/spec/14_risks_and_open_questions.md R3's separation of
+# conformance/authority/policy from descriptive projections.
+name: action_eligibility_summary
+version: "1"
+description: >
+  Per open work order: at_risk/shortage/severity plus transfer-candidate
+  counts and a mitigation_feasible flag, aggregated from this cycle's
+  work_order_risk and transfer_candidates results.
+queries: {}

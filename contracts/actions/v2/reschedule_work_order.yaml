@@ -1,0 +1,62 @@
+# contracts/actions/v1/reschedule_work_order.yaml
+#
+# Candidate alternative C in docs/experiment/spec/03_domain_scenario.md's
+# canonical incident. MES already exposes the real mutation
+# (POST /work_orders/{id}/reschedule, services/mes/app.py, 409 on
+# DONE/CANCELLED) so `external_operation` is real, but execution still
+# returns 501 through Phase 5 (Temporal wiring is Phase 6) — reachable via
+# this ActionType only through propose/get, same as the other two.
+name: reschedule_work_order
+version: 1
+
+parameters:
+  work_order_id:
+    type: WorkOrder
+  new_planned_start:
+    type: integer
+
+reads:
+  - WorkOrder
+
+authorization:
+  relation: can_transfer_inventory
+  object_binding: work_order_id
+  approval_relation: can_approve_large_transfer
+
+policy:
+  package: factory.work_order.reschedule
+
+evidence_requirements:
+  - current_work_order_status
+
+closure:
+  required:
+    - work_order_status
+    - priority
+  if_missing: insufficient_evidence
+  max_evidence_freshness_s: 5
+
+preconditions:
+  - work_order_status not in [DONE, CANCELLED]
+
+expected_effects:
+  - work_order.planned_start changes to new_planned_start
+
+external_operation:
+  system: MES
+  operation: reschedule_work_order
+
+idempotency:
+  key: action_execution_id
+
+observation:
+  source: MES_CDC
+  timeout: PT30S
+
+compensation:
+  mode: compensatable
+  operation: reschedule_work_order
+
+audit:
+  decision_required: true
+  approval_if_policy_requires: true

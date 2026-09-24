@@ -285,8 +285,17 @@ services:
   opa:
     image: openpolicyagent/opa:latest
     command: ["run", "--server", "--addr", "0.0.0.0:8181", "--watch", "/policies"]
+    # Phase 7: mounts the WHOLE contracts/policies/ tree (v1, v2, ...), not
+    # just v1 — every version's .rego declares its OWN, distinctly-named
+    # package (contracts/policies/v2/transfer_inventory.rego:
+    # `factory.inventory.transfer_v2`, vs v1's `factory.inventory.transfer`),
+    # so OPA loads all of them into the SAME live instance with no
+    # collision. `--watch` picks up a brand-new vN/*.rego file the moment
+    # it appears on disk (migrations/v1_to_v2/deploy.py's job) with no
+    # container restart — a historical decision's replay can always
+    # re-evaluate against its OWN pinned package, forever.
     volumes:
-      - ./contracts/policies/v1:/policies:ro
+      - ./contracts/policies:/policies:ro
     ports:
       - "${OPA_HOST_PORT}:8181"
     # Same no-shell/no-curl situation as openfga above (verified empirically)

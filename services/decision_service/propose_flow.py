@@ -112,6 +112,7 @@ def propose(
         action_type=action.name,
         action_version=action.version,
         action_pinned_sha256=manifest["actions"][action.name]["sha256"],
+        action_version_dir=action_version_dir,
         parameters=parameters,
         context=context,
         ontology_version=content_addressed(manifest["ontology"]),

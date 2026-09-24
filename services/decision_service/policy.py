@@ -39,10 +39,27 @@ def build_input(action: ActionType, parameters: dict, evidence: EvidenceResult) 
     if action.name == "transfer_inventory":
         src = evidence.facts_used["current_source_inventory"]
         dest = evidence.facts_used["current_destination_compatibility"]
+        if action.version_dir == "v1":
+            return {
+                "parameters": {"quantity": parameters["quantity"]},
+                "evidence": {
+                    "source_available": src["available"],
+                    "safety_stock": evidence.facts_used["safety_stock"],
+                    "freshness_status": src["freshness_status"],
+                    "source_quality_status": src["quality_status"],
+                    "destination_quality_status": dest["quality_status"],
+                },
+                "config": {"approval_threshold_units": action.policy_config["approval_threshold_units"]},
+            }
+        # V2+ (docs/experiment/spec/07_versioning_and_replay.md): on_hand/
+        # reserved/reservation_ok replace the retired `available` field —
+        # see contracts/policies/v2/transfer_inventory.rego's input contract.
         return {
             "parameters": {"quantity": parameters["quantity"]},
             "evidence": {
-                "source_available": src["available"],
+                "on_hand": src["on_hand"],
+                "reserved": src["reserved"],
+                "reservation_ok": evidence.facts_used["reservation_ok"],
                 "safety_stock": evidence.facts_used["safety_stock"],
                 "freshness_status": src["freshness_status"],
                 "source_quality_status": src["quality_status"],

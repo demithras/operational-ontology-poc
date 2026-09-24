@@ -94,10 +94,6 @@ oo:DecisionShape
     sh:message "oo:Decision.openfgaAuthorizationModelId, if present, must be a single string." ;
   ] ;
   sh:property [
-    sh:path oo:actionVersionDir ; sh:maxCount 1 ; sh:datatype xsd:string ;
-    sh:message "oo:Decision.actionVersionDir, if present, must be a single string." ;
-  ] ;
-  sh:property [
     # Structural transition check (phase3.md item 3, "status-transition
     # structural checks"): the status must be exactly one of the v1
     # lifecycle vocabulary's concepts. oo:DecisionStatusScheme

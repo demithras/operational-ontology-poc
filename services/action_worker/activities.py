@@ -43,21 +43,26 @@ from services.common.db import get_conn
 from services.common.identity_lookup import resolve_canonical_part_to_source_local
 from services.common.rdf4j_client import RDF4JClient
 from services.common.wms_transfer_observation import fetch_wms_transfer_record
-from services.decision_service.action_types import ACTIONS_DIR, get_action_type
+from services.decision_service.action_types import ACTIONS_DIR, actions_dir, get_action_type
 from services.decision_service.store import get_decision, update_status
 from services.projection_builder.reader import get_current_inventory
 
 TEST_MODE = os.environ.get("OO_TEST_MODE") == "1"
 
 
-def _current_action_sha256(action_type_name: str) -> str:
-    """F34: a FRESH sha256 of contracts/actions/v1/<name>.yaml's raw bytes,
-    read directly off disk — deliberately NOT via
+def _current_action_sha256(action_type_name: str, action_version_dir: str = "v1") -> str:
+    """F34: a FRESH sha256 of contracts/actions/<action_version_dir>/<name>.yaml's
+    raw bytes, read directly off disk — deliberately NOT via
     services/decision_service/action_types.py::get_action_type, whose
     _REGISTRY is cached for the lifetime of this process and would never
     observe a post-startup file change (exactly the scenario this check
-    exists to catch)."""
-    return hashlib.sha256((ACTIONS_DIR / f"{action_type_name}.yaml").read_bytes()).hexdigest()
+    exists to catch). `action_version_dir` is the decision's OWN recorded
+    pin location (Phase 7 — see services/decision_service/models.py's
+    action_version_dir field); a decision written before that column
+    existed has action_version_dir=None, and the caller passes "v1"
+    (every pre-Phase-7 decision was necessarily pinned against
+    contracts/actions/v1/)."""
+    return hashlib.sha256((actions_dir(action_version_dir) / f"{action_type_name}.yaml").read_bytes()).hexdigest()
 
 _TERMINAL_NON_EXECUTABLE = {
     "DRAFT", "PROPOSED", "INSUFFICIENT_EVIDENCE", "DENIED_AUTHORIZATION",
@@ -113,8 +118,9 @@ class ActionActivities:
         # have none — nothing to compare against, so let those through
         # unchanged rather than retroactively invalidating history).
         pinned_sha256 = row.get("action_pinned_sha256")
+        action_version_dir = row.get("action_version_dir") or "v1"
         if pinned_sha256 is not None:
-            current_sha256 = _current_action_sha256(row["action_type"])
+            current_sha256 = _current_action_sha256(row["action_type"], action_version_dir)
             if current_sha256 != pinned_sha256:
                 rdf4j_client = self._rdf4j_client()
                 try:
@@ -135,7 +141,7 @@ class ActionActivities:
                 )
 
         from_status = "APPROVED" if row["status"] == "APPROVED" else "EXECUTING"
-        action = get_action_type(row["action_type"])
+        action = get_action_type(row["action_type"], action_version_dir)
         parameters = row["parameters"]
         transfer_fields: dict[str, Any] = {}
         if row["action_type"] == "transfer_inventory":
@@ -256,6 +262,15 @@ class ActionActivities:
             # re-invoked, so no duplicate WMS effect is possible by
             # construction.
             test_hooks.maybe_pause(get_conn, action_execution_id, "post_call_pre_record", heartbeat=activity.heartbeat)
+        # Phase 7 scope note: this activity only receives action_type/parameters
+        # (not the decision's row), so it cannot look up action_version_dir
+        # the way verify_and_start_execution above does. Deliberately left
+        # at the "v1" default — the only field read off `action` below is
+        # `compensation_mode`, which contracts/actions/v2/transfer_inventory.yaml
+        # keeps IDENTICAL to v1 ("compensatable"), so this is a real but
+        # currently harmless gap, not a silent one: a FUTURE action version
+        # that changes compensation_mode would need this threaded through
+        # the workflow signature the same way decision_id already is.
         action = get_action_type(action_type)
         observation_timeout_s = 30.0  # contracts/actions/v1/*.yaml observation.timeout: PT30S, all three
 

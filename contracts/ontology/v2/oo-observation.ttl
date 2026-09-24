@@ -1,0 +1,96 @@
+# contracts/ontology/v1/oo-observation.ttl
+#
+# CDC observation + identity-mapping vocabulary. Populated by
+# services/ingestion and services/identity_resolver starting Phase 3.
+#
+# docs/experiment/spec/04_architecture.md ("Identity resolver", every
+# mapping records rule/version/source-ids/confidence/authority/time);
+# docs/experiment/spec/05_ontology_and_contracts.md ("Evidence" must
+# distinguish observed/inferred/derived/human-asserted/agent-asserted, each
+# item needs origin/time/source-position/derivation-rule/confidence/hash);
+# docs/experiment/spec/14 ("Open decision: inference" -> observed / inferred
+# / derived / asserted, versioned if they affect decisions);
+# docs/experiment/spec/09_failure_and_adversarial_matrix.md F09/F19/F20/F35/F37.
+@prefix oo:   <https://example.local/oo/> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+<https://example.local/oo/ontology/v1/oo-observation>
+  a owl:Ontology ;
+  owl:versionInfo "1.0.0" ;
+  rdfs:comment "CDC observation + identity-mapping vocabulary, v1." .
+
+#############################################
+## Fact kind (observed vs inferred vs derived vs asserted; 05/14).
+## A fact's named graph is tagged with exactly one of these via
+## oo:factKind so ingestion, projections (Phase 4) and human/agent
+## assertions (Phase 9) remain distinguishable at query time.
+#############################################
+
+oo:FactKindScheme a skos:ConceptScheme ; skos:prefLabel "Fact provenance kind (v1)" .
+
+oo:Observed  a skos:Concept ; skos:inScheme oo:FactKindScheme ; skos:notation "OBSERVED"
+  ; rdfs:comment "Arrived via CDC from a source system's committed row change. Authoritative for that source's owned properties (05: source-of-truth hierarchy)." .
+oo:Inferred  a skos:Concept ; skos:inScheme oo:FactKindScheme ; skos:notation "INFERRED"
+  ; rdfs:comment "Produced by a versioned inference rule over observed facts. Not populated before an inference rule exists (14: avoid large OWL reasoning scope)." .
+oo:Derived   a skos:Concept ; skos:inScheme oo:FactKindScheme ; skos:notation "DERIVED"
+  ; rdfs:comment "A hot-projection value (Phase 4)." .
+oo:Asserted  a skos:Concept ; skos:inScheme oo:FactKindScheme ; skos:notation "ASSERTED"
+  ; rdfs:comment "A human or software-agent assertion (Phase 9), not observed from a source system." .
+
+oo:factKind a owl:ObjectProperty ; rdfs:range skos:Concept ;
+  rdfs:comment "Applied to a named graph's describing resource (oo:Observation / future inference-run / projection-run / assertion resources), not to individual triples — see services/ingestion graph-naming scheme in implementation-notes.md." .
+
+#############################################
+## CDC observation provenance (one oo:Observation per applied Debezium
+## change event; skipped/duplicate/out-of-order events still produce an
+## Observation record with oo:applied false, for auditability).
+#############################################
+
+oo:Observation a owl:Class ; rdfs:subClassOf prov:Activity ;
+  rdfs:comment "One Debezium change event as processed by services/ingestion. prov:generated points at the canonical entity IRI whose state changed (coarse, entity-level provenance for this POC, not per-triple reification)." .
+
+oo:sourceSystem     a owl:DatatypeProperty ; rdfs:domain oo:Observation ; rdfs:range xsd:string ; rdfs:comment "erp | mes | wms." .
+oo:sourceTable      a owl:DatatypeProperty ; rdfs:domain oo:Observation ; rdfs:range xsd:string .
+oo:sourcePk         a owl:DatatypeProperty ; rdfs:domain oo:Observation ; rdfs:range xsd:string .
+oo:sourceLsn        a owl:DatatypeProperty ; rdfs:domain oo:Observation ; rdfs:range xsd:string ; rdfs:comment "Postgres WAL LSN from the Debezium 'source' block. Ordering authority (F20/F35) — never wall clock." .
+oo:sourceVersion    a owl:DatatypeProperty ; rdfs:domain oo:Observation ; rdfs:range xsd:integer ; rdfs:comment "The row's own optimistic-concurrency 'version' column value." .
+oo:cdcOperation     a owl:DatatypeProperty ; rdfs:domain oo:Observation ; rdfs:range xsd:string ; rdfs:comment "Debezium op code: c (create) | u (update) | d (delete) | r (snapshot read)." .
+oo:observedAt       a owl:DatatypeProperty ; rdfs:domain oo:Observation ; rdfs:range xsd:dateTime .
+oo:applied          a owl:DatatypeProperty ; rdfs:domain oo:Observation ; rdfs:range xsd:boolean ; rdfs:comment "false when this event was superseded by a newer LSN already applied (F19 duplicate / F20 out-of-order) or quarantined (F09)." .
+oo:mappingRuleUsed  a owl:ObjectProperty   ; rdfs:domain oo:Observation ; rdfs:comment "The oo:IdentityMapping (if any) used to resolve this row's part reference." .
+
+oo:SourcePosition a owl:Class ;
+  rdfs:comment "One per (source, table, primary key): the latest applied LSN/version, so out-of-order/duplicate CDC can be detected (F19/F20) and Phase 5 evidence snapshots can cite exact source positions (phase3.md item 5)." .
+
+oo:lastLsn        a owl:DatatypeProperty ; rdfs:domain oo:SourcePosition ; rdfs:range xsd:string .
+oo:lastVersion    a owl:DatatypeProperty ; rdfs:domain oo:SourcePosition ; rdfs:range xsd:integer .
+oo:lastObservedAt a owl:DatatypeProperty ; rdfs:domain oo:SourcePosition ; rdfs:range xsd:dateTime .
+
+#############################################
+## Identity mapping (04: "Identity resolver", every mapping records
+## rule/version, source ids, confidence/authority, creation/change time;
+## "Ambiguous identity is a first-class failure, not silently guessed").
+#############################################
+
+oo:IdentityResolutionActivity a owl:Class ; rdfs:subClassOf prov:Activity .
+
+oo:IdentityMapping a owl:Class ; rdfs:subClassOf prov:Entity ;
+  rdfs:comment "One resolved (source system, source-local id) -> canonical IRI mapping. contracts/identity/v1/mapping_rules.yaml is the versioned rule set this references." .
+
+oo:mappingRuleId       a owl:DatatypeProperty ; rdfs:domain oo:IdentityMapping ; rdfs:range xsd:string .
+oo:mappingRuleVersion  a owl:DatatypeProperty ; rdfs:domain oo:IdentityMapping ; rdfs:range xsd:string .
+oo:sourceLocalId       a owl:DatatypeProperty ; rdfs:domain oo:IdentityMapping ; rdfs:range xsd:string .
+oo:canonicalId         a owl:ObjectProperty   ; rdfs:domain oo:IdentityMapping .
+oo:authority           a owl:DatatypeProperty ; rdfs:domain oo:IdentityMapping ; rdfs:range xsd:string ; rdfs:comment "e.g. system-generated | fixture-override." .
+oo:confidence          a owl:DatatypeProperty ; rdfs:domain oo:IdentityMapping ; rdfs:range xsd:decimal .
+oo:createdAtMapping    a owl:DatatypeProperty ; rdfs:domain oo:IdentityMapping ; rdfs:range xsd:dateTime .
+
+oo:QuarantinedIdentity a owl:Class ; rdfs:subClassOf prov:Entity ;
+  rdfs:comment "F09: a source-local id that no mapping rule could resolve unambiguously. Never silently guessed — this class makes the failure a typed, queryable fact instead." .
+
+oo:quarantineReason a owl:DatatypeProperty ; rdfs:domain oo:QuarantinedIdentity ; rdfs:range xsd:string .

@@ -77,6 +77,13 @@ class DecisionRecord:
     # services/action_worker/activities.py re-verifies this against a FRESH
     # on-disk hash at execute() time.
     action_pinned_sha256: str | None = None
+    # Phase 7: which contracts/actions/<this>/<name>.yaml directory the
+    # pinned sha256 above was computed from ("v1"/"v2"/...) — F34's
+    # re-verification needs this to know WHICH file to re-hash (a plain
+    # int action_version is not enough: contracts/actions/v2/expedite_purchase_order.yaml
+    # still declares `version: 1`, carried forward unchanged alongside V2's
+    # transfer_inventory change — see contracts/actions/v2/'s own files).
+    action_version_dir: str = "v1"
 
     approved_by: str | None = None
     approved_at: datetime | None = None

@@ -1,0 +1,39 @@
+# contracts/projections/v2/current_inventory.yaml
+#
+# Phase 7 (docs/experiment/spec/07_versioning_and_replay.md) V2 projection
+# definition — required because migrations/v1_to_v2 retires
+# fac:availableQuantity from the live observed graph (contracts/ontology/v2/fac-core.ttl).
+# V1's query required fac:availableQuantity as part of one non-OPTIONAL
+# basic graph pattern; once that triple is gone, the WHOLE row (including
+# onHand/reserved, which nothing else changed) would silently disappear —
+# an entirely different, far worse failure than the one line that actually
+# changed. This version makes the property OPTIONAL and falls back to
+# computing it from onHand/reserved directly, so the SAME row keeps
+# appearing whether or not fac:availableQuantity still physically exists
+# for that lot (true for lots migrated before vs. after this projection
+# definition itself was deployed).
+#
+# Otherwise byte-identical to contracts/projections/v1/current_inventory.yaml.
+name: current_inventory
+version: "2"
+description: >
+  One row per (part, warehouse) currently observed InventoryLot, mirroring
+  WMS's operational shape but sourced exclusively from the semantic core.
+  V2: `available` is computed from onHand/reserved when the retired
+  fac:availableQuantity triple is absent (docs/experiment/spec/07_versioning_and_replay.md
+  migration V1 -> V2).
+queries:
+  inventory_lots: |
+    PREFIX fac: <https://example.local/factory/>
+    SELECT ?lot ?partUri ?whUri ?onHand ?reserved ?available ?qualityStatus WHERE {
+      GRAPH <https://example.local/oo/graph/observed> {
+        ?lot a fac:InventoryLot ;
+             fac:part ?partUri ;
+             fac:warehouse ?whUri ;
+             fac:onHand ?onHand ;
+             fac:reserved ?reserved ;
+             fac:qualityStatus ?qualityStatus .
+        OPTIONAL { ?lot fac:availableQuantity ?rawAvailable . }
+        BIND(COALESCE(?rawAvailable, (?onHand - ?reserved)) AS ?available)
+      }
+    }
