@@ -330,13 +330,29 @@ ab: ensure-env
 agent-llm-probe: ensure-env
 	$(VENV_PY) scripts/agent_llm_probe.py
 
-experiment:
-	@echo "not implemented yet — Phase 10 (see docs/experiment/spec/12_implementation_plan.md)"
-	@exit 2
+## Phase 10b (docs/experiment/spec/13_repository_contract.md "make experiment"):
+# creates a NEW immutable experiments/exp-NNN/ and runs the full pipeline —
+# the fair evolution comparison (item 7: V1 decisions on both variants ->
+# deploy V2 -> V2 decisions on both -> deploy V3 -> full replay sweep,
+# both variants), the 5,000-decision bulk corpus (both variants), the
+# comprehensive test suite + mutation tests, the full A/B rerun (W1-W7 at
+# N=500), latency benchmarks (incl. H13 forensic query timing), the fault
+# matrix (derived from the live test run), then hypothesis-results.json +
+# final-report.md — all derived from real artifacts, never hand-typed.
+# REQUIRES a genuinely fresh V1 stack (contracts/manifests/deployed_
+# version.json == baseline_v1.json) — run `make down && docker compose
+# down -v && make up && make seed` first (see README's definition-of-done
+# sequence). Exit code follows spec 11 (0/10/11/12/13/14/15).
+experiment: ensure-env
+	$(VENV_PY) scripts/run_experiment.py
 
-report:
-	@echo "not implemented yet — Phase 10 (see docs/experiment/spec/12_implementation_plan.md)"
-	@exit 2
+## Regenerates the LATEST experiments/exp-NNN/results/final-report.md from
+# whatever results/*.json already exist there — never re-runs anything
+# (spec 13: "make report regenerates final-report.md from the results").
+report: ensure-env
+	@LATEST=$$(ls -d experiments/exp-*/ | sort | tail -1 | sed 's:/$$::'); \
+	echo "regenerating $${LATEST}/results/final-report.md"; \
+	$(VENV_PY) scripts/gen_final_report.py "$${LATEST}/results" "$$(basename $${LATEST})"
 
 ## docs/experiment/spec/07_versioning_and_replay.md "Replay output" —
 # `make replay DECISION_ID=<id>`.
