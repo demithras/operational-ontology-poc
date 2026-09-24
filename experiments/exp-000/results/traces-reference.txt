@@ -1,0 +1,7 @@
+# traces-reference.txt -- Phase 10a item 5 (OpenTelemetry, F40)
+# source file: observability/otel/traces/traces.jsonl
+# spans found: 2
+
+# service | span name | trace_id | decision_id | action_execution_id | actor_id
+decision_service | decision_service.propose | 69c12ab91e6ec4d1c18434b7fab9c9a3 | D-f6ae30c304f54cee852c | None | planner-1
+decision_service | decision_service.execute | 1bddb41a4f7b8659fbd948712a033745 | D-f6ae30c304f54cee852c | AX-D-f6ae30c304f54cee852c | None

@@ -21,6 +21,7 @@ from temporalio.service import RPCError
 
 from services.common.db import close_pool, get_conn, open_pool
 from services.common.rdf4j_client import RDF4JClient
+from services.common.tracing import current_trace_id_hex, init_tracing, traced_span
 from services.decision_service import authz, execution, execution_reader, manifest as manifest_mod, planner, rdf_writer, store
 from services.decision_service.action_types import get_action_type
 from services.decision_service.config import from_env
@@ -36,6 +37,10 @@ _state: dict = {}
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     config = from_env()
+    # Phase 10a item 5: best-effort, F40-safe (services/common/tracing.py's
+    # own docstring) -- never raises, never blocks startup if the SDK or
+    # the collector is unavailable.
+    init_tracing("decision_service")
     open_pool()
     with get_conn() as conn:
         store.apply_schema(conn)
@@ -138,6 +143,13 @@ _EVIDENCE_DEADLOCK_RETRIES = 3
 @app.post("/decisions/propose")
 def decisions_propose(body: ProposeRequest):
     force_invalid = TEST_MODE and str(body.context.get("force_invalid_conformance", "")).lower() == "true"
+    with traced_span(
+        "decision_service.propose", action_type=body.action_type, actor_type=body.actor.type, actor_id=body.actor.id,
+    ) as set_attr:
+        return _decisions_propose_traced(body, force_invalid, set_attr)
+
+
+def _decisions_propose_traced(body: ProposeRequest, force_invalid: bool, set_attr) -> JSONResponse:
     for attempt in range(_EVIDENCE_DEADLOCK_RETRIES):
         with get_conn() as conn:
             try:
@@ -145,6 +157,8 @@ def decisions_propose(body: ProposeRequest):
                     _deps(conn), body.actor.type, body.actor.id, body.action_type,
                     body.parameters, body.context, force_invalid_conformance=force_invalid,
                 )
+                set_attr("decision_id", record.decision_id)
+                set_attr("trace_id", current_trace_id_hex())
             except MalformedProposal as exc:
                 store.record_proposal_attempt_failure(conn, body.action_type, body.actor.type, body.actor.id, "malformed_proposal", str(exc))
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -201,7 +215,7 @@ def decisions_get(decision_id: str):
 
 @app.post("/decisions/{decision_id}/approve")
 def decisions_approve(decision_id: str, body: ApproveRequest):
-    with get_conn() as conn:
+    with traced_span("decision_service.approve", decision_id=decision_id, approver_id=body.approver_id), get_conn() as conn:
         row = store.get_decision(conn, decision_id)
         if row is None:
             raise HTTPException(status_code=404, detail="decision not found")
@@ -254,41 +268,43 @@ def decisions_approve(decision_id: str, body: ApproveRequest):
 
 @app.post("/decisions/{decision_id}/execute")
 async def decisions_execute(decision_id: str):
-    with get_conn() as conn:
-        row = store.get_decision(conn, decision_id)
-    if row is None:
-        raise HTTPException(status_code=404, detail="decision not found")
-    # A decision already past APPROVED (EXECUTING or any terminal execution
-    # status) is not an error — execute() is idempotent per decision
-    # (F10/F25): re-resolve the SAME workflow rather than 409ing, so a
-    # caller retrying a slow/uncertain first call gets the real status back.
-    if row["status"] not in (APPROVED, "EXECUTING", "OBSERVED_SUCCESS", "DIVERGED", "OUTCOME_UNKNOWN", "EXECUTION_FAILED"):
-        raise HTTPException(status_code=409, detail=f"decision is not APPROVED and never executed (status={row['status']})")
+    with traced_span("decision_service.execute", decision_id=decision_id) as set_attr:
+        with get_conn() as conn:
+            row = store.get_decision(conn, decision_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="decision not found")
+        # A decision already past APPROVED (EXECUTING or any terminal execution
+        # status) is not an error — execute() is idempotent per decision
+        # (F10/F25): re-resolve the SAME workflow rather than 409ing, so a
+        # caller retrying a slow/uncertain first call gets the real status back.
+        if row["status"] not in (APPROVED, "EXECUTING", "OBSERVED_SUCCESS", "DIVERGED", "OUTCOME_UNKNOWN", "EXECUTION_FAILED"):
+            raise HTTPException(status_code=409, detail=f"decision is not APPROVED and never executed (status={row['status']})")
 
-    temporal_client = _state.get("temporal_client")
-    if temporal_client is None:
-        # F25: "Temporal unavailable -> approved decision remains
-        # unexecuted, auditable" — a clear, explicit 503, never a decision
-        # silently left in a fabricated-looking state.
-        raise HTTPException(status_code=503, detail="Temporal is unavailable — decision remains APPROVED and unexecuted (F25)")
+        temporal_client = _state.get("temporal_client")
+        if temporal_client is None:
+            # F25: "Temporal unavailable -> approved decision remains
+            # unexecuted, auditable" — a clear, explicit 503, never a decision
+            # silently left in a fabricated-looking state.
+            raise HTTPException(status_code=503, detail="Temporal is unavailable — decision remains APPROVED and unexecuted (F25)")
 
-    action_execution_id = execution.action_execution_id_for(decision_id)
-    try:
-        handle, started_now = await execution.start_or_get_execution(temporal_client, decision_id)
-    except RPCError as exc:
-        raise HTTPException(status_code=503, detail=f"Temporal unavailable — decision remains APPROVED and unexecuted (F25): {exc}") from exc
+        action_execution_id = execution.action_execution_id_for(decision_id)
+        set_attr("action_execution_id", action_execution_id)
+        try:
+            handle, started_now = await execution.start_or_get_execution(temporal_client, decision_id)
+        except RPCError as exc:
+            raise HTTPException(status_code=503, detail=f"Temporal unavailable — decision remains APPROVED and unexecuted (F25): {exc}") from exc
 
-    return JSONResponse(
-        status_code=202,
-        content={
-            "decision_id": decision_id,
-            "action_execution_id": action_execution_id,
-            "temporal_workflow_id": handle.id,
-            "started_now": started_now,
-            "verified_immutable_tuple": True,
-            "decision_content_hash": row["decision_content_hash"],
-        },
-    )
+        return JSONResponse(
+            status_code=202,
+            content={
+                "decision_id": decision_id,
+                "action_execution_id": action_execution_id,
+                "temporal_workflow_id": handle.id,
+                "started_now": started_now,
+                "verified_immutable_tuple": True,
+                "decision_content_hash": row["decision_content_hash"],
+            },
+        )
 
 
 @app.get("/executions/{execution_id}")

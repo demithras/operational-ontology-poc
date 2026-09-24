@@ -1,0 +1,41 @@
+# Phase 10a item 5 (docs/experiment/briefs/phase10a.md): minimal
+# OpenTelemetry tracing — an otel-collector receiving OTLP/HTTP from
+# services/decision_service and exporting every span to a local file, so
+# `experiments/exp-000/results/traces-reference.txt` (scripts/
+# gen_traces_reference.py) can point at REAL trace data, not a promise.
+#
+# `otel/opentelemetry-collector-contrib` (not the plain `otel/
+# opentelemetry-collector` image) is required here specifically for the
+# `file` exporter, which only ships in the contrib distribution. Like
+# openfga/opa elsewhere in this compose file, the contrib image has no
+# shell/curl/wget — no docker-level healthcheck is declared (services/
+# common/wait_healthy.py already treats "no healthcheck configured, State
+# == running" as ready, the same convention openfga/opa use).
+#
+# F40 (docs/experiment/spec/09_failure_and_adversarial_matrix.md: "trace/log
+# unavailable -> business correctness survives") is proved by
+# tests/faults/test_f40_traces_unavailable.py, which stops this container
+# entirely and asserts decision_service's propose/approve/execute path is
+# completely unaffected — see services/common/tracing.py's docstring for
+# how span export failures are swallowed rather than raised.
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+exporters:
+  file:
+    path: /var/otel/traces.jsonl
+
+processors:
+  batch:
+    timeout: 1s
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [file]

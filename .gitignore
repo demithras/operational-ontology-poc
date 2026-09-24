@@ -14,6 +14,10 @@ __pycache__/
 # Generated / non-reproducible seed output
 seed/out/
 
+# Generated / non-reproducible OTel trace export (Phase 10a item 5)
+observability/otel/traces/*
+!observability/otel/traces/.gitkeep
+
 # Local docker-compose credentials (copy .env.example -> .env)
 .env
 

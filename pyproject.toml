@@ -33,6 +33,12 @@ dev = [
     "mcp<2,>=1.2",
     "starlette",
     "anthropic>=0.40",
+    # Phase 10a item 5 — minimal OpenTelemetry tracing (services/common/
+    # tracing.py, services/decision_service). OTLP/HTTP only (no grpc
+    # dependency needed) — see observability/otel/collector-config.yaml.
+    "opentelemetry-api>=1.27",
+    "opentelemetry-sdk>=1.27",
+    "opentelemetry-exporter-otlp-proto-http>=1.27",
 ]
 
 [tool.pytest.ini_options]

@@ -28,7 +28,10 @@ RUN pip install --no-cache-dir \
     "confluent-kafka>=2.5" \
     "temporalio>=1.33" \
     "mcp<2,>=1.2" \
-    "starlette"
+    "starlette" \
+    "opentelemetry-api>=1.27" \
+    "opentelemetry-sdk>=1.27" \
+    "opentelemetry-exporter-otlp-proto-http>=1.27"
 
 # services.* / reference_model.* are implicit namespace packages (no
 # __init__.py at their top level, matching the rest of the repo) — make sure

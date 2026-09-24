@@ -4213,3 +4213,108 @@ under similarly contended host conditions.
 Items 1 (stateful/differential suite + the WMS idempotency-disable
 test-mode toggle it needs), 2 (mutation tests), and 5 (OpenTelemetry, F40)
 follow in later commits within this same phase.
+
+## Phase 10a item 5 — OpenTelemetry tracing (F40)
+
+Minimal, deliberately scoped tracing per docs/experiment/briefs/phase10a.md
+item 5: an otel-collector receiving OTLP/HTTP and exporting every span to a
+file, with `services/decision_service`'s propose/approve/execute endpoints
+instrumented (the hot path every governed decision goes through). Scope
+disclosed rather than hidden: `action_worker`/`projection_builder`/
+`reconciliation` are NOT instrumented this phase — the brief's own wording
+("minimal") and this phase's remaining item budget (1, 2 still ahead) both
+argued for the narrowest slice that still satisfies "traces-reference.txt
+points at real trace files" and F40.
+
+**Infra**: `observability/otel/collector-config.yaml` (OTLP/HTTP receiver
+on 4318, `file` exporter to `/var/otel/traces.jsonl`) — the `otel/
+opentelemetry-collector-CONTRIB` image specifically, since the file
+exporter only ships there, not in the plain `otel/opentelemetry-collector`
+core image. Like openfga/opa elsewhere in this compose file, the contrib
+image has no shell/curl/wget, so no docker-level `healthcheck:` is
+declared (`services/common/wait_healthy.py` already treats "no healthcheck
+configured, State == running" as ready — same convention). Traces land on
+a HOST bind mount (`observability/otel/traces/`, gitignored except
+`.gitkeep`) so host-side scripts/tests can read the file directly, no
+`docker exec` needed. New port: `OTEL_COLLECTOR_HTTP_HOST_PORT=15491`.
+
+**Instrumentation** (`services/common/tracing.py`): `init_tracing(service_
+name)` sets up a `TracerProvider` + `BatchSpanProcessor` (export on a
+background thread, decoupled from the request path — F40's real
+mechanism: a stuck/unreachable collector adds no latency to any real
+request, and a short `OTLPSpanExporter(timeout=2)` keeps a dead
+collector's background export attempts from piling up). `traced_span(name,
+**attrs)` yields a `set_attr(key, value)` callable so a caller can add
+attributes it only learns partway through a request (`decision_id` once
+`propose()` returns, `action_execution_id` once `execute()` derives it).
+**Care taken (caught by this phase's own new unit test)**: only span
+SETUP/TEARDOWN failures are swallowed — a REAL exception raised by the
+caller's own body must propagate normally, never get silently eaten by the
+same try/except that protects against a broken SDK/collector. The first
+implementation caught this wrong (one broad `try/except Exception` wrapped
+both the span's `with` block AND whatever the caller's code did inside
+it); `tests/component/test_tracing.py::
+test_traced_span_propagates_real_exceptions_from_its_body` exists
+specifically to pin this down permanently.
+
+**A real deployment bug found and fixed while wiring this up**: this
+repo's single shared `Dockerfile` does NOT `pip install -e ".[dev]"` from
+`pyproject.toml` — it hardcodes an explicit package list in its own `RUN
+pip install --no-cache-dir "fastapi>=0.115" ...` line (COPYing pyproject.
+toml but never reading it for the actual install). Adding the three OTel
+packages to `pyproject.toml` alone was invisible to the built image;
+`init_tracing()` inside the running container returned `False` silently
+(`ModuleNotFoundError: No module named 'opentelemetry'`, confirmed by
+`docker compose exec`), while the SAME code worked immediately from the
+host `.venv` (which DOES install from `pyproject.toml`). Fixed by adding
+the three packages to the Dockerfile's own explicit list too. **Any future
+phase adding a new Python dependency that a CONTAINER needs (not just host
+tests) must update BOTH `pyproject.toml` and `Dockerfile` — they are two
+independent install paths in this repo, not one.**
+
+**Live proof**: `tests/integration/test_otel_tracing.py` — a real
+`propose()` (and, when the outcome allows, `approve()`+`execute()`) through
+the real HTTP API, polling the real exported file for a span carrying the
+exact `decision_id` (and `action_execution_id`), asserting `trace_id`
+correlates the two spans of the same decision. `2 passed in 15.64s`
+alongside `tests/faults/test_f40_traces_unavailable.py`, together.
+
+**F40 proof**: `tests/faults/test_f40_traces_unavailable.py` stops the real
+`otel-collector` container and drives a full propose→approve→execute cycle
+through decision_service, asserting every step succeeds exactly as it
+would with tracing available — canonical provenance (`decision_id`/
+`action_execution_id` in the response body) is unaffected, because it was
+never sourced from tracing in the first place; only the (best-effort,
+now-silently-dropped) trace export is impacted.
+
+**`scripts/gen_traces_reference.py`** → `experiments/exp-000/results/
+traces-reference.txt`: reads the file-exporter output directly (host bind
+mount, no docker exec), robust to a benign whitespace-padding artifact
+observed around a line right after an external (host-side `>`) truncation
+of the file while the collector process still had it open (a buffered-
+writer/bind-mount interaction, not a data-loss bug — every line's actual
+JSON payload was intact once stripped). Never fakes success: an empty
+trace file writes an honest "NO TRACES FOUND" reference pointing at the
+F40 test as proof this is by design recoverable, not a silent gap. Live
+run: 2 spans (propose + execute of the same decision, trace_ids differ
+since they are separate requests, `decision_id`/`action_execution_id`
+correlate them).
+
+### Files touched (item 5)
+
+- `observability/otel/collector-config.yaml` (new)
+- `observability/otel/traces/.gitkeep` (new dir, gitignored contents)
+- `services/common/tracing.py` (new) + `tests/component/test_tracing.py` (new)
+- `services/decision_service/app.py` — `init_tracing()` at startup;
+  `traced_span(...)` around propose/approve/execute
+- `docker-compose.yml` — `otel-collector` service; `decision_service` gets
+  `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`/`OTEL_SERVICE_NAME`
+- `.env.example` (+ local `.env`) — `OTEL_COLLECTOR_HTTP_HOST_PORT=15491`
+- `.gitignore` — `observability/otel/traces/*` (keep `.gitkeep`)
+- `pyproject.toml` AND `Dockerfile` — OTel deps (see the deployment-bug
+  note above for why both were needed)
+- `scripts/gen_traces_reference.py` (new)
+- `tests/integration/test_otel_tracing.py` (new)
+- `tests/faults/test_f40_traces_unavailable.py` (new)
+- `experiments/exp-000/results/traces-reference.txt` (generated artifact,
+  committed as evidence — regenerate any time with the script above)

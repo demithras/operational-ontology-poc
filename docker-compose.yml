@@ -361,6 +361,11 @@ services:
       INGESTION_HEALTH_URL: http://ingestion:8090
       TEMPORAL_ADDRESS: temporal:7233
       OO_TEST_MODE: ${OO_TEST_MODE}
+      # Phase 10a item 5: best-effort OTLP/HTTP trace export. Absent or
+      # unreachable is a normal, fully-supported state (F40) — see
+      # services/common/tracing.py.
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://otel-collector:4318/v1/traces
+      OTEL_SERVICE_NAME: decision_service
     ports:
       - "${DECISION_SERVICE_HTTP_PORT}:8000"
     # Phase 7 (docs/experiment/spec/07_versioning_and_replay.md): reads
@@ -693,6 +698,24 @@ services:
       interval: 3s
       timeout: 5s
       retries: 60
+
+  # --- Phase 10a item 5: minimal OpenTelemetry tracing (docs/experiment/spec/
+  # 09_failure_and_adversarial_matrix.md F40) — see observability/otel/
+  # collector-config.yaml's own header for the full rationale. Traces land
+  # on a HOST bind mount (./observability/otel/traces, gitignored — same
+  # "generated, non-reproducible" treatment as seed/out/) so
+  # scripts/gen_traces_reference.py can read the file directly, no docker
+  # exec needed. No `depends_on` from decision_service: tracing is strictly
+  # best-effort (F40) — decision_service must start and work identically
+  # whether this container exists yet or not.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./observability/otel/collector-config.yaml:/etc/otel-collector-config.yaml:ro
+      - ./observability/otel/traces:/var/otel
+    ports:
+      - "${OTEL_COLLECTOR_HTTP_HOST_PORT}:4318"
 
 volumes:
   oo-poc-pgdata:
