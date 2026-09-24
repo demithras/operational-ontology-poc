@@ -119,6 +119,61 @@ def _read_all_tuples(openfga_api_url: str, store_id: str, page_limit: int = 20) 
     return sorted(tuples, key=lambda t: (t["object"] or "", t["relation"] or "", t["user"] or ""))
 
 
+_model_relations_cache: dict[str, dict[str, set[str]]] = {}
+
+
+def _relations_for_model(openfga_api_url: str, store_id: str, authorization_model_id: str) -> dict[str, set[str]] | None:
+    """{type_name: {relation_names defined on that type}} for one
+    authorization_model_id — OpenFGA models are IMMUTABLE by id, so this is
+    safe to cache forever, process-wide, keyed by model id alone (no store
+    id needed in the key — a model id already uniquely identifies its
+    content). Used by `check()` to filter `contextual_tuples` down to only
+    what the HISTORICAL model being checked can actually validate — see
+    that filtering's own docstring for why this is necessary at all."""
+    if authorization_model_id in _model_relations_cache:
+        return _model_relations_cache[authorization_model_id]
+    try:
+        with httpx.Client(timeout=5.0) as client:
+            r = client.get(f"{openfga_api_url}/stores/{store_id}/authorization-models/{authorization_model_id}")
+        if r.status_code != 200:
+            return None
+        type_defs = r.json().get("authorization_model", {}).get("type_definitions", [])
+    except httpx.HTTPError:
+        return None
+    relations = {td["type"]: set(td.get("relations", {}).keys()) for td in type_defs}
+    _model_relations_cache[authorization_model_id] = relations
+    return relations
+
+
+def _filter_tuples_for_model(openfga_api_url: str, store_id: str, authorization_model_id: str, tuples: list[dict]) -> list[dict]:
+    """Phase 7b: a whole-store tuple snapshot (authz.py::_read_all_tuples)
+    captured NOW can contain tuples for a relation that did not exist yet
+    in an OLDER authorization model — this experiment's real
+    `senior_approver` relation, added by `migrations/v2_to_v3/migrate_authz.py`,
+    is the concrete case: it is absent from the v1 model's `region` type,
+    so replaying a v1-era decision with the FULL current snapshot as
+    `contextual_tuples` makes OpenFGA reject the WHOLE Check with HTTP 400
+    ("relation ... not found") — one irrelevant future tuple poisoning an
+    otherwise-correct historical check. OpenFGA validates every
+    `contextual_tuples` entry against the PINNED `authorization_model_id`'s
+    own schema (never the store's latest model), so the fix is to keep only
+    tuples whose (object type, relation) pair the historical model actually
+    defines — anything newer is exactly what that model could never have
+    seen, and dropping it changes nothing about what the model COULD
+    resolve at proposal time (it could only ever resolve relations it
+    knew about)."""
+    relations = _relations_for_model(openfga_api_url, store_id, authorization_model_id)
+    if relations is None:
+        return tuples  # best-effort: schema fetch failed, pass through unfiltered
+    kept = []
+    for t in tuples:
+        obj = t.get("object") or ""
+        obj_type = obj.split(":", 1)[0] if ":" in obj else obj
+        if t.get("relation") in relations.get(obj_type, set()):
+            kept.append(t)
+    return kept
+
+
 def check(
     openfga_api_url: str,
     store_id: str,
@@ -157,7 +212,12 @@ def check(
     if authorization_model_id:
         body["authorization_model_id"] = authorization_model_id
     if contextual_tuples:
-        body["contextual_tuples"] = {"tuple_keys": contextual_tuples}
+        filtered = (
+            _filter_tuples_for_model(openfga_api_url, store_id, authorization_model_id, contextual_tuples)
+            if authorization_model_id else contextual_tuples
+        )
+        if filtered:
+            body["contextual_tuples"] = {"tuple_keys": filtered}
     snapshot = _read_all_tuples(openfga_api_url, store_id) if (capture_tuples_snapshot and not contextual_tuples) else None
     try:
         with httpx.Client(timeout=5.0) as client:

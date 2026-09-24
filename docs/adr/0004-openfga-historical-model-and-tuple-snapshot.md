@@ -183,3 +183,22 @@ best-effort (a failed read degrades that decision to the pre-existing
 against this model's size, and the ENTIRE reason option 2 above was
 rejected as a primary mechanism no longer applies once the snapshot is
 real and gets replayed against, not merely stored and cited.
+
+**Found live while wiring this up**: OpenFGA validates every
+`contextual_tuples` entry against the PINNED `authorization_model_id`'s own
+schema, not the store's latest model. A whole-store snapshot captured NOW
+can contain a tuple for a relation that did not exist yet in an OLDER
+model — this experiment's real case: `senior_approver`
+(`migrations/v2_to_v3/migrate_authz.py`) is absent from the v1 model's
+`region` type, so replaying ANY v1-era decision with the unfiltered
+current snapshot made OpenFGA reject the WHOLE Check with HTTP 400
+("relation ... not found"), which `authz.check()` correctly reported as
+`UNAVAILABLE` — the honest failure mode, but it meant every v1-era
+decision silently fell back to `recorded_only` again, defeating the whole
+point. Fixed in `authz.py::_filter_tuples_for_model` (cached per model id,
+immutable): before sending `contextual_tuples`, keep only the tuples whose
+(object type, relation) pair the TARGET historical model actually defines.
+This is not a workaround — it is exactly correct: a historical model could
+never have resolved a relation it didn't know about either, so dropping
+those tuples changes nothing about what that model's own Check would have
+returned at proposal time.

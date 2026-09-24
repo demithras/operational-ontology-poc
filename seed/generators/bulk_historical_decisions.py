@@ -73,6 +73,14 @@ ERAS = [
 ]
 
 ACTION_NAME = "transfer_inventory"
+# NOT "every one of these is granted can_transfer_inventory" — model.fga
+# defines it as `planner or junior_planner or agent_grant` and supervisor-1
+# only ever holds `supervisor`/`senior_approver` (approval authority, never
+# transfer authority itself), so a real Check for supervisor-1 legitimately
+# comes back DENIED. Left in deliberately: it is real, correct system
+# behavior (the real authz.check() call decides, never assumed), and adds
+# natural DENIED_AUTHORIZATION diversity beyond the dedicated intent bucket
+# below without a separate code path.
 AUTHORIZED_ACTORS = ["planner-1", "junior-1", "supervisor-1"]
 UNAUTHORIZED_ACTOR = "outsider-1"  # no tuple grants this actor anything — real DENIED
 WAREHOUSES = [("WH-B", "WH-A"), ("WH-A", "WH-B")]
