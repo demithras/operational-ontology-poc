@@ -1,0 +1,54 @@
+{
+  "counter_test": {
+    "query": "\nPREFIX fac: <https://example.local/factory/>\nSELECT ?req ?partUri ?qty ?available WHERE {\n  GRAPH <https://example.local/oo/graph/observed> {\n    ?req a fac:BomRequirement ; fac:workOrder <https://example.local/factory/instance/WorkOrder/WO-42> .\n    ?req fac:requiresPart ?partUri ; fac:quantity ?qty .\n    OPTIONAL {\n      ?lot a fac:InventoryLot ; fac:part ?partUri ; fac:warehouse ?whUri ; fac:availableQuantity ?available .\n    }\n  }\n}\n",
+    "target": "equivalent requirement+inventory facts via SPARQL directly against RDF4J",
+    "warm": {
+      "condition": "semantic_core_direct_sparql",
+      "count": 50,
+      "max_ms": 1.118,
+      "p50_ms": 0.799,
+      "p95_ms": 1.088,
+      "p99_ms": 1.118
+    }
+  },
+  "environment": {
+    "container_resource_limits": "not explicitly configured (docker-compose.yml has no deploy.resources.limits)",
+    "cpu": "arm",
+    "cpu_count": 14,
+    "docker_version": "29.4.2",
+    "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "python": "3.14.6",
+    "ram_bytes": 38654705664
+  },
+  "hot_read": {
+    "cold": {
+      "condition": "cold",
+      "count": 30,
+      "max_ms": 7.234,
+      "p50_ms": 4.752,
+      "p95_ms": 6.677,
+      "p99_ms": 7.234
+    },
+    "definitions": {
+      "cold": "a fresh psycopg connection opened and closed per sample",
+      "warm": "one psycopg connection reused across all samples (first sample discarded as warmup)"
+    },
+    "target": "work_order_risk point read (Postgres, ontology_hot)",
+    "warm": {
+      "condition": "warm",
+      "count": 200,
+      "max_ms": 0.37,
+      "p50_ms": 0.199,
+      "p95_ms": 0.239,
+      "p99_ms": 0.261
+    }
+  },
+  "measured_at": "2026-09-24T22:17:02Z",
+  "phase": 4,
+  "slo": {
+    "measured_warm_p95_ms": 0.239,
+    "name": "hot_read_p95_ms",
+    "pass": true,
+    "threshold_ms": 200
+  }
+}

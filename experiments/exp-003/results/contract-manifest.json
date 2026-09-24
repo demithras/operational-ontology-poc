@@ -1,0 +1,99 @@
+{
+  "baseline": {
+    "actions": {
+      "expedite_purchase_order": {
+        "sha256": "96be9359f6810ff7ea8b0800da07705a8aa8559bdd49d85eb02e222c049dbe09",
+        "version": 1
+      },
+      "reschedule_work_order": {
+        "sha256": "ae4ab25e1312885ac9ff0a2ce2ed9502bc2adb381e6e969f9d1c43e7ee00fe82",
+        "version": 1
+      },
+      "transfer_inventory": {
+        "sha256": "d68e4bfee711a077b22cbcacaf58f02796201e5a22422581d3f8d3c2db4945e1",
+        "version": 3
+      }
+    },
+    "deployed_version": {
+      "actions": "v3",
+      "authorization": "v2",
+      "identity": "v1",
+      "ontology": "v3",
+      "policies": "v2",
+      "projections": "v2",
+      "reconciliation": "v1",
+      "shapes": "v3"
+    },
+    "identity": {
+      "sha256": "ca848e87b0b3c28483a6b3b3a52938fbdbb9f774818aff60994ee5a26059f748",
+      "version": "v1"
+    },
+    "opa": {
+      "sha256": "2ab489b538b7465559f3e4a3299daf86b268f45bcdbf27c5ad8025469fd3f9db",
+      "version": "v2"
+    },
+    "openfga": {
+      "authorization_model_id": "01M3APKF7DNSBHW8J9GW2N2B47",
+      "sha256": "fd72eac4c7f978950dcbe96d909368bbecc8a17610d622d599296ed235b5a2fc",
+      "version": "v2"
+    }
+  },
+  "generated_at": "2026-09-24T22:17:28Z",
+  "note": "Both blocks are derived from the SAME live contracts/manifests/deployed_version.json (services/baseline/manifest.py's own docstring: 'both variants version-pin from the exact same live file') \u2014 ontology additionally carries ontology/shapes/projections/reconciliation, which the baseline variant has no equivalent of (no RDF semantic core).",
+  "ontology": {
+    "actions": {
+      "expedite_purchase_order": {
+        "sha256": "96be9359f6810ff7ea8b0800da07705a8aa8559bdd49d85eb02e222c049dbe09",
+        "version": 1
+      },
+      "reschedule_work_order": {
+        "sha256": "ae4ab25e1312885ac9ff0a2ce2ed9502bc2adb381e6e969f9d1c43e7ee00fe82",
+        "version": 1
+      },
+      "transfer_inventory": {
+        "sha256": "d68e4bfee711a077b22cbcacaf58f02796201e5a22422581d3f8d3c2db4945e1",
+        "version": 3
+      }
+    },
+    "code_git_commit": "b828fc7a7d13c7899b7dce4b50519e461b723464",
+    "deployed_version": {
+      "actions": "v3",
+      "authorization": "v2",
+      "identity": "v1",
+      "ontology": "v3",
+      "policies": "v2",
+      "projections": "v2",
+      "reconciliation": "v1",
+      "shapes": "v3"
+    },
+    "identity": {
+      "sha256": "ca848e87b0b3c28483a6b3b3a52938fbdbb9f774818aff60994ee5a26059f748",
+      "version": "v1"
+    },
+    "ontology": {
+      "sha256": "0ea028da4dc27f5d3e36fc8dce92bc4272dcf7a57cdec2269ee58b4e4a5398b9",
+      "version": "v3"
+    },
+    "opa": {
+      "sha256": "2ab489b538b7465559f3e4a3299daf86b268f45bcdbf27c5ad8025469fd3f9db",
+      "version": "v2"
+    },
+    "openfga": {
+      "authorization_model_id": "01M3APKF7DNSBHW8J9GW2N2B47",
+      "sha256": "fd72eac4c7f978950dcbe96d909368bbecc8a17610d622d599296ed235b5a2fc",
+      "version": "v2"
+    },
+    "projections": {
+      "sha256": "e7321d9993f58720c0d3c25cc52d17fd0cd99fed0b7be2a66b641879afc18cf6",
+      "version": "v2"
+    },
+    "reconciliation": {
+      "sha256": "b314e26848c6d53869e2c128bbd11dc0f8d702232c5c3e915048b14c3f0990a0",
+      "version": "v1"
+    },
+    "shapes": {
+      "sha256": "573292ef184504bb0b5e7f520eb91ba0fffa3d5fa9eec8f0a68ea3558a9c419c",
+      "version": "v3"
+    }
+  }
+}

@@ -1,0 +1,389 @@
+{
+  "generated_at": "2026-09-24T22:17:26Z",
+  "h13_forensic_query_latency": {
+    "baseline": {
+      "queries": {
+        "q1_baseline_equiv": {
+          "count": 30,
+          "max_ms": 5.359,
+          "mean_ms": 2.472,
+          "p50_ms": 2.385,
+          "p95_ms": 3.188,
+          "p99_ms": 5.359
+        },
+        "q2_baseline_equiv": {
+          "count": 30,
+          "max_ms": 4.879,
+          "mean_ms": 2.412,
+          "p50_ms": 2.281,
+          "p95_ms": 3.811,
+          "p99_ms": 4.879
+        },
+        "q3_baseline_equiv": {
+          "count": 30,
+          "max_ms": 3.988,
+          "mean_ms": 2.232,
+          "p50_ms": 2.231,
+          "p95_ms": 2.635,
+          "p99_ms": 3.988
+        },
+        "q4_baseline_equiv": {
+          "count": 30,
+          "max_ms": 3.971,
+          "mean_ms": 2.162,
+          "p50_ms": 2.131,
+          "p95_ms": 2.585,
+          "p99_ms": 3.971
+        },
+        "q5_baseline_equiv": {
+          "count": 30,
+          "max_ms": 3.8,
+          "mean_ms": 2.324,
+          "p50_ms": 2.141,
+          "p95_ms": 3.797,
+          "p99_ms": 3.8
+        },
+        "q6_baseline_equiv": {
+          "count": 30,
+          "max_ms": 3.232,
+          "mean_ms": 1.679,
+          "p50_ms": 1.599,
+          "p95_ms": 2.464,
+          "p99_ms": 3.232
+        },
+        "q7_baseline_equiv": {
+          "count": 1,
+          "max_ms": 1.929,
+          "mean_ms": 1.929,
+          "p50_ms": 1.929,
+          "p95_ms": 1.929,
+          "p99_ms": 1.929
+        },
+        "q8_baseline_equiv": {
+          "count": 30,
+          "max_ms": 6.014,
+          "mean_ms": 2.194,
+          "p50_ms": 2.015,
+          "p95_ms": 2.654,
+          "p99_ms": 6.014
+        },
+        "q9_baseline_equiv": {
+          "count": 30,
+          "max_ms": 6.705,
+          "mean_ms": 2.332,
+          "p50_ms": 2.208,
+          "p95_ms": 2.883,
+          "p99_ms": 6.705
+        }
+      },
+      "sample_count": 30
+    },
+    "note": "Ontology: each of contracts/queries/v1/q1-q9*.rq run as a real SPARQL round trip against RDF4J. Baseline: no separate query files exist (no RDF core) \u2014 the relational equivalent is a full GET /decisions/{id} round trip PER QUESTION (q1-q5/q9), GET /executions + GET /outcomes (q6/q7), and one indexed SQL query for 'later decisions' (q8). services/baseline/store.py already nests gate_results/evidence into ONE row (Phase 8's W5 finding: a single GET could answer 6 of 9 questions) \u2014 this measurement times a per-question ROUND TRIP on both sides for an apples-to-apples call-count comparison, not the cheaper 'fetch once, answer locally' path either variant's real application code would actually take.",
+    "ontology": {
+      "queries": {
+        "q1_why_was_decision_made.rq": {
+          "count": 30,
+          "max_ms": 7.187,
+          "mean_ms": 4.062,
+          "p50_ms": 4.065,
+          "p95_ms": 5.631,
+          "p99_ms": 7.187
+        },
+        "q2_which_evidence_was_used.rq": {
+          "count": 30,
+          "max_ms": 3.477,
+          "mean_ms": 2.165,
+          "p50_ms": 2.217,
+          "p95_ms": 3.272,
+          "p99_ms": 3.477
+        },
+        "q3_which_evidence_was_excluded.rq": {
+          "count": 30,
+          "max_ms": 3.439,
+          "mean_ms": 1.856,
+          "p50_ms": 1.94,
+          "p95_ms": 2.674,
+          "p99_ms": 3.439
+        },
+        "q4_which_policy_and_authz_versions.rq": {
+          "count": 30,
+          "max_ms": 2.992,
+          "mean_ms": 2.098,
+          "p50_ms": 2.066,
+          "p95_ms": 2.988,
+          "p99_ms": 2.992
+        },
+        "q5_who_proposed_approved_executed.rq": {
+          "count": 30,
+          "max_ms": 4.094,
+          "mean_ms": 2.713,
+          "p50_ms": 2.822,
+          "p95_ms": 3.832,
+          "p99_ms": 4.094
+        },
+        "q6_which_external_objects_changed.rq": {
+          "count": 30,
+          "max_ms": 3.452,
+          "mean_ms": 2.236,
+          "p50_ms": 2.311,
+          "p95_ms": 3.203,
+          "p99_ms": 3.452
+        },
+        "q7_what_outcome_was_observed.rq": {
+          "count": 30,
+          "max_ms": 3.592,
+          "mean_ms": 2.109,
+          "p50_ms": 2.067,
+          "p95_ms": 3.423,
+          "p99_ms": 3.592
+        },
+        "q8_which_later_decisions_depended_on_outcome.rq": {
+          "count": 30,
+          "max_ms": 4.28,
+          "mean_ms": 3.136,
+          "p50_ms": 3.241,
+          "p95_ms": 4.256,
+          "p99_ms": 4.28
+        },
+        "q9_replay_authz_fields.rq": {
+          "count": 30,
+          "max_ms": 5.961,
+          "mean_ms": 3.98,
+          "p50_ms": 4.377,
+          "p95_ms": 5.312,
+          "p99_ms": 5.961
+        }
+      },
+      "sample_count": 30
+    }
+  },
+  "host_load": {
+    "end": {
+      "contended": false,
+      "cpu_count": 14,
+      "docker_cpu_percent": {
+        "oo-poc-action_worker-1": 5.01,
+        "oo-poc-baseline_action_worker-1": 0.01,
+        "oo-poc-baseline_ingestion-1": 0.4,
+        "oo-poc-baseline_service-1": 0.13,
+        "oo-poc-connect-1": 2.37,
+        "oo-poc-decision_service-1": 0.22,
+        "oo-poc-erp-1": 4.77,
+        "oo-poc-ingestion-1": 0.23,
+        "oo-poc-kafka-1": 2.82,
+        "oo-poc-mcp-1": 0.16,
+        "oo-poc-mes-1": 4.71,
+        "oo-poc-opa-1": 0.0,
+        "oo-poc-openfga-1": 0.01,
+        "oo-poc-otel-collector-1": 0.07,
+        "oo-poc-postgres-1": 0.46,
+        "oo-poc-projection_builder-1": 0.01,
+        "oo-poc-rdf4j-1": 1.51,
+        "oo-poc-reconciliation-1": 0.01,
+        "oo-poc-temporal-1": 0.66,
+        "oo-poc-temporal-postgres-1": 0.83,
+        "oo-poc-temporal-ui-1": 0.0,
+        "oo-poc-wms-1": 4.66
+      },
+      "load_avg_15m": 4.5009765625,
+      "load_avg_1m": 2.82080078125,
+      "load_avg_5m": 4.0654296875
+    },
+    "note": "uncontended: 1m load 2.7->2.8 vs 14 cores.",
+    "start": {
+      "contended": false,
+      "cpu_count": 14,
+      "docker_cpu_percent": {
+        "oo-poc-action_worker-1": 0.01,
+        "oo-poc-baseline_action_worker-1": 0.0,
+        "oo-poc-baseline_ingestion-1": 0.19,
+        "oo-poc-baseline_service-1": 0.06,
+        "oo-poc-connect-1": 1.93,
+        "oo-poc-decision_service-1": 0.08,
+        "oo-poc-erp-1": 4.21,
+        "oo-poc-ingestion-1": 0.11,
+        "oo-poc-kafka-1": 1.15,
+        "oo-poc-mcp-1": 0.09,
+        "oo-poc-mes-1": 4.14,
+        "oo-poc-opa-1": 0.0,
+        "oo-poc-openfga-1": 0.01,
+        "oo-poc-otel-collector-1": 0.01,
+        "oo-poc-postgres-1": 16.39,
+        "oo-poc-projection_builder-1": 20.2,
+        "oo-poc-rdf4j-1": 7.82,
+        "oo-poc-reconciliation-1": 8.04,
+        "oo-poc-temporal-1": 1.72,
+        "oo-poc-temporal-postgres-1": 2.77,
+        "oo-poc-temporal-ui-1": 0.0,
+        "oo-poc-wms-1": 4.13
+      },
+      "load_avg_15m": 4.50439453125,
+      "load_avg_1m": 2.71826171875,
+      "load_avg_5m": 4.06689453125
+    }
+  },
+  "stage_benchmarks": {
+    "bench_phase4": {
+      "counter_test": {
+        "query": "\nPREFIX fac: <https://example.local/factory/>\nSELECT ?req ?partUri ?qty ?available WHERE {\n  GRAPH <https://example.local/oo/graph/observed> {\n    ?req a fac:BomRequirement ; fac:workOrder <https://example.local/factory/instance/WorkOrder/WO-42> .\n    ?req fac:requiresPart ?partUri ; fac:quantity ?qty .\n    OPTIONAL {\n      ?lot a fac:InventoryLot ; fac:part ?partUri ; fac:warehouse ?whUri ; fac:availableQuantity ?available .\n    }\n  }\n}\n",
+        "target": "equivalent requirement+inventory facts via SPARQL directly against RDF4J",
+        "warm": {
+          "condition": "semantic_core_direct_sparql",
+          "count": 50,
+          "max_ms": 1.118,
+          "p50_ms": 0.799,
+          "p95_ms": 1.088,
+          "p99_ms": 1.118
+        }
+      },
+      "environment": {
+        "container_resource_limits": "not explicitly configured (docker-compose.yml has no deploy.resources.limits)",
+        "cpu": "arm",
+        "cpu_count": 14,
+        "docker_version": "29.4.2",
+        "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+        "python": "3.14.6",
+        "ram_bytes": 38654705664
+      },
+      "hot_read": {
+        "cold": {
+          "condition": "cold",
+          "count": 30,
+          "max_ms": 7.234,
+          "p50_ms": 4.752,
+          "p95_ms": 6.677,
+          "p99_ms": 7.234
+        },
+        "definitions": {
+          "cold": "a fresh psycopg connection opened and closed per sample",
+          "warm": "one psycopg connection reused across all samples (first sample discarded as warmup)"
+        },
+        "target": "work_order_risk point read (Postgres, ontology_hot)",
+        "warm": {
+          "condition": "warm",
+          "count": 200,
+          "max_ms": 0.37,
+          "p50_ms": 0.199,
+          "p95_ms": 0.239,
+          "p99_ms": 0.261
+        }
+      },
+      "measured_at": "2026-09-24T22:17:02Z",
+      "phase": 4,
+      "slo": {
+        "measured_warm_p95_ms": 0.239,
+        "name": "hot_read_p95_ms",
+        "pass": true,
+        "threshold_ms": 200
+      }
+    },
+    "bench_phase5": {
+      "end_to_end_proposal": {
+        "condition": "warm",
+        "count": 30,
+        "max_ms": 58.007,
+        "p50_ms": 44.264,
+        "p95_ms": 56.212,
+        "p99_ms": 58.007
+      },
+      "environment": {
+        "cpu": "arm",
+        "cpu_count": 14,
+        "docker_version": "29.4.2",
+        "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+        "python": "3.14.6",
+        "ram_bytes": 38654705664
+      },
+      "measured_at": "2026-09-24T22:17:07Z",
+      "phase": 5,
+      "slo": {
+        "decision_proposal_p95_ms": {
+          "measured_p95_ms": 56.212,
+          "note": "excludes human approval wait and external write duration, per H6",
+          "pass": true,
+          "threshold_ms": 500
+        },
+        "gate_evaluation_p95_ms": {
+          "measured_worst_stage_p95_ms": 19.792,
+          "pass": true,
+          "threshold_ms": 300
+        }
+      },
+      "stages": {
+        "authorization_check": {
+          "condition": "warm",
+          "count": 50,
+          "max_ms": 32.928,
+          "p50_ms": 12.966,
+          "p95_ms": 19.792,
+          "p99_ms": 32.928
+        },
+        "policy_evaluation": {
+          "condition": "warm",
+          "count": 50,
+          "max_ms": 13.723,
+          "p50_ms": 4.446,
+          "p95_ms": 6.314,
+          "p99_ms": 13.723
+        },
+        "postgres_index_persistence": {
+          "condition": "warm",
+          "count": 50,
+          "max_ms": 2.411,
+          "p50_ms": 0.649,
+          "p95_ms": 1.764,
+          "p99_ms": 2.411
+        },
+        "shacl_rdf4j_persistence": {
+          "condition": "warm",
+          "count": 50,
+          "max_ms": 21.092,
+          "p50_ms": 7.355,
+          "p95_ms": 11.454,
+          "p99_ms": 21.092
+        }
+      }
+    },
+    "bench_phase6": {
+      "environment": {
+        "cpu_count": 14,
+        "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+        "python": "3.14.6"
+      },
+      "measured_at": "2026-09-24T22:17:20Z",
+      "n_requested": 10,
+      "note": "No SLO gate locked for these three Phase 6 stages in experiments/exp-000/manifest.yaml (only cdc_observation_timeout_s=30s, the ceiling services/action_worker's own poll uses) \u2014 measurement reporting only, per docs/experiment/briefs/phase6.md item 7. CAVEAT (honest, not hidden): external_action_duration_ms and cdc_observation_lag_ms are measured via GET /executions/{id}'s commandStatus field, which services/action_worker/activities.py only ever writes ONCE, in observe_and_finalize (see services/common/action_rdf.py's 'exactly two writes' design) \u2014 the SAME write that also records the CDC-correlated outcome. These two observation points therefore do not cleanly isolate 'WMS command round trip' from 'CDC poll wait' the way spec 08 asks; end_to_end_execution_ms (execute() call to terminal decision status) is the one cleanly-measured figure here. A precise per-activity breakdown would need Temporal's own workflow-history timestamps (ActivityTaskScheduled/Completed events per activity) rather than RDF-write observation points \u2014 left as a follow-up, not attempted this session.",
+      "phase": 6,
+      "stages": {
+        "cdc_observation_lag_ms": {
+          "count": 10,
+          "max_ms": 4.7,
+          "p50_ms": 2.8,
+          "p95_ms": 4.7,
+          "p99_ms": 4.7
+        },
+        "end_to_end_execution_ms": {
+          "count": 10,
+          "max_ms": 1270.3,
+          "p50_ms": 1260.3,
+          "p95_ms": 1270.3,
+          "p99_ms": 1270.3
+        },
+        "external_action_duration_ms": {
+          "count": 10,
+          "max_ms": 1267.2,
+          "p50_ms": 1257.4,
+          "p95_ms": 1267.2,
+          "p99_ms": 1267.2
+        },
+        "proposal_path_ms": {
+          "count": 10,
+          "max_ms": 62.1,
+          "p50_ms": 50.0,
+          "p95_ms": 62.1,
+          "p99_ms": 62.1
+        }
+      }
+    }
+  }
+}

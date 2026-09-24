@@ -1,0 +1,67 @@
+{
+  "end_to_end_proposal": {
+    "condition": "warm",
+    "count": 30,
+    "max_ms": 58.007,
+    "p50_ms": 44.264,
+    "p95_ms": 56.212,
+    "p99_ms": 58.007
+  },
+  "environment": {
+    "cpu": "arm",
+    "cpu_count": 14,
+    "docker_version": "29.4.2",
+    "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "python": "3.14.6",
+    "ram_bytes": 38654705664
+  },
+  "measured_at": "2026-09-24T22:17:07Z",
+  "phase": 5,
+  "slo": {
+    "decision_proposal_p95_ms": {
+      "measured_p95_ms": 56.212,
+      "note": "excludes human approval wait and external write duration, per H6",
+      "pass": true,
+      "threshold_ms": 500
+    },
+    "gate_evaluation_p95_ms": {
+      "measured_worst_stage_p95_ms": 19.792,
+      "pass": true,
+      "threshold_ms": 300
+    }
+  },
+  "stages": {
+    "authorization_check": {
+      "condition": "warm",
+      "count": 50,
+      "max_ms": 32.928,
+      "p50_ms": 12.966,
+      "p95_ms": 19.792,
+      "p99_ms": 32.928
+    },
+    "policy_evaluation": {
+      "condition": "warm",
+      "count": 50,
+      "max_ms": 13.723,
+      "p50_ms": 4.446,
+      "p95_ms": 6.314,
+      "p99_ms": 13.723
+    },
+    "postgres_index_persistence": {
+      "condition": "warm",
+      "count": 50,
+      "max_ms": 2.411,
+      "p50_ms": 0.649,
+      "p95_ms": 1.764,
+      "p99_ms": 2.411
+    },
+    "shacl_rdf4j_persistence": {
+      "condition": "warm",
+      "count": 50,
+      "max_ms": 21.092,
+      "p50_ms": 7.355,
+      "p95_ms": 11.454,
+      "p99_ms": 21.092
+    }
+  }
+}

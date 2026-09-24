@@ -1,0 +1,41 @@
+{
+  "environment": {
+    "cpu_count": 14,
+    "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "python": "3.14.6"
+  },
+  "measured_at": "2026-09-24T22:17:20Z",
+  "n_requested": 10,
+  "note": "No SLO gate locked for these three Phase 6 stages in experiments/exp-000/manifest.yaml (only cdc_observation_timeout_s=30s, the ceiling services/action_worker's own poll uses) \u2014 measurement reporting only, per docs/experiment/briefs/phase6.md item 7. CAVEAT (honest, not hidden): external_action_duration_ms and cdc_observation_lag_ms are measured via GET /executions/{id}'s commandStatus field, which services/action_worker/activities.py only ever writes ONCE, in observe_and_finalize (see services/common/action_rdf.py's 'exactly two writes' design) \u2014 the SAME write that also records the CDC-correlated outcome. These two observation points therefore do not cleanly isolate 'WMS command round trip' from 'CDC poll wait' the way spec 08 asks; end_to_end_execution_ms (execute() call to terminal decision status) is the one cleanly-measured figure here. A precise per-activity breakdown would need Temporal's own workflow-history timestamps (ActivityTaskScheduled/Completed events per activity) rather than RDF-write observation points \u2014 left as a follow-up, not attempted this session.",
+  "phase": 6,
+  "stages": {
+    "cdc_observation_lag_ms": {
+      "count": 10,
+      "max_ms": 4.7,
+      "p50_ms": 2.8,
+      "p95_ms": 4.7,
+      "p99_ms": 4.7
+    },
+    "end_to_end_execution_ms": {
+      "count": 10,
+      "max_ms": 1270.3,
+      "p50_ms": 1260.3,
+      "p95_ms": 1270.3,
+      "p99_ms": 1270.3
+    },
+    "external_action_duration_ms": {
+      "count": 10,
+      "max_ms": 1267.2,
+      "p50_ms": 1257.4,
+      "p95_ms": 1267.2,
+      "p99_ms": 1267.2
+    },
+    "proposal_path_ms": {
+      "count": 10,
+      "max_ms": 62.1,
+      "p50_ms": 50.0,
+      "p95_ms": 62.1,
+      "p99_ms": 62.1
+    }
+  }
+}

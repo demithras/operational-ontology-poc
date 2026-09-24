@@ -138,6 +138,24 @@ def main() -> int:
     if ab_src.exists():
         shutil.copy2(ab_src, results_dir / "ab-results.json")
 
+    _step("12b", "restore experiments/exp-000/results/ to its committed state — orchestrator correction "
+                 "(Phase 10b): this run's own sub-scripts (historical_corpus.py, replay_full_sweep.py, "
+                 "bench_phase*.py, mutate.py, run_ab.py, gen_traces_reference.py, probe_baseline_structural_"
+                 "mutation.py, ...) are pre-existing Phase 2-10a tools that all hardcode "
+                 "experiments/exp-000/results/<file> as their OWN output path — a convention that predates "
+                 "this phase and is shared with several standalone Makefile targets (`make bench`, `make ab`, "
+                 "`make test-replay`) that are NOT part of this pipeline and must keep working unmodified. "
+                 "Rather than rewrite each of those tools' internal paths (high risk this late, for files "
+                 "already faithfully copied into THIS run's own immutable snapshot one step above), this run "
+                 "uses exp-000/results/ as ITS OWN private scratch area and reverts it to HEAD here — "
+                 "exp-000 stays the frozen Phase 0-9 record; the real 5,000-decision measurements this run "
+                 "produced live only in this exp's own results/, never as a lingering dirty diff on exp-000.")
+    revert = subprocess.run(["git", "checkout", "--", "experiments/exp-000/results/"], cwd=REPO_ROOT, capture_output=True, text=True)
+    if revert.returncode != 0:
+        print(f"  WARNING: could not revert experiments/exp-000/results/ ({revert.stderr.strip()}) — leaving as-is, disclosed not hidden")
+    else:
+        print("  experiments/exp-000/results/ restored to its committed (HEAD) state")
+
     _step(13, "derive hypothesis-results.json from this run's own evidence")
     from scripts import gen_hypothesis_results
     gen_hypothesis_results.derive(results_dir, exp_version)

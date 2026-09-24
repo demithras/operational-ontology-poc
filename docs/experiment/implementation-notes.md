@@ -4829,3 +4829,450 @@ a live `SELECT ... FROM transfer_candidates JOIN work_order_risk` discovery
 query, which this fix's own investigation confirms is NOT safe against a
 long-lived, multi-agent-tested shared stack even when scoped away from
 WO-42 specifically.
+
+## Phase 10b — final experiment run and report (tag `poc-v1.0-experiment`)
+
+Brief: `docs/experiment/briefs/phase10b.md`. Spec: 01, 08, 10, 11, 13 (make
+experiment outputs, exit codes). Items done: 3 (`make experiment`/`make
+report` implemented for real), 4 (5,000-decision bulk corpus both variants,
+inside `make experiment`), 6 (clean-machine check), 7 (fair evolution
+comparison, corrected twice — see below), 8 (H13 forensic-query timing),
+9 (configurable cold-start `wait-converged` budget). Items 0/1/2/5 were
+already done in Phase 10a per the brief.
+
+Three orchestrator review rounds found and fixed real bugs across the
+whole session; every round is preserved as its own immutable
+`experiments/exp-NNN/` directory (exp-001, exp-002, exp-003) rather than
+edited in place, per spec 13's immutability requirement — see the
+"Immutability" subsection below for the one place this was violated by
+mistake and then corrected.
+
+### `make experiment` / `make report`, implemented
+
+`scripts/run_experiment.py` creates a new `experiments/exp-NNN/`
+(incrementing from the highest existing `exp-*`), copies exp-000's LOCKED
+`manifest.yaml` thresholds unchanged, then runs 14 steps: the fair
+evolution comparison (item 7, its own internal reset — see below), the
+5,000-decision bulk corpus (both variants, `seed/generators/
+bulk_historical_decisions.py` / the new `bulk_historical_decisions_
+baseline.py`), the comprehensive test suite (`scripts/run_full_test_
+suite.py` — tests/model, tests/experiment, tests/contracts, tests/
+component, tests/integration, tests/faults, tests/replay, tests/agent,
+tests/stateful, ONE junit-xml, `test-results.json`), mutation tests
+(fresh, `tests/mutation`), the H11 like-for-like structural-mutation probe
+(new, see below), the full A/B rerun (`pytest tests/ab` + `scripts/run_ab.py
+--w7-n 500` + `scripts/baseline_replay_sweep.py` + `scripts/gen_ab_
+tradeoffs.py`), the fault matrix (derived from the SAME test run — `scripts/
+gen_fault_results.py`), latency benchmarks (`make bench`'s three scripts +
+the new H13 forensic-query timing, `scripts/gen_latency_report.py`),
+`environment.json`/`contract-manifest.json` (`scripts/gen_experiment_
+metadata.py`), `traces-reference.txt`, copying every raw supporting
+artifact into the immutable `exp-NNN/results/` snapshot, restoring
+`experiments/exp-000/results/` to its committed state (see "Immutability"
+below), deriving `hypothesis-results.json` (`scripts/gen_hypothesis_
+results.py`), and `final-report.md` + the exit code (`scripts/gen_final_
+report.py` + `scripts/gen_acceptance_verdict.py`). `make report` just
+re-runs `gen_final_report.py` against the LATEST `exp-*` directory's
+already-written results — never re-runs anything.
+
+Exit codes follow spec 11's table exactly, derived (never hand-typed) from
+real per-category signals: `SAFETY_ZERO_TOLERANCE_FAULT_IDS` (spec 11's
+literal six safety items — F01-F06, F16/F17, F30-F34) gates exit 10;
+`DATA_QUALITY_FAULT_IDS` (F09, F19, F26, F27, F37-F39) and H4/H5 gate exit
+11; `REPLAY_FAULT_IDS` (F28/F29) and H7/H8 gate exit 12; an uncontended
+performance SLO miss gates exit 13; missing `test-results.json`/`fault-
+results.json` gates exit 15; anything else short of full PASS gates 14.
+
+### Item 9 — configurable cold-start `wait-converged` budget
+
+`services/ingestion/wait_converged.py`: `WAIT_CONVERGED_TIMEOUT_S` env var
+overrides the 240s default (Phase 7b hit a timeout right after a fresh
+reset+rebuild) without editing the Makefile; actual convergence time is
+now always printed and returned, not just assumed from the budget.
+
+### Item 7 — fair evolution comparison, corrected TWICE
+
+**First correction (auto-advance)**: a genuinely fresh stack used to start
+at the tracked V1 baseline and stay there until someone manually ran
+`make deploy-v2`/`deploy-v3` — but `make test` (which the DoD sequence
+runs directly after `make seed`, with no manual deploy step) is written
+throughout Phases 5-10 assuming V3 features are live. Fixed with `services/
+common/advance_fresh_stack_to_current.py`, wired into `make seed` (after
+`wait-converged`, not `make up` — `migrations/v1_to_v2/deploy.py`'s own
+`migrate_rdf()` needs real ingested inventory facts to do anything, so it
+has to run after seeding): re-derives "is this stack genuinely fresh" the
+same way `services/common/reset_deployed_version_if_empty.py` already
+does (0 rows in `decisions`), and if so, cascades through the exact same,
+already-proven `deploy-v2`/`deploy-v3`/`deploy-v3-gates` functions,
+landing at exactly today's real deployed state. Verified live end to end:
+fresh reset → `make test` → `21+67+26+73 = 187 passed, 0 failed`, matching
+the known-good baseline exactly.
+
+**A real projection-builder race found building this**: the very first
+live run of the auto-advance hit `RuntimeError: deploy-v2 projection
+rebuild hash mismatch` (`work_order_risk`/`transfer_candidates`/`action_
+eligibility_summary` mismatched; `current_inventory` matched).
+Root-caused: `wait-converged` only proves Kafka CDC lag is 0 and that ONE
+canonical row (WO-42) exists in `work_order_risk` — not that `services/
+projection_builder`'s own ~3s-interval live poll loop has finished
+rebuilding all 200 work orders'/1988 lots' rows from the now-fully-ingested
+graph. `migrations/v1_to_v2/deploy.py`'s own before/after hash check
+captures "before" from whatever the live loop had written at that exact
+moment (a moving target) and "after" from an explicit, complete rebuild —
+they can differ by nothing more than which poll cycle was in flight.
+Confirmed live: `build_all()` called twice in a row on the SAME
+(by-then-settled) stack produced IDENTICAL hashes for all four tables —
+the compute is fully deterministic once inputs stop changing, so this was
+a timing race, not a correctness bug in the check itself (the check was
+NOT weakened). Fixed in `services/common/advance_fresh_stack_to_current.py::
+_quiesce_projections()`: calls `build_all()` in a loop, before `deploy-v2`
+runs, until TWO CONSECUTIVE calls produce identical business-field hashes
+across all four tables — the same fixed-point definition of "settled"
+`wait_converged.py` already uses for Kafka lag. Verified: two full
+independent fresh `down -v`/`up`/`seed` cycles, both landing on the exact
+expected post-auto-advance state, no hash-mismatch.
+
+**Second correction (the evolution comparison's own reset)**: the
+original design tried to build V1-era history for H7/H11 by reusing the
+already-migrated (and, by the time `make experiment` runs, already
+populated by `make test`) V3 stack — flipping only the `deployed_
+version.json` pointer back to "v1" WITHOUT reloading RDF4J's live SHACL
+shapes, reasoning that a v1-labeled write would only ever be validated
+against a strictly MORE PERMISSIVE v3 ruleset (v2/v3 are additive-only
+over v1). **That reasoning is backwards and was rejected by the
+orchestrator**: a more permissive ruleset ACCEPTS MORE (v3's `oo:status`
+enum allows `oo:GateUnavailable`, v1's does not) — so a "v1-era" decision
+validated under live v3 shapes is NOT actually proven to satisfy real v1
+rules, silently weakening the exact historical-contract-integrity property
+H7/H8 exist to test. It was also unsafe in practice: reloading RDF4J's
+shapes graph on a NON-EMPTY store 409s (RDF4J's ShaclSail re-validates the
+WHOLE dataset against any newly-loaded shape graph, and the ~3,360
+decisions `make test` already created under V3 rules are correctly not
+conformant to v1's narrower enumeration) — found live while testing the
+first fix.
+
+**Correct design, shipped**: `scripts/gen_evolution_comparison.py`
+performs its OWN destructive fresh reset as the FIRST thing it does —
+`make down` → `docker compose down -v` → `make up` → `make seed` with a
+new `OO_SKIP_AUTO_ADVANCE=1` env var (checked inside `advance_fresh_stack_
+to_current.py`) so the stack STAYS at the tracked V1 baseline with the
+REAL V1 SHACL shapes genuinely live and enforcing (confirmed live: `[
+bootstrap_rdf4j] done: ontology graph 592 triples; SHACL enforcement
+active=True`) — then builds V1-era history for real under real V1 rules,
+advances forward through the real `deploy-v2`/`deploy-v3`/`deploy-v3-
+gates` functions, and runs the full replay sweep. Since `make experiment`
+"by definition creates a fresh, self-contained experiment" (orchestrator),
+every LATER `run_experiment.py` step (bulk corpus, full test suite,
+mutation, A/B, latency, fault matrix) now explicitly operates on the stack
+THIS step produces, not the one the outer `make test` validated earlier in
+the clean-machine sequence.
+
+**Baseline-variant infrastructure, new this phase**: `seed/generators/
+baseline_historical_corpus.py` (real-HTTP V1/V2 corpus for `services/
+baseline`, mirrors `historical_corpus.py`, disjoint SKU range 974xxx/
+975xxx) and `bulk_historical_decisions_baseline.py` (5000-target bulk
+corpus, mirrors the ontology's own). `scripts/baseline_replay_sweep.py`
+(pre-existing since Phase 8) is the ONE replay-sweep script for the
+baseline — a duplicate (`scripts/baseline_replay_full_sweep.py`) was
+written and then deleted after the orchestrator caught it, per its own
+correction below.
+
+**Live result (exp-003, the authoritative run)**: V1 corpus 110/variant
+(99 complete chains each), V2 corpus 110/variant (99 complete chains
+each), full replay sweep after `deploy-v3`(+gates): **220/220 (100%) PASS
+on BOTH variants**, 0 FAIL/PARTIAL, 0 F29 errors, for both the ontology
+(`scripts/replay_full_sweep.py`) and the baseline (`scripts/baseline_
+replay_sweep.py`). Migration effort (git-derived, never hand-typed — see
+below for a real bug found computing this): ontology V1→V2 4 files/214
+insertions across 4 commits, V2→V3 6 files/249 insertions across 4
+commits; baseline touched ZERO baseline-specific files for either step
+(`git status --porcelain services/baseline` empty before AND after both
+`make deploy-v2`/`deploy-v3` — confirmed live, and neither migration
+script's own source even mentions `services/baseline`), because `services/
+baseline/manifest.py` reads the exact same `contracts/manifests/deployed_
+version.json` the ontology variant reads.
+
+**A real bug found computing that migration-effort number**: `scripts/
+gen_evolution_comparison.py::_git_derived_migration_effort()` used `git
+log --follow --numstat` — `--follow` only accepts exactly ONE pathspec and
+`git` exits nonzero ("fatal: --follow requires exactly one pathspec") the
+moment a second directory is passed (the V2→V3 call site, `migrations/
+v2_to_v3/` + `migrations/v2_to_v3_gates/`). The subprocess return code
+wasn't checked, so this silently produced `files_changed=0, insertions=0`
+for V2→V3 — a plausible-looking zero, not a crash, caught only by reading
+the number against what `git log` showed directly. Fixed by dropping
+`--follow` (directory-level aggregation never needed single-file rename
+tracking) and checking the return code so a future git failure aborts
+loudly. Corrected numbers verified directly against `git log --numstat`
+output before trusting the script's own re-derivation.
+
+### Item 4 — 5,000-decision bulk corpus, both variants
+
+`seed/generators/bulk_historical_decisions.py --target 5000` (pre-existing
+since Phase 7b) and the new `bulk_historical_decisions_baseline.py`
+(mirrors it — direct-write via `services.baseline.store.insert_decision`,
+real `authz.check()`/`policy_mod.evaluate()` gate evaluation, no HTTP/
+Temporal, same synthetic-id-range discipline as every other generator in
+this repo) run inside `run_experiment.py` right after the evolution
+comparison, giving both variants a realistically-sized corpus for H6 hot-
+path latency, H13 forensic-query timing, and the full fault matrix/A/B
+rerun that follow.
+
+### Item 8 — H13 forensic-query timing on the full corpus
+
+`scripts/gen_latency_report.py`: for the ontology, each of `contracts/
+queries/v1/q1-q9*.rq` run as a real SPARQL round trip against RDF4J
+(`services/common/forensic_queries.run_forensic_query`) over N=30 sampled
+decisions. For the baseline (no separate query files — no RDF core), the
+honest relational equivalent: a full `GET /decisions/{id}` round trip PER
+QUESTION for q1-q5/q9 (deliberately NOT reusing one cached response, for an
+apples-to-apples CALL-COUNT comparison — `services/baseline/store.py`
+already nests everything into one row, so a real caller would only need
+ONE call; this measurement times the per-question cost each side would pay
+if it asked one question at a time), `GET /executions` + `GET /outcomes`
+for q6/q7, one indexed SQL query for q8 ("later decisions"). Merged with
+`make bench`'s existing bench-phase4/5/6 output and host-load samples
+(`services/common/host_load.py`) into one `latency.json`.
+
+### Item 6 — clean-machine check
+
+The full README definition-of-done sequence (`docker compose up -d`/`make
+up` → `make seed` → `make test` → `make experiment` → `make replay
+DECISION_ID=<id>` → `make report`) was run from a genuine `make down &&
+docker compose down -v` multiple times across this phase — once to
+validate the auto-advance fix (187/187 `make test` passed), twice more as
+the two-consecutive-fresh-cycles verification the orchestrator required
+after the projection-builder race fix (both cycles landed on the exact
+expected post-auto-advance state), and the final official run that
+produced exp-003. `make replay DECISION_ID=D-a499e5213301481e9e2a` (a real
+V1-era decision from exp-003's own corpus) reconstructs cleanly:
+`status: PASS`, `evidence_hash_match`/`gate_result_match`/`action_input_
+match` all `true`, `authz_replay_mode: live`.
+
+**A transient Kafka-lag stall, investigated and NOT a real bug**: during
+the first clean-machine attempt, `wait-converged` sat at `kafka lag
+total=6921` unchanged for 5+ minutes right after a fresh `docker compose
+down -v`/`make up`/`make seed`. Killed and investigated rather than
+assumed: `services/ingestion`'s own container logs were empty (buffered
+stdout, a real but harmless artifact — RDF4J's statement count was
+independently confirmed growing rapidly, 55,607 → 83,191 in 15s, proving
+ingestion WAS actively working), and re-running `wait_converged.py`
+moments later converged cleanly in 14.8s. The 600s budget (item 9) would
+almost certainly have absorbed this on its own; killing it early cost real
+time and is disclosed here as a mistake, not hidden.
+
+### Immutability — a mistake, found and corrected
+
+While iterating on the derivation-logic fixes below, `gen_hypothesis_
+results.py`/`gen_acceptance_verdict.py` were run DIRECTLY against `exp-001/
+results/` to verify the fixes against real (already-captured) raw data —
+which overwrote `hypothesis-results.json`/`acceptance-verdict.json` in
+place with the corrected derivation applied retroactively, violating spec
+13's "immutable `experiments/exp-XXX/`" requirement even though the intent
+was only verification. The orchestrator caught this. Recovered the TRUE
+original exactly (not a "reconstruct from partial evidence" fallback):
+`exp-001/results/final-report.md` was NEVER touched by the testing
+(confirmed by its own unchanged file mtime) and already contained the
+complete original hypothesis ledger/evidence/acceptance-item table.
+Extracted `gen_hypothesis_results.py`/`gen_acceptance_verdict.py` exactly
+as they were at commit `b899fc9` (the commit `final-report.md` itself
+names as its own "Git commit"), ran them — as standalone copies, never
+touching the committed `scripts/` versions — against exp-001's own
+untouched raw measurement files, and confirmed the output matched `final-
+report.md`'s recorded values in every field before restoring it over the
+wrongly-regenerated files. `run_experiment.py` now also restores `experiments/
+exp-000/results/` to its committed (HEAD) state as its own second-to-last
+step (`git checkout -- experiments/exp-000/results/`) — every pre-existing
+Phase 2-10a script this pipeline calls (`historical_corpus.py`, `replay_
+full_sweep.py`, `bench_phase*.py`, `mutate.py`, `run_ab.py`, `gen_traces_
+reference.py`, the new `probe_baseline_structural_mutation.py`, ...)
+hardcodes `experiments/exp-000/results/<file>` as ITS OWN output path, a
+convention shared with several standalone Makefile targets (`make bench`/
+`make ab`/`make test-replay`) that are not part of this pipeline and must
+keep working unmodified — rewriting each of those tools' internal paths
+this late was judged higher-risk than reverting the scratch usage
+afterward. `exp-000` stays the frozen Phase 0-9 record; the real
+measurements each `make experiment` run produces live only in that run's
+own `exp-NNN/results/`, copied there one step earlier in the same
+pipeline. `contracts/manifests/openfga_model_ids.json` is treated
+differently (committed with its current value, not reverted) — it is a
+required LIVE POINTER the system needs to function correctly right now
+(replay resolves historical OpenFGA model ids through it), not a
+point-in-time measurement snapshot.
+
+### Derivation-logic bugs — three orchestrator review rounds
+
+**Round 1 (exp-001, exit 10)** — five real bugs, all fixed:
+
+1. **F27 "test race", not a real defect**: `tests/integration/test_
+   projection_consistency.py::test_tampered_row_fails_consistency_check`
+   passed 3/3 when the orchestrator re-ran it alone. Root cause: `services/
+   projection_builder`'s live ~3s poll loop can heal a tampered row between
+   the test's UPDATE and its consistency-check SELECT. Fixed by holding the
+   SAME `pg_advisory_lock(hashtextextended('oo_poc_projection_rebuild',
+   0))` key `build_all()` itself takes, across the whole tamper → check →
+   restore window — mutual exclusion via the exact primitive the builder
+   already uses for writer-vs-writer serialization (Phase 10a step 0a),
+   applied here for tamper-vs-writer instead. Added `test_tampered_row_
+   fails_consistency_check_20x_under_load` (all 20 iterations must detect
+   the tamper, with the live builder genuinely active throughout). Verified
+   live: 3 separate `pytest` runs, 3/3 each time, plus the 20x test.
+2. **H2 scoped to the wrong fault set**: derived from "any of F01-F40
+   fails," conflating H2's actual claim (authorization/policy/SHACL GATES
+   prevent invalid effects) with data-quality/reliability/replay faults
+   that already own their own hypotheses. Rescoped to the real gate-
+   relevant set — `F01-F09` (direct gate/deny tests), `F22-F24`/`F26`
+   (gate-dependency-unavailable → fail closed), `F30-F34` (adversarial
+   agent bypass attempts) — plus the full `tests/agent` suite as an
+   independent signal. Exit-code mapping fixed to match: `SAFETY_ZERO_
+   TOLERANCE_FAULT_IDS` (spec 11's literal six safety items) gates exit
+   10; F27 (data quality) now maps to exit 11 instead — never safety.
+3. **H14 false negative**: the checker looked for `required_evidence`/
+   `evidence.required`, keys that appear NOWHERE in this repo — a
+   permanent false negative no green run could ever expose. Fixed to read
+   the real keys (`evidence_requirements`, `closure.required`, verified
+   directly against `contracts/actions/v1/transfer_inventory.yaml`) across
+   EVERY action type/version (9 files, all `True`), not just `transfer_
+   inventory`.
+4. **Acceptance item `2_hot_read_p95` always `None`**: the code assumed
+   `bench-phase4.json`'s `"hot_read"` key held a pass/fail verdict — it
+   holds raw cold/warm SAMPLES with no `"pass"` field at all. The real
+   verdict is the sibling `"slo"` key, and (a second layer to the same
+   bug) unlike `bench-phase5.json`'s `"slo"` — a dict keyed BY SLO name —
+   `bench-phase4.json`'s `"slo"` is a single flat object. Fixed to read
+   `slo.pass` directly, for every bench file, the same way.
+5. **H11 not like-for-like**: credited the ontology with a "change-
+   safety" advantage from the SHACL_CARDINALITY mutation kill ALONE,
+   without testing whether the baseline's own equivalent guard would
+   catch the same corruption. New `scripts/probe_baseline_structural_
+   mutation.py` runs a REAL live experiment against the running baseline:
+   creates a real decision; confirms Postgres's `NOT NULL` on `decisions.
+   evidence_snapshot` rejects a corrupting write (the closest real
+   analogue of SHACL_CARDINALITY's target — coarser-grained, whole column
+   vs. one nested field, but the same write-time-reject role); DROPS that
+   constraint (the literal baseline analogue of minCount 1→0); confirms
+   the write now succeeds; confirms `services/baseline/replay.py`'s own
+   `evidence_hash_match` check independently catches the corruption
+   anyway (it treats a missing `content_hash` as an automatic mismatch);
+   reverts both cleanly. Result, live: the baseline caught it BOTH ways.
+   H11 is now REJECTED, with dimension-by-dimension notes covering
+   correctness/forensic/replay-across-evolution/change-effort/latency/
+   complexity/structural-validation — every dimension the orchestrator
+   asked for, not a narrow SUPPORTED resting on one non-like-for-like
+   check.
+
+**`tests/experiment/test_verdict_derivation.py`** (new, no docker
+required): every hypothesis (H1-H14) and the exit-code/acceptance-item
+logic tested against a known-positive (an all-green synthetic fixture) and
+a known-negative (one targeted signal flipped) case, plus direct
+regression tests for bugs 2-5 above and a `_status()`/`_hyp_bool()`
+contract test ("no evidence" always reads INCONCLUSIVE, never a fabricated
+REJECTED). Wired into both `make test-unit` and `make experiment`'s own
+comprehensive suite. Building it caught one more latent bug of the same
+class: H1's own completeness-SQL check used a `-1` "DB unreachable" error
+sentinel that was being compared with `== 0`, producing a real `False`
+(REJECTED) instead of "no evidence" (INCONCLUSIVE) when the check
+genuinely couldn't run.
+
+**Round 2 (exp-002, exit 0, one bug left)**: H6's own notes read `"hot_read
+pass=None"` while its status still said SUPPORTED. Root cause: `_h6_slo_
+check()` (`gen_hypothesis_results.py`) had a SEPARATE, independent
+implementation of the SAME bench-phase4 key lookup bug 4 fixed above —
+missed the first time because it was a second, divergent implementation,
+not a shared one — PLUS a `hot_read_pass is not False` condition that let
+`None` (no evidence) pass as if it were a real pass, and `all(...) if slo
+else False`, which read a genuinely empty SLO block as a real failure
+rather than "unknown." Fixed to use the identical lookup `_slo_pass()`
+uses, and to route every signal through this module's own tested
+`_status()` None-propagation contract instead of a second, divergent
+boolean formula. H6's notes now cite the real measured numbers
+(`gate_p95=19.792ms, proposal_p95=56.212ms` in exp-003; `hot_read
+measured_warm_p95=0.239ms`), not a bare boolean.
+
+Per the orchestrator's instruction, swept both derivation files for the
+SAME "no evidence/id-not-found silently reads as a verdict" pattern and
+found FIVE more real instances, all fixed the same way:
+
+- `_all_pass()`: an empty dict, or any fault id present-but-`"MISSING"`
+  from the matrix, used to blend into the boolean instead of returning
+  `None`.
+- `gen_acceptance_verdict.py`'s per-item `_fault(fault_doc, X) == "PASS"
+  if fault_doc else None` pattern (acceptance items 5/6/7): a `fault_doc`
+  that EXISTS but doesn't contain id X used to read as a real `False`.
+  Centralized into a new `_fault_pass()` helper.
+- Acceptance item 8 (`concurrency_invariants`): same pattern for a
+  missing `concurrency_test` block.
+- H7/H8/Headline-B's `ont_replay_clean`: a missing `replay_sweep` block
+  (e.g. if item 7's own pipeline crashed before writing it) used to read
+  as a real "not clean" rather than "unknown."
+- H13: an empty `queries` dict used to read as "not all answered" rather
+  than "no evidence this ran."
+
+`tests/experiment/test_verdict_derivation.py` grew to 61 tests (+9):
+direct regressions for H6's two failure modes (missing verdict →
+INCONCLUSIVE; a REAL measured failure → still REJECTED, not silently
+passed through), a check that H6's notes embed the real measured numbers,
+and coverage for all five sweep fixes above.
+
+**Round 3**: none — the orchestrator independently verified exp-003 (exit
+0, H6 citing real numbers, 310/310 tests, 40/40 faults) and moved straight
+to the close-out sequence documented in this section.
+
+### Final result — exp-003 (authoritative)
+
+```yaml
+can_decide_now: PASS
+can_prove_why_later: PASS
+
+ontology_thesis:
+  H1: SUPPORTED   H2: SUPPORTED   H3: SUPPORTED   H4: SUPPORTED
+  H5: SUPPORTED   H6: SUPPORTED   H7: SUPPORTED   H8: SUPPORTED
+  H9: SUPPORTED   H10: SUPPORTED  H11: REJECTED   H12: SUPPORTED
+  H13: SUPPORTED  H14: SUPPORTED
+
+exit_code: 0
+```
+
+Test suite: `310 passed, 0 failed, 0 errors, 0 skipped` (tests/model,
+tests/experiment, tests/contracts, tests/component, tests/integration,
+tests/faults, tests/replay, tests/agent, tests/stateful). Fault matrix:
+`{'FAIL': 0, 'NOT_TESTED': 0, 'PASS': 40, 'total': 40}`. `make replay
+DECISION_ID=D-a499e5213301481e9e2a` → `status: PASS`. H11's full
+dimension-by-dimension evidence (correctness/forensic/replay-across-
+evolution/change-effort/latency/complexity/structural-validation) is in
+`experiments/exp-003/results/hypothesis-results.json` and `final-
+report.md` — see the README's own "Phase 10b — final experiment run"
+section for the headline block and the honest read of what H11 REJECTED
+actually means for the ontology thesis.
+
+### Files touched (this phase, cumulative)
+
+- `services/common/advance_fresh_stack_to_current.py` (new) — the
+  auto-advance + projection quiesce logic.
+- `services/ingestion/wait_converged.py` — `WAIT_CONVERGED_TIMEOUT_S` env
+  var, always-printed convergence time.
+- `Makefile` — `experiment`/`report` wired for real; `seed:` calls the
+  auto-advance; `test-unit` includes `tests/experiment`.
+- `scripts/run_experiment.py`, `gen_evolution_comparison.py`, `gen_
+  hypothesis_results.py`, `gen_acceptance_verdict.py`, `gen_fault_
+  results.py`, `gen_latency_report.py`, `gen_experiment_metadata.py`,
+  `gen_final_report.py`, `run_full_test_suite.py` (all new).
+- `scripts/probe_baseline_structural_mutation.py` (new) — the H11
+  like-for-like live probe.
+- `seed/generators/baseline_historical_corpus.py`, `bulk_historical_
+  decisions_baseline.py` (new).
+- `tests/integration/test_projection_consistency.py` — the F27
+  advisory-lock fix + 20x-under-load test.
+- `tests/experiment/test_verdict_derivation.py` (new, 61 tests).
+- `experiments/exp-001/`, `exp-002/`, `exp-003/` — every review round's
+  real, immutable result (exp-001/002 superseded, kept as the honest
+  record of what each review found; exp-003 authoritative).
+- `contracts/manifests/openfga_model_ids.json` — updated to the model ids
+  the final live stack actually has (a required live pointer, not a
+  measurement snapshot — see "Immutability" above).
+
+### What's left
+
+Nothing outstanding against `docs/experiment/spec/12_implementation_
+plan.md` — Phase 10b was the final phase. `poc-v1.0-experiment` tags the
+commit that produced exp-003.
