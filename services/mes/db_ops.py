@@ -137,3 +137,63 @@ def reschedule_work_order_with_idempotency(
         )
         conn.commit()
         return "OK", result
+
+
+def set_work_order_for_test(
+    conn: psycopg.Connection,
+    work_order_id: str,
+    priority: str,
+    warehouse: str,
+    requirements: list[dict[str, Any]],
+    status: str = "RELEASED",
+    planned_start: int = 0,
+    planned_finish: int = 1,
+    production_line_id: str = "LINE-00",
+) -> dict[str, Any]:
+    """Test-mode-only exact upsert of one synthetic work order plus its FULL
+    replacement BOM requirement set (docs/experiment/briefs/phase10fix.md
+    "self-contained fixtures"). Existing requirement rows for this
+    work_order_id are deleted first, then the given set is inserted —
+    `bom_requirements` has no UNIQUE(work_order_id, part_id) constraint (see
+    services/projection_builder/compute.py's own comment on this), so a
+    naive re-insert across repeated calls (a test's fixture re-running
+    across separate `make test` invocations against the same long-lived
+    stack) would silently accumulate duplicate requirement rows and inflate
+    the computed shortage each time. Mounted only behind OO_TEST_MODE=1
+    (services/mes/app.py), same convention as
+    services/wms/db_ops.py::set_inventory_for_test."""
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            INSERT INTO work_orders
+                (work_order_id, production_line_id, status, priority, planned_start, planned_finish, warehouse)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (work_order_id) DO UPDATE
+                SET status = EXCLUDED.status,
+                    priority = EXCLUDED.priority,
+                    planned_start = EXCLUDED.planned_start,
+                    planned_finish = EXCLUDED.planned_finish,
+                    warehouse = EXCLUDED.warehouse,
+                    production_line_id = EXCLUDED.production_line_id,
+                    version = work_orders.version + 1,
+                    updated_at = now()
+            RETURNING *
+            """,
+            (work_order_id, production_line_id, status, priority, planned_start, planned_finish, warehouse),
+        )
+        wo = cur.fetchone()
+
+        cur.execute("DELETE FROM bom_requirements WHERE work_order_id = %s", (work_order_id,))
+        for req in requirements:
+            cur.execute(
+                "INSERT INTO bom_requirements (work_order_id, part_id, qty) VALUES (%s, %s, %s)",
+                (work_order_id, req["part_id"], req["qty"]),
+            )
+
+        cur.execute(
+            "SELECT part_id, qty FROM bom_requirements WHERE work_order_id = %s ORDER BY id",
+            (work_order_id,),
+        )
+        wo["requirements"] = cur.fetchall()
+    conn.commit()
+    return wo

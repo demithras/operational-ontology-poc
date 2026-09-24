@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
@@ -10,7 +11,9 @@ from fastapi.responses import JSONResponse
 
 from services.common.db import close_pool, get_conn, open_pool
 from services.mes import db_ops
-from services.mes.schemas import RescheduleWorkOrderRequest
+from services.mes.schemas import RescheduleWorkOrderRequest, SetWorkOrderRequest
+
+TEST_MODE = os.environ.get("OO_TEST_MODE") == "1"
 
 
 @asynccontextmanager
@@ -85,3 +88,29 @@ def reschedule_work_order(work_order_id: str, body: RescheduleWorkOrderRequest):
     if outcome == "REPLAYED":
         return JSONResponse(status_code=200, content=jsonable_encoder({**row, "replayed": True}))
     return row
+
+
+if TEST_MODE:
+
+    @app.post("/_test/work_orders/{work_order_id}")
+    def set_work_order(work_order_id: str, body: SetWorkOrderRequest):
+        """Phase 10 fix (docs/experiment/briefs/phase10fix.md "self-contained
+        fixtures"): exact upsert of one synthetic HIGH/MEDIUM/LOW-priority
+        work order plus its full BOM requirement set, so integration tests
+        can build their own at-risk-work-order precondition instead of
+        scavenging whichever real seeded work order happens to currently
+        qualify. Same TEST_MODE-gated convention as
+        services/wms/app.py::set_inventory."""
+        with get_conn() as conn:
+            row = db_ops.set_work_order_for_test(
+                conn,
+                work_order_id,
+                priority=body.priority,
+                warehouse=body.warehouse,
+                requirements=[r.model_dump() for r in body.requirements],
+                status=body.status,
+                planned_start=body.planned_start,
+                planned_finish=body.planned_finish,
+                production_line_id=body.production_line_id,
+            )
+        return jsonable_encoder(row)

@@ -4656,3 +4656,176 @@ test_openfga_warmup_window.py`, `tests/faults/test_f40_traces_unavailable.py`,
 test_mutations.py` (6/6), `tests/stateful/test_live_differential.py` (2/2)
 — pass cleanly and independently of this residual issue; none of them are
 among the 2 failures above.
+
+## Phase 10 fix — self-contained fixtures for the 2 Phase 10a residual failures (pre-10b)
+
+Root-caused and fixed the two failures Phase 10a's close-out disclosed
+(`test_decision_service_protected_transfer.py::
+test_planner_declaring_the_high_priority_work_order_is_allowed` and
+`test_forensic_queries_phase6.py::
+test_h13_queries_6_7_8_and_work_order_risk_flips_to_mitigated`, both
+`DENIED_POLICY`/`INSUFFICIENT_EVIDENCE`). The orchestrator reproduced both
+deterministically on a QUIET host (load average 4-6/14 cores) after tag
+`poc-v0.10a-hardened`, refuting Phase 10a's own "host contention / another
+agent" explanation — the real causes were:
+
+1. `test_planner_declaring_the_high_priority_work_order_is_allowed` scavenged
+   seed route PX-0494/WO-0007 (WH-B->WH-A), whose destination lot at WH-A
+   was `QUARANTINE`. This is NOT test leftover: `seed/generators/
+   generate.py:124` assigns `quality_status` with a random 95/5 OK/QUARANTINE
+   weight per lot at generation time — a real, deterministic property of the
+   SEED=42 dataset. No test anywhere in this repo writes a `QUARANTINE`
+   status to a real seeded (non-synthetic) lot (checked every
+   `_test/inventory/set`/`quality_status="QUARANTINE"` call site in
+   `tests/`); the scavenged route simply landed on one of the generator's
+   own 5%-weighted draws.
+2. `test_h13_queries_6_7_8_and_work_order_risk_flips_to_mitigated` scavenged
+   PX-0484/WO-0099, which by the time this test ran was no longer a HIGH-
+   priority protected candidate (a different, already-run test had mitigated
+   or otherwise changed it) — a TOCTOU class the Phase 9/10a fixes had
+   already patched for WO-42 specifically (`_find_high_priority_route`/
+   `_find_at_risk_route` explicitly exclude WO-42) but not for every other
+   seeded work order the same live-discovery SELECT can land on.
+
+### Fix: synthetic, self-contained preconditions instead of scavenging
+
+Both fixtures (`high_priority_route` in `test_decision_service_
+protected_transfer.py`, `at_risk_route` in `test_forensic_queries_phase6.py`)
+now build their OWN synthetic HIGH-priority at-risk work order and
+`transfer_candidates` route end to end, via one new shared helper,
+`tests/integration/decision_helpers.py::create_at_risk_work_order_and_wait`:
+
+- **WMS side** (existing `/_test/inventory/set`, `set_inventory_and_wait`):
+  sets exact on_hand at BOTH the source warehouse (plenty of headroom over
+  `default_safety_stock`) and the destination warehouse (explicitly reset to
+  `on_hand=0, quality_status="OK"` every call — see below for why the
+  destination write is required, not merely defensive).
+- **MES side** (NEW test-mode endpoint `POST /_test/work_orders/{id}`,
+  `services/mes/app.py`/`db_ops.py`/`schemas.py`, same `OO_TEST_MODE=1`-gated
+  convention as WMS's `_test/inventory/set`): upserts one synthetic work
+  order (priority/warehouse/status) and its FULL replacement BOM requirement
+  set — existing requirement rows for that `work_order_id` are deleted
+  before the new set is inserted, because `bom_requirements` has no
+  `UNIQUE(work_order_id, part_id)` constraint (see `services/
+  projection_builder/compute.py`'s own comment) and a naive re-insert across
+  repeated calls would silently accumulate duplicate rows and inflate
+  shortage on every subsequent run.
+- Both sides use the SAME reserved `generated-index-v1` identity-mapping
+  slot (`SKU-{100000+i}`/`COMP-{i:05d}` -> canonical `PX-{i:04d}`,
+  `contracts/identity/v1/mapping_rules.yaml`) so the WMS inventory and the
+  MES requirement resolve to the identical canonical part — reserved index
+  range **62000-63999**, distinct from `seed/generators/generate.py` (0-499)
+  and `tests/ab/synthetic.py` (7000-8999).
+- The helper waits (via the existing `wait_until` convergence-polling
+  convention, never a fixed sleep) for BOTH `work_order_risk` (priority/
+  at_risk/shortage) and `transfer_candidates` (the actual route row) to
+  converge in the hot projection before returning.
+
+Each fixture uses a FIXED, clearly-synthetic `work_order_id`
+(`WO-TEST-PROTECTED-01`, `WO-TEST-H13-01`) reused across every invocation
+within its file — safe because every call fully REPLACES all of the work
+order's fields, its requirement set, and both lots' `on_hand`/
+`quality_status`, so no invocation depends on, or leaks into, any other
+test's or any earlier run's state.
+
+**A second, empirically-found bug in my own first fixture draft**: the H13
+test actually EXECUTES its proposed decision (`start_execution`/
+`wait_for_terminal_status`), which moves REAL inventory into the destination
+warehouse via WMS. An initial draft that (deliberately, to dodge the
+QUARANTINE risk) never wrote destination inventory at all was idempotent
+against every OTHER test but not against ITS OWN prior real execution: a
+second run of the same synthetic work order found the destination already
+partly stocked from the first run's transfer, so `shortage` no longer
+equaled the intended `shortfall` and the fixture's own convergence wait
+timed out (reproduced live via an explicit reverse-file-order run). Fixed by
+having the helper explicitly reset the destination lot to
+`on_hand=0, quality_status="OK"` on every call — this also guarantees the
+non-QUARANTINE destination quality status directly (rather than relying on
+"no row exists -> defaults to OK" in `services/decision_service/
+evidence.py`), so it is a fix, not a workaround.
+
+**A third, non-obvious finding**: `test_forensic_queries_phase6.py`'s
+synthetic work order must ALSO be HIGH priority, even though that file is
+not testing the protected-transfer gate. `services/decision_service/
+evidence.py::_resolve_route_protection` only ever populates
+`route_protection.work_order_ids` for candidates that are BOTH `HIGH`
+priority AND `at_risk` — for a MEDIUM/LOW-priority at-risk work order that
+list is always empty, which deterministically trips
+`gather_transfer_inventory_evidence`'s `work_order_route_mismatch` check
+the moment `parameters.work_order` is declared (reproduced live: a MEDIUM
+version of this fixture hit exactly the `INSUFFICIENT_EVIDENCE`/
+`work_order_route_mismatch` failure this fix's own step 0 diagnosed for the
+ORIGINAL scavenged-route flake — "the product was correct" there because
+the scavenged work order was, for the same underlying reason, no longer a
+HIGH-priority candidate either). Not a bug in `evidence.py` — this file's
+own `_propose()` call declares `work_order`, so it inherits the
+protected-transfer gate's machinery whether or not the test's *intent* is
+to exercise it.
+
+Also swept `tests/` for the SAME anti-pattern (any other test discovering a
+"suitable" route/work order live from `transfer_candidates`/
+`work_order_risk` as a precondition, per this fix's own instructions) and
+confirmed nothing else needed the same treatment:
+`test_decision_service_canonical.py::test_h10_...` only asserts the
+planner's pure-rule recommendation SHAPE (never submits it, explicitly
+self-skips on no candidate) and `test_projection_rebuild_concurrency.py`
+already drives its load exclusively against a dedicated `SYNTHETIC_PART`
+constant — neither scavenges a route the way the two fixed tests did.
+Also confirmed no test anywhere quarantines a REAL (non-synthetic)
+destination lot without restoring it — the `destination_quarantined`
+symptom traces entirely to the seed generator's own random draw (finding 1
+above), not to test leftover, so there was nothing further to clean up
+there.
+
+### Verification
+
+`make test` three times back to back, all green, identical result every
+time:
+
+```
+tests/model:       21 passed in 47.50s / 46.85s / 47.35s
+tests/contracts:   67 passed in 2.96s / 3.29s / 3.25s
+tests/component:   26 passed in 4.27s / 4.32s / 4.32s
+tests/integration: 73 passed in 176.79s / 176.12s / 179.71s
+```
+
+(`make`'s own exit code explicitly captured as `make_exit=0` on runs 2 and
+3, not merely inferred from a background-task notification's exit code,
+which would have reflected the log-redirect shell's status, not `make
+test`'s.) Plus, both fixed tests together in REVERSE file order via
+explicit node ids (`pytest -p no:randomly` with
+`test_forensic_queries_phase6.py::test_h13_...` listed before
+`test_decision_service_protected_transfer.py::test_planner_...`), run
+TWICE back to back to prove idempotency against the H13 test's own real
+execution side effect: `2 passed` both times. Each of the two tests alone:
+`1 passed` each. Both files together in forward order: `7 passed`
+(all of `test_decision_service_protected_transfer.py` +
+`test_forensic_queries_phase6.py`).
+
+### Files touched
+
+- `services/mes/schemas.py` (`SetWorkOrderRequirement`, `SetWorkOrderRequest`)
+- `services/mes/db_ops.py` (`set_work_order_for_test` — full-replace upsert)
+- `services/mes/app.py` (`OO_TEST_MODE`-gated `POST /_test/work_orders/{id}`,
+  same convention as `services/wms/app.py`'s `_test/inventory/set`)
+- `tests/integration/decision_helpers.py`
+  (`create_at_risk_work_order_and_wait`, `_synthetic_part_ids`, reserved
+  index range 62000-63999)
+- `tests/integration/test_decision_service_protected_transfer.py`
+  (`high_priority_route` fixture rewritten; `_find_high_priority_route`
+  removed)
+- `tests/integration/test_forensic_queries_phase6.py` (`at_risk_route`
+  fixture rewritten; `_find_at_risk_route` removed)
+
+### What Phase 10b needs to know
+
+`make test` is fully green again (73/73 integration, 0 failures) — Phase
+10b's load benchmark / `make experiment` / `make report` work can proceed
+without carrying forward either residual failure. The new MES
+`/_test/work_orders/{id}` endpoint is available to any future test that
+needs its own synthetic at-risk/HIGH-priority work order precondition —
+prefer it (and `decision_helpers.create_at_risk_work_order_and_wait`) over
+a live `SELECT ... FROM transfer_candidates JOIN work_order_risk` discovery
+query, which this fix's own investigation confirms is NOT safe against a
+long-lived, multi-agent-tested shared stack even when scoped away from
+WO-42 specifically.

@@ -3,14 +3,26 @@ the spec 03 canonical negative case — "Unauthorized actor: junior user
 attempts protected transfer -> authorization = DENY, external_effects = 0"
 — proved end to end against the real HTTP API.
 
-Uses a REAL, currently at-risk, HIGH-priority work order discovered live
-from the hot projection (preferring WO-42, falling back to any other seeded
-one) rather than a hard-coded fixture id: `tests/integration/test_canonical_scenario.py`
-(Phase 2) permanently mitigates WO-42 the first time the full suite drives
-it, so a test hard-coded to WO-42 would pass in isolation but could fail (or
-skip for the wrong reason) depending on `make test`'s file collection order
-— see decision_helpers.py's own module docstring for the same concern about
-WO-42/PX-17.
+Phase 10 fix (docs/experiment/briefs/phase10fix.md "self-contained
+fixtures"): `high_priority_route` below builds its OWN synthetic
+HIGH-priority, at-risk work order and transfer_candidates route (via
+`tests/integration/decision_helpers.py::create_at_risk_work_order_and_wait`)
+rather than discovering a REAL one live from the hot projection. Scavenging
+a real seeded route used to fail non-deterministically for two REAL,
+unrelated reasons the orchestrator reproduced on a quiet host: (1) the
+scavenged route's destination lot could land on one of
+`seed/generators/generate.py`'s own 5%-weighted QUARANTINE draws — a
+genuine property of the SEED=42 dataset, not test leftover — denying the
+proposal for a reason this file has nothing to do with; (2) a different,
+already-run test could have mitigated the scavenged work order below the
+HIGH-priority-candidate threshold between the SELECT and this file's later
+`propose()` call (the same TOCTOU class the Phase 9/10a fixes already
+patched for WO-42 specifically, just not for every other seeded work order
+scavenging can land on). A synthetic, per-fixture-call work order/route is
+immune to both: it is never touched by any other test, and its destination
+lot is a synthetic part/warehouse pair this fixture ALWAYS sets to
+`quality_status="OK"` itself (never a real seeded lot subject to the
+generator's own random QUARANTINE draw).
 
 Zero-external-effects is trivially true for every propose()-only test below
 (as it is for every other pre-Phase-6-execute decision-service test): this
@@ -25,71 +37,36 @@ from __future__ import annotations
 import httpx
 import psycopg
 import pytest
-from psycopg.rows import dict_row
 
-from tests.integration.decision_helpers import set_inventory_and_wait
+from tests.integration.decision_helpers import create_at_risk_work_order_and_wait, set_inventory_and_wait
 
-
-def _find_high_priority_route(conn: psycopg.Connection) -> dict | None:
-    """A real (part, source_warehouse, destination_warehouse) triple that IS
-    a transfer_candidates row for a currently HIGH-priority, at-risk work
-    order — the candidate with the most headroom over `default_safety_stock`
-    (10, contracts/policies/v1/data.json) so a 1-unit test transfer can
-    never itself be denied by the safety-stock policy gate, which would
-    confound the authorization-only assertions this file makes.
-
-    Phase 10a step 0 regression-verification fix: this used to prefer WO-42
-    (`ORDER BY (tc.work_order_id = 'WO-42') DESC, ...`) — the EXACT same
-    anti-pattern implementation-notes.md's Phase 9 section already found
-    and fixed in a SIBLING file
-    (tests/integration/test_forensic_queries_phase6.py::_find_at_risk_route),
-    just never noticed here. WO-42 is the canonical, shared, EVERYONE-
-    touches-it fixture (common.md: "Never mutate the canonical fixture...
-    except in tests that explicitly restore it") — picking it introduces a
-    TOCTOU window between this SELECT and the caller's later `propose()`
-    call in a long-lived, heavily multi-agent-tested stack: another
-    process's concurrent mitigation of WO-42 between the two can flip this
-    test's outcome from APPROVED to DENIED_POLICY, reproduced live during
-    this phase's own regression-confirmation run. Excluding WO-42 entirely
-    (rather than merely deprioritizing it) is the same remedy Phase 9's fix
-    used, for the same reason: deprioritizing alone does not help when it
-    is the only row that still qualifies once a headroom-losing test has
-    run against everything else."""
-    with conn.cursor(row_factory=dict_row) as cur:
-        cur.execute(
-            """
-            SELECT tc.* FROM transfer_candidates tc
-            JOIN work_order_risk wor ON wor.work_order_id = tc.work_order_id
-            WHERE wor.priority = 'HIGH' AND wor.at_risk = true
-              AND tc.work_order_id != 'WO-42'
-              -- Scoped to WH-A/WH-B: the only warehouses
-              -- contracts/authorization/v1/tuples.yaml grants ANY canonical
-              -- actor (junior-1/planner-1/supervisor-1) authority over —
-              -- every other seeded warehouse denies EVERYONE at the base
-              -- can_transfer_inventory check, which would confound this
-              -- file's authorization-only assertions.
-              AND tc.source_warehouse IN ('WH-A', 'WH-B')
-            ORDER BY tc.available_at_source DESC
-            LIMIT 10
-            """
-        )
-        rows = cur.fetchall()
-    for row in rows:
-        if row["available_at_source"] >= 11:  # remaining after qty=1 >= default_safety_stock (10)
-            return row
-    return None
+# Reserved synthetic index (see decision_helpers.py's own reserved-range
+# comment) and a fixed, clearly-synthetic work_order_id — reused across
+# every fixture invocation in this file (one per test that requests
+# `high_priority_route`). Each invocation fully REPLACES the work order's
+# priority/requirements and the source lot's on_hand
+# (create_at_risk_work_order_and_wait is idempotent), so reuse never
+# depends on — or leaks into — another test's state.
+_WORK_ORDER_ID = "WO-TEST-PROTECTED-01"
+_PART_INDEX = 1001
 
 
 @pytest.fixture()
-def high_priority_route(ontology_hot_conn: psycopg.Connection) -> dict:
-    row = _find_high_priority_route(ontology_hot_conn)
-    if row is None:
-        pytest.skip(
-            "no currently HIGH-priority, at-risk work order with a transfer_candidates "
-            "route (and >= 11 available at source) exists in the seeded dataset right now "
-            "— run against a freshly seeded stack, or before another test fully mitigates it"
-        )
-    return row
+def high_priority_route(
+    mes_client: httpx.Client, wms_client: httpx.Client, ontology_hot_conn: psycopg.Connection
+) -> dict:
+    return create_at_risk_work_order_and_wait(
+        mes_client,
+        wms_client,
+        ontology_hot_conn,
+        _WORK_ORDER_ID,
+        index=_PART_INDEX,
+        priority="HIGH",
+        source_warehouse="WH-B",
+        destination_warehouse="WH-A",
+        shortfall=20,
+        source_on_hand=100,  # >> default_safety_stock (10) + this file's 1-unit test transfers
+    )
 
 
 def _propose(decision_client: httpx.Client, actor_id: str, route: dict, declare_work_order: bool) -> httpx.Response:
