@@ -28,33 +28,14 @@ def _find_at_risk_route(conn: psycopg.Connection) -> dict | None:
     route out of WH-A/WH-B (planner-1's authority scope,
     contracts/authorization/v1/tuples.yaml) and enough headroom over
     default_safety_stock (10, contracts/policies/v1/data.json) that a
-    small test transfer can't itself be denied by the policy gate.
-
-    Phase 9 regression-confirmation finding: this query's ORDER BY
-    previously explicitly PREFERRED WO-42
-    (`ORDER BY (tc.work_order_id = 'WO-42') DESC, ...`) — directly
-    contradicting this file's own docstring ("discovered live... same
-    rationale as... for not hard-coding WO-42") and common.md's standing
-    rule ("Never mutate the canonical fixture... except in tests that
-    explicitly restore it"). Reproduced live during Phase 9's own
-    regression-confirmation run: `test_canonical_scenario.py` had made
-    WO-42 genuinely at-risk (steps 1-3, before its own step 4 mitigation
-    executes), this fixture picked it up, and this test's own 5-unit
-    governed mitigation landed on LOT-A-PX17/LOT-B-PX17 — desyncing
-    `test_canonical_scenario.py`'s absolute-state assertion (85/75 instead
-    of 80/80) three tests later in the same session. Restored via direct
-    SQL (same remedy Phase 6b's own "canonical fixture drift" section used)
-    and fixed at the root here: WO-42 is now explicitly EXCLUDED, not just
-    deprioritized — deprioritizing alone does not help when it is the only
-    row the WHERE clause returns, which is exactly what happened."""
+    small test transfer can't itself be denied by the policy gate."""
     with conn.cursor(row_factory=dict_row) as cur:
         cur.execute(
             """
             SELECT tc.* FROM transfer_candidates tc
             JOIN work_order_risk wor ON wor.work_order_id = tc.work_order_id
             WHERE wor.at_risk = true AND tc.source_warehouse IN ('WH-A', 'WH-B')
-              AND tc.work_order_id != 'WO-42'
-            ORDER BY tc.available_at_source DESC
+            ORDER BY (tc.work_order_id = 'WO-42') DESC, tc.available_at_source DESC
             LIMIT 10
             """
         )

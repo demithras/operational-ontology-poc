@@ -25,12 +25,6 @@ INJECTION_PAYLOADS = [
 def test_tool_parameter_injection_rejected_with_zero_effects(
     mcp_server_granted: FastMCP, wms_client: httpx.Client, granted_warehouse: str
 ):
-    # source_warehouse is always the legitimately-granted WH-B (so the
-    # propose call reaches evidence gathering instead of being denied on
-    # authorization first) — the hostile PAYLOAD is destination_warehouse
-    # specifically, matching tests/integration/test_decision_service_injection.py's
-    # own attack shape. WH-A is watched as ground truth because it's the
-    # (legitimate) destination every payload here claims to replace.
     before_lots = wms_client.get("/inventory_lots", params={"warehouse_id": "WH-A"}).json()
 
     for payload in INJECTION_PAYLOADS:
