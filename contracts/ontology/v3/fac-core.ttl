@@ -1,0 +1,166 @@
+# contracts/ontology/v2/fac-core.ttl
+#
+# Phase 7 (docs/experiment/spec/07_versioning_and_replay.md) V2 BREAKING
+# CHANGE: fac:availableQuantity — the V1 derived (onHand - reserved)
+# property — is RETIRED from the schema. fac:onHand/fac:reserved (already
+# present since V1, see the fac:InventoryLot section below) become the
+# operative facts; anything that read fac:availableQuantity directly must
+# now compute (onHand - reserved) itself. This is why it is a BREAKING
+# change, not an additive one: a V1-shaped policy input
+# (evidence.source_available) has no direct equivalent in V2's evidence
+# shape (evidence.on_hand / evidence.reserved) — see
+# contracts/policies/v2/transfer_inventory.rego and
+# migrations/v1_to_v2/ for the RDF4J + projection migration this requires.
+# Otherwise identical to contracts/ontology/v1/fac-core.ttl (diff it to see
+# the full V1 baseline this evolved from).
+#
+# Domain vocabulary for the factory scenario (docs/experiment/spec/03_domain_scenario.md).
+# phase3.md item 3: Supplier, Part, PurchaseOrder, InventoryLot, Warehouse,
+# WorkOrder, ProductionLine, Shipment.
+#
+# Authoritative-source-per-property (05_ontology_and_contracts.md,
+# "Source-of-truth hierarchy"): Part.description=ERP,
+# InventoryLot.available=WMS, WorkOrder.status=MES — services/ingestion
+# only writes a property from the system implementation-notes.md lists as
+# that property's owner; it never lets another system's CDC event overwrite
+# an authoritative value (see services/ingestion/mapping.py).
+@prefix fac:  <https://example.local/factory/> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+<https://example.local/oo/ontology/v1/fac-core>
+  a owl:Ontology ;
+  owl:versionInfo "1.0.0" ;
+  rdfs:comment "Factory domain vocabulary, v1. See docs/experiment/spec/03_domain_scenario.md." .
+
+#############################################
+## Classes
+#############################################
+
+fac:Supplier       a owl:Class .
+fac:Part           a owl:Class ; rdfs:comment "Canonical part. IRI = part:{canonical_id} (identity-resolved; see contracts/identity/v1/mapping_rules.yaml)." .
+fac:PurchaseOrder  a owl:Class .
+fac:PurchaseOrderLine a owl:Class .
+fac:InventoryLot   a owl:Class .
+fac:Warehouse      a owl:Class .
+fac:WorkOrder      a owl:Class .
+fac:BomRequirement a owl:Class .
+fac:ProductionLine a owl:Class .
+fac:Shipment       a owl:Class ;
+  rdfs:comment "Declared per phase3.md item 3. No Phase 2 source table produces shipment rows yet (WMS models inter-warehouse transfers, not outbound customer shipments) — left unpopulated until a later phase introduces a source for it. See docs/experiment/implementation-notes.md Phase 3 section." .
+
+#############################################
+## Shared identifying / descriptive properties
+#############################################
+
+fac:supplierId    a owl:DatatypeProperty ; rdfs:domain fac:Supplier ; rdfs:range xsd:string .
+fac:partId         a owl:DatatypeProperty ; rdfs:domain fac:Part ; rdfs:range xsd:string ; rdfs:comment "Canonical part id, e.g. PX-0017." .
+fac:poId            a owl:DatatypeProperty ; rdfs:domain fac:PurchaseOrder ; rdfs:range xsd:string .
+fac:lotId            a owl:DatatypeProperty ; rdfs:domain fac:InventoryLot ; rdfs:range xsd:string .
+fac:warehouseId       a owl:DatatypeProperty ; rdfs:domain fac:Warehouse ; rdfs:range xsd:string .
+fac:workOrderId        a owl:DatatypeProperty ; rdfs:domain fac:WorkOrder ; rdfs:range xsd:string .
+fac:lineId               a owl:DatatypeProperty ; rdfs:domain fac:ProductionLine ; rdfs:range xsd:string .
+
+fac:description a owl:DatatypeProperty ; rdfs:domain fac:Part ; rdfs:range xsd:string ; rdfs:comment "authoritative_source: ERP." .
+fac:unit         a owl:DatatypeProperty ; rdfs:domain fac:Part ; rdfs:range xsd:string ; rdfs:comment "authoritative_source: ERP." .
+fac:criticality   a owl:DatatypeProperty ; rdfs:domain fac:Part ; rdfs:range xsd:string ; rdfs:comment "authoritative_source: ERP. LOW | MEDIUM | HIGH | CRITICAL." .
+
+fac:status a owl:DatatypeProperty ; rdfs:comment "Shared status property; allowed literal set is per-domain (Supplier: ACTIVE|SUSPENDED authoritative_source ERP; PurchaseOrder: OPEN|DELAYED|RECEIVED|CANCELLED authoritative_source ERP; WorkOrder: PLANNED|RELEASED|RUNNING|DONE|CANCELLED authoritative_source MES; ProductionLine: ACTIVE|MAINTENANCE authoritative_source MES)." .
+
+#############################################
+## fac:Supplier
+#############################################
+
+fac:leadTimeDays a owl:DatatypeProperty ; rdfs:domain fac:Supplier ; rdfs:range xsd:integer ; rdfs:comment "authoritative_source: ERP." .
+fac:riskClass    a owl:DatatypeProperty ; rdfs:domain fac:Supplier ; rdfs:range xsd:string ; rdfs:comment "authoritative_source: ERP. LOW | MEDIUM | HIGH." .
+
+#############################################
+## fac:PurchaseOrder / fac:PurchaseOrderLine (authoritative_source: ERP)
+#############################################
+
+fac:promisedAt    a owl:DatatypeProperty ; rdfs:domain fac:PurchaseOrder ; rdfs:range xsd:integer .
+fac:expectedAt     a owl:DatatypeProperty ; rdfs:domain fac:PurchaseOrder ; rdfs:range xsd:integer .
+fac:delayReason     a owl:DatatypeProperty ; rdfs:domain fac:PurchaseOrder ; rdfs:range xsd:string .
+fac:suppliedBy       a owl:ObjectProperty   ; rdfs:domain fac:PurchaseOrder ; rdfs:range fac:Supplier .
+fac:hasLine            a owl:ObjectProperty   ; rdfs:domain fac:PurchaseOrder ; rdfs:range fac:PurchaseOrderLine ;
+  owl:inverseOf fac:purchaseOrder ;
+  rdfs:comment "Declared for symmetry/documentation only — NOT populated by services/ingestion. See fac:purchaseOrder's comment (Phase 4 finding: a triple whose subject is the PARENT gets silently wiped whenever the parent's own CDC row event is reprocessed, non-deterministically depending on snapshot delivery order between the two tables)." .
+fac:purchaseOrder a owl:ObjectProperty ; rdfs:domain fac:PurchaseOrderLine ; rdfs:range fac:PurchaseOrder ;
+  rdfs:comment "authoritative_source: ERP purchase_order_lines.po_id. The ACTUALLY POPULATED direction (row's own subject -> owning PurchaseOrder) — see docs/experiment/implementation-notes.md Phase 4 section for why the inverse (fac:hasLine) is not populated." .
+fac:destinationWarehouse a owl:ObjectProperty  ; rdfs:range fac:Warehouse ; rdfs:comment "Used by PurchaseOrderLine (destination for received stock)." .
+fac:quantity              a owl:DatatypeProperty ; rdfs:range xsd:integer ; rdfs:comment "Shared line/requirement quantity (PurchaseOrderLine, BomRequirement)." .
+fac:part                    a owl:ObjectProperty   ; rdfs:range fac:Part ; rdfs:comment "Shared reference-to-Part property (PurchaseOrderLine, InventoryLot)." .
+
+#############################################
+## fac:InventoryLot (authoritative_source: WMS)
+#############################################
+
+fac:warehouse         a owl:ObjectProperty   ; rdfs:domain fac:InventoryLot ; rdfs:range fac:Warehouse .
+fac:onHand             a owl:DatatypeProperty ; rdfs:domain fac:InventoryLot ; rdfs:range xsd:integer .
+fac:reserved            a owl:DatatypeProperty ; rdfs:domain fac:InventoryLot ; rdfs:range xsd:integer .
+# fac:availableQuantity RETIRED in V2 (see file header) — no longer part of
+# the schema. migrations/v1_to_v2 deletes any live fac:availableQuantity
+# triples from the current observed graph; anything needing "available"
+# now computes onHand - reserved directly (services/decision_service/evidence.py
+# is version-aware: V1 decisions still read this property from a
+# still-present triple where migration hasn't run yet; V2+ never does).
+fac:qualityStatus         a owl:DatatypeProperty ; rdfs:domain fac:InventoryLot ; rdfs:range xsd:string ; rdfs:comment "OK | QUARANTINE." .
+
+#############################################
+## fac:Warehouse (authoritative_source: WMS)
+#############################################
+
+fac:capacityClass a owl:DatatypeProperty ; rdfs:domain fac:Warehouse ; rdfs:range xsd:string ; rdfs:comment "SMALL | MEDIUM | LARGE." .
+fac:region          a owl:DatatypeProperty ; rdfs:domain fac:Warehouse ; rdfs:range xsd:string .
+
+#############################################
+## fac:WorkOrder / fac:BomRequirement (authoritative_source: MES)
+#############################################
+
+fac:priority        a owl:DatatypeProperty ; rdfs:domain fac:WorkOrder ; rdfs:range xsd:string ; rdfs:comment "LOW | MEDIUM | HIGH." .
+fac:plannedStart      a owl:DatatypeProperty ; rdfs:domain fac:WorkOrder ; rdfs:range xsd:integer .
+fac:plannedFinish       a owl:DatatypeProperty ; rdfs:domain fac:WorkOrder ; rdfs:range xsd:integer .
+fac:productionLine        a owl:ObjectProperty   ; rdfs:domain fac:WorkOrder ; rdfs:range fac:ProductionLine .
+fac:hasRequirement           a owl:ObjectProperty   ; rdfs:domain fac:WorkOrder ; rdfs:range fac:BomRequirement ;
+  owl:inverseOf fac:workOrder ;
+  rdfs:comment "Declared for symmetry/documentation only — NOT populated by services/ingestion. See fac:purchaseOrder's comment on fac:PurchaseOrderLine above for why (same Phase 4 finding, same fix)." .
+fac:workOrder a owl:ObjectProperty ; rdfs:domain fac:BomRequirement ; rdfs:range fac:WorkOrder ;
+  rdfs:comment "authoritative_source: MES bom_requirements.work_order_id. The ACTUALLY POPULATED direction (row's own subject -> owning WorkOrder)." .
+fac:requiresPart               a owl:ObjectProperty   ; rdfs:domain fac:BomRequirement ; rdfs:range fac:Part .
+
+#############################################
+## fac:ProductionLine (authoritative_source: MES)
+#############################################
+
+fac:capabilities a owl:DatatypeProperty ; rdfs:domain fac:ProductionLine ; rdfs:range xsd:string ; rdfs:comment "MES's JSONB capabilities array, stored as its JSON-encoded string form in v1 (no multi-valued modeling yet)." .
+
+#############################################
+## fac:WmsTransferRecord (authoritative_source: WMS `transfers` table)
+##
+## Phase 6 (docs/experiment/briefs/phase6.md): the CDC-OBSERVED counterpart
+## to the GOVERNANCE-authored oo:ActionExecution (contracts/ontology/v1/oo-core.ttl)
+## — WMS's own ground truth for what actually happened, keyed by the SAME
+## action_execution_id, arriving via the SAME CDC path as every other
+## observed fact (never a live re-query of WMS — H3/H12). This is the fact
+## services/action_worker and services/reconciliation correlate an
+## ActionExecution's expected effect against (spec 06: "must use correlated
+## transaction/transfer facts rather than naive absolute arithmetic").
+## `transfers` was previously deliberately unmapped (docs/adr/0002's sibling
+## note) — this is where it lands, per Phase 5's own handoff note.
+#############################################
+
+fac:WmsTransferRecord a owl:Class ;
+  rdfs:comment "One row per services/wms `transfers.action_execution_id` — the ActionExecution's real-world outcome as WMS itself recorded it." .
+
+fac:actionExecutionId a owl:DatatypeProperty ; rdfs:domain fac:WmsTransferRecord ; rdfs:range xsd:string .
+fac:sourceWarehouse a owl:ObjectProperty ; rdfs:range fac:Warehouse ; rdfs:comment "Used by fac:WmsTransferRecord." .
+# fac:destinationWarehouse already declared above (PurchaseOrderLine) with
+# rdfs:range fac:Warehouse and no rdfs:domain restriction — reused here
+# unchanged for fac:WmsTransferRecord.
+fac:requestedQuantity a owl:DatatypeProperty ; rdfs:domain fac:WmsTransferRecord ; rdfs:range xsd:integer .
+fac:actualQuantity    a owl:DatatypeProperty ; rdfs:domain fac:WmsTransferRecord ; rdfs:range xsd:integer .
+fac:transferStatus    a owl:DatatypeProperty ; rdfs:domain fac:WmsTransferRecord ; rdfs:range xsd:string ; rdfs:comment "COMMITTED | PARTIAL | FAILED | REVERSED (services/wms/schema.sql transfers.status)." .
+fac:faultModeApplied  a owl:DatatypeProperty ; rdfs:domain fac:WmsTransferRecord ; rdfs:range xsd:string ; rdfs:comment "Test-mode only (OO_TEST_MODE=1) — which fault injection, if any, WMS applied (F10-F21)." .
+fac:reversesActionExecutionId a owl:DatatypeProperty ; rdfs:domain fac:WmsTransferRecord ; rdfs:range xsd:string ; rdfs:comment "Set when this record is itself a compensating reverse_transfer (H12/F16)." .

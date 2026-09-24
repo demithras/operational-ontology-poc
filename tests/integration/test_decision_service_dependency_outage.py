@@ -138,12 +138,20 @@ def test_f22_rdf4j_down_fails_proposal_safely(
 
 
 def test_f23_openfga_down_denies_authorization_explicitly(
-    decision_client: httpx.Client, wms_client: httpx.Client, ontology_hot_conn: psycopg.Connection
+    decision_client: httpx.Client, wms_client: httpx.Client, ontology_hot_conn: psycopg.Connection, rdf4j_client,
 ):
+    """Phase 8 step 0 (acceptance criterion A.11): an OpenFGA outage means
+    the authorization gate never ANSWERED — GATE_UNAVAILABLE (HTTP 503),
+    never the fabricated-looking DENIED_AUTHORIZATION a gate that actually
+    answered would produce. Still fail-closed (0 effects — asserted below),
+    still fully governed (a real Decision IS written, still replayable —
+    see the PASS_FAIL_CLOSED_VERIFIED assertion at the end, its own new
+    replay class for exactly this case: `services/decision_service/replay.py`)."""
     sku = "SKU-900702"
     stop = _docker_compose("stop", "openfga")
     if stop.returncode != 0:
         pytest.skip(f"could not stop openfga: {stop.stderr}")
+    decision_id = None
     try:
         part = set_inventory_and_wait(wms_client, ontology_hot_conn, sku, "WH-B", on_hand=100)
         r = decision_client.post(
@@ -155,10 +163,12 @@ def test_f23_openfga_down_denies_authorization_explicitly(
             },
             timeout=15.0,
         )
-        assert r.status_code == 200
+        assert r.status_code == 503, r.text
         body = r.json()
-        assert body["status"] == "DENIED_AUTHORIZATION"
+        assert body["status"] == "GATE_UNAVAILABLE", body
+        assert body["unavailable_gate"] == "authorization", body
         assert body["authorization_result"]["outcome"] == "UNAVAILABLE"
+        decision_id = body["decision_id"]
     finally:
         start = _docker_compose("start", "openfga")
         assert start.returncode == 0, f"failed to restart openfga: {start.stderr}"
@@ -177,14 +187,33 @@ def test_f23_openfga_down_denies_authorization_explicitly(
 
     assert inventory_unchanged(wms_client, sku, "WH-B", 100)
 
+    # Phase 8 step 0: the GATE_UNAVAILABLE decision persisted above must
+    # still replay honestly — never FAIL for "not reproducing" an outage
+    # that is now resolved (`docs/experiment/spec/07_versioning_and_replay.md`,
+    # `services/decision_service/replay.py`'s PASS_FAIL_CLOSED_VERIFIED
+    # class). OpenFGA is back up by this point (the finally block above
+    # already re-verified convergence), so this also proves the fix works
+    # with the dependency both down (at propose time) and later recovered
+    # (at replay time) — the actual sequence F23 exists to model.
+    from services.decision_service.replay import replay_decision
+
+    assert decision_id is not None
+    replay_result = replay_decision(decision_id, ontology_hot_conn, rdf4j_client, db_env.openfga_api_url())
+    assert replay_result.status == "PASS_FAIL_CLOSED_VERIFIED", replay_result.as_dict()
+    assert replay_result.replay["zero_effects_linked"] is True
+    assert replay_result.replay["evidence_hash_match"] is True
+
 
 def test_f24_opa_down_denies_policy_explicitly(
-    decision_client: httpx.Client, wms_client: httpx.Client, ontology_hot_conn: psycopg.Connection
+    decision_client: httpx.Client, wms_client: httpx.Client, ontology_hot_conn: psycopg.Connection, rdf4j_client,
 ):
+    """Phase 8 step 0: same GATE_UNAVAILABLE/PASS_FAIL_CLOSED_VERIFIED
+    treatment as test_f23 above, for the policy gate."""
     sku = "SKU-900703"
     stop = _docker_compose("stop", "opa")
     if stop.returncode != 0:
         pytest.skip(f"could not stop opa: {stop.stderr}")
+    decision_id = None
     try:
         part = set_inventory_and_wait(wms_client, ontology_hot_conn, sku, "WH-B", on_hand=100)
         r = decision_client.post(
@@ -196,10 +225,12 @@ def test_f24_opa_down_denies_policy_explicitly(
             },
             timeout=15.0,
         )
-        assert r.status_code == 200
+        assert r.status_code == 503, r.text
         body = r.json()
-        assert body["status"] == "DENIED_POLICY"
+        assert body["status"] == "GATE_UNAVAILABLE", body
+        assert body["unavailable_gate"] == "policy", body
         assert body["policy_result"]["outcome"] == "UNAVAILABLE"
+        decision_id = body["decision_id"]
     finally:
         start = _docker_compose("start", "opa")
         assert start.returncode == 0, f"failed to restart opa: {start.stderr}"
@@ -212,6 +243,15 @@ def test_f24_opa_down_denies_policy_explicitly(
         _wait_opa_policy_evaluates()
 
     assert inventory_unchanged(wms_client, sku, "WH-B", 100)
+
+    # Phase 8 step 0 — same replay proof as test_f23 above, for the policy gate.
+    from services.decision_service.replay import replay_decision
+
+    assert decision_id is not None
+    replay_result = replay_decision(decision_id, ontology_hot_conn, rdf4j_client, db_env.openfga_api_url(), db_env.opa_base_url())
+    assert replay_result.status == "PASS_FAIL_CLOSED_VERIFIED", replay_result.as_dict()
+    assert replay_result.replay["zero_effects_linked"] is True
+    assert replay_result.replay["evidence_hash_match"] is True
 
 
 def _wait_opa_policy_evaluates(timeout_s: float = 20.0) -> None:

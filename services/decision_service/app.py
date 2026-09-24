@@ -24,7 +24,7 @@ from services.common.rdf4j_client import RDF4JClient
 from services.decision_service import authz, execution, execution_reader, manifest as manifest_mod, planner, rdf_writer, store
 from services.decision_service.action_types import get_action_type
 from services.decision_service.config import from_env
-from services.decision_service.models import APPROVED, REQUIRES_APPROVAL
+from services.decision_service.models import APPROVED, GATE_UNAVAILABLE, REQUIRES_APPROVAL
 from services.decision_service.propose_flow import MalformedProposal, ProposeDeps, propose
 from services.decision_service.schemas import ApproveRequest, ProposeRequest
 
@@ -177,7 +177,16 @@ def decisions_propose(body: ProposeRequest):
                 store.record_proposal_attempt_failure(conn, body.action_type, body.actor.type, body.actor.id, "dependency_unavailable", str(exc))
                 raise HTTPException(status_code=503, detail=f"decision service dependency unavailable: {exc}") from exc
             row = store.get_decision(conn, record.decision_id)
-        return JSONResponse(status_code=200, content=_decision_response(row))
+        # Phase 8 step 0 (acceptance criterion A.11): a governed Decision WAS
+        # written (unlike the F22 RDF4J-unreachable branches above, which
+        # 503 with NO decision at all) — but a required gate never
+        # answered, so the API itself must surface that as an explicit
+        # failure (503), never a fabricated-looking 200. The full record
+        # (status=GATE_UNAVAILABLE, unavailable_gate, decision_id) is still
+        # returned in the body so the caller can look it up / retry
+        # propose() once the dependency recovers.
+        status_code = 503 if row["status"] == GATE_UNAVAILABLE else 200
+        return JSONResponse(status_code=status_code, content=_decision_response(row))
     raise AssertionError("unreachable")  # loop always returns or raises
 
 
@@ -216,6 +225,16 @@ def decisions_approve(decision_id: str, body: ApproveRequest):
             _state["config"].openfga_api_url, store_id, action.approval_relation, object_ref, "user", body.approver_id,
         )
         if not approve_check.allowed:
+            if approve_check.outcome == authz.UNAVAILABLE:
+                # Phase 8 step 0: the gate never answered (transient OpenFGA
+                # warm-up/outage after store_id itself resolved) — this is
+                # NOT the same as the approver genuinely lacking authority.
+                # 503 (gate unavailable), never a fabricated 403 denial the
+                # gate never actually issued (acceptance criterion A.11).
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"OpenFGA did not answer the approval-authority check for {object_ref!r} (F23): {approve_check.detail}",
+                )
             raise HTTPException(
                 status_code=403,
                 detail=f"approver {body.approver_id!r} lacks {action.approval_relation!r} on {object_ref!r} (outcome={approve_check.outcome})",

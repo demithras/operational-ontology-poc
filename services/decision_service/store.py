@@ -74,7 +74,7 @@ def insert_decision(conn: psycopg.Connection, record: DecisionRecord) -> None:
                 decision_content_hash, action_pinned_sha256, action_version_dir, evidence_snapshot_id, evidence_snapshot,
                 authorization_result, policy_result, conformance_result,
                 approved_by, approved_at, approval_decision_hash, approval_scope,
-                rdf_graph, created_at
+                rdf_graph, created_at, unavailable_gate
             ) VALUES (
                 %s, %s, %s, %s, %s,
                 %s, %s, %s, %s, %s,
@@ -82,7 +82,7 @@ def insert_decision(conn: psycopg.Connection, record: DecisionRecord) -> None:
                 %s, %s, %s, %s, %s,
                 %s, %s, %s,
                 %s, %s, %s, %s,
-                %s, %s
+                %s, %s, %s
             )
             """,
             (
@@ -94,7 +94,7 @@ def insert_decision(conn: psycopg.Connection, record: DecisionRecord) -> None:
                 json.dumps(policy_json) if policy_json else None,
                 json.dumps(conformance_json) if conformance_json else None,
                 record.approved_by, record.approved_at, record.approval_decision_hash, record.approval_scope,
-                decision_graph_iri(record.decision_id), record.created_at,
+                decision_graph_iri(record.decision_id), record.created_at, record.unavailable_gate,
             ),
         )
     conn.commit()

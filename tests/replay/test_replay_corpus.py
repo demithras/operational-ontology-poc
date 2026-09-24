@@ -35,10 +35,22 @@ def _replay_all(decision_ids: list[str], ontology_hot_conn, rdf4j_client, openfg
     return results
 
 
+#: Phase 8 step 0: a decision whose ORIGINAL gate outcome was itself
+#: UNAVAILABLE (a real, resolved dependency outage at propose() time)
+#: replays as PASS_FAIL_CLOSED_VERIFIED, not PASS — see
+#: services/decision_service/replay.py's ReplayResult.status docstring.
+#: Neither this tracked live/bulk corpus nor its generation scripts ever
+#: run through a real outage, so this set is expected to stay empty for
+#: this corpus specifically; it is accepted here (rather than asserted
+#: empty) so this test documents the acceptable statuses without assuming
+#: how the corpus was generated.
+_ACCEPTABLE_STATUSES = {"PASS", "PASS_FAIL_CLOSED_VERIFIED"}
+
+
 def _assert_all_pass_and_live(results: list[tuple[str, str, str, list[str]]], label: str) -> None:
-    failures = [(d, s, reasons) for d, s, mode, reasons in results if s != "PASS"]
+    failures = [(d, s, reasons) for d, s, mode, reasons in results if s not in _ACCEPTABLE_STATUSES]
     assert not failures, f"{len(failures)}/{len(results)} {label} decisions did not replay PASS: {failures[:10]}"
-    checked = [(d, mode) for d, s, mode, _ in results if mode != "not_applicable"]
+    checked = [(d, mode) for d, s, mode, _ in results if mode not in ("not_applicable", "not_applicable_outage")]
     assert checked, f"expected at least one {label} decision with an authorization check to replay"
     non_live = [(d, mode) for d, mode in checked if mode != "live"]
     assert not non_live, (

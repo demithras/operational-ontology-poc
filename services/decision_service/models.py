@@ -30,6 +30,12 @@ APPROVED = "APPROVED"
 # Phase 6b / F34 — set by services/action_worker/activities.py at execute()
 # time, never by propose_flow.py itself.
 ACTION_VERSION_INVALIDATED = "ACTION_VERSION_INVALIDATED"
+# Phase 8 step 0 (acceptance criterion A.11 — "component failure causes
+# explicit unavailable/pending/unknown state, not fabricated certainty"):
+# a required gate (authorization or policy) could not be reached/answered
+# at all. Distinct from DENIED_AUTHORIZATION/DENIED_POLICY, which mean the
+# gate DID answer and refused — this means the gate never answered.
+GATE_UNAVAILABLE = "GATE_UNAVAILABLE"
 
 
 @dataclass
@@ -69,6 +75,11 @@ class DecisionRecord:
 
     conformance_outcome: str | None = None
     conformance_violations: list[str] = field(default_factory=list)
+
+    # Phase 8 step 0: set alongside status == GATE_UNAVAILABLE — "authorization"
+    # or "policy", naming which gate could not be reached/answered. None for
+    # every other status.
+    unavailable_gate: str | None = None
 
     decision_content_hash: str | None = None
 

@@ -51,10 +51,13 @@ def test_bulk_sample_replays_pass_with_live_authz(bulk_decision_sample, ontology
         result = replay_decision(decision_id, ontology_hot_conn, rdf4j_client, openfga_api_url, opa_base_url)
         results.append((decision_id, result.status, result.replay["authz_replay_mode"], result.failure_reasons))
 
-    failures = [(d, s, reasons) for d, s, mode, reasons in results if s != "PASS"]
+    # Phase 8 step 0: PASS_FAIL_CLOSED_VERIFIED accepted alongside PASS —
+    # see tests/replay/test_replay_corpus.py's _ACCEPTABLE_STATUSES for why.
+    acceptable = {"PASS", "PASS_FAIL_CLOSED_VERIFIED"}
+    failures = [(d, s, reasons) for d, s, mode, reasons in results if s not in acceptable]
     assert not failures, f"{len(failures)}/{len(results)} bulk decisions did not replay PASS: {failures[:10]}"
 
-    checked = [(d, mode) for d, s, mode, _ in results if mode != "not_applicable"]
+    checked = [(d, mode) for d, s, mode, _ in results if mode not in ("not_applicable", "not_applicable_outage")]
     assert checked, "expected at least one sampled bulk decision with an authorization check"
     non_live = [(d, mode) for d, mode in checked if mode != "live"]
     assert not non_live, (

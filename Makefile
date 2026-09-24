@@ -1,7 +1,8 @@
 .PHONY: up down reset seed test test-unit test-contracts test-component test-integration \
         test-stateful test-destructive test-determinism test-faults test-replay bench \
         bench-phase5 bench-phase6 experiment report replay ensure-env wait-healthy wait-converged \
-        wait-connectors rebuild-projections deploy-v2 deploy-v3 reevaluate historical-corpus
+        wait-connectors rebuild-projections deploy-v2 deploy-v3 deploy-v3-gates reevaluate historical-corpus \
+        ab
 
 SHELL := /usr/bin/env bash
 VENV_PY := .venv/bin/python
@@ -205,6 +206,13 @@ deploy-v2: ensure-env
 # migrations/v2_to_v3/deploy.py).
 deploy-v3: ensure-env
 	$(VENV_PY) migrations/v2_to_v3/deploy.py
+
+## Phase 8 step 0: publishes oo:GateUnavailable into the ontology/shapes
+# enumeration (acceptance criterion A.11) — see
+# migrations/v2_to_v3_gates/deploy.py. Independent of deploy-v3 above
+# (different kinds, same target version number).
+deploy-v3-gates: ensure-env
+	$(VENV_PY) migrations/v2_to_v3_gates/deploy.py
 
 ## docs/experiment/spec/07_versioning_and_replay.md "Counterfactual replay":
 # `make reevaluate DECISION_ID=<id>` — what would TODAY's deployed rules

@@ -44,7 +44,8 @@ CREATE TABLE IF NOT EXISTS decisions (
     approval_scope                              TEXT,
     rdf_graph                                    TEXT NOT NULL,
     created_at                                    TIMESTAMPTZ NOT NULL,
-    updated_at                                     TIMESTAMPTZ NOT NULL DEFAULT now()
+    updated_at                                     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    unavailable_gate                               TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_decisions_status ON decisions (status);
@@ -65,6 +66,12 @@ ALTER TABLE decisions ADD COLUMN IF NOT EXISTS action_pinned_sha256 TEXT;
 -- treats NULL as "v1" (every decision before this column existed was
 -- necessarily pinned against contracts/actions/v1/).
 ALTER TABLE decisions ADD COLUMN IF NOT EXISTS action_version_dir TEXT;
+
+-- Phase 8 step 0 (acceptance criterion A.11) — same ALTER-TABLE-on-an-
+-- already-running-stack pattern as the two columns above. NULL for every
+-- decision whose status isn't GATE_UNAVAILABLE, and for every pre-Phase-8
+-- row.
+ALTER TABLE decisions ADD COLUMN IF NOT EXISTS unavailable_gate TEXT;
 
 -- F22-style "the proposal never even became a governed Decision" record
 -- (RDF4J was unreachable, so no SHACL-validated Decision write was even

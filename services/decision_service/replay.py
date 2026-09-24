@@ -30,7 +30,7 @@ import httpx
 from services.common.rdf4j_client import RDF4JClient
 from services.common.rdf_graphs import decision_graph_iri
 from services.common.sparql_escape import escape_sparql_literal
-from services.decision_service import authz, hashing, store
+from services.decision_service import authz, execution_reader, hashing, policy as policy_mod, store
 from services.decision_service.action_types import get_action_type
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -55,13 +55,25 @@ class ReplayResult:
     decision_id: str
     original: dict[str, Any]
     replay: dict[str, Any]
-    # PASS | FAIL | PARTIAL_RECORDED_ONLY (Phase 7b requirement A: a
-    # decision whose evidence/action/policy all reconstruct correctly but
-    # whose AUTHORIZATION could only be checked via the honest
-    # "recorded_only" fallback (docs/adr/0004) must never report a plain
-    # PASS — that would silently certify authorization reproducibility that
-    # never actually happened. FAIL always wins over PARTIAL_RECORDED_ONLY:
-    # a genuine mismatch is worse than "we couldn't prove it either way".
+    # PASS | FAIL | PARTIAL_RECORDED_ONLY | PASS_FAIL_CLOSED_VERIFIED
+    # (Phase 7b requirement A: a decision whose evidence/action/policy all
+    # reconstruct correctly but whose AUTHORIZATION could only be checked
+    # via the honest "recorded_only" fallback (docs/adr/0004) must never
+    # report a plain PASS — that would silently certify authorization
+    # reproducibility that never actually happened. FAIL always wins over
+    # PARTIAL_RECORDED_ONLY: a genuine mismatch is worse than "we couldn't
+    # prove it either way".
+    #
+    # Phase 8 step 0: PASS_FAIL_CLOSED_VERIFIED is its own, distinct class
+    # for a decision whose ORIGINAL gate outcome was itself UNAVAILABLE
+    # (authz and/or policy never answered — GATE_UNAVAILABLE, or a legacy
+    # pre-Phase-8 DENIED_AUTHORIZATION/DENIED_POLICY recorded with a
+    # UNAVAILABLE gate outcome). There is no original live gate ANSWER to
+    # reproduce, so this never attempts to and never counts a live re-eval
+    # "disagreeing" with an outage as a mismatch — it instead verifies the
+    # record is honestly fail-closed (a real fail-closed status, 0 effects
+    # linked, evidence/action hashes intact). See replay_decision()'s
+    # `gate_was_unavailable` branch.
     status: str
     failure_reasons: list[str] = field(default_factory=list)
 
@@ -250,7 +262,16 @@ def replay_decision(
     policy_input = policy_result.get("input_json")
     gate_result_match = True
     policy_replayed_outcome = None
-    if policy_input is not None:
+    # Phase 8 step 0: the recorded outcome itself was UNAVAILABLE (OPA never
+    # answered at propose() time — GATE_UNAVAILABLE, or a legacy pre-Phase-8
+    # decision recorded as DENIED_POLICY with policy_result.outcome ==
+    # UNAVAILABLE). OPA is almost certainly reachable again by replay time,
+    # so re-evaluating and comparing would almost always "mismatch" against
+    # an outcome that was never a real policy decision to begin with —
+    # never FAIL for failing to reproduce a resolved outage. See
+    # `gate_was_unavailable` below.
+    policy_was_unavailable = policy_result.get("outcome") == policy_mod.UNAVAILABLE
+    if policy_input is not None and not policy_was_unavailable:
         action = get_action_type(pg_row["action_type"], pg_row["action_version_dir"] or "v1")
         # Dotted Rego package path (e.g. "factory.inventory.transfer") — NOT
         # the slash-separated form services/decision_service/policy.py uses
@@ -289,8 +310,19 @@ def replay_decision(
     tuples_snapshot_json = rdf_fields.get("checkTuplesSnapshotJson")
     tuples_snapshot = json.loads(tuples_snapshot_json) if tuples_snapshot_json else None
     authz_replayed_outcome = authz_result.get("outcome")
+    # Phase 8 step 0: same "never re-derive a resolved outage" reasoning as
+    # policy_was_unavailable above — the recorded authz outcome ITSELF was
+    # UNAVAILABLE (GATE_UNAVAILABLE, or a legacy DENIED_AUTHORIZATION whose
+    # authorization_result.outcome is UNAVAILABLE). There was never a real
+    # ALLOWED/DENIED answer to reproduce, so this gets its own replay mode
+    # rather than falling into "recorded_only" (which means something
+    # different: a check DID happen and answered, but live re-verification
+    # merely couldn't run).
+    authz_was_unavailable = authz_result.get("outcome") == authz.UNAVAILABLE
     if not authz_result.get("outcome"):
         authz_replay_mode = "not_applicable"
+    elif authz_was_unavailable:
+        authz_replay_mode = "not_applicable_outage"
     else:
         authz_replay_mode = "recorded_only"
         if authz_model_id and rdf_fields.get("checkRelation") and rdf_fields.get("checkObject") and rdf_fields.get("actorId") and tuples_snapshot:
@@ -305,6 +337,31 @@ def replay_decision(
                 if live.outcome != authz_result.get("outcome"):
                     gate_result_match = False
 
+    # --- Phase 8 step 0: the fail-closed-on-outage replay class ----------
+    # A decision that never got a real gate ANSWER (authz and/or policy
+    # UNAVAILABLE at propose() time) cannot be "replayed" in the normal
+    # sense — there is no original gate decision to reproduce, live or
+    # archived. What CAN and MUST be verified: the record is honestly
+    # fail-closed (a real terminal status from the fail-closed set, never
+    # something that looks like a successful/executable decision), it
+    # committed zero external effects, and the parts that ARE independent
+    # of the outage (evidence snapshot integrity, decision_content_hash)
+    # still check out. docs/experiment/briefs/phase8.md step 0: "never FAIL
+    # for not reproducing an outage."
+    FAIL_CLOSED_STATUSES = {
+        "GATE_UNAVAILABLE", "DENIED_AUTHORIZATION", "DENIED_POLICY",
+        "INSUFFICIENT_EVIDENCE", "INVALID_CONFORMANCE",
+    }
+    gate_was_unavailable = policy_was_unavailable or authz_was_unavailable
+    zero_effects_linked = True
+    if gate_was_unavailable:
+        # services/decision_service/execution.py::action_execution_id_for —
+        # duplicated as a one-line literal rather than imported, to avoid
+        # pulling in that module's temporalio.client dependency for a
+        # read-only replay check.
+        action_execution_id = f"AX-{decision_id}"
+        zero_effects_linked = execution_reader.get_execution(rdf4j_client, action_execution_id) is None
+
     all_pass = evidence_hash_match and action_input_match and gate_result_match
     failure_reasons = []
     if not evidence_hash_match:
@@ -315,8 +372,18 @@ def replay_decision(
         failure_reasons.append("gate_result_mismatch")
     if authz_replay_mode == "recorded_only":
         failure_reasons.append("authz_replay_recorded_only")
+    if gate_was_unavailable and not zero_effects_linked:
+        failure_reasons.append("gate_unavailable_but_effects_linked")
+    if gate_was_unavailable and pg_row["status"] not in FAIL_CLOSED_STATUSES:
+        failure_reasons.append("gate_unavailable_but_status_not_fail_closed")
 
-    if not all_pass:
+    if gate_was_unavailable:
+        fail_closed_verified = (
+            evidence_hash_match and action_input_match and zero_effects_linked
+            and pg_row["status"] in FAIL_CLOSED_STATUSES
+        )
+        status = "PASS_FAIL_CLOSED_VERIFIED" if fail_closed_verified else "FAIL"
+    elif not all_pass:
         status = "FAIL"
     elif authz_replay_mode == "recorded_only":
         status = "PARTIAL_RECORDED_ONLY"
@@ -348,6 +415,8 @@ def replay_decision(
             "policy_replayed_outcome": policy_replayed_outcome,
             "authz_replayed_outcome": authz_replayed_outcome,
             "authz_replay_mode": authz_replay_mode,
+            "gate_was_unavailable": gate_was_unavailable,
+            "zero_effects_linked": zero_effects_linked if gate_was_unavailable else None,
         },
         status=status,
         failure_reasons=failure_reasons,

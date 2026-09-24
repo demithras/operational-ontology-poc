@@ -26,6 +26,8 @@ STATUS_CONCEPT_LOCAL: dict[str, str] = {
     "DIVERGED": "Diverged",
     "OBSERVED_SUCCESS": "ObservedSuccess",
     "ACTION_VERSION_INVALIDATED": "ActionVersionInvalidated",
+    # Phase 8 step 0 — see contracts/ontology/v3/oo-core.ttl's oo:GateUnavailable.
+    "GATE_UNAVAILABLE": "GateUnavailable",
 }
 
 

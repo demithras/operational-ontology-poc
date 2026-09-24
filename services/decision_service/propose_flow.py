@@ -44,6 +44,7 @@ from services.decision_service.models import (
     APPROVED,
     DENIED_AUTHORIZATION,
     DENIED_POLICY,
+    GATE_UNAVAILABLE,
     INSUFFICIENT_EVIDENCE,
     INVALID_CONFORMANCE,
     REQUIRES_APPROVAL,
@@ -150,7 +151,17 @@ def propose(
             deps.openfga_authorization_model_id,
         )
     if not record.authz_result.allowed:
-        record.status = DENIED_AUTHORIZATION
+        # Phase 8 step 0 (acceptance criterion A.11): the gate ANSWERED
+        # DENIED -> a real refusal, DENIED_AUTHORIZATION. The gate could not
+        # be reached/answered at all (UNAVAILABLE) -> GATE_UNAVAILABLE, never
+        # a fabricated denial the gate never actually issued. Both are
+        # equally fail-closed (0 effects below either way); only the
+        # terminal status and its semantics differ.
+        if record.authz_result.outcome == authz.UNAVAILABLE:
+            record.status = GATE_UNAVAILABLE
+            record.unavailable_gate = "authorization"
+        else:
+            record.status = DENIED_AUTHORIZATION
         return _finalize(deps, record, force_invalid_conformance)
 
     # --- Protected-transfer authorization (Phase 6 step 0) ---
@@ -163,13 +174,21 @@ def propose(
     )
     if protected_deny is not None:
         record.authz_result = protected_deny
-        record.status = DENIED_AUTHORIZATION
+        if protected_deny.outcome == authz.UNAVAILABLE:
+            record.status = GATE_UNAVAILABLE
+            record.unavailable_gate = "authorization"
+        else:
+            record.status = DENIED_AUTHORIZATION
         return _finalize(deps, record, force_invalid_conformance)
 
     # --- Policy (F05/F06/F24) ---
     input_json = policy_mod.build_input(action, parameters, ev)
     record.policy_result = policy_mod.evaluate(deps.opa_base_url, action, input_json)
-    if record.policy_result.outcome in (policy_mod.DENY, policy_mod.UNAVAILABLE):
+    if record.policy_result.outcome == policy_mod.UNAVAILABLE:
+        record.status = GATE_UNAVAILABLE
+        record.unavailable_gate = "policy"
+        return _finalize(deps, record, force_invalid_conformance)
+    if record.policy_result.outcome == policy_mod.DENY:
         record.status = DENIED_POLICY
         return _finalize(deps, record, force_invalid_conformance)
 

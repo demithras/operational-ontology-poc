@@ -2986,3 +2986,123 @@ finish with no further failures.
 - The stack's final state is unchanged from Phase 7's own close:
   `ontology=v2, shapes=v2, actions=v3, policies=v2, authorization=v2,
   identity=v1, projections=v2, reconciliation=v1`.
+
+## Phase 8 step 0 — explicit dependency-unavailable status (GATE_UNAVAILABLE)
+
+Orchestrator finding from the Phase 7b review: acceptance criterion A.11
+(spec 11) requires a component failure to produce an explicit unavailable/
+pending/unknown state, never fabricated certainty. Before this fix, an OPA
+outage yielded `status=DENIED_POLICY` with `policy_result.outcome=UNAVAILABLE`
+buried inside it (e.g. `D-2343d218828442f69f6b`), an OpenFGA outage yielded
+`status=DENIED_AUTHORIZATION` with `authorization_result.outcome=UNAVAILABLE`
+(`D-e80e1852794e40ea80f6`), and `approve()` during an OpenFGA warm-up window
+returned a plain HTTP 403 — three different ways of quietly reporting "the
+gate said no" when the true fact was "the gate never answered".
+
+### Fix
+
+- New terminal status `GATE_UNAVAILABLE` (`services/decision_service/models.py`),
+  set by `propose_flow.py` whenever `authz.check()` or `policy.evaluate()`
+  (or the protected-transfer second check) returns outcome `UNAVAILABLE` —
+  distinct from a real `DENIED_AUTHORIZATION`/`DENIED_POLICY`, which now only
+  fire when the gate actually answered and refused. `DecisionRecord.unavailable_gate`
+  records which gate (`"authorization"` or `"policy"`) — persisted as its own
+  Postgres column (`ALTER TABLE decisions ADD COLUMN IF NOT EXISTS
+  unavailable_gate TEXT`, same live-stack-safe pattern as `action_pinned_sha256`)
+  and RDF property (`oo:unavailableGate`, unconstrained by SHACL, same
+  pattern as Phase 7b's `oo:checkTuplesSnapshotJson`).
+- `POST /decisions/propose` now returns **HTTP 503** (not 200) when the
+  resulting status is `GATE_UNAVAILABLE` — the full decision body is still
+  returned (a real, SHACL-validated Decision WAS written — still fully
+  governed and fail-closed, 0 effects, `decision_content_hash` never set)
+  so the caller can look it up / retry once the dependency recovers.
+  `POST /decisions/{id}/approve` now returns **503** (not a fabricated 403)
+  when the approval-authority `authz.check()` itself returns `UNAVAILABLE`
+  (the OpenFGA-warm-up case) — a real 403 is still returned when the check
+  genuinely answers and denies.
+- **Contract evolution, not an in-place edit**: `oo:GateUnavailable` is a
+  new `skos:Concept` in `oo:DecisionStatusScheme`, and decision-shape.ttl's
+  `oo:status` `sh:in` enumeration gains it as a 15th member — but
+  `contracts/ontology/v2/` and `contracts/shapes/v2/` (and v1) are
+  byte-for-byte **untouched**. The addition lives in `contracts/ontology/v3/`
+  (previously an empty placeholder directory) and a new
+  `contracts/shapes/v3/`, published via `migrations/v2_to_v3_gates/deploy.py`
+  (`make deploy-v3-gates`) — a small, purely-additive migration distinct
+  from `migrations/v2_to_v3/` (which covers `actions`/`authorization`
+  reaching different version numbers for an unrelated reason). This matters
+  because every EXISTING historical decision is pinned to the exact sha256
+  of the ontology/shapes directory it was created under
+  (`replay.py::_verify_archive`) — editing v2 in place would have broken
+  F29 verification for the entire existing corpus (thousands of decisions).
+  `contracts/manifests/deployed_version.json`'s `ontology`/`shapes` pointers
+  now read `v3`; `services/ingestion/bootstrap_rdf4j.py` was changed from a
+  **hardcoded "v1"** ontology/shapes directory (a latent gap: RDF4J's
+  ShaclSail was always enforcing v1's shapes regardless of what
+  `deployed_version.json` claimed — harmless only because v1/v2's
+  `decision-shape.ttl` `sh:in` enumeration happened to be byte-identical
+  until now) to reading `services/common/contract_versions.deployed_version()`
+  live, factored into a reusable `reload_ontology_and_shapes()` the new
+  migration's `deploy.py` also calls directly against the running stack.
+- `scripts/compat_check.py` (F28) passes: `migrations/v2_to_v3_gates/migration.json`
+  declares `kind_versions: {"ontology": "v3", "shapes": "v3"}`.
+
+### Replay — the `PASS_FAIL_CLOSED_VERIFIED` class
+
+A decision whose ORIGINAL gate outcome was itself `UNAVAILABLE` has no real
+live gate answer to reproduce — re-running the policy/authorization gate
+once the outage is resolved will almost always return a REAL decision
+(`allow`/`deny`/...), which the old replay logic counted as a mismatch
+against the recorded `UNAVAILABLE` and reported `FAIL`. `replay_decision()`
+(`services/decision_service/replay.py`) now detects `gate_was_unavailable`
+(policy and/or authz outcome recorded as `UNAVAILABLE` — covers BOTH the new
+`GATE_UNAVAILABLE` status AND legacy pre-Phase-8 `DENIED_AUTHORIZATION`/
+`DENIED_POLICY` records that happen to carry an `UNAVAILABLE` gate outcome,
+like the two example decisions above) and, for those, skips the live
+re-evaluation/comparison entirely and instead verifies: the recorded status
+is a real fail-closed status, **zero effects are linked** (no
+`ActionExecution` exists for the decision — checked via
+`execution_reader.get_execution`), and the evidence/action-hash integrity
+checks that ARE independent of the outage still pass. Reports the new
+`ReplayResult.status = "PASS_FAIL_CLOSED_VERIFIED"` — never `FAIL` for not
+reproducing a resolved outage, and never a plain `PASS` either (that would
+imply a live gate re-verification that never happened). `authz_replay_mode`
+gained `"not_applicable_outage"` alongside the existing `not_applicable`/
+`recorded_only`/`live`.
+
+### Verification
+
+```
+make test:          21 + 67 (+ compat_check OK) + 19 + 71 = 178 passed
+make test-replay:    10 passed; scripts/replay_report.py — all groups
+                     status in {PASS, PASS_FAIL_CLOSED_VERIFIED}
+make test-faults:    25 passed in 272.26s (0:04:32)
+```
+
+`tests/integration/test_decision_service_dependency_outage.py::test_f23_openfga_down_denies_authorization_explicitly`
+and `::test_f24_opa_down_denies_policy_explicitly` now assert the real
+sequence end to end against the live stack (real `docker compose stop`):
+propose during the outage -> `503`, `status=GATE_UNAVAILABLE`,
+`unavailable_gate` set -> dependency recovers -> replay the SAME decision
+-> `PASS_FAIL_CLOSED_VERIFIED`, `zero_effects_linked=True`.
+
+`scripts/replay_full_sweep.py` (new — replays the WHOLE `ontology_hot.decisions`
+table, not scripts/replay_report.py's fixed sample) confirmed the phase's own
+acceptance bar directly, replaying **5,293** decisions:
+
+```
+('PASS', 'live'): 5067
+('PASS', 'not_applicable'): 221
+('PASS_FAIL_CLOSED_VERIFIED', 'live'): 2
+('PASS_FAIL_CLOSED_VERIFIED', 'not_applicable_outage'): 3
+OK — 0 FAIL, 0 PARTIAL_RECORDED_ONLY, 0 F29 errors across 5293 decisions.
+```
+
+Both cited example decisions (`D-2343d218828442f69f6b`, `D-e80e1852794e40ea80f6`)
+replay `PASS_FAIL_CLOSED_VERIFIED` directly-verified by decision id.
+
+`experiments/exp-000/results/fault-matrix-phase8.json` (via the new
+`scripts/gen_fault_matrix_phase8.py`) carries F01-F40 forward from
+`fault-matrix-phase7.json` unchanged except F22-F24's notes/test node ids.
+
+The stack's final state: `ontology=v3, shapes=v3, actions=v3, policies=v2,
+authorization=v2, identity=v1, projections=v2, reconciliation=v1`.

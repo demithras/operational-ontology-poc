@@ -100,13 +100,20 @@ def main() -> int:
     for row in rows:
         print(_fmt(row))
 
-    non_ideal = {k: v for k, v in counts.items() if k[2] != "PASS" or (k[3] not in ("live", "not_applicable"))}
+    # Phase 8 step 0: PASS_FAIL_CLOSED_VERIFIED (a decision whose original
+    # gate outcome was itself UNAVAILABLE — a real, resolved dependency
+    # outage — see services/decision_service/replay.py) is an ACCEPTABLE
+    # terminal status alongside PASS, with its own authz_mode
+    # ("not_applicable_outage") alongside live/not_applicable.
+    acceptable_status = ("PASS", "PASS_FAIL_CLOSED_VERIFIED")
+    acceptable_authz_mode = ("live", "not_applicable", "not_applicable_outage")
+    non_ideal = {k: v for k, v in counts.items() if k[2] not in acceptable_status or (k[3] not in acceptable_authz_mode)}
     if non_ideal:
-        print(f"\n[replay_report] WARNING: {sum(non_ideal.values())} decisions are not (status=PASS, authz_mode in live/not_applicable):")
+        print(f"\n[replay_report] WARNING: {sum(non_ideal.values())} decisions are not (status in {acceptable_status}, authz_mode in {acceptable_authz_mode}):")
         for k, v in sorted(non_ideal.items()):
             print(f"  {k}: {v}")
     else:
-        print("\n[replay_report] all replayed decisions: status=PASS and authz_replay_mode in {live, not_applicable}.")
+        print(f"\n[replay_report] all replayed decisions: status in {acceptable_status} and authz_replay_mode in {acceptable_authz_mode}.")
 
     return 0
 

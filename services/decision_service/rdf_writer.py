@@ -91,6 +91,8 @@ def build_decision_graph(record: DecisionRecord) -> rdflib.Graph:
         g.add((decision, OO.actionPinnedSha256, Literal(record.action_pinned_sha256)))
     if record.action_version_dir:
         g.add((decision, OO.actionVersionDir, Literal(record.action_version_dir)))
+    if record.unavailable_gate:
+        g.add((decision, OO.unavailableGate, Literal(record.unavailable_gate)))
 
     actor_node = _actor_node(g, record.actor_type, record.actor_id)
     g.add((decision, OO.actor, actor_node))

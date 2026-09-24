@@ -1,0 +1,270 @@
+# contracts/ontology/v1/oo-core.ttl
+#
+# Governance vocabulary: decisions, evidence, provenance, versioning.
+# docs/experiment/spec/05_ontology_and_contracts.md ("Provenance foundation",
+# "Decision object", "Decision lifecycle") + docs/experiment/spec/14
+# ("Open decision: inference" -> observed/inferred/derived/asserted).
+#
+# Populated starting Phase 5 (decision service). Declared now so
+# contracts/shapes/v1/decision-shape.ttl and its standalone fixtures
+# (tests/contracts/shacl/) can be tested against a real, versioned ontology
+# instead of ad hoc shape-local vocabulary.
+@prefix oo:   <https://example.local/oo/> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+<https://example.local/oo/ontology/v1/oo-core>
+  a owl:Ontology ;
+  owl:versionInfo "1.0.0" ;
+  rdfs:comment "Operational-ontology governance vocabulary (decisions, evidence, provenance, CDC observation), v1. See docs/experiment/spec/05_ontology_and_contracts.md and docs/experiment/spec/14_risks_and_open_questions.md." .
+
+#############################################
+## PROV-O specializations (05: "Provenance foundation")
+#############################################
+
+oo:EvidenceSnapshot   a owl:Class ; rdfs:subClassOf prov:Entity ;
+  rdfs:comment "Content-addressed manifest of the facts/projection rows a decision was evaluated against (spec 04 'Evidence snapshot', spec 14 R5)." .
+
+oo:DecisionActivity   a owl:Class ; rdfs:subClassOf prov:Activity ;
+  rdfs:comment "The act of proposing/gating a Decision." .
+
+oo:ActionExecution    a owl:Class ; rdfs:subClassOf prov:Activity ;
+  rdfs:comment "The act of executing an approved Decision's action against an external system (Phase 6: Temporal). Declared now per phase3.md item 3; populated starting Phase 6." .
+
+oo:Outcome            a owl:Class ; rdfs:subClassOf prov:Entity ;
+  rdfs:comment "The observed real-world result of an ActionExecution, distinct from the command response (spec 04: 'the boundary between we asked and the world changed')." .
+
+oo:HumanActor         a owl:Class ; rdfs:subClassOf prov:Agent .
+oo:SoftwareAgent      a owl:Class ; rdfs:subClassOf prov:SoftwareAgent .
+
+#############################################
+## Decision object (05: "Decision object", exactly-1 cardinalities)
+#############################################
+
+oo:Decision a owl:Class ;
+  rdfs:comment "A governed decision. Immutable once APPROVED (05_ontology_and_contracts.md). Populated starting Phase 5." .
+
+oo:decisionId               a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string .
+oo:decisionType              a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string .
+oo:actor                     a owl:ObjectProperty   ; rdfs:domain oo:Decision ; rdfs:range prov:Agent .
+oo:evidenceSnapshot           a owl:ObjectProperty   ; rdfs:domain oo:Decision ; rdfs:range oo:EvidenceSnapshot .
+oo:ontologyVersion            a owl:DatatypeProperty ; rdfs:range xsd:string .
+oo:shapeSetVersion            a owl:DatatypeProperty ; rdfs:range xsd:string .
+oo:authorizationModelVersion  a owl:DatatypeProperty ; rdfs:range xsd:string .
+oo:policyBundleVersion        a owl:DatatypeProperty ; rdfs:range xsd:string .
+oo:actionType                 a owl:DatatypeProperty ; rdfs:range xsd:string .
+oo:actionVersion              a owl:DatatypeProperty ; rdfs:range xsd:integer .
+oo:createdAt                  a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:dateTime .
+
+## Phase 7 (docs/experiment/spec/07_versioning_and_replay.md item 1): "every
+## decision already pins these" for identity mapping rules, projection
+## definitions, and reconciliation predicates, exactly like ontology/shapes/
+## authorization/policy already did from Phase 5 — see
+## services/decision_service/manifest.py's Phase 7 docstring for why these
+## are added here (within "v1") rather than as a new ontology version: this
+## is the governance (oo:) vocabulary growing additively, the same way
+## oo:actionPinnedSha256 was added in Phase 6b — not the fac: DOMAIN
+## ontology under active V1->V2->V3 experimentation (fac-core.ttl is never
+## touched by this addition). oo:openfgaAuthorizationModelId is the REAL
+## OpenFGA-assigned authorization_model_id (distinct from
+## oo:authorizationModelVersion's content-hash form) — OpenFGA models are
+## immutable-by-id, so this is what replay actually re-Checks against.
+oo:identityMappingVersion          a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string .
+oo:projectionDefinitionVersion     a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string .
+oo:reconciliationPredicateVersion  a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string .
+oo:openfgaAuthorizationModelId     a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string .
+oo:unavailableGate                 a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string ;
+  rdfs:comment "v3 (Phase 8 step 0): 'authorization' or 'policy' — which gate produced GATE_UNAVAILABLE. Present only when oo:status = oo:GateUnavailable. Unconstrained by SHACL (no shape references it), same pattern as oo:checkTuplesSnapshotJson (Phase 7b)." .
+oo:status                     a owl:ObjectProperty   ; rdfs:comment "Range: a skos:Concept in oo:DecisionStatusScheme (Decision) or oo:FactKindScheme (facts) depending on domain; see shapes for the per-target sh:in enumeration." .
+
+#############################################
+## Decision status enumeration (05: "Decision lifecycle").
+## "No state named simply SUCCESS is allowed" -> deliberately absent below;
+## contracts/shapes/v1/decision-shape.ttl's sh:in whitelist enforces it and
+## tests/contracts/shacl/negative/decision-status-success-literal.ttl proves
+## a bare "SUCCESS" status is rejected.
+#############################################
+
+oo:DecisionStatusScheme a skos:ConceptScheme ; skos:prefLabel "Decision lifecycle statuses (v1)" .
+
+oo:Draft                 a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "DRAFT" .
+oo:Proposed               a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "PROPOSED" .
+oo:InsufficientEvidence   a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "INSUFFICIENT_EVIDENCE" .
+oo:DeniedAuthorization    a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "DENIED_AUTHORIZATION" .
+oo:DeniedPolicy           a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "DENIED_POLICY" .
+oo:InvalidConformance     a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "INVALID_CONFORMANCE" .
+oo:RequiresApproval       a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "REQUIRES_APPROVAL" .
+oo:Approved               a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "APPROVED" .
+oo:Executing              a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "EXECUTING" .
+oo:ExecutionFailed        a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "EXECUTION_FAILED" .
+oo:OutcomeUnknown         a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "OUTCOME_UNKNOWN" .
+oo:AwaitingObservation    a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "AWAITING_OBSERVATION" .
+oo:Diverged               a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "DIVERGED" .
+oo:ObservedSuccess        a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "OBSERVED_SUCCESS" .
+oo:ActionVersionInvalidated a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "ACTION_VERSION_INVALIDATED" ;
+  skos:definition "Phase 6b / F34: the pinned contracts/actions/v1/<name>.yaml sha256 recorded at propose() time no longer matches the file's CURRENT sha256 at execute() time — the approved decision is never silently executed against a changed action definition; it terminates here instead." .
+oo:GateUnavailable a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "GATE_UNAVAILABLE" ;
+  skos:definition "v3 (Phase 8 step 0, acceptance criterion A.11): a required gate (OpenFGA authorization or OPA policy) could not be reached/answered at propose() time. Distinct from oo:DeniedAuthorization/oo:DeniedPolicy, which mean the gate ANSWERED and refused — this means the gate never answered at all. Still fail-closed (0 effects, decisionContentHash never set), but the record does not fabricate a denial the gate never actually issued. services/decision_service/models.py's DecisionRecord.unavailable_gate names which gate('authorization'|'policy')." .
+
+#############################################
+## ActionExecution parameters (phase3.md item 3; shape in
+## action-execution-shape.ttl: quantity >= 1, source != destination).
+## Populated starting Phase 6; declared now so the shape is testable today.
+#############################################
+
+oo:quantity            a owl:DatatypeProperty ; rdfs:domain oo:ActionExecution ; rdfs:range xsd:integer .
+oo:sourceWarehouse      a owl:ObjectProperty   ; rdfs:domain oo:ActionExecution .
+oo:destinationWarehouse a owl:ObjectProperty   ; rdfs:domain oo:ActionExecution .
+
+#############################################
+## Phase 5 additions: actor/delegation, evidence-snapshot content, per-gate
+## result capture, approval, and decision-content hashing.
+## docs/experiment/spec/05_ontology_and_contracts.md "Provenance foundation"
+## ("Domain-specific relations may be added but should preserve a mapping to
+## PROV where sensible" -> prov:used / prov:wasAssociatedWith asserted
+## alongside oo:evidenceSnapshot / oo:actor below, not instead of them);
+## docs/experiment/spec/01_hypotheses.md H1 (actor delegation context,
+## proposed parameters, authorization/policy/conformance results, approval
+## information); H13 (forensic queries, contracts/queries/v1/*.rq).
+#############################################
+
+## --- Actor identity + delegation ---
+## Every actor (human or agent) referenced by oo:actor is a real instance of
+## oo:HumanActor or oo:SoftwareAgent (both already subClassOf prov:Agent /
+## prov:SoftwareAgent above), carrying its principal id and, for an agent,
+## the human it acts on behalf of — the SAME delegation link
+## contracts/authorization/v1/model.fga's agent#principal relation records,
+## kept independently in the semantic core per spec 04 "Every mapping/
+## delegation must record ... creation/change time" applied to decisions.
+oo:actorId       a owl:DatatypeProperty ; rdfs:range xsd:string ; rdfs:comment "e.g. planner-1, agent-1 (matches contracts/authorization/v1/tuples.yaml principal ids)." .
+oo:actorRole     a owl:DatatypeProperty ; rdfs:range xsd:string ; rdfs:comment "planner | junior_planner | supervisor | agent." .
+oo:actsOnBehalfOf a owl:ObjectProperty  ; rdfs:domain oo:SoftwareAgent ; rdfs:range oo:HumanActor ;
+  rdfs:comment "H1 'actor delegation context if an agent acts for a human'. Populated only when oo:actor is a oo:SoftwareAgent." .
+
+## --- Proposed parameters (H1) ---
+## Action parameters vary per ActionType (contracts/actions/v1/*.yaml), so
+## they are not modeled as fixed RDF properties per action; the exact
+## proposed-parameters object is preserved as canonical JSON (the SAME bytes
+## hashed into oo:decisionContentHash below), and also linked as typed
+## fac: object references where the action concerns them (oo:concerns*)
+## so a decision is still traversable to the real domain objects it acted on.
+oo:parametersJson a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string .
+oo:concernsWorkOrder            a owl:ObjectProperty ; rdfs:domain oo:Decision .
+oo:concernsPart                 a owl:ObjectProperty ; rdfs:domain oo:Decision .
+oo:concernsSourceWarehouse      a owl:ObjectProperty ; rdfs:domain oo:Decision .
+oo:concernsDestinationWarehouse a owl:ObjectProperty ; rdfs:domain oo:Decision .
+
+## --- Decision content hash (spec 06 execute(): "verify immutable content
+## hash"; F33: "approval replay on changed decision -> rejected due decision
+## hash mismatch") ---
+oo:decisionContentHash a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string ;
+  rdfs:comment "sha256 over {actor, evidenceSnapshot id, all *Version fields, actionType/actionVersion, parametersJson}, computed once when the decision reaches a terminal gate outcome. Approval must be checked against this exact value (F33)." .
+
+## --- Per-gate result capture (H1: 'authorization result', 'policy result',
+## 'conformance result' each stored, per spec 04 'must not collapse gate
+## results into one opaque boolean'; distinct classes so H13 query 4 'which
+## policy/authorization versions were evaluated' and query 3 'which evidence
+## was available but excluded' are answerable by stable SPARQL, not log
+## scraping) ---
+oo:AuthorizationCheck a owl:Class ; rdfs:subClassOf prov:Entity .
+oo:checkRelation   a owl:DatatypeProperty ; rdfs:domain oo:AuthorizationCheck ; rdfs:range xsd:string .
+oo:checkObject     a owl:DatatypeProperty ; rdfs:domain oo:AuthorizationCheck ; rdfs:range xsd:string .
+oo:checkOutcome    a owl:DatatypeProperty ; rdfs:range xsd:string ; rdfs:comment "ALLOWED | DENIED | UNAVAILABLE (F23: OpenFGA down -> UNAVAILABLE, fails closed as DENIED_AUTHORIZATION at the Decision level)." .
+oo:checkedAt       a owl:DatatypeProperty ; rdfs:range xsd:dateTime .
+oo:checkAuthorizationModelId a owl:DatatypeProperty ; rdfs:domain oo:AuthorizationCheck ; rdfs:range xsd:string ;
+  rdfs:comment "Phase 7: the REAL OpenFGA authorization_model_id this specific Check was evaluated against (models are immutable-by-id) — what replay re-issues the Check with, per docs/experiment/spec/14_risks_and_open_questions.md R4." .
+
+oo:PolicyEvaluation a owl:Class ; rdfs:subClassOf prov:Entity .
+oo:policyOutcome         a owl:DatatypeProperty ; rdfs:domain oo:PolicyEvaluation ; rdfs:range xsd:string ; rdfs:comment "allow | deny | require_approval | UNAVAILABLE (F24)." .
+oo:policyReasonsJson     a owl:DatatypeProperty ; rdfs:domain oo:PolicyEvaluation ; rdfs:range xsd:string .
+oo:policyObligationsJson a owl:DatatypeProperty ; rdfs:domain oo:PolicyEvaluation ; rdfs:range xsd:string .
+oo:policyInputHash       a owl:DatatypeProperty ; rdfs:domain oo:PolicyEvaluation ; rdfs:range xsd:string ; rdfs:comment "sha256 of the exact JSON input sent to OPA (spec 06: 'persist policy input hash + result + bundle version')." .
+oo:policyInputJson       a owl:DatatypeProperty ; rdfs:domain oo:PolicyEvaluation ; rdfs:range xsd:string ; rdfs:comment "The full input document itself, not only its hash — spec item 5 'persist the input hash + full input + bundle sha256'." .
+
+oo:ConformanceCheck a owl:Class ; rdfs:subClassOf prov:Entity .
+oo:conformanceOutcome        a owl:DatatypeProperty ; rdfs:domain oo:ConformanceCheck ; rdfs:range xsd:string ; rdfs:comment "CONFORMS | VIOLATED." .
+oo:conformanceViolationsJson a owl:DatatypeProperty ; rdfs:domain oo:ConformanceCheck ; rdfs:range xsd:string .
+
+oo:authorizationCheck a owl:ObjectProperty ; rdfs:domain oo:Decision ; rdfs:range oo:AuthorizationCheck .
+oo:policyEvaluation   a owl:ObjectProperty ; rdfs:domain oo:Decision ; rdfs:range oo:PolicyEvaluation .
+oo:conformanceCheck   a owl:ObjectProperty ; rdfs:domain oo:Decision ; rdfs:range oo:ConformanceCheck .
+
+## --- Approval (spec 06 'Human approval': approver/time/decision
+## hash/policy version/scope) ---
+oo:approvedBy           a owl:ObjectProperty   ; rdfs:domain oo:Decision ; rdfs:range prov:Agent .
+oo:approvedAt           a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:dateTime .
+oo:approvalDecisionHash a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string ; rdfs:comment "Must equal oo:decisionContentHash at approval time; a mismatch is F33." .
+oo:approvalScope        a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string .
+
+## --- Evidence snapshot content (spec 04 'Evidence snapshot' hybrid
+## manifest; spec 14 R5 'hybrid manifest with hashes + immutable required
+## facts, then test reconstruction') ---
+oo:snapshotObservedAt   a owl:DatatypeProperty ; rdfs:domain oo:EvidenceSnapshot ; rdfs:range xsd:dateTime .
+oo:snapshotContentHash  a owl:DatatypeProperty ; rdfs:domain oo:EvidenceSnapshot ; rdfs:range xsd:string .
+oo:sourcePositionsJson  a owl:DatatypeProperty ; rdfs:domain oo:EvidenceSnapshot ; rdfs:range xsd:string ; rdfs:comment "JSON list of {system, table, pk, lsn, version, observed_at} cited from oo:SourcePosition (contracts/ontology/v1/oo-observation.ttl)." .
+oo:requiredFactsJson    a owl:DatatypeProperty ; rdfs:domain oo:EvidenceSnapshot ; rdfs:range xsd:string ; rdfs:comment "The ActionType's evidence_requirements, resolved to concrete values at freeze time — the facts the decision actually used (H13 query 2)." .
+oo:excludedFactsJson    a owl:DatatypeProperty ; rdfs:domain oo:EvidenceSnapshot ; rdfs:range xsd:string ; rdfs:comment "Candidate evidence gathered from the same hot-projection rows/RDF entities but NOT part of evidence_requirements for this ActionType — H13 query 3 'which evidence was available but excluded'." .
+oo:projectionRowHashesJson a owl:DatatypeProperty ; rdfs:domain oo:EvidenceSnapshot ; rdfs:range xsd:string ; rdfs:comment "content_hash of every contributing ontology_hot row (services/projection_builder/hashing.py), per R5's 'projection row hashes'." .
+
+#############################################
+## Phase 6 additions: ActionExecution (Temporal-driven), Outcome
+## (CDC-reconciled), and the PROV chain linking evidence -> decision ->
+## execution -> observed outcome (docs/experiment/spec/03_domain_scenario.md
+## "Decision provenance links evidence -> decision -> action -> observed
+## outcome"; H13 queries 5-8; H1's "execution identifier"/"observed outcome
+## identifier" fields, absent by design before this phase).
+#############################################
+
+oo:executedBy a owl:ObjectProperty ; rdfs:domain oo:Decision ; rdfs:range prov:Agent ;
+  rdfs:comment "The actor/agent Temporal executed the approved action AS — normally identical to oo:actor, but kept distinct so a future delegated/service-identity execution path does not have to overload oo:actor. H13 query 5's 'executedBy', absent through Phase 5 by design." .
+
+oo:actionExecution a owl:ObjectProperty ; rdfs:domain oo:Decision ; rdfs:range oo:ActionExecution ;
+  rdfs:comment "H1 'execution identifier'. One per Decision (execute() is only ever called on an APPROVED decision; a retried/replayed execute() reuses the SAME ActionExecution/idempotency key, never creates a second one)." .
+
+oo:actionExecutionId a owl:DatatypeProperty ; rdfs:domain oo:ActionExecution ; rdfs:range xsd:string ;
+  rdfs:comment "The SAME value sent to the external system as its idempotency key (spec 06 'idempotency: key: action_execution_id') — e.g. WMS's transfers.action_execution_id unique constraint." .
+oo:externalSystem     a owl:DatatypeProperty ; rdfs:domain oo:ActionExecution ; rdfs:range xsd:string ; rdfs:comment "WMS | ERP | MES." .
+oo:externalOperation  a owl:DatatypeProperty ; rdfs:domain oo:ActionExecution ; rdfs:range xsd:string .
+oo:commandStatus      a owl:DatatypeProperty ; rdfs:domain oo:ActionExecution ; rdfs:range xsd:string ; rdfs:comment "The RAW external command response status, e.g. HTTP 200/404/409/500 — distinct from oo:status's governed decision lifecycle (spec 06: 'persist command receipt/status')." .
+oo:commandReceiptJson a owl:DatatypeProperty ; rdfs:domain oo:ActionExecution ; rdfs:range xsd:string ; rdfs:comment "The full external response body, verbatim (e.g. WMS's transfer row) — never re-derived after the fact." .
+oo:startedAt          a owl:DatatypeProperty ; rdfs:domain oo:ActionExecution ; rdfs:range xsd:dateTime .
+oo:completedAt        a owl:DatatypeProperty ; rdfs:domain oo:ActionExecution ; rdfs:range xsd:dateTime .
+oo:temporalWorkflowId a owl:DatatypeProperty ; rdfs:domain oo:ActionExecution ; rdfs:range xsd:string ; rdfs:comment "Temporal's own workflow id (= oo:actionExecutionId, one workflow per logical action — the durable-execution-history side of spec 06's exactly-once language)." .
+
+## --- Outcome (spec 06 'evaluate outcome predicate'; spec 03 'Outcome' /
+## 'World divergence'; reconciliation) ---
+oo:outcome a owl:ObjectProperty ; rdfs:domain oo:ActionExecution ; rdfs:range oo:Outcome ;
+  rdfs:comment "H1 'observed outcome identifier'. prov:wasGeneratedBy is ALSO asserted (Outcome -> ActionExecution) so the PROV chain is traversable both directions without relying on a domain-specific property alone." .
+
+oo:outcomeId              a owl:DatatypeProperty ; rdfs:domain oo:Outcome ; rdfs:range xsd:string .
+oo:reconciliationState    a owl:DatatypeProperty ; rdfs:domain oo:Outcome ; rdfs:range xsd:string ;
+  rdfs:comment "One of spec 06's 'Reconciliation states': NOT_STARTED | COMMAND_SENT | COMMAND_ACCEPTED | AWAITING_OBSERVATION | CONVERGED | DIVERGED | OUTCOME_UNKNOWN | COMPENSATING | COMPENSATED | FAILED. Finer-grained than oo:Decision's own oo:status (which only ever shows the decision-level EXECUTING/AWAITING_OBSERVATION/DIVERGED/OUTCOME_UNKNOWN/OBSERVED_SUCCESS/EXECUTION_FAILED)." .
+oo:expectedEffectJson     a owl:DatatypeProperty ; rdfs:domain oo:Outcome ; rdfs:range xsd:string ; rdfs:comment "The ActionType's outcome predicate, evaluated with this action's own proposed parameters (e.g. transfer_inventory: {source_available_before, source_available_after_expected, ...})." .
+oo:observedEffectJson     a owl:DatatypeProperty ; rdfs:domain oo:Outcome ; rdfs:range xsd:string ; rdfs:comment "What CDC/reconciliation actually observed for the SAME correlated external record (e.g. the WMS transfer row's actual_quantity) — never naive absolute arithmetic (spec 06: 'must use correlated transaction/transfer facts')." .
+oo:observedAtOutcome      a owl:DatatypeProperty ; rdfs:domain oo:Outcome ; rdfs:range xsd:dateTime .
+oo:compensationStatus     a owl:DatatypeProperty ; rdfs:domain oo:Outcome ; rdfs:range xsd:string ; rdfs:comment "NONE | NOT_APPLICABLE | COMPENSATING | COMPENSATED | COMPENSATION_FAILED — H12/F16. Only ever non-NONE for an ActionType whose contract declares compensation.mode: compensatable." .
+oo:compensatingActionExecutionId a owl:DatatypeProperty ; rdfs:domain oo:Outcome ; rdfs:range xsd:string ; rdfs:comment "The reversal/compensating action's OWN idempotency key, when one was issued." .
+oo:sourceEvidenceLsn      a owl:DatatypeProperty ; rdfs:domain oo:Outcome ; rdfs:range xsd:string ; rdfs:comment "The Debezium source LSN (oo:SourcePosition.oo:lastLsn) of the CDC observation reconciliation correlated this outcome to — H13 acceptance criterion 10's 'what actual outcome ... what changed next' traces to a real source position, not a timestamp guess." .
+
+## --- Phase 6b: action-definition version pinning (F34) ---
+## contracts/manifests/current.json's per-action sha256 is REFERENCED at
+## propose() time (services/decision_service/propose_flow.py stamps
+## oo:actionPinnedSha256 from that same manifest) but, before Phase 6b, was
+## never actively re-verified at execute() time — see
+## docs/experiment/implementation-notes.md Phase 6 section's own handoff
+## note. services/action_worker/activities.py::verify_and_start_execution
+## now re-hashes contracts/actions/v1/<name>.yaml FRESH off disk (never the
+## cached services/decision_service/action_types.py registry) and compares
+## against oo:actionPinnedSha256; a mismatch writes oo:actionSha256AtExecute
+## + oo:actionVersionInvalidatedAt and moves oo:status to
+## oo:ActionVersionInvalidated instead of ever calling the external system.
+oo:actionPinnedSha256 a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string ;
+  rdfs:comment "sha256 of contracts/actions/v1/<action_type>.yaml's raw bytes, captured from contracts/manifests/current.json at propose() time (services/decision_service/manifest.py) — the PINNED version execute() must still match." .
+oo:actionSha256AtExecute a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string ;
+  rdfs:comment "Only present when a mismatch was detected: the action definition file's ACTUAL sha256 at execute() time, for forensic comparison against oo:actionPinnedSha256." .
+oo:actionVersionInvalidatedAt a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:dateTime .
+

@@ -1,7 +1,7 @@
 {
   "_comment": "Phase 7 (docs/experiment/spec/07_versioning_and_replay.md) \u2014 which contracts/<kind>/vN directory is CURRENTLY LIVE, per kind, independently. Read by services/decision_service/manifest.py on every manifest build (decision_service's own startup, and any process that re-reads it) so 'deploying' a new contract version is a data-only change here plus a decision_service restart (docker compose restart decision_service) -- no image rebuild, matching the bind-mount pattern already established for services/action_worker (F34) and services/opa. NEVER edited by decision_service itself -- only by migrations/*/deploy.py scripts, under an operator's control, exactly like a real contract redeploy.",
-  "ontology": "v2",
-  "shapes": "v2",
+  "ontology": "v3",
+  "shapes": "v3",
   "actions": "v3",
   "policies": "v2",
   "authorization": "v2",
