@@ -2309,3 +2309,351 @@ tests/integration: 71 passed
   contract-version fixtures and Phase 9's agent/MCP layer (F30, F39) will
   both introduce new data-derived identifiers and must route them through
   it from the start, not retrofit it later the way this phase had to.
+
+## Phase 7 — Contract versioning, migration, historical replay
+
+Tag `poc-v0.7-replay`. Brief: `docs/experiment/briefs/phase7.md`. Spec: 01
+(H7, H8, H13), 07 (whole), 08 (replay tests), 09 (F28, F29, F39), 11
+(criterion B), 14 (R4, R6, R10). No new ports — reuses OPA (15482),
+OpenFGA (15481), RDF4J (15480-range), decision_service (15410), Postgres
+(15432) from earlier phases.
+
+### The core mechanism: a per-kind, live-editable version pointer
+
+`contracts/manifests/deployed_version.json` — one JSON object, one key per
+contract kind (`ontology`, `shapes`, `actions`, `policies`, `authorization`,
+`identity`, `projections`, `reconciliation`), each holding which
+`contracts/<kind>/vN/` directory is CURRENTLY live. `services/common/contract_versions.py::deployed_version()`
+reads it fresh off disk on **every** call — never cached in-process, the
+same "never trust a stale cache across a store wipe" policy
+`services/decision_service/app.py::_current_store_id` already established
+for OpenFGA. Every kind advances **independently**: this experiment's
+actions/ reached v3 while ontology/shapes/policies/projections stopped at
+v2 and authorization only reached v2 with a totally different meaning (its
+OWN second version, not "the v3 era") — see the "V3" section below for why
+that's correct, not a bug.
+
+"Deploying" a new version is therefore a **data-only edit to one file**,
+picked up by the next request with **no container restart** for anything
+that reads it per-request (`services/decision_service/app.py::_deps`
+rebuilds the manifest fresh every propose() call;
+`services/projection_builder/definitions.py::definitions_dir()` re-resolves
+on every projection load). `docker-compose.yml` changes made this possible:
+`decision_service` and `projection_builder` both gained the SAME read-only
+`./contracts:/app/contracts:ro` bind mount `action_worker` already had from
+Phase 6b's F34 work; `opa`'s mount widened from `./contracts/policies/v1`
+to the WHOLE `./contracts/policies` tree, so `--watch` picks up a brand-new
+version's `.rego` (a distinct package name, e.g.
+`factory.inventory.transfer_v2` vs v1's `factory.inventory.transfer`) with
+**zero** restart, and both packages stay simultaneously servable forever —
+which turned out to be exactly what replay needs (see below).
+
+### V1 -> V2: ontology + policy + action evolution
+
+`contracts/ontology/v2/fac-core.ttl` retires `fac:availableQuantity`
+(V1's `onHand - reserved` derived convenience property — `onHand`/`reserved`
+were ALREADY the real facts since Phase 3, so this needed no new source
+columns, only retiring the derived one). `contracts/policies/v2/transfer_inventory.rego`
+(package `factory.inventory.transfer_v2`) reads onHand/reserved directly,
+adds a NEW `reservation_ok` (reserved <= on_hand) hard-deny rule, and reads
+a genuinely different (higher) safety-stock default from
+`contracts/policies/v2/data.json`'s `safety_stock_v2` block.
+`contracts/actions/v2/transfer_inventory.yaml` (version 2) makes
+`reservation_ok` a new required-evidence/closure field and LOWERS
+`approval_threshold_units` from V1's 100 to 80 — a deliberate, genuine
+behavior divergence used later to demonstrate the counterfactual path.
+
+`migrations/v1_to_v2/migrate_rdf.py` does the one real state migration this
+step needs: a SPARQL `DELETE WHERE` removing every live `fac:availableQuantity`
+triple from the CURRENT observed graph (never touches any per-decision
+historical graph — those are immutable by construction).
+`migrations/v1_to_v2/deploy.py` orchestrates: migrate, flip
+`deployed_version.json`'s ontology/shapes/actions/policies/projections
+pointers to v2, force an immediate projection rebuild with a
+before/after hash proof.
+
+**Found via that rebuild's own hash-mismatch check, not assumed**: deleting
+`fac:availableQuantity` ALSO broke `contracts/projections/v1/work_order_risk.yaml`'s
+`inventory_available` query, which required the same triple as a hard
+(non-`OPTIONAL`) graph-pattern element — every `work_order_risk` row
+silently lost its `available` figure, recomputing shortage/at_risk wrong.
+Both `contracts/projections/v2/current_inventory.yaml` and
+`contracts/projections/v2/work_order_risk.yaml` fix this the same way:
+`OPTIONAL { ?lot fac:availableQuantity ?rawAvailable }` +
+`BIND(COALESCE(?rawAvailable, (?onHand - ?reserved)) AS ?available)` —
+works identically whether the triple still physically exists or not.
+Verified live against the real running stack: 2,290 `fac:availableQuantity`
+triples migrated, all four projection tables' rebuilt hash matched their
+pre-rebuild hash exactly.
+
+`services/decision_service/evidence.py`/`policy.py` are now version-aware:
+`gather_transfer_inventory_evidence` branches on `action.version_dir` for
+the safety-stock lookup and the new `reservation_ok` fact;
+`policy.py::build_input` has a V1 and a V2+ input-shape branch. **Found and
+fixed live**: `_load_safety_stock` was originally keyed off
+`action.version_dir` (the ACTIONS directory) rather than
+`action.policy_package` — broke the instant V3 deployed (`contracts/actions/v3/`
+exists, `contracts/policies/v3/` never does, since V3 doesn't touch
+policy at all) with a live 500 looking for a `data.json` that was never
+meant to exist. Different contract kinds evolve on independent clocks;
+never assume one kind's version number implies another's.
+
+### V2 -> V3: authorization-model evolution (the "second incompatible evolution")
+
+Deliberately a DIFFERENT KIND of breaking change than V1->V2's — see
+`docs/adr/0004-openfga-historical-model-and-tuple-snapshot.md`.
+`contracts/authorization/v2/model.fga` adds a `senior_approver` relation and
+`can_approve_large_transfer_v2`, NOT unioned with plain `supervisor` — a v1
+supervisor tuple alone no longer grants v2 approval authority.
+`contracts/actions/v3/transfer_inventory.yaml` (version 3) is the one
+resulting action-schema delta: `approval_relation` moves to
+`can_approve_large_transfer_v2` (everything else byte-identical to v2's
+file). `migrations/v2_to_v3/migrate_authz.py` publishes the v2 model as a
+BRAND NEW model in the SAME live OpenFGA store (`services/decision_service/bootstrap_openfga.py::bootstrap`
+generalized to take an `auth_dir` param — OpenFGA models are immutable-by-id
+and additive, so v1's model is never touched, edited, or deleted) and
+migrates `supervisor-1`'s authority forward
+(`contracts/authorization/v2/tuples.yaml`'s one new tuple) — the real F28
+case a skipped migration would silently regress.
+`migrations/v2_to_v3/deploy.py` flips `deployed_version.json`'s `actions`
+to `v3` and `authorization` to `v2` (its OWN second version — NOT "v3";
+per-kind independent numbering, see above).
+
+Every `Decision`/`AuthorizationCheck` now pins the REAL OpenFGA
+`authorization_model_id` (`oo:openfgaAuthorizationModelId`,
+`oo:checkAuthorizationModelId` — new optional properties, distinct from the
+existing content-hash `authorizationModelVersion`), resolved fresh per
+request via `authz.py::resolve_latest_authorization_model_id`
+(`GET /authorization-models?page_size=1`, newest first). Live-verified end
+to end: a V3 decision (quantity 90, `REQUIRES_APPROVAL`) approved
+successfully by `supervisor-1` (the migrated principal) via
+`can_approve_large_transfer_v2`, executed to `OBSERVED_SUCCESS`.
+
+**A real infrastructure event, observed and recovered, not hidden**:
+partway through this phase OpenFGA's `memory` datastore lost its v2 model
+(container restarted with `RestartCount=0`, i.e. a recreation, not a crash
+— exact trigger not conclusively identified; root-causing further wasn't
+worth the time against everything else left to build). Recovered by
+re-running `bootstrap_openfga.py` then `migrate_authz.py`. This is the
+EXACT risk `docs/adr/0004` documents as this design's one real gap
+(`memory` engine, no persistent OpenFGA storage in this POC) — every
+corpus decision's authorization replay therefore reports
+`authz_replay_mode: "recorded_only"` rather than `"live"` (their ORIGINAL
+model ids no longer resolve in the post-recovery store), which is the
+documented, honest fallback working exactly as designed, not a silent
+false pass.
+
+### Full per-decision contract pinning (spec 07 item 1's "verify; fix Phase 5 if not")
+
+Closed the gap: every Decision now also pins `identityMappingVersion`,
+`projectionDefinitionVersion`, `reconciliationPredicateVersion` (new
+optional `oo:` properties, `sh:maxCount 1` with no `sh:minCount` so every
+pre-Phase-7 decision keeps validating unchanged), plus `actionVersionDir`
+(WHICH `contracts/actions/<dir>/` a decision's `actionPinnedSha256` was
+computed from — F34's re-verification needed this once actions stopped
+being globally "v1"; threaded through `services/action_worker/activities.py`
+and the `/approve` endpoint, new `action_version_dir` Postgres column via
+the same `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` pattern Phase 6b
+established). `contracts/reconciliation/v1/predicates.yaml` is a new,
+versioned, content-hashable DESCRIPTION of `services/action_worker/outcome_eval.py`'s
+existing predicate logic — honestly scoped as description-only (not yet
+dynamically loaded/interpreted; changing the real predicate still needs a
+code change, versioned via `code_git_commit` like any other code change),
+documented in the file itself rather than silently implied otherwise.
+
+### Historical corpus — LIVE tier (spec: ">= 100 V1 + >= 100 V2, real
+executions for >= 200 complete chains, denied/failed/diverged/unknown via
+fault injection")
+
+`seed/generators/historical_corpus.py` (+ `corpus_helpers.py`) drives the
+REAL decision service — propose -> approve -> execute -> wait — via a
+bounded 8-worker thread pool, reusing the SAME WMS fault endpoints
+`tests/faults/` already proves correct (`partial_commit` -> DIVERGED,
+`return_200_without_commit`/`return_500_before_commit` -> OUTCOME_UNKNOWN,
+plus propose-time DENIED_POLICY/DENIED_AUTHORIZATION/INSUFFICIENT_EVIDENCE
+via parameter choice). Run sequence: generate 116 V1 decisions -> `make
+deploy-v2` -> generate 116 V2 decisions -> `make deploy-v3`. Result:
+**232 live decisions, 210 complete action/outcome chains** (>= the spec's
+200 minimum), recorded in `experiments/exp-000/results/historical-corpus.json`.
+
+**Found and fixed mid-generation, the costliest bug of this phase**: the
+first full run had every single decision time out waiting for
+`current_inventory` to converge (175+ seconds, never converging, on writes
+that should take ~3s). Root cause: the poll loop's `psycopg.connect(...)`
+was never set to `autocommit=True` and never committed between polls — an
+open, uncommitted SELECT-only transaction held an `AccessShareLock` on
+`current_inventory` for its WHOLE lifetime, which BLOCKED
+`services/projection_builder`'s own `TRUNCATE` (needs `ACCESS EXCLUSIVE`)
+indefinitely. Exactly the same lock-order class Phase 6b's own
+`evidence.py` freshness-retry fix already documented for a different
+caller — same fix here (`conn.commit()` between polls in
+`corpus_helpers.py::set_inventory_and_wait`), confirmed by direct
+measurement (never converged in 175s before the fix; converged in 3s
+after).
+
+### Historical corpus — BULK tier (spec: "bulk-generate records up to
+5,000 total... document which were made live vs bulk-generated")
+
+`seed/generators/bulk_historical_decisions.py` writes DIRECTLY via
+`rdf_writer.write_decision` + `store.insert_decision` (the identical
+functions `propose_flow.py` calls — never a second writer), with
+self-consistent synthetic evidence/gate results (built from the SAME
+hashing functions real decisions use) randomly distributed across the
+THREE real archived contract eras (V1, V2, V3-actions/V2-authz).
+`context.is_bulk_generated=true` on every bulk record, `decision_id`
+prefix `D-BULK`, so live vs bulk is always distinguishable by either
+signal. Honest scope note (documented in the script's own docstring): the
+gate OUTCOMES (allow/deny/require_approval) are randomly assigned, not
+derived from evaluating real policy against the fabricated evidence — this
+tier is for query/load testing volume, not a second replay-corpus claim.
+This session's stack already carried 1,970 decisions from its own
+Phase 5-7 history before this ran; 3,030 new bulk records brought the
+total to exactly **5,000** (verified via a direct `SELECT count(*)`, not
+the script's own self-report).
+
+### Replay (H7) — `services/decision_service/replay.py`
+
+`replay_decision(decision_id, conn, rdf4j_client, openfga_api_url,
+opa_base_url)`:
+
+1. Reconstructs the evidence snapshot from RDF4J's `EvidenceSnapshot`
+   resource — **RDF4J-authoritative, not the Postgres index**, which
+   deliberately omits `projection_row_hashes` (found empirically: every
+   decision "failed" replay with a hash mismatch until this was corrected
+   — recomputing from Postgres's PARTIAL copy alone silently produces a
+   DIFFERENT hash than the one originally computed with all three inputs).
+   New SPARQL query `contracts/queries/v1/q9_replay_authz_fields.rq` pulls
+   the RDF-only fields (`requiredFactsJson`/`sourcePositionsJson`/
+   `projectionRowHashesJson`/`snapshotContentHash`, plus the OpenFGA model
+   id fields).
+2. Recomputes `decision_content_hash` and cross-checks RDF4J against the
+   Postgres index. A decision that never reached `APPROVED`
+   (denied/insufficient-evidence) has NO `decision_content_hash` by design
+   — treated as vacuously matching (nothing to check), not a failure
+   (found live: the first full `test-replay` run failed 11/116 per version
+   until this was corrected).
+3. **F29's loud-failure point**: `_verify_archive` re-hashes every archived
+   `contracts/<kind>/<pinned version>/` directory FRESH off disk and
+   compares to what the decision pinned — a deleted or modified archived
+   artifact raises `ReplayIntegrityError` immediately, before any gate
+   re-runs. Never caught internally; propagates as HTTP 409 / CLI exit 2.
+4. Re-runs the policy gate using the STORED `policy_result.input_json`
+   against the historical package. **Two real bugs found and fixed
+   building this**: (a) mixed the REST-API slash-path form with the Rego
+   dotted-package form in the `opa eval` query argument — a silent
+   `rego_unsafe_var_error`; (b) `opa eval` shelling out to `docker run`
+   only works HOST-SIDE — decision_service's container has neither a
+   docker socket nor the CLI, so the live `POST /replay/{id}` endpoint
+   500'd. Fixed by preferring the ALREADY-RUNNING OPA server's REST API
+   (it serves every published package simultaneously and forever, since
+   the whole `contracts/policies/` tree is mounted) with `opa eval` via
+   docker only as a fallback when OPA itself is unreachable — works
+   identically host-side and in-container, and ~3x faster (no per-decision
+   subprocess spawn: `make test-replay` dropped from ~80s to ~24s).
+5. Re-runs the authorization check LIVE against the decision's own pinned
+   `openfga_authorization_model_id`, with the `"recorded_only"` fallback
+   documented in ADR 0004 when that model id no longer resolves (the real
+   store-wipe event above exercises this fallback for the ENTIRE corpus in
+   this run).
+
+`POST /replay/{id}` (404 not found, 409 on F29 integrity failure) and
+`POST /reevaluate/{id}` (separate counterfactual, `services/decision_service/replay.py::reevaluate_under_current`
+— reuses the frozen evidence FACTS but rebuilds the policy input under
+CURRENTLY deployed rules, never touches history). `make replay
+DECISION_ID=<id>` / `make reevaluate DECISION_ID=<id>` CLIs
+(`scripts/replay_cli.py`, `scripts/reevaluate_cli.py`) call the exact same
+functions the HTTP endpoints do.
+
+**Counterfactual live proof** (the capstone demonstration of H7's "never
+silently apply today's policy to yesterday's decision"): a real V1 corpus
+decision (quantity 95, auto-`ALLOW`ed under V1's 100-unit threshold)
+replays `PASS` with its ORIGINAL "allow" verdict forever, while `make
+reevaluate` on the SAME decision reports
+`diverges_from_original: true`, `under_current_policy_outcome:
+"require_approval"` (V2/V3's lower 80-unit threshold) — proven, not
+asserted. `reevaluate_under_current` also handles the case where old
+evidence lacks a field the CURRENT policy needs: a V1 snapshot has no
+`reservation_ok` fact (didn't exist before V2) but DOES carry
+`on_hand`/`reserved` inside `current_source_inventory` (always populated,
+even when V1's own policy never read them) — derived rather than crashed,
+with an explicit "cannot reevaluate" result as the honest fallback for any
+OTHER shape mismatch.
+
+### `make test-replay`: 100% PASS
+
+`tests/replay/test_replay_corpus.py` replays every one of the 232 LIVE V1
+(116) and V2 (116) decisions under the (by then) V3-deployed state — **8
+passed** covering: the corpus itself (2 tests), F29 (2 tests: delete +
+modify an archived policy, both restored in `finally`, both re-verified
+`PASS` again afterward), projection-rebuild-after-migration (reuses Phase
+4's exact `build_all`/`table_hash` mechanism, explicitly asserting a
+migration has actually run first), and H13 forensic queries Q1-Q8
+(`contracts/queries/v1/*.rq`, unchanged, version-agnostic by design)
+answering fully for a real V1 decision after the whole V1->V2->V3
+sequence — Q4 shows the decision's OWN original v1 pin, never silently
+migrated.
+
+### F28 — `scripts/compat_check.py`
+
+Structural, not self-reported: for each `contracts/<kind>/vN/` with real
+content (N>=2), coverage requires EITHER a `migrations/*/migration.json`
+whose `kind_versions` map (kind -> its OWN target version — needed because
+one migrations/ directory can cover kinds reaching DIFFERENT version
+numbers in the same deploy, exactly this phase's own `migrations/v2_to_v3/`:
+`actions` -> v3, `authorization` -> v2) declares that exact (kind, version)
+pair, OR (fallback, for a kind with no `migration.json`) a numerically-
+matched `migrations/v{N-1}_to_v{N}/` directory containing a script. Found
+and fixed the `kind_versions` gap live: the FIRST version only matched by
+version NUMBER, which would have let `authorization/v2` ride for free on
+`migrations/v1_to_v2/`'s UNRELATED `migrate_rdf.py` purely because both
+happened to be "version 2" of something. `make test-contracts` runs it
+directly (Makefile), plus `tests/contracts/test_compat_check.py`: the real
+repo tree (0 violations) and three synthetic known-bad trees (missing
+migration dir, empty migration dir, `migration.json` pointing at a
+nonexistent script).
+
+### F39 — already half-built, just never exercised
+
+`services/identity_resolver/resolver.py::IdentityResolver` already
+validated `mapping_rules.yaml` at LOAD TIME with a
+`ConflictingMappingRuleError` explicitly commented "F39" — from an earlier
+phase, never tested. `tests/component/test_f39_invalid_mapping_rule.py`:
+conflicting explicit-override entries for the same source id (the
+realistic deployment error), an unknown rule kind, a pattern rule missing
+`canonical_template`, and a known-negative (a structurally valid file
+still loads and resolves correctly, proving the first three catch real
+invalidity rather than rejecting everything).
+
+### fault-matrix-phase7.json
+
+`scripts/gen_fault_matrix_phase7.py`: every F01-F40 entry carried forward
+from `fault-matrix-phase6b.json` unchanged except F28/F29/F39, updated to
+PASS with real test node ids verified against a live `pytest
+--collect-only` run (same convention Phase 6b's own generator used).
+**38 PASS, 2 NOT_TESTED** (F30 needs Phase 9's agent/MCP layer, F40 needs
+Phase 10's observability layer — both explicitly out of this phase's
+scope, untouched).
+
+### What Phase 8 (A/B baseline) needs from here
+
+- `contracts/manifests/deployed_version.json` + `services/common/contract_versions.py::deployed_version()`
+  is now the ONE place any future phase checks "what contract version is
+  live" — never hardcode "v1" again anywhere in this codebase (two
+  pre-existing Phase 4/5 tests already had to be fixed for exactly this:
+  `tests/integration/test_forensic_queries.py` and
+  `tests/integration/test_projection_differential.py`).
+- The stack is LEFT at its real, final Phase 7 state:
+  `ontology=v2, shapes=v2, actions=v3, policies=v2, authorization=v2,
+  identity=v1, projections=v2, reconciliation=v1` — Phase 8's baseline
+  comparison should measure against THIS state, not assume v1 everywhere.
+- `contracts/manifests/openfga_model_ids.json` (kind version -> real
+  OpenFGA `authorization_model_id`) is the pattern for any future phase
+  that needs to pin a real external-system identifier alongside a
+  content-hash version — see `docs/adr/0004` for the full reasoning on
+  why a content hash alone isn't enough for OpenFGA specifically.
+- The `memory` OpenFGA datastore engine is a real, now-OBSERVED
+  operational risk (not just a theoretical one) for any phase that keeps
+  this stack running for hours — if authorization replay/checks start
+  returning unexpected `UNAVAILABLE`/`recorded_only`, re-run
+  `services/decision_service/bootstrap_openfga.py` then
+  `migrations/v2_to_v3/migrate_authz.py` before assuming a code bug.

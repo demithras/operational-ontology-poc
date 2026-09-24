@@ -27,7 +27,7 @@ Build order and exit criteria: `docs/experiment/spec/12_implementation_plan.md`.
 | 5 | Decision service + gates (OpenFGA, OPA, SHACL gate capture) | done |
 | 6 | Durable action runtime (Temporal, WMS action, idempotency, CDC, reconciliation) | done (tag `poc-v0.6-actions`) |
 | 6b | Complete the fault matrix (F01-F40; worker-crash/CDC-delay/Kafka-outage/kill/network fault tests; F34 action-version pinning implemented; two real concurrency bugs + a SPARQL/IRI injection vulnerability found and fixed) | done (tag `poc-v0.6.1-faults`) |
-| 7 | Contract versioning / replay | pending |
+| 7 | Contract versioning / replay (V1->V2 ontology+policy+action evolution, V2->V3 authorization-model evolution, live-through-real-service historical corpus (232 decisions, 210 complete chains) + bulk corpus to 5,000, `services/decision_service/replay.py` — H7 proven: `make test-replay` 100% PASS across V1/V2 under the V3-deployed state — plus F28/F29/F39 closed) | done (tag `poc-v0.7-replay`) |
 | 8 | A/B baseline (conventional relational implementation) | pending |
 | 9 | Agent / MCP layer | pending |
 | 10 | Final attack (full stateful suite, fault matrix, mutation tests, load, replay, A/B) | pending |
@@ -103,19 +103,28 @@ locked `hot_read_p95_ms` SLO plus a counter-test (the same information via
 direct SPARQL), writing `experiments/exp-000/results/bench-phase4.json`.
 
 Since Phase 5, `make up` also brings up `openfga` (authorization,
-memory-store, host port 15481), `opa` (contextual policy, loading
-`contracts/policies/v1` as a mounted bundle, host port 15482), and
-`services/decision_service` (the governed decision API, host port 15410) —
-and idempotently bootstraps the OpenFGA store/model/tuples from
-`contracts/authorization/v1/`. `POST /decisions/propose` runs the full
+memory-store, host port 15481), `opa` (contextual policy, loading the
+WHOLE `contracts/policies/` tree — every published version's bundle stays
+simultaneously servable, since Phase 7 — as a mounted bundle, host port
+15482), and `services/decision_service` (the governed decision API, host
+port 15410) — and idempotently bootstraps the OpenFGA store/model/tuples
+from `contracts/authorization/v1/`. `POST /decisions/propose` runs the full
 evidence → authorization (OpenFGA) → policy (OPA) → SHACL-validated RDF4J
 write pipeline from `docs/experiment/spec/06_decision_and_action_runtime.md`;
 `GET /decisions/{id}`, `POST /decisions/{id}/approve` (human approval, F33
-hash-mismatch rejection), and `POST /decisions/{id}/execute` /
-`POST /replay/{id}` (verified-immutable-tuple / 501 stub through Phase 7)
-round out the API surface. `make test-contracts` now also runs the OpenFGA
-model tests (`fga model test`) and OPA policy tests (`opa test
---fail-on-empty`), each via its own docker CLI image. `make bench-phase5`
+hash-mismatch rejection), and `POST /decisions/{id}/execute` round out the
+Phase 5/6 API surface. Since Phase 7, `POST /replay/{id}` (H7: reconstructs
+the evidence snapshot, re-runs the policy/authorization gates against the
+ARCHIVED contract versions a decision pinned, 409s loudly per F29 if an
+archived artifact was deleted/modified) and `POST /reevaluate/{id}` (the
+separate, never-history-overwriting counterfactual — "what would TODAY's
+rules decide?") complete it — see
+`docs/experiment/implementation-notes.md`'s Phase 7 section and
+`docs/adr/0004-openfga-historical-model-and-tuple-snapshot.md`.
+`make test-contracts` now also runs the OpenFGA model tests (`fga model
+test`) and OPA policy tests (`opa test --fail-on-empty`), each via its own
+docker CLI image, parametrized over every published contract version.
+`make bench-phase5`
 (folded into `make bench`) measures per-gate latency (authorization/policy/
 SHACL-RDF4J/Postgres) plus the end-to-end proposal path against the locked
 `gate_evaluation_p95_ms`/`decision_proposal_p95_ms` SLOs, writing
@@ -145,19 +154,51 @@ measures external-action duration / CDC-observation lag / end-to-end
 execution time, writing `experiments/exp-000/results/bench-phase6.json`
 (no SLO gate locked for these three — measurement reporting).
 
-Every other mandatory command from the repository contract (`make
-test-replay`, `make experiment`, `make report`, `make replay
-DECISION_ID=<id>`) prints which phase it belongs to and exits `2` —
-nothing is faked as passing before its phase actually lands. `make
-test-stateful` is already live: it aliases to Phase 1's own Hypothesis
+Since Phase 7, `contracts/manifests/deployed_version.json` records which
+`contracts/<kind>/vN/` directory is CURRENTLY live, independently per kind
+(`ontology`, `shapes`, `actions`, `policies`, `authorization`, `identity`,
+`projections`, `reconciliation`) — "deploying" a new contract version is a
+data-only edit to that one file, picked up on the next request with no
+container restart (`services/common/contract_versions.py::deployed_version()`
+reads it fresh every call). `migrations/v1_to_v2/` (ontology retires
+`fac:availableQuantity`, policy/action/projection evolve alongside) and
+`migrations/v2_to_v3/` (a second, deliberately different kind of breaking
+change — a new, non-inherited OpenFGA authorization relation, requiring a
+real tuple migration) are the two real evolutions this experiment ran;
+`make deploy-v2` / `make deploy-v3` apply them against the live stack.
+`seed/generators/historical_corpus.py` created 232 decisions through the
+real decision service across both eras (210 with complete action/outcome
+chains, including denied/failed/diverged/unknown outcomes via the same
+fault-injection endpoints `tests/faults/` uses);
+`seed/generators/bulk_historical_decisions.py` fills the rest of a
+5,000-decision corpus for query/load testing via the same production write
+path, self-reported as `bulk` (never conflated with the live corpus).
+`POST /replay/{id}` / `make replay DECISION_ID=<id>` reconstruct a
+decision's evidence, re-run its policy/authorization gates against the
+ARCHIVED contract versions it pinned, and fail loudly (F29, HTTP 409) if
+an archived artifact was deleted or modified since — `make test-replay`
+replays every V1 and V2 corpus decision under the (by then) V3-deployed
+state, 100% PASS required. `POST /reevaluate/{id}` / `make reevaluate
+DECISION_ID=<id>` is the separate counterfactual ("what would today's
+rules decide?") that never overwrites history — see
+`docs/experiment/implementation-notes.md`'s Phase 7 section for a live
+example where the two genuinely diverge. `scripts/compat_check.py` (`make
+test-contracts`) fails any published contract version lacking migration
+coverage (F28); `experiments/exp-000/results/fault-matrix-phase7.json` is
+the updated fault matrix (38 PASS / 2 NOT_TESTED — F30/F40 remain
+Phase 9/10 scope).
+
+`make test-stateful` is already live: it aliases to Phase 1's own Hypothesis
 stateful/bug-detection tests. `make test-contracts` (Phase 3+) is live:
 SHACL positive/negative fixtures via pyshacl, the same shapes proven
 transactionally against the real RDF4J repository, plus (Phase 5) the
 OpenFGA/OPA suites above. `make test`
 runs `tests/model/` and `tests/contracts/` always, and `tests/component/` +
 `tests/integration/` too if the stack is reachable (otherwise it prints a
-clear skip, per the same honesty rule) — `tests/faults/` is intentionally
-NOT part of `make test` (see `make test-faults` above).
+clear skip, per the same honesty rule) — `tests/faults/` and `tests/replay/`
+are intentionally NOT part of `make test` (see `make test-faults` /
+`make test-replay` above). `make experiment` / `make report` still print
+which phase (10) they belong to and exit `2`.
 
 ## What Phase 1 proves (and doesn't)
 
