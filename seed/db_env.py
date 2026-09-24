@@ -86,6 +86,17 @@ def connect_rest_url() -> str:
     return f"http://{host}:{os.environ['CONNECT_HOST_PORT']}"
 
 
+def kafka_bootstrap_servers() -> str:
+    """Host-reachable Kafka bootstrap address (host:port form) — the
+    EXTERNAL listener docker-compose.yml's `kafka` service advertises for
+    exactly this (see that file's own comment on KAFKA_ADVERTISED_LISTENERS).
+    Same pattern as services/ingestion/readiness.py's own
+    `_bootstrap_servers()` (kept private there, not reused here to avoid a
+    seed/ -> services/ import direction)."""
+    host = os.environ.get("OO_SERVICE_HOST", "localhost")
+    return f"{host}:{os.environ['KAFKA_HOST_PORT']}"
+
+
 def ingestion_health_url() -> str:
     host = os.environ.get("OO_SERVICE_HOST", "localhost")
     return f"http://{host}:{os.environ['INGESTION_HEALTH_PORT']}"
