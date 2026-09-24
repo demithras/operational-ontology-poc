@@ -1,6 +1,7 @@
 .PHONY: up down reset seed test test-unit test-contracts test-component test-integration \
-        test-stateful test-faults test-replay bench experiment report replay \
-        ensure-env wait-healthy rebuild-projections
+        test-stateful test-destructive test-determinism test-faults test-replay bench \
+        experiment report replay ensure-env wait-healthy wait-converged wait-connectors \
+        rebuild-projections
 
 SHELL := /usr/bin/env bash
 VENV_PY := .venv/bin/python
@@ -42,19 +43,50 @@ wait-healthy:
 down:
 	docker compose down
 
-## Full reset: drop the Postgres volume (all seeded/mutated data) and start clean.
+## Full reset: drop EVERY named volume (Postgres AND RDF4J — `docker compose
+# down -v` per docs/experiment/briefs/phase4fix.md "after down -v, all CDC
+# state ... must be reset too"). Kafka and Connect have no named volume at
+# all (docker-compose.yml) — a plain container recreation already wipes
+# their broker/internal-topics state every time, `-v` or not, so there is
+# no separate "Kafka volume" to drop; verified empirically (see
+# docs/experiment/implementation-notes.md Phase 4 fix section). Ends only
+# once connectors are confirmed RUNNING (wait-connectors) — a bare "up"
+# alone does not guarantee that (register_connectors.py's PUT only means
+# Kafka Connect accepted the config, not that the task/replication slot
+# actually exists yet).
 reset: ensure-env
 	docker compose down -v
 	$(MAKE) up
+	$(MAKE) wait-connectors
 
 ## Deterministic seed-dataset generator (seed/generators/generate.py) +
 # load step into the running erp/mes/wms databases (seed/load.py), writing
 # seed/out/identity_truth.json. Same SEED => byte-identical generated
 # dataset (seed/out/manifest.json's combined_sha256) and, per
-# docs/experiment/briefs/phase2.md item 3, the same loaded WMS state.
+# docs/experiment/briefs/phase2.md item 3, the same loaded WMS state. Ends
+# only once the WHOLE pipeline has converged (wait-converged, phase4fix.md
+# "a single readiness contract") — never returns while ingestion is still
+# mid-drain of the CDC backlog this seed just produced.
 seed: ensure-env
 	$(VENV_PY) seed/generators/generate.py --seed $(SEED)
 	$(VENV_PY) seed/load.py --seed $(SEED)
+	$(MAKE) wait-converged
+
+## The single readiness contract every one of up/seed/reset ultimately
+# blocks on (docs/experiment/briefs/phase4fix.md): connectors RUNNING,
+# ingestion consumer lag 0 against CURRENT Kafka high-watermarks, RDF4J
+# contains the canonical fixture (WO-42, LOT-A-PX17), and the
+# work_order_risk projection has a WO-42 row. Prints exactly what is still
+# missing and exits non-zero on timeout — never fakes convergence.
+wait-converged: ensure-env
+	$(VENV_PY) services/ingestion/wait_converged.py
+
+## Same contract, but skips the RDF4J-fixture / projection checks — for
+# right after a bare `make up`/`make reset`, before any `make seed` has
+# run, when the source tables are still genuinely empty and those two
+# checks could never be satisfied.
+wait-connectors: ensure-env
+	$(VENV_PY) services/ingestion/wait_converged.py --no-data
 
 ## Run the Phase 1 pure reference-model test suite (tests/model/).
 test-unit:
@@ -62,8 +94,26 @@ test-unit:
 
 ## docs/experiment/spec/13_repository_contract.md "make test-integration".
 # Requires the stack to be up (`make up`) and seeded (`make seed`).
+# tests/integration/test_seed_determinism.py is EXCLUDED here (see
+# test-destructive below, docs/experiment/briefs/phase4fix.md) — it is the
+# one integration test that tears the stack down and rebuilds it
+# (subprocess `make reset` x2), which must never happen inside a plain
+# `make test` run.
 test-integration: ensure-env
-	$(VENV_PY) -m pytest tests/integration -q
+	$(VENV_PY) -m pytest tests/integration -q --ignore=tests/integration/test_seed_determinism.py
+
+## Destructive tests: anything that runs `make reset`/`down` itself.
+# Currently just test_seed_determinism.py (docs/experiment/briefs/phase2.md
+# item 3's same-seed-same-state proof, which by construction must reset
+# the stack twice). NEVER part of `make test` — running it concurrently
+# with anything else touching the shared stack (another `make test`,
+# `make bench`, ...) resets THEIR stack out from under them
+# (docs/experiment/briefs/phase4fix.md item 3: this, not an external
+# process, was the real cause of the Phase 4 flakiness). Run it alone.
+test-destructive: ensure-env
+	$(VENV_PY) -m pytest tests/integration/test_seed_determinism.py -q
+
+test-determinism: test-destructive
 
 ## test-stateful: Phase 1's Hypothesis stateful machine + bug-detection
 # suite already exist (tests/model/test_stateful.py,

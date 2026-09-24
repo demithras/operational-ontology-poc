@@ -23,6 +23,7 @@ Build order and exit criteria: `docs/experiment/spec/12_implementation_plan.md`.
 | 2 | Fake ERP/MES/WMS source systems | done |
 | 3 | Semantic core (RDF4J, ontology, PROV-O, SHACL) + CDC ingestion (Kafka, Debezium) | done |
 | 4 | Hot projections (`work_order_risk`, `transfer_candidates`, `current_inventory`, `action_eligibility_summary`) in PostgreSQL, derived from the semantic core via SPARQL | done |
+| 4fix | Test-suite stability: single readiness contract (`make wait-converged`), destructive tests isolated into `make test-destructive`, root-caused and fixed the flaky CDC-convergence check | done (tag `poc-v0.4.1-stable`) |
 | 5 | Decision service + gates (OpenFGA, OPA, SHACL gate capture) | pending |
 | 6 | Durable action runtime (Temporal, WMS action, idempotency, CDC, reconciliation) | pending |
 | 7 | Contract versioning / replay | pending |

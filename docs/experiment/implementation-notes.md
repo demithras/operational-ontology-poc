@@ -763,29 +763,32 @@ RDF4J directly for the same information, which is the whole point of H6's
 counter-test. **SLO: PASS** (measured warm p95 well under the 200ms
 threshold on every run performed).
 
-### Environment finding: this session's shared Docker daemon was reset by an external process throughout Phase 4 implementation
+### Environment finding, CORRECTED (see "Phase 4 fix" section below): the stack resets were self-inflicted, not an external process
 
-Repeatedly observed (`docker ps --format '{{.RunningFor}}'` showing ALL
-`oo-poc-*` containers recreated simultaneously, at a fresh "N seconds/
-minutes ago", with no `make reset`/`docker compose down` issued by this
-agent in between) during this implementation session: the ENTIRE `oo-poc`
-compose project got torn down and reseeded from an external source roughly
-every 2-8 minutes, independent of anything this agent did. Symptoms this
-caused, all eventually traced to it (not to Phase 4 code) and NOT
-representative of any lasting defect: `hasLine`/`hasRequirement` (later
-`workOrder`/`purchaseOrder`) counts fluctuating between 0 and the full
-expected value across successive checks; `work_order_risk` briefly showing
-`shortage=0` for WO-42 immediately after a wipe (RDF4J re-empty, requirement/
-incoming-line data not yet re-ingested, so the shortage formula correctly
-computed 0 from an incomplete input — not a compute.py bug); two
-`test_projection_differential.py` runs failing with "never converged"
-because the entire stack was mid-reset under the running test. The FINAL
-`make test` run recorded in this section's summary (see phase4-report.md)
-was captured in a confirmed-stable window (`docker ps` showed no container
-recreation for 3+ minutes before AND immediately after the run). Anyone
-re-running this phase's suite against the SAME shared host should expect
-occasional unrelated flakiness from this cause and should verify container
-uptimes before attributing a failure to the code.
+This section originally claimed "this session's shared Docker daemon was
+reset by an external process throughout Phase 4 implementation." **That
+claim was wrong and is corrected here** (docs/experiment/briefs/phase4fix.md
+item 3): a later independent verification watched the stack for 12 minutes
+with no test process running and observed ZERO container recreations,
+ruling out any external actor. The real cause of the container-recreation
+churn observed during Phase 4 implementation was this repository's OWN
+`tests/integration/test_seed_determinism.py`, which performs `make reset
+&& make seed` TWICE via `subprocess.run` as part of its own test body —
+and, at the time, `test_seed_determinism.py` ran as part of `make
+test-integration`, i.e. inside plain `make test`. Any overlapping or
+closely-spaced `make test` invocation during that implementation session
+(this agent's own, run repeatedly while iterating) would have looked
+EXACTLY like "something external is resetting the stack every few minutes,
+with no `make reset` from me in between" — because the reset genuinely
+did not come from that particular `make test` invocation, it came from a
+DIFFERENT one (or from `test_seed_determinism.py`'s own second internal
+reset firing again). The symptoms originally attributed to an external
+process (`hasLine`/`hasRequirement`/`workOrder`/`purchaseOrder` counts
+fluctuating, `work_order_risk` briefly showing `shortage=0`,
+`test_projection_differential.py` failing with "never converged") are all
+consistent with this self-inflicted cause and needed no other explanation.
+See the "Phase 4 fix" section below for the actual fix: destructive tests
+now live in `make test-destructive`, never inside `make test`.
 
 ### What Phase 5 (decision service) needs from here
 
@@ -801,3 +804,173 @@ uptimes before attributing a failure to the code.
 - `services/common/contract_versions.ONTOLOGY_CONTRACT_VERSION` is the
   single source for the ontology-version string Decision records will need
   to cite (H1's required field list).
+
+## Phase 4 fix — test-suite stability
+
+Tag `poc-v0.4.1-stable`. Brief: `docs/experiment/briefs/phase4fix.md`. No
+new ports/services — this phase only touches Makefile targets, one new
+ingestion module, and test isolation.
+
+### Root cause (with evidence)
+
+The reported failure (`test_wms_change_converges_to_rdf4j_with_provenance`:
+"WMS change did not converge... `before` had NO fac:onHand for LOT-A-PX17")
+had two independent contributing causes, both confirmed empirically:
+
+**1. `_wait_for_ingestion_caught_up()` was a false-positive detector, not a
+convergence proof.** It polled the ingestion health endpoint's
+`messages_consumed` counter and declared "caught up" the moment two
+consecutive 2-second samples were equal. That condition is satisfied just
+as happily by "nothing has reached Kafka yet" as by "the backlog has been
+drained." Reproduced directly while validating this fix: querying real
+Kafka consumer-group lag immediately after `make seed`'s inserts finished
+gave, sample by sample. `lag total=0 per-topic={}` (topics did not exist
+yet — Debezium had not read the new WAL records), then on the very next
+2-second sample `lag total=6921` (the real backlog had appeared). A
+counter-based or single-sample check taken at that first instant would
+declare convergence while the canonical fixture (LOT-A-PX17) is still
+completely absent from RDF4J — exactly the reported symptom.
+
+**2. `test_seed_determinism.py` ran `make reset` twice from inside `make
+test`,** and an independent verification's `make bench` run immediately
+after `make test` hit the stack mid-reconvergence (`bench` failed with "no
+work_order_risk row for WO-42 even after a build"). This is also what
+Phase 4's implementation-notes section had wrongly blamed on "an external
+process resetting the shared Docker daemon" (corrected above) — a 12-minute
+watch with no test process running showed zero container recreations; the
+resets were this repository's own destructive test running as part of a
+supposedly non-destructive target.
+
+**Discarded alternative, recorded for anyone tempted to reach for it
+again:** comparing each Debezium replication slot's `confirmed_flush_lsn`
+against Postgres's `pg_current_wal_lsn()` looks like the authoritative way
+to know a connector has caught up, but `pg_current_wal_lsn()` is
+CLUSTER-WIDE — `services/projection_builder`'s own poll-every-3s
+TRUNCATE+INSERT cycle against the unrelated `ontology_hot` database keeps
+advancing it continuously, so a slot's flush position never converges to
+"current" even when the connector has captured 100% of its own tables'
+changes. Measured on a stack that was demonstrably fully converged
+(ingestion health showed `messages_consumed == messages_applied`): ~190MB
+of "lag" by that metric. Abandoned in favor of ground-truth checks (see
+below).
+
+### Design: a single readiness contract (`services/ingestion/readiness.py`)
+
+New module, shared by `make wait-converged`
+(`services/ingestion/wait_converged.py`, a thin CLI wrapper) and
+`tests/integration/test_cdc_ingestion.py`'s `_wait_for_ingestion_caught_up`.
+Checks run in order, each with its own timeout and progress logging, and
+the function raises `ConvergenceTimeout` with exactly what's still missing
+on failure (never fakes convergence):
+
+1. **Connectors + tasks RUNNING** (Kafka Connect REST `/connectors/{name}/status`).
+2. **Ingestion consumer lag == 0** against each CDC topic's freshly-fetched
+   current high-watermark (`confluent_kafka` `AdminClient` +
+   `Consumer.get_watermark_offsets`), required stable across two
+   consecutive 2-second samples. This is real Kafka lag, not a counter
+   proxy — but it is still only defense-in-depth, not the sole correctness
+   guarantee (see next point).
+3. **RDF4J contains the canonical fixture** (WO-42 exists; LOT-A-PX17 has a
+   `fac:onHand` fact) — `expect_data=True` only (skipped right after a bare
+   `make up`/`make reset`, before any seed has run, when this could never
+   be satisfied). This is the LOAD-BEARING check: even if step 2's
+   high-watermark snapshot was itself sampled too early (Debezium hadn't
+   read the new WAL yet), this step just keeps polling its own generous
+   timeout until the real data shows up, which is what actually fixes the
+   reported bug.
+4. **`ontology_hot.work_order_risk` has a WO-42 row** — closes the `make
+   bench` failure mode directly.
+
+`CDC_TOPICS` for step 2 is derived from
+`services.ingestion.consumer.all_topics()` itself, not a hand-maintained
+duplicate list. First cut duplicated the list from the Debezium connector
+configs' `table.include.list`, which includes `wms.transfers` —
+`consumer.py`'s own `TABLES` dict deliberately excludes `transfers`
+(mapping.py: "transfers ... deliberately NOT mapped"), so the ingestion
+consumer group never subscribes to that topic and never commits an offset
+for it. That produced a PERMANENT phantom lag of 9 that could never drain
+(nothing ever consumes it), caught empirically before this ever reached a
+test run.
+
+`register_connectors.py` now calls `readiness.connectors_running()` after
+registering, closing a real (if narrow) race: a PUT to
+`/connectors/{name}/config` only means Kafka Connect accepted the config,
+not that the task has started and created its Postgres replication slot —
+and `make seed` can run as a separate, later `make` invocation the moment
+`make up` returns.
+
+`make reset` (`docker compose down -v`) drops the Postgres AND RDF4J named
+volumes. Kafka and Connect have **no named volume at all** in
+docker-compose.yml — verified: `docker volume ls` before a reset showed
+only `oo-poc_oo-poc-pgdata` and `oo-poc_oo-poc-rdf4j-data`; a plain
+container recreation already destroys their broker/internal-topics state
+every time regardless of `-v`. Confirmed live: right after `make reset`,
+`bootstrap_rdf4j.py` printed "creating repository 'oo'" (it did not exist —
+proving the RDF4J volume was truly wiped) and the Kafka topic list was
+empty (proving Kafka/Connect state doesn't survive either).
+
+### Deviations
+
+- `tests/integration/test_seed_determinism.py` moved OUT of
+  `test-integration`/`make test` into a new `make test-destructive` target
+  (aliased `make test-determinism`) — never runs concurrently with
+  anything else touching the shared stack.
+- `tests/integration/test_cdc_ingestion.py::test_wms_change_converges_to_rdf4j_with_provenance`
+  was retargeted from the canonical fixture (LOT-A-PX17 / SKU-88429 / WH-A)
+  to a synthetic marker (`SKU-CDC-CONVERGENCE-TEST` / `WH-C`), matching the
+  convention `test_wms_concurrency.py` / `test_wms_idempotency.py` /
+  `test_wms_faults.py` / the RDF4J-outage test already use. Found while
+  running the acceptance sequence's mandated repeated `make test`
+  invocations: the original test permanently incremented LOT-A-PX17's
+  `on_hand` by 1 on every run (via `_test/inventory/set`, an unconditional
+  overwrite, not an idempotent replay), which broke
+  `test_canonical_scenario.py::test_step4_transfer_60_units_wh_b_to_wh_a`'s
+  absolute-end-state assertion (`after_a["on_hand"] == 80`) on the second
+  `make test` run within the same stack lifetime. Not previously visible
+  because nothing had run `make test` back-to-back without an intervening
+  reset until this fix's own acceptance criteria required exactly that.
+- `bench_phase4.py` now calls `readiness.wait_for_converged()` when
+  `work_order_risk` has no WO-42 row yet, instead of failing immediately;
+  only times out (exit 2) if the pipeline genuinely never converges.
+
+### Acceptance run (this session, sequential, nothing overlapping)
+
+```
+make reset && SEED=42 make seed && make test && make bench && make test-destructive && make test && make bench
+```
+then `make test` three more times. All green, every pytest summary line:
+
+| Step | Result |
+|---|---|
+| `make reset` | clean (connectors RUNNING, RDF4J repo freshly created, Kafka topics empty) |
+| `SEED=42 make seed` | converged in ~90s (kafka lag drained 6921 -> 0, canonical fixture + WO-42 row confirmed) |
+| `make test` (1st) | `tests/model`: 21 passed; `tests/contracts`: 19 passed; `tests/component`: 15 passed; `tests/integration`: 36 passed |
+| `make bench` (1st) | SLO PASS, warm p95 = 0.304ms (threshold 200ms) |
+| `make test-destructive` | `1 passed` in 224.72s (two full internal reset+seed cycles) |
+| `make test` (2nd) | 21 / 19 / 15 / 36 passed |
+| `make bench` (2nd) | SLO PASS, warm p95 = 0.295ms |
+| `make test` (flake check 1/3) | 21 / 19 / 15 / 36 passed |
+| `make test` (flake check 2/3) | 21 / 19 / 15 / 36 passed |
+| `make test` (flake check 3/3) | 21 / 19 / 15 / 36 passed |
+
+Zero flakiness observed across all 5 `make test` invocations in this
+session.
+
+### What later phases need from here
+
+- `make seed`/`make reset` now block until the pipeline has genuinely
+  converged — no later phase needs its own ad hoc "is the stack ready"
+  polling; call `make wait-converged` (or import
+  `services.ingestion.readiness.wait_for_converged`) instead of
+  reinventing a readiness check.
+- Any FUTURE destructive test (one that runs `make reset`/`down` itself)
+  belongs in `make test-destructive`, never in `make test` — this is now
+  the established convention, not just this one test's fix.
+- Any FUTURE test that mutates WMS/ERP/MES state via a `_test/*` endpoint
+  should target a synthetic, non-canonical entity (part/warehouse/etc.),
+  matching the pattern every test in `tests/integration/` other than the
+  original `test_wms_change_converges_to_rdf4j_with_provenance` already
+  followed — never the canonical incident fixture (PX-17 / WO-42 /
+  LOT-A-PX17 / LOT-B-PX17 / WH-A / WH-B), which `test_canonical_scenario.py`
+  and this phase's own readiness contract both assert absolute state
+  against.

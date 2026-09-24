@@ -37,6 +37,7 @@ import yaml  # noqa: E402
 
 from seed import db_env  # noqa: E402
 from services.common.rdf4j_client import RDF4JClient  # noqa: E402
+from services.ingestion import readiness  # noqa: E402
 from services.projection_builder.builder import build_all  # noqa: E402
 from services.projection_builder.reader import get_work_order_risk  # noqa: E402
 
@@ -159,14 +160,32 @@ def main() -> int:
     with psycopg.connect(dsn, autocommit=True) as conn:
         row = get_work_order_risk(conn, WORK_ORDER_ID)
         if row is None:
-            client = RDF4JClient(base_url=db_env.rdf4j_server_url(), repository="oo")
+            # docs/experiment/briefs/phase4fix.md item 4: a missing row right
+            # after `make seed`/`make reset` is very plausibly the pipeline
+            # still converging (thousands of CDC messages to drain), not a
+            # real defect — wait on the SAME readiness contract `make
+            # wait-converged` uses instead of failing immediately. Only once
+            # that wait itself times out (pipeline genuinely never converges)
+            # is this a real failure.
             try:
-                build_all(client, conn)
-            finally:
-                client.close()
+                readiness.wait_for_converged(expect_data=True, timeout_s=180.0, log=lambda m: print(m, file=sys.stderr))
+            except readiness.ConvergenceTimeout as e:
+                print(f"pipeline did not converge before bench could run: {e}", file=sys.stderr)
+                return 2
             row = get_work_order_risk(conn, WORK_ORDER_ID)
+            if row is None:
+                # Belt-and-suspenders: readiness.wait_for_converged already
+                # waits for exactly this row, so this should be unreachable —
+                # but a build is cheap and this must never silently proceed
+                # with row still None (common.md honesty rule).
+                client = RDF4JClient(base_url=db_env.rdf4j_server_url(), repository="oo")
+                try:
+                    build_all(client, conn)
+                finally:
+                    client.close()
+                row = get_work_order_risk(conn, WORK_ORDER_ID)
     if row is None:
-        print(f"no work_order_risk row for {WORK_ORDER_ID} even after a build — is the stack seeded?", file=sys.stderr)
+        print(f"no work_order_risk row for {WORK_ORDER_ID} even after convergence + a build — is the stack seeded?", file=sys.stderr)
         return 2
 
     warm_samples = bench_hot_read_warm(dsn, WORK_ORDER_ID, WARM_SAMPLES)

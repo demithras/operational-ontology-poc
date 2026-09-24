@@ -5,10 +5,10 @@
     "warm": {
       "condition": "semantic_core_direct_sparql",
       "count": 50,
-      "max_ms": 1.72,
-      "p50_ms": 0.981,
-      "p95_ms": 1.337,
-      "p99_ms": 1.72
+      "max_ms": 2.267,
+      "p50_ms": 1.717,
+      "p95_ms": 2.157,
+      "p99_ms": 2.267
     }
   },
   "environment": {
@@ -24,10 +24,10 @@
     "cold": {
       "condition": "cold",
       "count": 30,
-      "max_ms": 199.134,
-      "p50_ms": 4.996,
-      "p95_ms": 11.807,
-      "p99_ms": 199.134
+      "max_ms": 5.92,
+      "p50_ms": 5.283,
+      "p95_ms": 5.883,
+      "p99_ms": 5.92
     },
     "definitions": {
       "cold": "a fresh psycopg connection opened and closed per sample",
@@ -37,16 +37,16 @@
     "warm": {
       "condition": "warm",
       "count": 200,
-      "max_ms": 0.469,
-      "p50_ms": 0.225,
-      "p95_ms": 0.307,
-      "p99_ms": 0.358
+      "max_ms": 0.537,
+      "p50_ms": 0.19,
+      "p95_ms": 0.295,
+      "p99_ms": 0.339
     }
   },
-  "measured_at": "2026-09-23T23:07:40Z",
+  "measured_at": "2026-09-24T00:20:54Z",
   "phase": 4,
   "slo": {
-    "measured_warm_p95_ms": 0.307,
+    "measured_warm_p95_ms": 0.295,
     "name": "hot_read_p95_ms",
     "pass": true,
     "threshold_ms": 200

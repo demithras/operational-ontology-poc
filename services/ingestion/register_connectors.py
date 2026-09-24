@@ -20,6 +20,7 @@ sys.path.insert(0, str(REPO_ROOT))
 import httpx
 
 from seed import db_env
+from services.ingestion import readiness
 
 CONNECTOR_CONFIG_DIR = REPO_ROOT / "contracts" / "cdc" / "v1"
 
@@ -54,6 +55,19 @@ def main() -> int:
         wait_for_connect(client, connect_url)
         for config_path in sorted(CONNECTOR_CONFIG_DIR.glob("*-connector.json")):
             register_one(client, connect_url, config_path)
+
+    # phase4fix.md's readiness contract starts here: PUT .../config only
+    # means Kafka Connect ACCEPTED the config, not that the connector's
+    # task has actually started and created its Postgres replication slot.
+    # `make seed` can run (as a separate, later `make` invocation) the
+    # moment `make up` returns — without this wait, a seed insert landing
+    # in the gap between "config accepted" and "slot created" would be
+    # missed by streaming (it would still normally survive via the
+    # connector's own initial-table snapshot, but never rely on that
+    # timing coincidence). Waiting here makes "connectors RUNNING" (hence
+    # streaming active) a guarantee `make up` provides, not a race.
+    print("[register_connectors] waiting for all connectors + tasks to report RUNNING...")
+    readiness.connectors_running(timeout_s=60.0, log=print)
 
     return 0
 

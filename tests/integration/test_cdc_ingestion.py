@@ -29,7 +29,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from seed import db_env  # noqa: E402
 from services.common.rdf4j_client import RDF4JClient  # noqa: E402
 from services.identity_resolver.resolver import IdentityResolver  # noqa: E402
-from services.ingestion import mapping, store  # noqa: E402
+from services.ingestion import mapping, readiness, store  # noqa: E402
 
 from tests.contracts.conftest import negative_fixtures  # noqa: E402
 
@@ -75,27 +75,29 @@ def _ingestion_health() -> dict:
 
 
 def _wait_for_ingestion_caught_up(timeout_s: float = 90.0) -> None:
-    """Polls the ingestion health counter until `messages_consumed` stops
-    growing across two consecutive samples — i.e. the consumer has drained
-    whatever backlog existed and is at the tail of every topic. Tests that
-    measure CONVERGENCE LATENCY must call this first: a freshly (re)started
-    consumer replaying a large snapshot backlog can take much longer than
-    the steady-state convergence bound to reach a brand-new message
-    appended at the tail of the same (single-partition) topic — that is
-    backlog-drain time, not convergence latency, and conflating the two
-    was caught empirically during Phase 3 implementation (a live WMS
-    change took ~25s to appear right after `docker compose up` started
-    ingestion fresh against a ~10k-row snapshot backlog, vs. sub-second
-    once caught up)."""
-    deadline = time.monotonic() + timeout_s
-    last = _ingestion_health()["messages_consumed"]
-    while time.monotonic() < deadline:
-        time.sleep(2.0)
-        current = _ingestion_health()["messages_consumed"]
-        if current == last:
-            return
-        last = current
-    pytest.skip(f"ingestion consumer did not reach steady state within {timeout_s}s (still consuming backlog)")
+    """Waits for the ingestion consumer group's committed Kafka offsets to
+    reach each CDC topic's CURRENT high-watermark (services/ingestion/
+    readiness.py — the phase4fix.md "single readiness contract" module).
+
+    This REPLACES a prior implementation that polled the ingestion health
+    endpoint's `messages_consumed` counter and declared success the moment
+    two consecutive 2-second samples were equal. That was a stale notion of
+    lag: it is satisfied just as happily by "nothing new has arrived at
+    Kafka yet" as by "the backlog has actually been drained" — caught
+    empirically (docs/experiment/implementation-notes.md Phase 4 fix
+    section) right after `make seed`, when this function returned
+    immediately (both samples equal because Debezium had not even read the
+    new WAL records yet) and the canonical lot (LOT-A-PX17) was genuinely
+    absent from RDF4J. Comparing against the REAL, freshly-fetched Kafka
+    high-watermark instead of a moving/pausable counter closes that gap."""
+    try:
+        readiness.wait_for_zero_kafka_lag(_kafka_bootstrap_servers(), timeout_s=timeout_s)
+    except readiness.ConvergenceTimeout:
+        pytest.skip(f"ingestion consumer did not reach zero Kafka lag within {timeout_s}s (still consuming backlog)")
+
+
+def _kafka_bootstrap_servers() -> str:
+    return f"localhost:{os.environ['KAFKA_HOST_PORT']}"
 
 
 def _select_one(rdf4j_client: RDF4JClient, subject: str) -> dict[str, str]:
@@ -111,15 +113,41 @@ def _select_one(rdf4j_client: RDF4JClient, subject: str) -> dict[str, str]:
 def test_wms_change_converges_to_rdf4j_with_provenance(wms_client: httpx.Client, rdf4j_client: RDF4JClient):
     _wait_for_ingestion_caught_up()
 
-    lot_subject = "https://example.local/factory/instance/InventoryLot/LOT-A-PX17"
-    before = _select_one(rdf4j_client, lot_subject)
+    # A synthetic, non-canonical (part, warehouse) pair for this test's
+    # marker lot — the SAME convention test_wms_concurrency.py /
+    # test_wms_idempotency.py / test_wms_faults.py already use for their own
+    # SKU-*-TEST markers, and exactly what
+    # test_rdf4j_outage_backs_off_without_data_loss_and_resumes below does
+    # ("a GENERATED (non-canonical-fixture) part/warehouse pair ... so this
+    # test never mutates the canonical incident fixture's own PX-17/WH-A/
+    # WH-B state"). This test originally targeted LOT-A-PX17/SKU-88429/WH-A
+    # directly — the canonical fixture — which permanently drifted its
+    # on_hand upward by 1 every time this test ran, breaking
+    # test_canonical_scenario.py::test_step4's absolute-end-state assertion
+    # (`after_a["on_hand"] == 80`) on any `make test` invocation that wasn't
+    # preceded by a fresh `make reset && make seed` (docs/experiment/
+    # implementation-notes.md Phase 4 fix section has the full write-up —
+    # found while validating this exact phase4fix.md fix by running `make
+    # test` repeatedly, which the acceptance criteria requires).
+    marker_part = "SKU-CDC-CONVERGENCE-TEST"
+    marker_warehouse = "WH-C"
+
+    existing = wms_client.get("/inventory_lots", params={"part": marker_part, "warehouse_id": marker_warehouse}).json()
+    before: dict[str, str] = {}
+    if existing:
+        before = _select_one(rdf4j_client, f"https://example.local/factory/instance/InventoryLot/{existing[0]['lot_id']}")
     new_on_hand = int(before.get("https://example.local/factory/onHand", "0")) + 1
 
     resp = wms_client.post(
         "/_test/inventory/set",
-        json={"part": "SKU-88429", "warehouse_id": "WH-A", "on_hand": new_on_hand, "reserved": 0, "quality_status": "OK"},
+        json={"part": marker_part, "warehouse_id": marker_warehouse, "on_hand": new_on_hand, "reserved": 0, "quality_status": "OK"},
     )
     assert resp.status_code == 200
+    # set_inventory_for_test upserts on (part, warehouse_id); read the
+    # resulting lot_id back from the response rather than assuming a naming
+    # convention (same reasoning as the outage test below).
+    lot_id = resp.json()["lot_id"]
+    lot_subject = f"https://example.local/factory/instance/InventoryLot/{lot_id}"
 
     deadline = time.monotonic() + CONVERGENCE_BOUND_S
     converged = False
@@ -137,16 +165,16 @@ def test_wms_change_converges_to_rdf4j_with_provenance(wms_client: httpx.Client,
 
     # Provenance: at least one applied oo:Observation for this pk, sourced from wms.
     obs_rows = rdf4j_client.select(
-        """
-        SELECT ?applied WHERE {
-          GRAPH <https://example.local/oo/graph/provenance> {
+        f"""
+        SELECT ?applied WHERE {{
+          GRAPH <https://example.local/oo/graph/provenance> {{
             ?obs a <https://example.local/oo/Observation> ;
                  <https://example.local/oo/sourceSystem> "wms" ;
                  <https://example.local/oo/sourceTable> "inventory_lots" ;
-                 <https://example.local/oo/sourcePk> "LOT-A-PX17" ;
+                 <https://example.local/oo/sourcePk> "{lot_id}" ;
                  <https://example.local/oo/applied> ?applied .
-          }
-        }
+          }}
+        }}
         """
     )
     assert any(row["applied"] == "true" for row in obs_rows), "no applied Observation provenance record found"
