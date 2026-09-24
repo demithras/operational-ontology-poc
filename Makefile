@@ -2,7 +2,7 @@
         test-stateful test-destructive test-determinism test-faults test-replay test-agent bench \
         bench-phase5 bench-phase6 experiment report replay ensure-env wait-healthy wait-converged \
         wait-connectors rebuild-projections deploy-v2 deploy-v3 deploy-v3-gates reevaluate historical-corpus \
-        ab
+        ab agent-llm-probe
 
 SHELL := /usr/bin/env bash
 VENV_PY := .venv/bin/python
@@ -319,6 +319,16 @@ ab: ensure-env
 	$(VENV_PY) scripts/run_ab.py --w7-n $${OO_AB_W7_N:-500}
 	$(VENV_PY) scripts/baseline_replay_sweep.py
 	$(VENV_PY) scripts/gen_ab_tradeoffs.py
+
+## Phase 9 item 3 (optional): the five spec-09 adversarial prompts through a
+# REAL model (claude-sonnet-5) connected to the real services/mcp tool
+# surface, IF ANTHROPIC_API_KEY is set in the environment — writes
+# experiments/exp-000/results/agent-llm-probe.json either way (a real
+# {"status": "SKIPPED", "reason": ...} when the key is absent, never a
+# silent no-op). H9's verdict rests on `make test-agent`, not this target
+# (spec 14 R11).
+agent-llm-probe: ensure-env
+	$(VENV_PY) scripts/agent_llm_probe.py
 
 experiment:
 	@echo "not implemented yet — Phase 10 (see docs/experiment/spec/12_implementation_plan.md)"
