@@ -27,6 +27,13 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<-EOSQL
 	CREATE ROLE ${BASELINE_DB_USER} LOGIN PASSWORD '${BASELINE_DB_PASSWORD}';
 	CREATE DATABASE ${BASELINE_DB_NAME} OWNER ${BASELINE_DB_USER};
 
+	-- Phase 7: OpenFGA's own database (postgres datastore engine --
+	-- docs/adr/0004-openfga-historical-model-and-tuple-snapshot.md: a
+	-- restart must never wipe the authorization store the way the
+	-- `memory` engine did).
+	CREATE ROLE ${OPENFGA_DB_USER} LOGIN PASSWORD '${OPENFGA_DB_PASSWORD}';
+	CREATE DATABASE ${OPENFGA_DB_NAME} OWNER ${OPENFGA_DB_USER};
+
 	-- Credential isolation: revoke default PUBLIC connect grant on every
 	-- database, then grant CONNECT back only to that database's own role
 	-- (plus the bootstrap superuser, which keeps needing access for
@@ -36,12 +43,14 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<-EOSQL
 	REVOKE CONNECT ON DATABASE ${WMS_DB_NAME} FROM PUBLIC;
 	REVOKE CONNECT ON DATABASE ${ONTOLOGY_HOT_DB_NAME} FROM PUBLIC;
 	REVOKE CONNECT ON DATABASE ${BASELINE_DB_NAME} FROM PUBLIC;
+	REVOKE CONNECT ON DATABASE ${OPENFGA_DB_NAME} FROM PUBLIC;
 
 	GRANT CONNECT ON DATABASE ${ERP_DB_NAME} TO ${ERP_DB_USER};
 	GRANT CONNECT ON DATABASE ${MES_DB_NAME} TO ${MES_DB_USER};
 	GRANT CONNECT ON DATABASE ${WMS_DB_NAME} TO ${WMS_DB_USER};
 	GRANT CONNECT ON DATABASE ${ONTOLOGY_HOT_DB_NAME} TO ${ONTOLOGY_HOT_DB_USER};
 	GRANT CONNECT ON DATABASE ${BASELINE_DB_NAME} TO ${BASELINE_DB_USER};
+	GRANT CONNECT ON DATABASE ${OPENFGA_DB_NAME} TO ${OPENFGA_DB_USER};
 
 	-- Phase 3 (docs/adr/0002-cdc-now-not-deferred.md): Debezium's Postgres
 	-- connector opens a logical-replication connection per source database
@@ -65,7 +74,7 @@ echo "host replication all all scram-sha-256" >> "${PGDATA}/pg_hba.conf"
 
 # Lock down the public schema of each system DB to only that DB's own role
 # (belt-and-suspenders alongside the CONNECT revoke above).
-for pair in "${ERP_DB_NAME}:${ERP_DB_USER}" "${MES_DB_NAME}:${MES_DB_USER}" "${WMS_DB_NAME}:${WMS_DB_USER}" "${ONTOLOGY_HOT_DB_NAME}:${ONTOLOGY_HOT_DB_USER}" "${BASELINE_DB_NAME}:${BASELINE_DB_USER}"; do
+for pair in "${ERP_DB_NAME}:${ERP_DB_USER}" "${MES_DB_NAME}:${MES_DB_USER}" "${WMS_DB_NAME}:${WMS_DB_USER}" "${ONTOLOGY_HOT_DB_NAME}:${ONTOLOGY_HOT_DB_USER}" "${BASELINE_DB_NAME}:${BASELINE_DB_USER}" "${OPENFGA_DB_NAME}:${OPENFGA_DB_USER}"; do
 	db="${pair%%:*}"
 	role="${pair##*:}"
 	psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$db" <<-EOSQL

@@ -13,7 +13,7 @@
       "version": 3
     }
   },
-  "code_git_commit": "d5f2fbe2dc45e0bceb488001ea76bc162ddd3970",
+  "code_git_commit": "e5b5c683bf9499db2965c4ba13f00082296f5799",
   "deployed_version": {
     "actions": "v3",
     "authorization": "v2",
@@ -37,7 +37,7 @@
     "version": "v2"
   },
   "openfga": {
-    "authorization_model_id": "01M399TWT1VDSY048WR1J88ZS4",
+    "authorization_model_id": "01M39CCF5TJHVRP6VXMVS29EWN",
     "sha256": "fd72eac4c7f978950dcbe96d909368bbecc8a17610d622d599296ed235b5a2fc",
     "version": "v2"
   },

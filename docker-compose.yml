@@ -22,6 +22,9 @@ services:
       BASELINE_DB_NAME: ${BASELINE_DB_NAME}
       BASELINE_DB_USER: ${BASELINE_DB_USER}
       BASELINE_DB_PASSWORD: ${BASELINE_DB_PASSWORD}
+      OPENFGA_DB_NAME: ${OPENFGA_DB_NAME}
+      OPENFGA_DB_USER: ${OPENFGA_DB_USER}
+      OPENFGA_DB_PASSWORD: ${OPENFGA_DB_PASSWORD}
     # wal_level=logical is not needed until Phase 6 (Debezium CDC) but is
     # set from Phase 2 on so no later phase needs a data-losing `make reset`
     # just to flip it (phase2.md item 1).
@@ -261,11 +264,40 @@ services:
 
   # --- Phase 5: decision service + gates (docs/experiment/briefs/phase5.md) --
 
+  # Phase 7 (docs/adr/0004-openfga-historical-model-and-tuple-snapshot.md):
+  # runs the OpenFGA postgres-datastore schema migration once, before the
+  # real `openfga` service starts. One-shot: exits 0 on success, `openfga`
+  # below waits on that exact exit via `service_completed_successfully`.
+  # Safe to re-run (openfga migrate is idempotent — verified empirically:
+  # a second run against an already-migrated schema is a clean no-op).
+  openfga-migrate:
+    image: openfga/openfga:latest
+    command:
+      - "migrate"
+      - "--datastore-engine"
+      - "postgres"
+      - "--datastore-uri"
+      - "postgres://${OPENFGA_DB_USER}:${OPENFGA_DB_PASSWORD}@postgres:5432/${OPENFGA_DB_NAME}?sslmode=disable"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   openfga:
     image: openfga/openfga:latest
     command: ["run"]
     environment:
-      OPENFGA_DATASTORE_ENGINE: memory
+      # Phase 7: postgres, not `memory` -- a container restart/recreation
+      # (this docker-compose stack's own tests/integration/test_decision_service_dependency_outage.py
+      # F22-F26 outage tests stop/start this exact container for real) must
+      # never wipe the authorization store, its models, or its tuples —
+      # historical decisions' pinned authorization_model_id must keep
+      # resolving forever. See docs/adr/0004 for the full reasoning; found
+      # necessary live when Phase 7's own outage-test suite, running inside
+      # `make test`, silently regressed a LATER test in the same session by
+      # restarting openfga out from under it.
+      OPENFGA_DATASTORE_ENGINE: postgres
+      OPENFGA_DATASTORE_URI: postgres://${OPENFGA_DB_USER}:${OPENFGA_DB_PASSWORD}@postgres:5432/${OPENFGA_DB_NAME}?sslmode=disable
       OPENFGA_PLAYGROUND_ENABLED: "false"
     ports:
       - "${OPENFGA_HOST_PORT}:8080"
@@ -280,7 +312,11 @@ services:
     # {"status":"SERVING"}) with its own retry/backoff before writing the
     # store/model/tuples — so actual API readiness is still proven, just
     # from outside the container.
-    depends_on: {}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      openfga-migrate:
+        condition: service_completed_successfully
 
   opa:
     image: openpolicyagent/opa:latest

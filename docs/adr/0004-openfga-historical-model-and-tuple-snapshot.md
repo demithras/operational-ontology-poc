@@ -53,7 +53,7 @@ because:
   `scripts/compat_check.py`) — the same discipline this repo already
   applies to ontology/policy changes.
 
-## Consequence — the one real gap, stated plainly
+## Consequence — the one real gap, stated plainly (CLOSED — see update below)
 
 If a FUTURE change ever deletes/mutates a relationship tuple in place
 (rather than publishing a new model), a decision's replayed authorization
@@ -63,11 +63,38 @@ PROPOSAL TIME — this is the weaker form R4 names as the fallback
 `gate_result_match` therefore always ALSO compares against the recorded
 `oo:checkOutcome` as the authoritative record, and
 `services/decision_service/replay.py` labels which mode it used
-(`authz_replay_mode: "live"` when the live re-Check ran; the OpenFGA store
-using the `memory` datastore engine, wiped on container restart, is the
-one scenario this repo cannot protect against without moving OpenFGA to
-persistent storage — out of scope for this POC, called out honestly rather
-than silently papered over).
+(`authz_replay_mode: "live"` when the live re-Check ran).
+
+**Update, same day**: the "memory datastore, wiped on restart" gap
+originally called out here as out-of-scope stopped being theoretical
+almost immediately — this repo's OWN `tests/integration/test_decision_service_dependency_outage.py`
+(F22-F26, real `docker compose stop/start` against rdf4j/openfga/opa/
+projection_builder) restarts the real `openfga` container as part of F23,
+and the `memory`-engine store's wipe there SILENTLY REGRESSED a later,
+unrelated test in the same `make test` session (an approval check that
+should 200 instead 403'd, because F23's own rebootstrap-on-restart helper
+only restored the V1 authorization model, never migrate_authz.py's V2
+one). That is not a hypothetical FUTURE change — it is this experiment's
+OWN outage-test suite exercising the documented gap on every `make test`
+run.
+
+**Fixed**: OpenFGA now runs on the `postgres` datastore engine (its own
+database, `docker-compose.yml`'s `openfga-migrate` one-shot service runs
+`openfga migrate` before `openfga` starts) instead of `memory` — a
+container restart no longer loses the store, its models, or its tuples,
+period; `tests/faults/test_openfga_persistence.py` proves this directly
+(real restart, same store id, same latest model id, an existing approval
+check still 200, a real V1 corpus decision still replays PASS).
+`services/decision_service/bootstrap_openfga.py::_write_model` is also now
+content-aware idempotent (compares the new model's normalized
+`type_definitions` against every model the store already has, reusing an
+existing id when unchanged) so repeated `make up`/bootstrap invocations no
+longer churn `contracts/manifests/openfga_model_ids.json` for no reason.
+`authz_replay_mode: "recorded_only"` remains the correct, honest fallback
+for any decision whose authorization_model_id predates this fix (this
+session's own historical corpus — see docs/experiment/implementation-notes.md
+Phase 7 section) or for the (now much narrower) case of a genuine in-place
+tuple mutation, which this change does not and cannot address.
 
 ## Why not option 2 (record the historical result only, never re-Check)
 

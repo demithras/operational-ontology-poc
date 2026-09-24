@@ -21,3 +21,4 @@ from tests.integration.conftest import (  # noqa: F401
     wms_client_factory,
     wms_faults_reset,
 )
+from tests.replay.conftest import historical_corpus, opa_base_url  # noqa: F401

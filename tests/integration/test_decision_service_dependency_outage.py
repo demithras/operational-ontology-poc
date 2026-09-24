@@ -50,11 +50,43 @@ def _docker_compose(*args: str, timeout: float = 60.0) -> subprocess.CompletedPr
 
 
 def _rebootstrap_openfga() -> None:
-    result = subprocess.run(
-        [str(REPO_ROOT / ".venv" / "bin" / "python"), str(REPO_ROOT / "services" / "decision_service" / "bootstrap_openfga.py")],
-        cwd=REPO_ROOT, env={**os.environ, **DOCKER_CONFIG_ENV}, capture_output=True, text=True, timeout=30,
-    )
-    assert result.returncode == 0, f"bootstrap_openfga.py failed after openfga restart: {result.stderr}"
+    """Phase 7 (docs/adr/0004-openfga-historical-model-and-tuple-snapshot.md):
+    OpenFGA now runs on the `postgres` datastore engine, so a plain
+    container restart (this function's own caller, F23 below) no longer
+    wipes anything — this is now a defensive, idempotent no-op in the
+    common case (services/decision_service/bootstrap_openfga.py's own
+    content-dedup means re-running it never creates a redundant model when
+    nothing changed). Kept, and now also re-runs migrations/v2_to_v3/migrate_authz.py,
+    for the one real scenario where it still matters: openfga's FIRST-EVER
+    startup before either script has run at all. Found the hard way why
+    running only the v1 bootstrap here isn't enough: it used to leave the
+    v2 (senior_approver / can_approve_large_transfer_v2) model unrestored
+    after F23 wiped the (then still `memory`-engine) store, 403ing a LATER
+    test in the same session that needed V3-era approval authority."""
+    for script in ("services/decision_service/bootstrap_openfga.py", "migrations/v2_to_v3/migrate_authz.py"):
+        result = subprocess.run(
+            [str(REPO_ROOT / ".venv" / "bin" / "python"), str(REPO_ROOT / script)],
+            cwd=REPO_ROOT, env={**os.environ, **DOCKER_CONFIG_ENV}, capture_output=True, text=True, timeout=30,
+        )
+        assert result.returncode == 0, f"{script} failed after openfga restart: {result.stderr}"
+
+
+def _verify_openfga_converged() -> None:
+    """"Wait for convergence", OpenFGA's own analogue of
+    readiness.wait_for_fresh_hot_projection: a real Check against a KNOWN
+    tuple (supervisor-1's migrated senior_approver authority) must resolve
+    ALLOWED, not just "the process answers /healthz" — proves the store
+    actually has real data behind it, not merely that the HTTP server is
+    up."""
+    from services.decision_service import authz
+
+    base_url = db_env.openfga_api_url()
+    store_id = authz.resolve_store_id(base_url)
+    assert store_id is not None, "openfga store not resolvable after restart"
+    model_id = authz.resolve_latest_authorization_model_id(base_url, store_id)
+    assert model_id is not None, "no authorization model resolvable after restart"
+    result = authz.check(base_url, store_id, "can_approve_large_transfer_v2", "warehouse:WH-A", "user", "supervisor-1", model_id)
+    assert result.outcome == authz.ALLOWED, f"openfga did not converge to a working, populated store: {result}"
 
 
 def _wait_healthy(service: str, health_url: str, timeout_s: float = 60.0) -> bool:
@@ -131,12 +163,17 @@ def test_f23_openfga_down_denies_authorization_explicitly(
         start = _docker_compose("start", "openfga")
         assert start.returncode == 0, f"failed to restart openfga: {start.stderr}"
         assert _wait_healthy("openfga", "http://localhost:15481/healthz"), "openfga did not recover"
-        # OpenFGA runs with the `memory` datastore engine (docker-compose.yml)
-        # — a restart wipes its store/model/tuples entirely, same as a real
-        # operational restart would. Re-bootstrap so later tests in this
-        # file (and this whole test session) see a populated store again,
-        # exactly like `make up` does after a fresh container start.
+        # Phase 7: OpenFGA now runs on the `postgres` datastore engine — a
+        # restart no longer wipes its store/model/tuples (docs/adr/0004),
+        # verified by tests/faults/test_openfga_persistence.py directly.
+        # _rebootstrap_openfga() is now a defensive, idempotent no-op in
+        # the common case; _verify_openfga_converged() is the REAL
+        # assertion this finally block relies on — a live Check against
+        # known data, not just an HTTP 200 health response, so a later
+        # test in this same session never silently inherits an
+        # unpopulated store.
         _rebootstrap_openfga()
+        _verify_openfga_converged()
 
     assert inventory_unchanged(wms_client, sku, "WH-B", 100)
 
@@ -167,8 +204,38 @@ def test_f24_opa_down_denies_policy_explicitly(
         start = _docker_compose("start", "opa")
         assert start.returncode == 0, f"failed to restart opa: {start.stderr}"
         assert _wait_healthy("opa", "http://localhost:15482/health"), "opa did not recover"
+        # "Wait for convergence", OPA's analogue: --watch needs a moment to
+        # reload the mounted contracts/policies/ tree after a fresh start —
+        # a real policy evaluation (not just HTTP 200 on /health) proves
+        # the bundle is actually served again, not merely that the process
+        # answered.
+        _wait_opa_policy_evaluates()
 
     assert inventory_unchanged(wms_client, sku, "WH-B", 100)
+
+
+def _wait_opa_policy_evaluates(timeout_s: float = 20.0) -> None:
+    deadline = time.monotonic() + timeout_s
+    last_body = None
+    while time.monotonic() < deadline:
+        try:
+            r = httpx.post(
+                f"{db_env.opa_base_url()}/v1/data/factory/inventory/transfer/result",
+                json={"input": {
+                    "parameters": {"quantity": 10},
+                    "evidence": {"source_available": 100, "safety_stock": 10, "freshness_status": "FRESH",
+                                 "source_quality_status": "OK", "destination_quality_status": "OK"},
+                    "config": {"approval_threshold_units": 100},
+                }},
+                timeout=3.0,
+            )
+            last_body = r.json()
+            if r.status_code == 200 and (last_body.get("result") or {}).get("decision") == "allow":
+                return
+        except httpx.HTTPError as exc:
+            last_body = str(exc)
+        time.sleep(0.5)
+    raise AssertionError(f"opa never resumed evaluating the transfer_inventory bundle: {last_body}")
 
 
 def test_f26_stalled_projection_builder_yields_insufficient_evidence(

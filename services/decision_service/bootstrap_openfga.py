@@ -80,7 +80,50 @@ def _find_or_create_store(client: httpx.Client, base_url: str, name: str) -> str
     return r.json()["id"]
 
 
+def _recent_models(client: httpx.Client, base_url: str, store_id: str, limit: int = 50) -> list[dict]:
+    r = client.get(f"{base_url}/stores/{store_id}/authorization-models", params={"page_size": limit})
+    r.raise_for_status()
+    return r.json().get("authorization_models", [])
+
+
+def _normalize(value):
+    """OpenFGA's own `GET .../authorization-models` echoes a FULLY
+    EXPANDED form (explicit `null`/`""`/`{}` for every field the CLI
+    transform's sparse output simply omits — verified empirically: a
+    freshly transformed model.fga and the SAME model read straight back
+    from the server differ in dozens of these default-filled leaves even
+    though they describe the identical model) — strips exactly those
+    "no information" leaves recursively so a sparse and a fully-expanded
+    encoding of the SAME model compare equal."""
+    if isinstance(value, dict):
+        normalized = {k: _normalize(v) for k, v in value.items()}
+        return {k: v for k, v in normalized.items() if v not in (None, "", {}, [])}
+    if isinstance(value, list):
+        return [_normalize(v) for v in value]
+    return value
+
+
 def _write_model(client: httpx.Client, base_url: str, store_id: str, model_json: dict) -> str:
+    """Phase 7 (per orchestrator direction: "bootstrap idempotent and model
+    ids stable across restarts"): with OpenFGA now on a PERSISTENT
+    (postgres) datastore, a container restart no longer wipes anything, so
+    a `make up` that runs this again (idempotent-bootstrap, same as every
+    other `make up` step) should NOT keep appending a new model version for
+    UNCHANGED content — that would make contracts/manifests/openfga_model_ids.json's
+    recorded id drift on every `make up` even though nothing actually
+    changed. Compares the new model's `schema_version`/`type_definitions`
+    (the only meaningful content — never the server-assigned `id`) against
+    EVERY recent model this store already has (not just the single latest
+    — this store alternates between v1 and v2 model content across this
+    function's own re-runs and migrations/v2_to_v3/migrate_authz.py's, so
+    "the latest" is frequently the OTHER era's content, not this one's,
+    even when THIS era's content is otherwise unchanged and was already
+    written before); reuses the first matching id found, writes a
+    genuinely new model only when no existing one matches."""
+    new_normalized = _normalize(model_json.get("type_definitions"))
+    for existing in _recent_models(client, base_url, store_id):
+        if existing.get("schema_version") == model_json.get("schema_version") and _normalize(existing.get("type_definitions")) == new_normalized:
+            return existing["id"]
     r = client.post(f"{base_url}/stores/{store_id}/authorization-models", json=model_json)
     r.raise_for_status()
     return r.json()["authorization_model_id"]
