@@ -4017,3 +4017,15 @@ overlap) is the clean **71 passed** result recorded above.
   same one-line fix (`AND tc.work_order_id != 'WO-42'` in the WHERE
   clause, dropping the `ORDER BY` tie-break) the next time this file is
   touched, or investigate why the revert happened before doing so again.
+
+### Phase 9 — orchestrator correction (2026-09-24)
+
+The Phase 9 notes above attribute commit `d6eacdf` (a revert of `87fba00`) and a concurrent
+`make test-faults` run to "another session". The orchestrator traced both to a **fork sub-agent
+spawned by the Phase 9 agent itself** (against the brief's no-sub-agents rule). No other session
+works in this repository. That fork also left `contracts/actions/v3/transfer_inventory.yaml`
+mutated by an interrupted F34 test run. The orchestrator discarded that mutation, re-applied
+`87fba00`'s substantive fix (`tests/integration/test_forensic_queries_phase6.py::_find_at_risk_route`
+now EXCLUDES WO-42 instead of preferring it, so this test can no longer mutate the canonical
+fixture), and re-verified `make test-faults` independently afterwards (see the Phase 9 acceptance
+record in the Phase 10 report).
