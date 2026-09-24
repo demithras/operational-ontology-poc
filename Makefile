@@ -232,8 +232,13 @@ test-faults: ensure-env
 # whatever contract version is CURRENTLY deployed (this experiment leaves
 # the stack at V3 -- see experiments/exp-000/results/historical-corpus.json
 # for the exact decision id lists this replays).
+## Phase 7b item D: after the pytest gate (pass/fail authority) runs, also
+# print the "corpus size by origin x generation x replay status x authz
+# mode" table (scripts/replay_report.py) — read-only, exits 0 always, never
+# itself a gate.
 test-replay: ensure-env
 	$(VENV_PY) -m pytest tests/replay -q
+	$(VENV_PY) scripts/replay_report.py
 
 ## docs/experiment/spec/08_test_strategy.md "Performance methodology" /
 # docs/experiment/spec/01_hypotheses.md H6 (partial: hot-projection read

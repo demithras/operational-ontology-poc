@@ -85,7 +85,13 @@ def propose(
         "action_type": "transfer_inventory",
         "actor": {"type": actor_type, "id": actor_id},
         "parameters": {"source_warehouse": source, "destination_warehouse": destination, "part": part, "quantity": quantity},
-        "context": {},
+        # Phase 7b: distinguishes this real-HTTP-through-decision_service
+        # corpus from seed/generators/bulk_historical_decisions.py's
+        # "bulk-evaluated" records (real gate evaluation, but never through
+        # the HTTP API/Temporal) in the replay report's origin breakdown
+        # (docs/experiment/briefs/phase7b.md item D's "corpus size by
+        # origin x generation x replay status x authz mode" table).
+        "context": {"origin": "live"},
     })
     r.raise_for_status()
     return r.json()
