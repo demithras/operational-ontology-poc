@@ -73,7 +73,6 @@ def derive(results_dir: Path, exp_version: str) -> dict:
     mutation = _load(results_dir, "mutation-results.json") or _load(REPO_ROOT / "experiments" / "exp-000" / "results", "mutation-results.json")
     evolution = _load(results_dir, "evolution-comparison.json") or _load(REPO_ROOT / "experiments" / "exp-000" / "results", "evolution-comparison.json")
     latency = _load(results_dir, "latency.json")
-    baseline_sweep = _load(results_dir, "baseline-replay-full-sweep.json") or _load(REPO_ROOT / "experiments" / "exp-000" / "results", "baseline-replay-full-sweep.json")
     env = _load(results_dir, "environment.json") or {}
     git_commit = env.get("git_commit", "unknown")
 

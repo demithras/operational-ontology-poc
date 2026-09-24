@@ -2,8 +2,11 @@
 """`make experiment` (docs/experiment/spec/13_repository_contract.md) —
 Phase 10b. Creates a NEW immutable experiments/exp-NNN/ (manifest.yaml
 copying exp-000's LOCKED thresholds unchanged, seeds.txt) and runs the
-full, real, live pipeline: the fair evolution comparison (item 7, requires
-a fresh V1 stack — see docs/experiment/briefs/phase10b.md item 6/7), the
+full, real, live pipeline: the fair evolution comparison (item 7 — this
+step performs its OWN destructive fresh reset, `OO_ALLOW_DESTRUCTIVE=1`,
+so real V1 SHACL shapes are genuinely live while V1-era history is built;
+see scripts/gen_evolution_comparison.py's own docstring for why a
+pointer-only shortcut was tried and rejected), the
 full 5,000-decision bulk corpus for both variants (item 4), the
 comprehensive test suite + mutation tests, the full A/B rerun (W1-W7 at
 N=500), latency benchmarks (incl. H13 forensic query timing), the fault
@@ -37,7 +40,7 @@ EXP000_RESULTS = EXPERIMENTS_DIR / "exp-000" / "results"
 RAW_ARTIFACTS_TO_COPY = [
     "bench-phase4.json", "bench-phase5.json", "bench-phase6.json",
     "mutation-results.json", "historical-corpus.json", "historical-corpus-baseline.json",
-    "baseline-replay-full-sweep.json", "evolution-comparison.json",
+    "baseline-replay-sweep.json", "evolution-comparison.json",
     "ab-tradeoffs.md", "traces-reference.txt", "agent-llm-probe.json",
 ]
 
@@ -74,7 +77,10 @@ def main() -> int:
     (exp_dir / "manifest.yaml").write_text(manifest_text)
     (exp_dir / "seeds.txt").write_text("SEED=42\n")
 
-    _step(2, "fair evolution comparison (item 7): V1 corpus -> deploy V2 -> V2 corpus -> deploy V3 -> full replay sweep, both variants")
+    _step(2, "fair evolution comparison (item 7) — its OWN destructive fresh reset (real V1 shapes live) -> "
+             "V1 corpus -> deploy V2 -> V2 corpus -> deploy V3 -> full replay sweep, both variants. Every "
+             "later step in this run operates on the stack THIS step produces, not the one `make test` "
+             "validated earlier in the clean-machine sequence.")
     from scripts import gen_evolution_comparison
     gen_evolution_comparison.main()
 

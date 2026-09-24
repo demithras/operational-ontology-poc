@@ -79,10 +79,21 @@ reset: ensure-env
 # only once the WHOLE pipeline has converged (wait-converged, phase4fix.md
 # "a single readiness contract") — never returns while ingestion is still
 # mid-drain of the CDC backlog this seed just produced.
+## Phase 10b orchestrator correction: a genuinely fresh stack (0 decisions,
+# still the tracked V1 baseline) is then auto-advanced to the product's
+# CURRENT published contract state (today V1->V2->V3) via the real
+# migration deploy() functions — services/common/advance_fresh_stack_to_
+# current.py, a silent no-op on any stack that already has real history.
+# This is what makes README's definition-of-done (`up -> seed -> test ->
+# experiment -> replay`) work: `make test` is written throughout Phases
+# 5-10 assuming V3 features are live. The evolution-comparison generators
+# (item 7) explicitly descend back to V1 when they need to build V1-era
+# history, then advance forward the same way.
 seed: ensure-env
 	$(VENV_PY) seed/generators/generate.py --seed $(SEED)
 	$(VENV_PY) seed/load.py --seed $(SEED)
 	$(MAKE) wait-converged
+	$(VENV_PY) -m services.common.advance_fresh_stack_to_current
 
 ## The single readiness contract every one of up/seed/reset ultimately
 # blocks on (docs/experiment/briefs/phase4fix.md): connectors RUNNING,
