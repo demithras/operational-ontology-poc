@@ -1,0 +1,11 @@
+{
+  "_comment": "Phase 7b fix (docs/experiment/briefs/phase7b.md orchestrator direction, item 1): the tracked, canonical V1 baseline every GENUINELY FRESH stack (empty ontology_hot.decisions table) starts from. Copied onto contracts/manifests/deployed_version.json by services/common/reset_deployed_version_if_empty.py, which `make up` now runs (Makefile) BEFORE services/decision_service/bootstrap_openfga.py, on every plain fresh bring-up AND on the `make reset` -> `make up` sequence -- so deployed-contract state can never again survive a `docker compose down -v` as a stray host-file leftover from a previous session (root cause of a real bug found live during this phase: 82 decisions were generated labeled 'v1' while the live service was still actually serving a PRIOR session's v3 state, because `docker compose down -v` wipes Docker volumes but this JSON file lives on the host filesystem, untouched by that wipe). Edit ONLY this file to change what a fresh stack's baseline is; NEVER hand-edit contracts/manifests/deployed_version.json directly for that purpose -- it is a derived, mutable pointer that migrations/*/deploy.py scripts advance forward from here.",
+  "ontology": "v1",
+  "shapes": "v1",
+  "actions": "v1",
+  "policies": "v1",
+  "authorization": "v1",
+  "identity": "v1",
+  "projections": "v1",
+  "reconciliation": "v1"
+}

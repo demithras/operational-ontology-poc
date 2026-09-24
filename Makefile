@@ -25,9 +25,19 @@ ensure-env:
 # RDF4J "oo" repository (ontology + SHACL shapes). Both steps are safe to
 # re-run (PUT .../connectors/{name}/config is create-or-update;
 # bootstrap_rdf4j.py clears+reloads its two graphs every time).
+## Phase 7b fix (docs/experiment/briefs/phase7b.md orchestrator direction
+# item 1): reset_deployed_version_if_empty.py runs BEFORE bootstrap_openfga.py
+# so a genuinely fresh stack (make reset's `down -v`, or the very first
+# `make up` an environment ever runs) always starts contract-version state
+# at the tracked V1 baseline (contracts/manifests/baseline_v1.json) --
+# deployed_version.json is a HOST FILE, never wiped by `docker compose
+# down -v`, so without this a fresh stack could silently inherit a STALE
+# version label left over from a PRIOR session (root cause of a real bug:
+# see that script's own docstring).
 up: ensure-env
 	docker compose up -d --build
 	$(MAKE) wait-healthy
+	$(VENV_PY) services/common/reset_deployed_version_if_empty.py
 	$(VENV_PY) services/ingestion/register_connectors.py
 	$(VENV_PY) services/ingestion/bootstrap_rdf4j.py
 	$(VENV_PY) services/decision_service/bootstrap_openfga.py

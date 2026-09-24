@@ -198,12 +198,57 @@ def generate(version: str, n: int, denied_fraction: float = 0.10, max_workers: i
     }
 
 
+# Phase 7b fix (docs/experiment/briefs/phase7b.md orchestrator direction
+# item 2): the --version flag used to be COSMETIC ONLY (SKU numbering /
+# which results.json key gets written) — it never actually verified that
+# the LIVE decision_service was serving that contract version, which is
+# governed entirely by contracts/manifests/deployed_version.json (a host
+# file `make reset` does not wipe — see
+# services/common/reset_deployed_version_if_empty.py). Found live: 82
+# decisions were generated labeled "v1" while the stack was still actually
+# serving a stale v3 deployment from a prior session. The exact deployed
+# state expected for each CLI --version value, matching
+# seed/generators/bulk_historical_decisions.py's own ERAS[0]/ERAS[1]
+# (authorization only advances to "v2" at the v2->v3 step, i.e. `make
+# deploy-v3` — "v2" here means "after deploy-v2, before deploy-v3").
+EXPECTED_LIVE_DEPLOYED_VERSION = {
+    "v1": {"ontology": "v1", "shapes": "v1", "actions": "v1", "policies": "v1", "authorization": "v1"},
+    "v2": {"ontology": "v2", "shapes": "v2", "actions": "v2", "policies": "v2", "authorization": "v1"},
+}
+
+
+def _assert_live_deployed_version_matches(cli_version: str) -> None:
+    """Probes the deployed manifest (the exact same file/mechanism
+    decision_service itself reads, per-request, with no caching on either
+    side — see services/common/contract_versions.py — so this is as "live"
+    a check as an HTTP round-trip would be, without needing a dedicated
+    probe endpoint) and aborts loudly (never fakes success) if it does not
+    match what --version claims to be generating."""
+    from services.common.contract_versions import deployed_version
+
+    live = deployed_version()
+    expected = EXPECTED_LIVE_DEPLOYED_VERSION[cli_version]
+    mismatches = {k: (expected[k], live.get(k)) for k in expected if live.get(k) != expected[k]}
+    if mismatches:
+        lines = "\n".join(f"  {k}: expected {exp!r}, live deployed_version.json has {actual!r}" for k, (exp, actual) in mismatches.items())
+        raise RuntimeError(
+            f"--version {cli_version!r} requested, but the LIVE deployed contract "
+            f"(contracts/manifests/deployed_version.json) does not match:\n{lines}\n"
+            f"The --version flag is a LABEL only (SKU numbering / results.json key) — it does NOT itself change "
+            f"what decision_service serves. Deploy the matching contract first (make deploy-v2 / make deploy-v3), "
+            f"or reset to the v1 baseline (make reset, or copy contracts/manifests/baseline_v1.json over "
+            f"deployed_version.json), before generating this corpus tier."
+        )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--version", required=True, choices=["v1", "v2"])
     parser.add_argument("--n", type=int, default=110)
     parser.add_argument("--workers", type=int, default=8)
     args = parser.parse_args()
+
+    _assert_live_deployed_version_matches(args.version)
 
     db_env.load_dotenv()
     summary = generate(args.version, args.n, max_workers=args.workers)
