@@ -1,17 +1,19 @@
 # contracts/queries/v1/q9_replay_authz_fields.rq
 #
-# Phase 7 (docs/experiment/spec/07_versioning_and_replay.md) — the two
+# Phase 7 / 7b (docs/experiment/spec/07_versioning_and_replay.md) — the
 # fields services/decision_service/replay.py needs that only live in RDF4J
 # (never duplicated into the Postgres index, docs/experiment/spec/06:
 # "the Postgres row is only an index"): the REAL OpenFGA
 # authorization_model_id pinned on the Decision and on its
-# AuthorizationCheck (see docs/adr/0004-openfga-historical-model-and-tuple-snapshot.md),
-# plus decisionContentHash/status as a cross-check that RDF4J (authoritative)
+# AuthorizationCheck, PLUS (Phase 7b, R4 ADR update) the check's full
+# tuple-snapshot JSON, replayed back as contextual_tuples — see
+# docs/adr/0004-openfga-historical-model-and-tuple-snapshot.md — plus
+# decisionContentHash/status as a cross-check that RDF4J (authoritative)
 # and the Postgres index still agree.
 PREFIX oo: <https://example.local/oo/>
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 SELECT ?decisionContentHash ?status ?openfgaAuthorizationModelId ?checkAuthorizationModelId
-       ?checkRelation ?checkObject ?checkOutcome ?actorId
+       ?checkRelation ?checkObject ?checkOutcome ?checkTuplesSnapshotJson ?actorId
        ?snapshotContentHash ?requiredFactsJson ?sourcePositionsJson ?projectionRowHashesJson
 WHERE {
   ?decision a oo:Decision ;
@@ -26,6 +28,7 @@ WHERE {
     OPTIONAL { ?check oo:checkRelation ?checkRelation . }
     OPTIONAL { ?check oo:checkObject ?checkObject . }
     OPTIONAL { ?check oo:checkOutcome ?checkOutcome . }
+    OPTIONAL { ?check oo:checkTuplesSnapshotJson ?checkTuplesSnapshotJson . }
   }
   OPTIONAL { ?decision oo:actor ?actor . ?actor oo:actorId ?actorId . }
   OPTIONAL {

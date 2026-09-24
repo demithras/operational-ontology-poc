@@ -47,6 +47,16 @@ class AuthzResult:
     # the IDENTICAL Check request (same model id, same tuple_key) later —
     # see services/decision_service/replay.py.
     model_id: str | None = None
+    # Phase 7b (docs/adr/0004-openfga-historical-model-and-tuple-snapshot.md,
+    # R4 ADR update): the FULL relationship-tuple set this store held at the
+    # moment of this check ("the whole small tuple set hashed" — this
+    # model's real tuple population is ~10 rows, cheap to snapshot whole
+    # rather than trying to infer which subset was "relevant" to this one
+    # Check's graph traversal). None when the snapshot read itself failed
+    # (best-effort — never blocks the check outcome) or when this
+    # AuthzResult IS a replay's own re-check (capture_tuples_snapshot=False
+    # there, since replay is verifying a snapshot, not producing a new one).
+    tuples_snapshot: list[dict] | None = None
 
     @property
     def allowed(self) -> bool:
@@ -70,6 +80,45 @@ def _actor_fga_id(actor_type: str, actor_id: str) -> str:
     return f"{actor_type}:{actor_id}"
 
 
+def _read_all_tuples(openfga_api_url: str, store_id: str, page_limit: int = 20) -> list[dict] | None:
+    """Phase 7b: the store's COMPLETE tuple population, canonicalized
+    (sorted, `user`/`relation`/`object` only — drops OpenFGA's own
+    `timestamp` so the snapshot is stable across re-reads of unchanged
+    tuples). Used two ways: (1) captured onto every AuthzResult at
+    propose() time so a Decision's authorization check carries the exact
+    relationship state it was evaluated against, independent of whatever
+    the LIVE store looks like later; (2) replayed back as `contextual_tuples`
+    on the historical re-Check, so replay proves authorization against the
+    HISTORICAL tuples, never today's — see
+    docs/adr/0004-openfga-historical-model-and-tuple-snapshot.md.
+
+    Best-effort: returns None (never raises) on any failure — a missing
+    snapshot degrades that decision's replay to the honest
+    `authz_replay_mode: "recorded_only"` fallback, never a hard error at
+    propose time."""
+    tuples: list[dict] = []
+    continuation_token = ""
+    try:
+        with httpx.Client(timeout=5.0) as client:
+            for _ in range(page_limit):
+                body: dict = {}
+                if continuation_token:
+                    body["continuation_token"] = continuation_token
+                r = client.post(f"{openfga_api_url}/stores/{store_id}/read", json=body)
+                if r.status_code != 200:
+                    return None
+                payload = r.json()
+                for row in payload.get("tuples", []):
+                    key = row.get("key", {})
+                    tuples.append({"user": key.get("user"), "relation": key.get("relation"), "object": key.get("object")})
+                continuation_token = payload.get("continuation_token") or ""
+                if not continuation_token:
+                    break
+    except httpx.HTTPError:
+        return None
+    return sorted(tuples, key=lambda t: (t["object"] or "", t["relation"] or "", t["user"] or ""))
+
+
 def check(
     openfga_api_url: str,
     store_id: str,
@@ -78,6 +127,8 @@ def check(
     actor_type: str,
     actor_id: str,
     authorization_model_id: str | None = None,
+    contextual_tuples: list[dict] | None = None,
+    capture_tuples_snapshot: bool = True,
 ) -> AuthzResult:
     """Phase 7: `authorization_model_id`, when given, pins the Check to that
     EXACT model version (OpenFGA's real, documented Check API field) —
@@ -88,11 +139,26 @@ def check(
     exactly the "silently apply today's policy to yesterday's decision"
     07_versioning_and_replay.md forbids). Live proposals omit it and get
     OpenFGA's own "latest model in this store" default, matching Phase 5/6
-    behavior exactly."""
+    behavior exactly.
+
+    Phase 7b: `contextual_tuples`, when given (replay only — see
+    services/decision_service/replay.py), are passed as OpenFGA's own
+    `contextual_tuples` Check field — additional tuples considered for THIS
+    call only, never written to the store — so replay can re-issue the
+    check against the HISTORICAL relationship snapshot even if the live
+    store's tuples have since changed, without needing a second store or a
+    tuple restore/rollback. `capture_tuples_snapshot` (default True) makes a
+    normal (propose-time) call also read back the store's current full
+    tuple population and attach it to the returned AuthzResult — set False
+    for replay's own re-check, which is verifying a snapshot, not producing
+    one."""
     tuple_key = {"user": _actor_fga_id(actor_type, actor_id), "relation": relation, "object": object_ref}
     body: dict = {"tuple_key": tuple_key}
     if authorization_model_id:
         body["authorization_model_id"] = authorization_model_id
+    if contextual_tuples:
+        body["contextual_tuples"] = {"tuple_keys": contextual_tuples}
+    snapshot = _read_all_tuples(openfga_api_url, store_id) if (capture_tuples_snapshot and not contextual_tuples) else None
     try:
         with httpx.Client(timeout=5.0) as client:
             r = client.post(f"{openfga_api_url}/stores/{store_id}/check", json=body)
@@ -100,12 +166,19 @@ def check(
             return AuthzResult(
                 outcome=UNAVAILABLE, relation=relation, object=object_ref,
                 detail=f"HTTP {r.status_code}: {r.text[:300]}", model_id=authorization_model_id,
+                tuples_snapshot=snapshot,
             )
         resp_body = r.json()
         outcome = ALLOWED if resp_body.get("allowed") else DENIED
-        return AuthzResult(outcome=outcome, relation=relation, object=object_ref, model_id=authorization_model_id)
+        return AuthzResult(
+            outcome=outcome, relation=relation, object=object_ref, model_id=authorization_model_id,
+            tuples_snapshot=snapshot,
+        )
     except httpx.HTTPError as exc:
-        return AuthzResult(outcome=UNAVAILABLE, relation=relation, object=object_ref, detail=str(exc), model_id=authorization_model_id)
+        return AuthzResult(
+            outcome=UNAVAILABLE, relation=relation, object=object_ref, detail=str(exc),
+            model_id=authorization_model_id, tuples_snapshot=snapshot,
+        )
 
 
 def resolve_latest_authorization_model_id(openfga_api_url: str, store_id: str) -> str | None:

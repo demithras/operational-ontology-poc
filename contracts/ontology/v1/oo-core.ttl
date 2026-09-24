@@ -175,6 +175,8 @@ oo:checkOutcome    a owl:DatatypeProperty ; rdfs:range xsd:string ; rdfs:comment
 oo:checkedAt       a owl:DatatypeProperty ; rdfs:range xsd:dateTime .
 oo:checkAuthorizationModelId a owl:DatatypeProperty ; rdfs:domain oo:AuthorizationCheck ; rdfs:range xsd:string ;
   rdfs:comment "Phase 7: the REAL OpenFGA authorization_model_id this specific Check was evaluated against (models are immutable-by-id) — what replay re-issues the Check with, per docs/experiment/spec/14_risks_and_open_questions.md R4." .
+oo:checkTuplesSnapshotJson a owl:DatatypeProperty ; rdfs:domain oo:AuthorizationCheck ; rdfs:range xsd:string ;
+  rdfs:comment "Phase 7b (R4 ADR update, docs/adr/0004-openfga-historical-model-and-tuple-snapshot.md): the store's FULL relationship-tuple population (canonical JSON list of {user,relation,object}) at the moment this Check ran. Replay passes this back as OpenFGA's own `contextual_tuples` on its re-Check, so authorization replay proves the historical model id AND the historical tuples, never today's live tuple state — optional (older, pre-Phase-7b decisions have none, honestly falling back to authz_replay_mode='recorded_only')." .
 
 oo:PolicyEvaluation a owl:Class ; rdfs:subClassOf prov:Entity .
 oo:policyOutcome         a owl:DatatypeProperty ; rdfs:domain oo:PolicyEvaluation ; rdfs:range xsd:string ; rdfs:comment "allow | deny | require_approval | UNAVAILABLE (F24)." .

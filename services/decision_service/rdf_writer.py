@@ -128,6 +128,8 @@ def build_decision_graph(record: DecisionRecord) -> rdflib.Graph:
         g.add((ac, OO.checkedAt, Literal(record.authz_result.checked_at.isoformat(), datatype=XSD.dateTime)))
         if record.authz_result.model_id:
             g.add((ac, OO.checkAuthorizationModelId, Literal(record.authz_result.model_id)))
+        if record.authz_result.tuples_snapshot is not None:
+            g.add((ac, OO.checkTuplesSnapshotJson, Literal(canonical_json(record.authz_result.tuples_snapshot))))
         g.add((decision, OO.authorizationCheck, ac))
 
     if record.policy_result is not None:

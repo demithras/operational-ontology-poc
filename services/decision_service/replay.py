@@ -54,7 +54,14 @@ class ReplayResult:
     decision_id: str
     original: dict[str, Any]
     replay: dict[str, Any]
-    status: str  # PASS | FAIL
+    # PASS | FAIL | PARTIAL_RECORDED_ONLY (Phase 7b requirement A: a
+    # decision whose evidence/action/policy all reconstruct correctly but
+    # whose AUTHORIZATION could only be checked via the honest
+    # "recorded_only" fallback (docs/adr/0004) must never report a plain
+    # PASS — that would silently certify authorization reproducibility that
+    # never actually happened. FAIL always wins over PARTIAL_RECORDED_ONLY:
+    # a genuine mismatch is worse than "we couldn't prove it either way".
+    status: str
     failure_reasons: list[str] = field(default_factory=list)
 
     def as_dict(self) -> dict[str, Any]:
@@ -252,20 +259,43 @@ def replay_decision(
                 gate_result_match = False
 
     # --- Re-run the authorization check ----------------------------------
+    # Phase 7b (R4 ADR update): replay re-issues the IDENTICAL Check —
+    # same relation/object/actor/HISTORICAL model id — WITH the decision's
+    # own HISTORICAL tuple snapshot supplied as OpenFGA's `contextual_tuples`
+    # (never the live store's current tuples), so a live re-Check proves
+    # authorization against the state that actually existed at propose()
+    # time, not whatever the store looks like now. Three possible modes:
+    #   "not_applicable" — this decision never reached an authorization
+    #     check at all (e.g. INSUFFICIENT_EVIDENCE short-circuited first) —
+    #     nothing to replay, vacuously fine, same treatment as
+    #     action_input_match above.
+    #   "recorded_only"  — a check happened, but live re-verification could
+    #     not run (model id doesn't resolve in this store, no tuple
+    #     snapshot was ever captured — a pre-Phase-7b decision — or OpenFGA
+    #     itself is unreachable). Honest ADR-0004 fallback: the recorded
+    #     outcome is trusted, not re-proven.
+    #   "live"            — the check was actually re-run and its outcome
+    #     compared against what was recorded.
     authz_result = pg_row["authorization_result"] or {}
     authz_model_id = rdf_fields.get("checkAuthorizationModelId") or rdf_fields.get("openfgaAuthorizationModelId")
-    authz_replay_mode = "recorded_only"
+    tuples_snapshot_json = rdf_fields.get("checkTuplesSnapshotJson")
+    tuples_snapshot = json.loads(tuples_snapshot_json) if tuples_snapshot_json else None
     authz_replayed_outcome = authz_result.get("outcome")
-    if authz_model_id and rdf_fields.get("checkRelation") and rdf_fields.get("checkObject") and rdf_fields.get("actorId"):
-        live = authz.check(
-            openfga_api_url, _resolve_store_id(openfga_api_url), rdf_fields["checkRelation"], rdf_fields["checkObject"],
-            pg_row["actor_type"], rdf_fields["actorId"], authz_model_id,
-        )
-        if live.outcome != authz.UNAVAILABLE:
-            authz_replay_mode = "live"
-            authz_replayed_outcome = live.outcome
-            if live.outcome != authz_result.get("outcome"):
-                gate_result_match = False
+    if not authz_result.get("outcome"):
+        authz_replay_mode = "not_applicable"
+    else:
+        authz_replay_mode = "recorded_only"
+        if authz_model_id and rdf_fields.get("checkRelation") and rdf_fields.get("checkObject") and rdf_fields.get("actorId") and tuples_snapshot:
+            live = authz.check(
+                openfga_api_url, _resolve_store_id(openfga_api_url), rdf_fields["checkRelation"], rdf_fields["checkObject"],
+                pg_row["actor_type"], rdf_fields["actorId"], authz_model_id,
+                contextual_tuples=tuples_snapshot, capture_tuples_snapshot=False,
+            )
+            if live.outcome != authz.UNAVAILABLE:
+                authz_replay_mode = "live"
+                authz_replayed_outcome = live.outcome
+                if live.outcome != authz_result.get("outcome"):
+                    gate_result_match = False
 
     all_pass = evidence_hash_match and action_input_match and gate_result_match
     failure_reasons = []
@@ -275,6 +305,15 @@ def replay_decision(
         failure_reasons.append("decision_content_hash_mismatch")
     if not gate_result_match:
         failure_reasons.append("gate_result_mismatch")
+    if authz_replay_mode == "recorded_only":
+        failure_reasons.append("authz_replay_recorded_only")
+
+    if not all_pass:
+        status = "FAIL"
+    elif authz_replay_mode == "recorded_only":
+        status = "PARTIAL_RECORDED_ONLY"
+    else:
+        status = "PASS"
 
     return ReplayResult(
         decision_id=decision_id,
@@ -302,7 +341,7 @@ def replay_decision(
             "authz_replayed_outcome": authz_replayed_outcome,
             "authz_replay_mode": authz_replay_mode,
         },
-        status="PASS" if all_pass else "FAIL",
+        status=status,
         failure_reasons=failure_reasons,
     )
 
