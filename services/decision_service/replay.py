@@ -107,11 +107,35 @@ def _fetch_rdf_fields(rdf4j_client: RDF4JClient, decision_id: str) -> dict[str, 
     return rows[0]
 
 
-def _run_opa_eval(policies_dir: Path, package_path: str, input_json: dict) -> str:
-    """opa eval via docker on the archived bundle (docs/experiment/spec/07
-    item 1's own suggested mechanism). Returns the `decision` field, or
-    raises if OPA itself could not evaluate (e.g. the archived bundle is
-    malformed) — a hard failure, never silently treated as a non-match."""
+def _eval_via_live_opa(opa_base_url: str, package_path: str, input_json: dict) -> str | None:
+    """The LIVE running OPA server ALREADY serves every published policy
+    version's package simultaneously and forever (docker-compose.yml mounts
+    the WHOLE contracts/policies/ tree, not just the current one — see that
+    file's own comment) — evaluating an ARCHIVED package through it is
+    exactly as historically faithful as a fresh `opa eval` against the
+    on-disk bundle, and works identically whether replay runs host-side
+    (scripts/replay_cli.py) or inside the decision_service CONTAINER
+    (POST /replay/{id}), which has neither a docker socket nor the docker
+    CLI. Returns None (never raises) if OPA is unreachable, so the caller
+    can fall back to `opa eval` via docker."""
+    package_url_path = package_path.replace(".", "/")
+    try:
+        with httpx.Client(timeout=5.0) as client:
+            r = client.post(f"{opa_base_url}/v1/data/{package_url_path}/result", json={"input": input_json})
+        if r.status_code != 200:
+            return None
+        body = r.json().get("result")
+        if not body or "decision" not in body:
+            return None
+        return body["decision"]
+    except httpx.HTTPError:
+        return None
+
+
+def _eval_via_docker(policies_dir: Path, package_path: str, input_json: dict) -> str:
+    """`opa eval` via docker on the archived bundle (docs/experiment/spec/07
+    item 1's own suggested mechanism) — the fallback when the live OPA
+    server isn't reachable (e.g. a fully offline host-side audit)."""
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
         json.dump(input_json, f)
         input_path = Path(f.name)
@@ -138,8 +162,16 @@ def _run_opa_eval(policies_dir: Path, package_path: str, input_json: dict) -> st
         raise ReplayIntegrityError(f"opa eval produced no result for data.{package_path}.result: {result.stdout[:500]}") from exc
 
 
+def _eval_policy(opa_base_url: str | None, policies_dir: Path, package_path: str, input_json: dict) -> str:
+    if opa_base_url:
+        live_outcome = _eval_via_live_opa(opa_base_url, package_path, input_json)
+        if live_outcome is not None:
+            return live_outcome
+    return _eval_via_docker(policies_dir, package_path, input_json)
+
+
 def replay_decision(
-    decision_id: str, conn, rdf4j_client: RDF4JClient, openfga_api_url: str,
+    decision_id: str, conn, rdf4j_client: RDF4JClient, openfga_api_url: str, opa_base_url: str | None = None,
 ) -> ReplayResult:
     pg_row = store.get_decision(conn, decision_id)
     if pg_row is None:
@@ -213,7 +245,9 @@ def replay_decision(
         # empirically while building this.
         package_path = action.policy_package if action else None
         if package_path:
-            policy_replayed_outcome = _run_opa_eval(CONTRACTS_ROOT / "policies" / policy_vdir, package_path, policy_input)
+            policy_replayed_outcome = _eval_policy(
+                opa_base_url, CONTRACTS_ROOT / "policies" / policy_vdir, package_path, policy_input,
+            )
             if policy_replayed_outcome != policy_result.get("outcome"):
                 gate_result_match = False
 
@@ -311,9 +345,34 @@ def reevaluate_under_current(decision_id: str, conn, opa_base_url: str) -> dict[
     action = get_action_type(pg_row["action_type"], action_version_dir)
     if action is None:
         raise ValueError(f"action type {pg_row['action_type']!r} not found under current version {action_version_dir!r}")
+    current_action_sha256 = manifest["actions"].get(pg_row["action_type"], {}).get("sha256", "?")
+
+    # A V1-era evidence snapshot has no "reservation_ok" fact (that field
+    # didn't exist until V2 — contracts/actions/v2/transfer_inventory.yaml)
+    # but DOES already carry on_hand/reserved inside current_source_inventory
+    # (services/decision_service/evidence.py has always populated both,
+    # even when v1's own policy never read them) — derive it rather than
+    # fail, since the underlying data genuinely was captured at the time,
+    # just not yet surfaced as its own named fact.
+    src = facts_used.get("current_source_inventory", {})
+    if "reservation_ok" not in facts_used and "on_hand" in src and "reserved" in src:
+        facts_used = {**facts_used, "reservation_ok": bool(src["on_hand"] >= src["reserved"])}
 
     ev = EvidenceResult(facts_used=facts_used, facts_excluded=evidence.get("facts_excluded", {}))
-    input_json = policy_mod.build_input(action, pg_row["parameters"], ev)
+    try:
+        input_json = policy_mod.build_input(action, pg_row["parameters"], ev)
+    except KeyError as exc:
+        # Honest failure mode, never a crash: the historical evidence shape
+        # genuinely cannot answer what today's policy needs.
+        return {
+            "mode": "counterfactual",
+            "decision_id": decision_id,
+            "original_status": pg_row["status"],
+            "error": f"cannot reevaluate under current rules — historical evidence is missing a field the "
+                     f"CURRENT policy input requires: {exc}",
+            "under_current_action_version": f"{action_version_dir}@{current_action_sha256}",
+            "note": "counterfactual only — never written back to history",
+        }
     current_result = policy_mod.evaluate(opa_base_url, action, input_json)
 
     return {
@@ -322,7 +381,7 @@ def reevaluate_under_current(decision_id: str, conn, opa_base_url: str) -> dict[
         "original_status": pg_row["status"],
         "original_policy_outcome": (pg_row["policy_result"] or {}).get("outcome"),
         "under_current_policy_version": content_addressed(manifest["opa"]),
-        "under_current_action_version": f"{action_version_dir}@{pg_row['action_pinned_sha256'] or '?'}",
+        "under_current_action_version": f"{action_version_dir}@{current_action_sha256}",
         "under_current_policy_outcome": current_result.outcome,
         "diverges_from_original": current_result.outcome != (pg_row["policy_result"] or {}).get("outcome"),
         "note": "counterfactual only — never written back to history",

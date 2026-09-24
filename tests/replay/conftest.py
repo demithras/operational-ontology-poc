@@ -35,3 +35,9 @@ def historical_corpus() -> dict:
 def openfga_api_url() -> str:
     db_env.load_dotenv()
     return db_env.openfga_api_url()
+
+
+@pytest.fixture()
+def opa_base_url() -> str:
+    db_env.load_dotenv()
+    return db_env.opa_base_url()

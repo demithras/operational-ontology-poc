@@ -25,30 +25,30 @@ POLICY_FILE = REPO_ROOT / "contracts" / "policies" / "v1" / "transfer_inventory.
 
 
 def test_f29_deleted_archived_policy_makes_replay_fail_loudly(
-    historical_corpus, ontology_hot_conn, rdf4j_client, openfga_api_url,
+    historical_corpus, ontology_hot_conn, rdf4j_client, openfga_api_url, opa_base_url,
 ):
     decision_id = historical_corpus["v1"]["decision_ids"][0]
 
     # Sanity: this decision replays PASS before we touch anything.
-    baseline = replay_decision(decision_id, ontology_hot_conn, rdf4j_client, openfga_api_url)
+    baseline = replay_decision(decision_id, ontology_hot_conn, rdf4j_client, openfga_api_url, opa_base_url)
     assert baseline.status == "PASS", baseline.as_dict()
 
     original_bytes = POLICY_FILE.read_bytes()
     try:
         POLICY_FILE.unlink()  # "old policy deleted"
         with pytest.raises(ReplayIntegrityError, match="F29"):
-            replay_decision(decision_id, ontology_hot_conn, rdf4j_client, openfga_api_url)
+            replay_decision(decision_id, ontology_hot_conn, rdf4j_client, openfga_api_url, opa_base_url)
     finally:
         POLICY_FILE.write_bytes(original_bytes)
 
     # Restored: the SAME decision replays PASS again — proves the failure
     # above was genuinely caused by the deletion, not some other drift.
-    restored = replay_decision(decision_id, ontology_hot_conn, rdf4j_client, openfga_api_url)
+    restored = replay_decision(decision_id, ontology_hot_conn, rdf4j_client, openfga_api_url, opa_base_url)
     assert restored.status == "PASS", restored.as_dict()
 
 
 def test_f29_modified_archived_policy_makes_replay_fail_loudly(
-    historical_corpus, ontology_hot_conn, rdf4j_client, openfga_api_url,
+    historical_corpus, ontology_hot_conn, rdf4j_client, openfga_api_url, opa_base_url,
 ):
     """"deleted" per the matrix's own wording, but a REPLACED (mutated)
     archived artifact is the same class of failure — same F29 requirement,
@@ -59,6 +59,6 @@ def test_f29_modified_archived_policy_makes_replay_fail_loudly(
     try:
         POLICY_FILE.write_bytes(original_bytes + b"\n# F29 test: tampering with an archived, immutable artifact\n")
         with pytest.raises(ReplayIntegrityError, match="F29"):
-            replay_decision(decision_id, ontology_hot_conn, rdf4j_client, openfga_api_url)
+            replay_decision(decision_id, ontology_hot_conn, rdf4j_client, openfga_api_url, opa_base_url)
     finally:
         POLICY_FILE.write_bytes(original_bytes)

@@ -296,6 +296,7 @@ def replay(decision_id: str):
         try:
             result = replay_mod.replay_decision(
                 decision_id, conn, _state["rdf4j_client"], _state["config"].openfga_api_url,
+                _state["config"].opa_base_url,
             )
         except replay_mod.DecisionNotFound as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc

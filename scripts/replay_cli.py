@@ -38,7 +38,7 @@ def main() -> int:
     rdf4j_client = RDF4JClient(base_url=db_env.rdf4j_server_url(), repository="oo")
     try:
         try:
-            result = replay_decision(decision_id, conn, rdf4j_client, db_env.openfga_api_url())
+            result = replay_decision(decision_id, conn, rdf4j_client, db_env.openfga_api_url(), db_env.opa_base_url())
         except DecisionNotFound as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2

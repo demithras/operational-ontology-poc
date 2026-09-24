@@ -13,26 +13,26 @@ from __future__ import annotations
 from services.decision_service.replay import replay_decision
 
 
-def _replay_all(decision_ids: list[str], ontology_hot_conn, rdf4j_client, openfga_api_url) -> list[tuple[str, str, list[str]]]:
+def _replay_all(decision_ids: list[str], ontology_hot_conn, rdf4j_client, openfga_api_url, opa_base_url) -> list[tuple[str, str, list[str]]]:
     results = []
     for decision_id in decision_ids:
-        result = replay_decision(decision_id, ontology_hot_conn, rdf4j_client, openfga_api_url)
+        result = replay_decision(decision_id, ontology_hot_conn, rdf4j_client, openfga_api_url, opa_base_url)
         results.append((decision_id, result.status, result.failure_reasons))
     return results
 
 
-def test_all_v1_decisions_replay_pass(historical_corpus, ontology_hot_conn, rdf4j_client, openfga_api_url):
+def test_all_v1_decisions_replay_pass(historical_corpus, ontology_hot_conn, rdf4j_client, openfga_api_url, opa_base_url):
     decision_ids = historical_corpus["v1"]["decision_ids"]
     assert len(decision_ids) >= 100, f"expected >= 100 V1 decisions, got {len(decision_ids)}"
-    results = _replay_all(decision_ids, ontology_hot_conn, rdf4j_client, openfga_api_url)
+    results = _replay_all(decision_ids, ontology_hot_conn, rdf4j_client, openfga_api_url, opa_base_url)
     failures = [(d, reasons) for d, status, reasons in results if status != "PASS"]
     assert not failures, f"{len(failures)}/{len(results)} V1 decisions failed replay: {failures[:10]}"
 
 
-def test_all_v2_decisions_replay_pass(historical_corpus, ontology_hot_conn, rdf4j_client, openfga_api_url):
+def test_all_v2_decisions_replay_pass(historical_corpus, ontology_hot_conn, rdf4j_client, openfga_api_url, opa_base_url):
     decision_ids = historical_corpus["v2"]["decision_ids"]
     assert len(decision_ids) >= 100, f"expected >= 100 V2 decisions, got {len(decision_ids)}"
-    results = _replay_all(decision_ids, ontology_hot_conn, rdf4j_client, openfga_api_url)
+    results = _replay_all(decision_ids, ontology_hot_conn, rdf4j_client, openfga_api_url, opa_base_url)
     failures = [(d, reasons) for d, status, reasons in results if status != "PASS"]
     assert not failures, f"{len(failures)}/{len(results)} V2 decisions failed replay: {failures[:10]}"
 
