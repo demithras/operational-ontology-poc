@@ -545,6 +545,42 @@ services:
       timeout: 5s
       retries: 60
 
+  # --- Phase 9: MCP agent surface (docs/experiment/spec/06_decision_and_action_runtime.md
+  # "MCP layer (phase 2 only)") — a thin client of decision_service exposing
+  # exactly the 7 tools that spec names; see services/mcp/server.py's own
+  # module docstring for the F04/F30-F34 safety properties this shape
+  # enforces structurally. Reads ontology_hot directly (read-only,
+  # query_work_order_risk/list_transfer_candidates/get_object only) the
+  # same way services/decision_service's own evidence.py does — the
+  # "Decision API / MCP" box sits directly above the hot-projection box in
+  # 04_architecture.md's component diagram, not behind a second HTTP hop.
+  mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["python3", "-m", "services.mcp"]
+    environment:
+      DECISION_SERVICE_URL: http://decision_service:8000
+      ONTOLOGY_HOT_DSN: "host=postgres port=5432 dbname=${ONTOLOGY_HOT_DB_NAME} user=${ONTOLOGY_HOT_DB_USER} password=${ONTOLOGY_HOT_DB_PASSWORD}"
+      OPENFGA_API_URL: http://openfga:8080
+      OO_MCP_AGENT_ID: ${OO_MCP_AGENT_ID}
+      OO_MCP_TRANSPORT: streamable-http
+      OO_MCP_HTTP_PORT: "8095"
+    ports:
+      - "${MCP_HTTP_PORT}:8095"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      decision_service:
+        condition: service_healthy
+      openfga:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8095/health', timeout=2)"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+
   # --- Phase 8: A/B baseline (Variant A, docs/experiment/spec/10_ab_experiment.md) ---
   # A conventional relational implementation — its OWN CDC consumer
   # (separate Kafka consumer group, SAME topics), its OWN `baseline`

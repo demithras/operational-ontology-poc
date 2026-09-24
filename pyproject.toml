@@ -24,6 +24,15 @@ dev = [
     # Phase 6 — durable action runtime (services/action_worker,
     # services/decision_service execute()).
     "temporalio>=1.33",
+    # Phase 9 — MCP agent surface (services/mcp) + optional real-LLM
+    # adversarial sub-experiment (tests/agent/). Pinned to the 1.x FastMCP
+    # API deliberately: `mcp>=2` renames FastMCP -> MCPServer and changes
+    # other APIs (see the package's own ModuleNotFoundError message on
+    # `mcp.server.fastmcp` under 2.x) — 1.x is the stable, documented
+    # surface this phase's code is written against.
+    "mcp<2,>=1.2",
+    "starlette",
+    "anthropic>=0.40",
 ]
 
 [tool.pytest.ini_options]
