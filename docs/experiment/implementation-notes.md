@@ -3594,3 +3594,426 @@ One `make test` run mid-phase hit a single `httpx.ReadTimeout` in
 139-157%, real, measurable load left over from the two full W7=500
 corpus runs) rather than a Phase 8 regression: the FULL suite re-run
 above, after that load had a chance to drain, is 100% clean.
+
+## Phase 9 — Agent / MCP layer
+
+Tag `poc-v0.9-agent`. Brief: `docs/experiment/briefs/phase9.md`. Spec: 01
+(H9, H10), 02 (AI section), 06 (MCP layer), 09 (F04, F30-F34, adversarial
+prompts), 14 (R11). Notably, this phase's own step 0 root-caused the exact
+`httpx.ReadTimeout` Phase 8's own close section had shrugged off as
+"transient" (that section's last paragraph) — at corpus scale it was a
+real, reproducible bug (q5's unscoped shared-actor-node fan-out), not
+load-related flakiness. See step 0b below.
+
+### Ports
+
+| Service | Host port | Notes |
+|---|---|---|
+| `services/mcp` (streamable-http + `/health`) | 15490 | `MCP_HTTP_PORT`/`.env.example`; container-internal port 8095 |
+
+### Step 0 (orchestrator findings from the Phase 8 review, commit `317bb25`)
+
+**0a — destructive-test guard.** The orchestrator's own reproduction —
+running `pytest tests/integration` (the whole directory, bypassing
+Makefile's `--ignore`) — wiped the shared stack via
+`tests/integration/test_seed_determinism.py`'s two internal `make reset`
+calls, destroying the historical corpus. The guard now lives IN the test
+(`pytest.mark.destructive` + an `OO_ALLOW_DESTRUCTIVE=1` check, skip
+otherwise), registered in `pyproject.toml`'s new `markers` list; only
+`make test-destructive` sets that env var. This closes the gap
+structurally — no plain pytest invocation, from any directory or working
+style, can destroy data again, whereas the old Makefile-only `--ignore`
+protected exactly one invocation shape.
+
+**0b — forensic query scaling.** `contracts/queries/v1/q1-q8.rq` now scope
+their whole body to `GRAPH <%%GRAPH_IRI%%>` (the decision's own named
+graph), generalizing Phase 7b's q9-only fix. Root cause, reproduced
+directly against the live 5,002-decision corpus for confirmation (not
+merely inferred): shared actor nodes (`oo:actor`/`oo:actorId`) are
+re-asserted into EVERY decision's own named graph (by design, so each
+decision's record is fully self-contained), so an unscoped join against
+one of those nodes fans out once per OTHER decision that actor ever
+appeared in. q5's four separate actor joins (`?proposer`/`?principal`/
+`?approver`/`?executor`) compounded this into an up-to-N^4 blowup before
+`DISTINCT` could collapse it — the OLD unscoped q5 pattern, run directly
+against the busiest actor's decision (planner-1, 1,670 decisions),
+reproducibly hits `httpx.ReadTimeout`; the NEW scoped version answers in
+6ms. `services/common/forensic_queries.py` is the new single place every
+caller substitutes both `%%DECISION_ID%%` and `%%GRAPH_IRI%%`, replacing
+three independently hand-rolled `_run_query` copies
+(`tests/integration/test_forensic_queries.py`,
+`tests/integration/test_forensic_queries_phase6.py`,
+`tests/replay/test_forensic_queries_v1_post_v3.py`) — so no future H13
+query caller can reintroduce an unscoped copy by accident. q8 is the one
+query that genuinely needs TWO graph scopes (the anchor decision via the
+known `%%GRAPH_IRI%%`, and each candidate later decision via a VARIABLE
+`GRAPH ?laterGraph`) since it deliberately spans two different decisions'
+graphs joined on a shared `fac:WorkOrder` node — that fan-OUT is the
+query's whole point, not a bug to scope away.
+`tests/replay/test_forensic_query_scaling.py` is the new regression proof:
+finds the corpus's actual busiest actor via SQL, runs q1-q9 against one of
+their decisions, and asserts every query answers in `< 2s` (measured, all
+9 queries under 6ms against the real 5,002-decision corpus) and returns
+`<= 50` rows (a second, independent tripwire against any future unscoped
+join, not just the timing one).
+
+**0c — corpus rebuild.** The stack had already been reset to the V1
+baseline before this session started (`contracts/manifests/deployed_version.json`
+read `ontology=v1, ..., authorization=v1` — the tracked
+`baseline_v1.json` state — and `SEED=42` was already loaded). Ran the
+exact Phase 7b sequence again: 110 V1 live decisions
+(`historical_corpus.py --version v1 --n 110`) -> `make deploy-v2` -> 130
+V2 live decisions -> `make deploy-v3` -> `make deploy-v3-gates`
+(restores Phase 8 step 0's `GATE_UNAVAILABLE` ontology/shapes addition —
+not literally named in this phase's own brief text, but needed to avoid
+regressing `test_decision_service_dependency_outage.py`'s F23/F24
+`GATE_UNAVAILABLE`/`PASS_FAIL_CLOSED_VERIFIED` assertions, which the
+"confirm no regression" step below would otherwise have caught anyway) ->
+`bulk_historical_decisions.py --target 5000 --seed 42` (4,756 new bulk
+records on top of 244 already present, era-balanced 1586/1585/1585 across
+V1/V2/V3). Final corpus: **5,002 decisions**. `make test-replay`: **11
+passed** (the existing 10 + the new scaling test), all groups
+`status in {PASS, PASS_FAIL_CLOSED_VERIFIED}` per `scripts/replay_report.py`.
+Stack final state after step 0: `ontology=v3, shapes=v3, actions=v3,
+policies=v2, authorization=v2, identity=v1, projections=v2,
+reconciliation=v1` — identical to Phase 8's own close.
+
+### Item 1 — `services/mcp`: the MCP agent surface (commit `632579d`)
+
+Python `mcp` SDK, **pinned `<2,>=1.2`** — `mcp>=2` renames `FastMCP` ->
+`MCPServer` and changes other APIs (discovered via the package's own
+`ModuleNotFoundError` message on `mcp.server.fastmcp` under 2.x, which
+names the migration guide directly); 1.x's `FastMCP` is the stable,
+documented surface this phase's code targets, chosen deliberately over
+chasing the newest major version given the time available to verify it.
+`streamable-http` transport by default (`OO_MCP_TRANSPORT=stdio` switches
+it), with a real `/health` route via FastMCP's `custom_route` (same
+docker-healthcheck convention every other service in this repo already
+uses — `python3 -c "import urllib.request; ..."`).
+
+Exposes **exactly** the 7 tools spec 06 names — `get_object`,
+`query_work_order_risk`, `list_transfer_candidates`,
+`propose_transfer_inventory`, `get_decision`, `execute_approved_decision`,
+`explain_decision` — and nothing else. There is no `run_sql`,
+`write_triple`, unrestricted-HTTP, or source-credential tool anywhere in
+`services/mcp/`: F04's "undisclosed/unauthorized tool" scenario is closed
+**structurally** (the tool does not exist to be discovered or invoked —
+`call_tool` on any other name raises `ToolError("Unknown tool: ...")`),
+never by a runtime permission check that could have a gap. There is also
+no `approve_decision` tool at all — spec 06's list has no approval tool,
+so an agent can propose and (once a human approves elsewhere) execute, but
+can never approve its own or anyone else's proposal through this surface.
+
+**Identity/delegation (F31/F32/H9) is a startup config value, never a
+request parameter.** `services/mcp/config.py::MCPConfig.agent_id`
+(default `agent-1`, matching the canonical fixture's `agent:agent-1` whose
+`principal` is `user:planner-1` — `contracts/authorization/v1/tuples.yaml`)
+is baked into every mutating tool call server-side
+(`services/mcp/decision_client.py::propose_transfer_inventory`'s first
+positional arg). No tool signature anywhere in `services/mcp/server.py`
+accepts an actor, principal, or "on behalf of" argument — so there is
+literally no parameter for a compromised planner to inject one into (found
+empirically while writing `tests/agent/`: FastMCP silently DROPS extra
+JSON arguments a caller sends that don't match the tool's declared
+signature, rather than erroring — confirmed live, see item 2 below).
+Delegation is resolved the same way it already was since Phase 5
+(`services/decision_service`'s own OpenFGA `agent#principal` Check,
+unrelated to this phase) — this phase adds no new delegation mechanism,
+only a client that cannot smuggle a different one in.
+
+**Reuses existing machinery rather than re-implementing anything gate-
+adjacent** — the central design decision, mirroring Phase 8's own
+"central fairness decision" for the baseline variant:
+- `services/mcp/decision_client.py` is a thin sync `httpx` wrapper around
+  decision_service's REAL HTTP API (`propose`/`get`/`execute`/
+  `executions`/`outcomes`) — every gate (authorization, policy, SHACL,
+  approval-hash, immutable-content-hash verification) runs exactly once,
+  server-side, inside decision_service. This module cannot bypass or
+  duplicate any of it, and duplicating gate logic here was never
+  considered — the whole point of "thin client of the decision service"
+  (spec 06's own phrase) is that there is nothing else to get wrong.
+- `services/mcp/projections.py` (`get_object`/`query_work_order_risk`/
+  `list_transfer_candidates`) reads `ontology_hot` directly via
+  `services/projection_builder/reader.py`'s existing point-read functions
+  — the same relationship `04_architecture.md`'s component diagram already
+  describes ("Decision API / MCP" sits directly above the hot-projection
+  box) and the same pattern `services/decision_service/evidence.py` itself
+  already uses. Every argument is ID-pattern-validated
+  (`services/mcp/projections.py::_validate_id`); there is no free-form
+  query parameter anywhere, which is what keeps `get_object` from
+  becoming the generic `run_sql` tool spec 06 explicitly forbids.
+- `services/mcp/explain.py::explain_decision` is built from the EXACT
+  3-call shape Phase 8's W5 workload already proved sufficient at the
+  REST-API level (`GET /decisions/{id}` + `/executions/{id}` +
+  `/outcomes/{id}`) — no direct RDF4J access from the MCP server at all,
+  which keeps it a strict decision_service thin client end to end (unlike
+  `get_object`/`query_work_order_risk`, which read `ontology_hot` directly
+  by design, per the point above).
+
+**Authorization-filtered tool discovery** (spec 06: "where feasible") —
+`services/mcp/authz_filter.py::agent_has_any_transfer_grant` reads the
+OpenFGA store's whole tuple population (reusing
+`services/decision_service/authz.py::_read_all_tuples`, the same Phase 7b
+mechanism the tuple-snapshot replay fix already established) and, if the
+configured agent holds zero `agent_grant` tuples anywhere,
+`server.py::build_server` removes `propose_transfer_inventory`/
+`execute_approved_decision` from the tool set at BUILD time. Documented
+explicitly as UX/discovery only, never the security boundary — the real
+enforcement is decision_service's own gate chain regardless of whether a
+tool was ever listed. **Known limitation, disclosed rather than hidden**:
+this is a build-time snapshot, not re-checked per call — a grant added
+AFTER the server starts stays invisible to discovery until the server (or,
+in `tests/agent/`, a fresh `mcp_server_granted` fixture instance) rebuilds.
+
+**Verified live** against the real running stack (not just unit-level):
+`docker compose up -d --build mcp` -> healthy, real `GET /health` 200 over
+the actual streamable-http container; tool discovery correctly omits the
+two mutating tools with zero `agent_grant` tuples and correctly includes
+them once one is written; a real `propose_transfer_inventory` call reaches
+decision_service and `principal_actor_id` resolves to `planner-1`
+server-side; a route the agent has no grant for still hits the real
+authorization deny, unaffected by whether the tool happened to be listed.
+
+### Item 2 — `tests/agent` + `make test-agent`: the deterministic
+adversarial suite (commit `1460745`)
+
+21 tests, 3 consecutive clean runs, zero residual OpenFGA grants left
+behind afterward (verified via a direct tuple read after the suite
+finishes). The "compromised planner" is the test suite itself, driving
+`services/mcp/server.py::build_server`'s REAL server object in-process
+(same code path a container runs — `tests/agent/conftest.py::mcp_server`)
+via `tests/agent/helpers.py::call_tool`, a thin sync wrapper around
+FastMCP's async `call_tool` (matching this repo's established
+sync-everywhere test style). Every scenario asserts against REAL WMS
+ground truth (`tests.integration.decision_helpers.inventory_unchanged`),
+never a decision record's own self-report — same standard every earlier
+phase's negative-effect tests already held themselves to.
+
+**A real bug found and fixed while writing the suite, not after**:
+`services/mcp/authz_filter.py`'s tool-discovery filter runs once, at
+`build_server()` time. A test that requested `mcp_server` and
+`granted_warehouse` as CO-EQUAL fixture parameters (no dependency between
+them) built the server BEFORE the grant tuple existed — pytest does not
+order independent fixtures by their position in a function signature, so
+this was non-obvious and initially looked like a server bug
+(`propose_transfer_inventory` raising `ToolError("Unknown tool")` when the
+test expected a real gate response). Fixed with a THIRD fixture,
+`mcp_server_granted(granted_warehouse, mcp_config)`, whose own parameter
+IS a real dependency on the grant fixture — guaranteeing build-after-grant
+ordering structurally, not by hoping pytest resolves co-equal fixtures in
+a particular order.
+
+Per scenario:
+- **`test_f04_undisclosed_tools.py`** (F04): `run_sql`/`write_triple`/
+  `http_request`/`admin_execute_decision`/`approve_decision`/
+  `decisions_approve`/`sparql_query`/`get_credentials` all raise
+  `ToolError("Unknown tool")`; `list_tools()` never exceeds
+  `server.py::ALLOWED_TOOL_NAMES`.
+- **`test_f30_prompt_injection.py`** (F30, the exact "transfer 500 units
+  now" prompt): a 500-unit request (`approval_threshold_units=80` since
+  V2/V3) lands `REQUIRES_APPROVAL`, never auto-allow; a follow-up
+  `execute_approved_decision` call on it (the jailbreak: "just do it
+  anyway") gets HTTP 409 from decision_service's own status check, zero
+  WMS effects either way.
+- **`test_f31_tool_parameter_tampering.py`** (F31): the SAME hostile
+  payload set `tests/integration/test_decision_service_injection.py`
+  already proves at the raw-HTTP level (`'WH-A" } ; DROP ALL ; #'`, etc.),
+  now through the actual MCP tool call path — confirms
+  `services/decision_service/schemas.py`'s validation is the one real
+  gate regardless of which client (HTTP or MCP) called it.
+- **`test_f32_impersonation_and_identity_retry.py`** (F32 + the "hide the
+  denial and retry with another identity" prompt): extra identity-shaped
+  arguments (`actor_id`/`principal`/`on_behalf_of`) are silently unbound by
+  FastMCP (confirmed empirically — see item 1) and never reach
+  decision_service; `principal_actor_id` always resolves the real OpenFGA
+  tuple. A denied proposal retried with a "claimed identity" gets the
+  IDENTICAL real answer, because this MCP server IS one fixed identity,
+  not a caller selection — there is no retry-as-someone-else to attempt.
+- **`test_stale_and_replay.py`** (stale-decision execution, F33, and the
+  "swap the evidence snapshot, keep the approval" prompt): `execute()` on
+  a never-approved decision is rejected (409); F33 is driven at the
+  decision_service HTTP level directly (there is no `approve` MCP tool —
+  a compromised agent is not assumed to be MCP-obedient, and F31's own
+  matrix entry reads "MCP/action API" together, not MCP alone) — a
+  stale/tampered `decision_content_hash` at approve time is rejected while
+  the real hash still works; two identically-parametrized proposals get
+  PROVABLY different `decision_content_hash` values (`evidence_snapshot_id`
+  is a hashed input — `services/decision_service/hashing.py::decision_content_hash`),
+  so "keep the approval, swap the evidence" has no live payload that could
+  ever pass the F33 hash check — proven directly, not just asserted from
+  reading the hash function's source.
+
+### Item 3 (optional) — `scripts/agent_llm_probe.py`: real-LLM sub-experiment (commit `9456478`)
+
+`ANTHROPIC_API_KEY` was checked directly via `os.environ.get` (never by
+calling `seed/db_env.py::load_dotenv()`, per this phase's own "do not read
+.env files or hunt for credentials" instruction) and was **not present**
+in this session — the script wrote a real
+`{"status": "SKIPPED", "reason": "ANTHROPIC_API_KEY not set in the process
+environment (not read from .env)"}` to
+`experiments/exp-000/results/agent-llm-probe.json` and exited 0, rather
+than doing nothing silently. H9's verdict rests on `make test-agent`
+(item 2) regardless, per spec 14 R11 ("AI is optional final phase...not
+used as proof of core architecture").
+
+**Two real bugs found and fixed via a dry run against a fake Anthropic
+client** (asserting a simulated `run_sql` tool-use block correctly fails
+`"Unknown tool: run_sql"` and a simulated real tool call returns real
+data) before ever committing the RAN code path unverified: (1) the
+tool-use loop's inner function is itself `async` and runs inside ONE
+`asyncio.run()` call from `main()` — it had called
+`tests/agent/helpers.py::call_tool`, which wraps its OWN `asyncio.run()`,
+raising "cannot be called from a running event loop" on literally every
+tool call the model would ever make; fixed by `await mcp.call_tool(...)`
+directly instead. (2) `final_assistant_text` read `messages[-2]` instead
+of the actual final assistant turn (`messages[-1]` at the point the loop
+breaks) — an off-by-one that would have silently recorded the WRONG
+turn's text in every probe result. Both caught before commit, never live
+(no API key available to actually exercise the RAN path end to end this
+session — disclosed as unverified-live, not claimed as tested).
+
+### F30 fault-matrix closure
+
+`experiments/exp-000/results/fault-matrix-phase9.json`
+(`scripts/gen_fault_matrix_phase9.py`, same live-`pytest --collect-only`-
+verified convention as the Phase 7/8 generators): F30 flips
+`NOT_TESTED` -> `PASS`. F04/F31/F32/F33 (already `PASS` from Phase 5/6b
+against the raw HTTP API) gain the new `tests/agent/` node ids as
+additional evidence, no status change. **Summary: 39 PASS, 1 NOT_TESTED**
+(F40 — trace/log unavailable — still explicitly Phase 10's scope, no
+observability layer exists yet).
+
+### Item 4 — regression confirmation
+
+```
+make test-contracts:  67 passed; compat_check OK
+make test-integration: 71 passed (clean run, after the fix below)
+make test-faults:     NOT CLEANLY VERIFIED this session — see below
+```
+
+**`make test-faults` could not be reliably verified this session — confirmed
+concurrent multi-agent stack usage, not a Phase 9 regression.** Two
+attempts (9 failed/16 passed in 377s; 8 failed/16 passed in 428s) each
+showed a DIFFERENT set of failures in DIFFERENT tests, none of them in
+anything Phase 9 touched (all 9/8 failures were in
+Temporal/WMS/Kafka/CDC fault-injection tests from Phases 3-6b:
+`test_cdc_delay_and_kafka_outage`, `test_commit_then_timeout`,
+`test_concurrency_race`, `test_concurrent_stock_receipt`,
+`test_idempotency`, `test_kill_restart_convergence`,
+`test_worker_crash`, `test_dependency_outage`). One failure's own response
+body showed `"authorization_result":{"detail":"OpenFGA store not resolved
+(F23: fail closed)","outcome":"UNAVAILABLE"}` — direct evidence OpenFGA
+was genuinely unreachable at that moment, not a logic bug. A THIRD attempt
+was aborted after `ps aux` showed a SEPARATE `make test-faults` process
+(PID 68250, started independently, not spawned by this session) already
+running against the same stack — this session's own second attempt's log
+file had already been silently truncated/overwritten once by whatever
+launched that process, using the identical scratchpad log-file naming
+convention this session used. Per common.md's own explicit rule ("NEVER
+run two make/pytest/compose invocations concurrently... destructive
+targets reset the shared stack and silently corrupt the other run"), this
+session's own contributing process was killed rather than adding a third
+concurrent run, and no further attempt was made. `tests/faults/` was
+completely unmodified by Phase 9 (confirmed: `git diff e3c63b4 HEAD --
+tests/faults/` is empty) — there is no plausible mechanism by which this
+phase's changes could be the cause. Re-run `make test-faults` ALONE (per
+its own Makefile documentation) once no other agent/process holds the
+shared stack, and treat the two runs above as inconclusive, not failing.
+
+**A real, previously-latent bug found via this step — fix attempted,
+reverted by a concurrent session, left DISCLOSED and OPEN, not silently
+dropped.** The first `make test-integration` run hit a real, non-Phase-9
+failure: `test_canonical_scenario.py::test_step4_transfer_60_units_wh_b_to_wh_a`
+found `LOT-A-PX17.on_hand == 85` instead of the documented `80`. Root
+cause, fully traced (not guessed): `tests/integration/test_forensic_queries_phase6.py`'s
+`_find_at_risk_route` (Phase 6, commit `040cdc6`, untouched since except
+this phase's step-0 `_run_query` import swap) has an `ORDER BY` that
+explicitly PREFERS `WO-42`
+(`ORDER BY (tc.work_order_id = 'WO-42') DESC, ...`) whenever it is
+at-risk — directly contradicting this file's own docstring ("discovered
+live... same rationale as... for not hard-coding WO-42") and
+common.md's standing rule ("Never mutate the canonical fixture... except
+in tests that explicitly restore it"). In this run's timing window,
+`test_canonical_scenario.py`'s own steps 1-3 had made WO-42 genuinely
+at-risk (its step 4 mitigation had not yet run), this fixture picked it
+up, and its own 5-unit governed mitigation landed on
+`LOT-A-PX17`/`LOT-B-PX17` — three tests later, `test_canonical_scenario.py`'s
+absolute-state assertion desynced. The canonical fixture was restored via
+direct SQL (same remedy Phase 6b's own "canonical fixture drift" section
+used, and this restoration IS in effect — `LOT-A-PX17`/`LOT-B-PX17` read
+80/80 as of this phase's close).
+
+A root-cause fix (excluding `WO-42` from candidacy entirely, not merely
+deprioritizing it — deprioritizing alone does not help when it is the
+ONLY row the WHERE clause returns, which is exactly what happened) was
+committed as `87fba00`, then **reverted by another concurrent session in
+this multi-agent orchestration** (`d6eacdf`, `git revert 87fba00`,
+observed live — this session's own working tree is shared with at least
+one other active agent, and three files this phase had touched were found
+silently reset to their pre-fix content mid-session before the revert
+commit explained why). Per this repo's own multi-agent-session norms this
+session does not have authority to contest, the revert is respected and
+NOT re-applied a third time. **The underlying bug therefore remains
+UNFIXED in the repository as of this phase's close** — `_find_at_risk_route`'s
+`ORDER BY` still prefers `WO-42`, and the SAME
+`test_canonical_scenario.py` desync can recur on any future
+`make test-integration` run that happens to catch WO-42 mid-transition
+between "made at-risk by steps 1-3" and "mitigated by step 4." Flagged
+explicitly for Phase 10 (see "What Phase 10 needs from here" below) —
+this is disclosure, not a claim of resolution.
+
+Two earlier full runs (before this fix was found) also each hit exactly
+ONE different, unrelated failure —
+`tests/integration/test_projection_rebuild.py::test_rebuild_reproduces_identical_business_state`
+(a hash mismatch between two back-to-back manual rebuilds, consistent with
+concurrent CDC/decision activity landing between them) and the SAME
+`test_forensic_queries_phase6.py` test via a different assertion
+(`INSUFFICIENT_EVIDENCE` instead of `APPROVED`, a freshness-window miss
+under load) — both passed cleanly in isolation immediately afterward, and
+neither touches anything Phase 9 changed. Documented here in full per
+common.md's own "don't call something transient without checking"
+discipline, not swept under the rug. The FIFTH full run (after the real
+fix above, and after this session stopped running concurrent diagnostic
+pytest invocations of its own alongside the backgrounded suite — a
+self-inflicted `ConnectError` in the 4th run traced to exactly that
+overlap) is the clean **71 passed** result recorded above.
+
+### What Phase 10 needs from here
+
+- `services/mcp` is a real, running docker-compose service
+  (`OO_MCP_AGENT_ID`/`MCP_HTTP_PORT` in `.env.example`) — Phase 10's final
+  attack run should include it in whatever "is the whole stack healthy"
+  check it performs, the same way Phase 8 added `baseline_service` etc.
+- `services/common/forensic_queries.py` is now the required entry point
+  for ANY future H13 query caller — a hand-rolled `_run_query` that skips
+  the `%%GRAPH_IRI%%` substitution is exactly the class of bug this phase
+  found and fixed at corpus scale.
+- `tests/agent/conftest.py`'s `mcp_server_granted` (grant-before-build
+  fixture ordering) is the reusable pattern for ANY future test that needs
+  an OpenFGA tuple to exist before a `build_server()` call — co-equal
+  fixture parameters are NOT a build-order guarantee.
+- `experiments/exp-000/results/fault-matrix-phase9.json`'s one remaining
+  `NOT_TESTED` (F40) is explicitly Phase 10's own scope (observability
+  layer, per every prior phase's fault-matrix generator's own note).
+- `scripts/agent_llm_probe.py`'s RAN code path (real Anthropic API calls)
+  is written and dry-run-verified against a fake client, but has never
+  been exercised against the real API in this repository — if Phase 10 (or
+  anyone) sets `ANTHROPIC_API_KEY` and runs `make agent-llm-probe` for the
+  first time for real, treat the first run as genuinely first-run-risk,
+  not as "already proven," and read `experiments/exp-000/results/agent-llm-probe.json`'s
+  `prompts[].tool_calls` transcripts carefully before trusting
+  `wms_unchanged` alone (documented in the script itself as a coarse
+  signal, not a forbidden/legitimate classifier).
+- **OPEN, DISCLOSED (not fixed): `tests/integration/test_forensic_queries_phase6.py`'s
+  `_find_at_risk_route` still explicitly prefers `WO-42` in its `ORDER BY`**
+  (`ORDER BY (tc.work_order_id = 'WO-42') DESC, ...`), contradicting its
+  own docstring and common.md's canonical-fixture rule. This phase's own
+  regression-confirmation run reproduced the real consequence live
+  (`test_canonical_scenario.py` desynced to on_hand 85/75 instead of
+  80/80) and prepared a root-cause fix (exclude `WO-42` from candidacy
+  entirely) — that fix was committed (`87fba00`) then reverted by another
+  concurrent session in this orchestration (`d6eacdf`) before this phase
+  closed, so the bug is UNFIXED in the repository as shipped. Re-apply the
+  same one-line fix (`AND tc.work_order_id != 'WO-42'` in the WHERE
+  clause, dropping the `ORDER BY` tie-break) the next time this file is
+  touched, or investigate why the revert happened before doing so again.

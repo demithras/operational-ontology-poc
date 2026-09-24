@@ -30,7 +30,7 @@ Build order and exit criteria: `docs/experiment/spec/12_implementation_plan.md`.
 | 7 | Contract versioning / replay (V1->V2 ontology+policy+action evolution, V2->V3 authorization-model evolution, live-through-real-service historical corpus (232 decisions, 210 complete chains) + bulk corpus to 5,000, `services/decision_service/replay.py` — H7 proven: `make test-replay` 100% PASS across V1/V2 under the V3-deployed state — plus F28/F29/F39 closed) | superseded by 7b (`poc-v0.7-replay` — authz replay was fail-open, see 7b) |
 | 7b | Honest replay: real authorization replay (historical OpenFGA tuple snapshot + `contextual_tuples`, replacing the fail-open `recorded_only` fallback the orchestrator's audit caught — R4/ADR 0004 closed for real), bulk corpus (5,159 decisions) now generated from REAL policy/authz evaluation instead of random outcomes, corpus regenerated on a true `make reset` (110 V1 + 130 V2 live, 216 complete chains) with two source-level fixes (`contracts/manifests/baseline_v1.json` + `make up` auto-reset, `historical_corpus.py --version` self-verifying) so deployed-contract-version drift can't recur — `make test-replay` 10/10 passed, all 740 sampled decisions PASS with live/not_applicable authz mode | done (tag `poc-v0.7.1-replay`) |
 | 8 | A/B baseline: step 0 explicit `GATE_UNAVAILABLE` status + `PASS_FAIL_CLOSED_VERIFIED` replay class; `services/baseline` (Variant A — own CDC consumer/Postgres/Temporal worker, reusing authz/policy/action-type/identity-resolver/outcome-eval code verbatim); A/B experiment (`tests/ab`, `make ab`, workloads W1-W7 — 500/500 decision-match rate between variants and vs. the reference-model oracle across a full W7 corpus; ontology's ingestion lag ~5x baseline's under the same measurement) | done (tag `poc-v0.8-baseline`) |
-| 9 | Agent / MCP layer | pending |
+| 9 | Agent / MCP layer: `services/mcp` (7 tools only — get_object/query_work_order_risk/list_transfer_candidates/propose_transfer_inventory/get_decision/execute_approved_decision/explain_decision; no run_sql/write_triple/approve tool exists), `tests/agent` deterministic adversarial suite (21 tests, F04/F30-F34) driven against the real MCP server, `scripts/agent_llm_probe.py` (optional real-LLM sub-experiment, SKIPPED — no API key this session) — plus step 0's forensic-query scaling fix (q1-q8 GRAPH-scoped, reproduced the old unscoped q5's `httpx.ReadTimeout` directly against the corpus) and historical-corpus rebuild (5,002 decisions) | done (tag `poc-v0.9-agent`) |
 | 10 | Final attack (full stateful suite, fault matrix, mutation tests, load, replay, A/B) | pending |
 
 Phase 1 runs in **lite mode taken to its logical extreme**: pure Python, no
@@ -230,6 +230,31 @@ fabricated denial, with its own `PASS_FAIL_CLOSED_VERIFIED` replay class —
 see `docs/experiment/implementation-notes.md`'s Phase 8 sections for the
 full write-up, including two real bugs found and fixed while building the
 baseline.
+
+Since Phase 9, `make up` also brings up `services/mcp` (host port 15490,
+streamable-http + `/health`) — the agent surface `docs/experiment/spec/06_decision_and_action_runtime.md`'s
+"MCP layer" section describes, exposing exactly `get_object`,
+`query_work_order_risk`, `list_transfer_candidates`,
+`propose_transfer_inventory`, `get_decision`, `execute_approved_decision`,
+and `explain_decision` — no `run_sql`/`write_triple`/unrestricted-HTTP/
+approval tool exists anywhere in the package. It always acts as one fixed
+`oo:SoftwareAgent` identity (`OO_MCP_AGENT_ID`, default `agent-1`); the
+human it acts on behalf of is resolved server-side from OpenFGA, never
+asserted by a caller. `tests/agent/` + `make test-agent` is a deterministic
+scripted "compromised planner" that drives the real server through every
+spec 09 F04/F30-F34 adversarial scenario (prompt-injection-style requests,
+tool-parameter tampering, undisclosed/admin tools, impersonation, stale-
+decision execution, approval replay, evidence-snapshot swapping) and
+asserts zero forbidden effects against real WMS ground truth — H9's
+verdict rests on this suite, not on `scripts/agent_llm_probe.py`'s optional
+real-model sub-experiment (`make agent-llm-probe`, SKIPPED without
+`ANTHROPIC_API_KEY`). Phase 9's own step 0 also fixed a real
+query-scaling bug found reviewing Phase 8: `contracts/queries/v1/q1-q8.rq`
+were missing the named-graph scoping Phase 7b had only applied to q9,
+which fanned out into an `httpx.ReadTimeout` once the corpus reached
+thousands of decisions by the same actor — see
+`docs/experiment/implementation-notes.md`'s Phase 9 section for the full
+write-up.
 
 ## What Phase 1 proves (and doesn't)
 
