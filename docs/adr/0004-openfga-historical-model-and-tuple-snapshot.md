@@ -1,6 +1,14 @@
 # ADR 0004 — Historical authorization replay: model id, not a tuple snapshot per decision
 
-**Status:** accepted
+**Status:** accepted, SUPERSEDED IN PART by the "Update (Phase 7b)" section
+below — this ADR's title and original Decision below now describe what
+Phase 7 built; Phase 7b added the whole-store tuple snapshot the original
+Decision explicitly declined, once the orchestrator's independent
+replay verification found the undeclined alternative (recorded_only
+result, never re-proven) was silently the norm for the ENTIRE corpus.
+Read the Context/Decision/Consequence below for the original reasoning,
+then the Phase 7b update for what changed and why.
+
 **Date:** 2026-09-24
 
 ## Context
@@ -104,3 +112,74 @@ a recorded value to itself proves nothing about reproducibility) and
 defeats H7's actual claim ("a decision can be reconstructed using the
 versions... that existed at decision time" — reconstruction, not
 recitation).
+
+## Update (Phase 7b) — the tuple snapshot the original Decision declined
+
+The orchestrator's independent verification of Phase 7 (tag
+`poc-v0.7-replay`) found that replaying the entire 232-decision live
+corpus reported PASS for all 232, but `authz_replay_mode ==
+"recorded_only"` for 232/232 — i.e. **zero** decisions in the acceptance
+corpus ever actually re-proved authorization; every one used the fallback
+this ADR calls "the weaker form" and "not the PRIMARY mechanism". The
+proximate cause was the real `memory`-datastore incident this ADR already
+documents above (their original model ids stopped resolving). But the
+deeper problem is structural, not incidental: `gate_result_match` treats
+`recorded_only` and `live` identically when computing `status: PASS`, so
+this failure mode is invisible in the corpus's own headline number, in
+direct tension with H7's "reconstruction, not recitation" claim two
+paragraphs up. Silently keeping PASS whenever the live check is
+UNAVAILABLE is fail-open replay — the opposite of F29's "old artifact
+missing -> replay fails loudly" design intent applied to authorization
+specifically.
+
+**Revised decision: capture the tuple snapshot after all — but the WHOLE
+store's tuples, not a per-decision derived subset.** The original
+rejection of tuple-snapshotting argued it would mean "re-implementing
+OpenFGA's own relationship graph inside this codebase's evidence model,
+for no proven benefit" — true of a subset-computing scheme that tries to
+infer which tuples were *relevant* to one Check's graph traversal (that
+really would require reimplementing OpenFGA's own resolution algorithm).
+It is not true of a **whole-store snapshot**: this experiment's real
+authorization model has on the order of 10 tuples
+(`contracts/authorization/v1/tuples.yaml` /
+`contracts/authorization/v2/tuples.yaml`), so `authz.py::_read_all_tuples`
+reads the entire store via `POST .../read` (paginated, though one page
+always suffices here) on every `authz.check()` call and stores the result,
+canonicalized, as `AuthzResult.tuples_snapshot` ->
+`oo:checkTuplesSnapshotJson` on the `oo:AuthorizationCheck` resource. No
+second store, no re-implemented graph — just the plain tuple list R4
+itself offered as the fallback design ("or the whole small tuple set
+hashed").
+
+Replay (`services/decision_service/replay.py::replay_decision`) now
+passes that snapshot back to `authz.check()` as OpenFGA's own
+**`contextual_tuples`** field — tuples considered for that one Check call
+only, never written to the store. This means replay proves authorization
+against the tuple state that existed AT PROPOSAL TIME even if the live
+store's tuples have since drifted (the narrower future-gap this ADR's
+original Consequence section left open), without restoring anything or
+needing a second store.
+
+`authz_replay_mode` gains a real teeth: `ReplayResult.status` is no longer
+just `PASS`/`FAIL` — a decision that reaches all the way through
+evidence/action/policy reconstruction but can only fall back to
+`recorded_only` now reports `PARTIAL_RECORDED_ONLY`, a distinct, explicit,
+separately-counted status, never folded into `PASS`. A decision that never
+reached an authorization check at all (`INSUFFICIENT_EVIDENCE`) reports
+`authz_replay_mode: "not_applicable"` instead — there is nothing to
+replay, which is a different (and unproblematic) thing from "couldn't
+replay it". `tests/replay/test_replay_corpus.py` now asserts
+`authz_replay_mode == "live"` for every corpus decision that has an
+authorization check at all — 100%, not merely "PASS on the corpus". A new
+F29-style test (`tests/replay/test_f29_tuple_snapshot_integrity.py`)
+tampers with a real decision's `oo:checkTuplesSnapshotJson` (removing the
+tuple that actually grants the recorded outcome) and proves replay goes
+from PASS to FAIL, not a silent pass-through — the tuple snapshot is
+exercised, not merely stored.
+
+Cost: one extra small (~10-row) HTTP read per `authz.check()` call,
+best-effort (a failed read degrades that decision to the pre-existing
+`recorded_only` fallback, never a hard error at propose time) — negligible
+against this model's size, and the ENTIRE reason option 2 above was
+rejected as a primary mechanism no longer applies once the snapshot is
+real and gets replayed against, not merely stored and cited.
