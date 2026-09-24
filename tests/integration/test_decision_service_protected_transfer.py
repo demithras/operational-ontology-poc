@@ -33,18 +33,35 @@ from tests.integration.decision_helpers import set_inventory_and_wait
 def _find_high_priority_route(conn: psycopg.Connection) -> dict | None:
     """A real (part, source_warehouse, destination_warehouse) triple that IS
     a transfer_candidates row for a currently HIGH-priority, at-risk work
-    order — preferring WO-42 (the canonical fixture, if it hasn't been
-    mitigated by an earlier test in this run) and otherwise the candidate
-    with the most headroom over `default_safety_stock` (10, contracts/
-    policies/v1/data.json) so a 1-unit test transfer can never itself be
-    denied by the safety-stock policy gate, which would confound the
-    authorization-only assertions this file makes."""
+    order — the candidate with the most headroom over `default_safety_stock`
+    (10, contracts/policies/v1/data.json) so a 1-unit test transfer can
+    never itself be denied by the safety-stock policy gate, which would
+    confound the authorization-only assertions this file makes.
+
+    Phase 10a step 0 regression-verification fix: this used to prefer WO-42
+    (`ORDER BY (tc.work_order_id = 'WO-42') DESC, ...`) — the EXACT same
+    anti-pattern implementation-notes.md's Phase 9 section already found
+    and fixed in a SIBLING file
+    (tests/integration/test_forensic_queries_phase6.py::_find_at_risk_route),
+    just never noticed here. WO-42 is the canonical, shared, EVERYONE-
+    touches-it fixture (common.md: "Never mutate the canonical fixture...
+    except in tests that explicitly restore it") — picking it introduces a
+    TOCTOU window between this SELECT and the caller's later `propose()`
+    call in a long-lived, heavily multi-agent-tested stack: another
+    process's concurrent mitigation of WO-42 between the two can flip this
+    test's outcome from APPROVED to DENIED_POLICY, reproduced live during
+    this phase's own regression-confirmation run. Excluding WO-42 entirely
+    (rather than merely deprioritizing it) is the same remedy Phase 9's fix
+    used, for the same reason: deprioritizing alone does not help when it
+    is the only row that still qualifies once a headroom-losing test has
+    run against everything else."""
     with conn.cursor(row_factory=dict_row) as cur:
         cur.execute(
             """
             SELECT tc.* FROM transfer_candidates tc
             JOIN work_order_risk wor ON wor.work_order_id = tc.work_order_id
             WHERE wor.priority = 'HIGH' AND wor.at_risk = true
+              AND tc.work_order_id != 'WO-42'
               -- Scoped to WH-A/WH-B: the only warehouses
               -- contracts/authorization/v1/tuples.yaml grants ANY canonical
               -- actor (junior-1/planner-1/supervisor-1) authority over —
@@ -52,7 +69,7 @@ def _find_high_priority_route(conn: psycopg.Connection) -> dict | None:
               -- can_transfer_inventory check, which would confound this
               -- file's authorization-only assertions.
               AND tc.source_warehouse IN ('WH-A', 'WH-B')
-            ORDER BY (tc.work_order_id = 'WO-42') DESC, tc.available_at_source DESC
+            ORDER BY tc.available_at_source DESC
             LIMIT 10
             """
         )

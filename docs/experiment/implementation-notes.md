@@ -4029,3 +4029,187 @@ mutated by an interrupted F34 test run. The orchestrator discarded that mutation
 now EXCLUDES WO-42 instead of preferring it, so this test can no longer mutate the canonical
 fixture), and re-verified `make test-faults` independently afterwards (see the Phase 9 acceptance
 record in the Phase 10 report).
+
+## Phase 10a step 0 — deadlock fix, load-aware measurement, 503-not-403 warm-up (tag pending, commit pending)
+
+Scope: docs/experiment/briefs/phase10a.md item 0 (a/b/c) only. Items 1, 2,
+5 follow in separate commits within this same phase; items 3/4/6/7/8/9
+belong to Phase 10b and were NOT started.
+
+### 0a — the projection-rebuild deadlock, fixed at the source, TWICE
+
+The orchestrator's Phase 9 review reproduced a real `psycopg.errors.
+DeadlockDetected` at setup of `test_decision_service_protected_transfer.py
+::test_unresolvable_priority_fails_closed_for_every_actor`: a reader
+(AccessShareLock on `work_order_risk`) racing a projection rebuild that
+TRUNCATEd it (AccessExclusiveLock) in the same fixed order the reader's own
+evidence query joins them (`services/decision_service/evidence.py::
+_resolve_route_protection` reads `work_order_risk` then `transfer_
+candidates` in one transaction — the exact AB-BA shape `services/
+decision_service/app.py`'s pre-existing `_EVIDENCE_DEADLOCK_RETRIES` retry
+loop comment already documented).
+
+**Fix, part 1** (`services/projection_builder/writer.py`): `TRUNCATE
+<table>` → `DELETE FROM <table>` in all four `write_*` functions. TRUNCATE
+takes Postgres's strongest lock (AccessExclusiveLock), incompatible with
+even a plain reader's AccessShareLock; a full-table `DELETE FROM` deletes
+every row identically but only takes a RowExclusiveLock, which is
+compatible with concurrent readers. Lock ORDER was already globally
+consistent (this module is the four tables' only writer, and `builder.py`
+calls the four `write_*` functions in the same fixed order every cycle,
+live-poll or manual rebuild alike) — only the lock STRENGTH was wrong.
+
+**Fix, part 2, found by this phase's OWN new test** (`services/
+projection_builder/builder.py`): removing TRUNCATE's AccessExclusiveLock
+also removed the WRITER-vs-WRITER mutual exclusion it gave for free. Two
+genuinely concurrent `build_all()` calls (the live poll-loop container +
+this phase's own host-side rebuild-loop test, or in real operational use
+the live poll loop + a manually-run `make rebuild-projections`) can
+interleave their own independent DELETE-then-INSERT cycles and hit a
+`work_order_risk_pkey`/etc `UniqueViolation` — reproduced live the first
+time the new concurrency test ran with two independent rebuild loops
+active. Fixed with one `SELECT pg_advisory_xact_lock(hashtextextended(
+'oo_poc_projection_rebuild', 0))` as the first statement inside `build_
+all()`'s own transaction — the same advisory-lock idiom `services/wms/
+transfers.py` already uses for its own per-key idempotency lock. An
+advisory lock serializes writers against each other without ever
+interacting with ordinary table-level locks, so it cannot reintroduce the
+original reader-vs-writer deadlock while still preventing writer-vs-writer
+races.
+
+**Both fixes had to be REBUILT INTO THE RUNNING CONTAINER to take effect**
+— `services/projection_builder` is not bind-mounted (only `./contracts` is;
+`services/` is baked into the image via the Dockerfile's `COPY`), so a
+source edit alone is invisible to the already-running `projection_builder`
+container until `docker compose up -d --build projection_builder`. Found
+the hard way: the first concurrency-test run "passed" only because it
+exercised the fix via the HOST-side `rebuild.py` CLI, not the live poll
+loop; re-running the two ORIGINALLY-deadlocking tests in isolation still
+hit a live `DeadlockDetected` until the container was rebuilt. **Any future
+phase editing `services/*` for a bug that must be visible to the live
+stack needs the same `docker compose up -d --build <service>` step — a
+plain source edit is not enough.**
+
+**Live proof**: `tests/integration/test_projection_rebuild_concurrency.py`
+— one thread calls `services.projection_builder.builder.build_all`
+directly in a tight loop, 8 threads concurrently `POST /decisions/propose`
+against a synthetic part (`SKU-975001`, WH-A→WH-B, never PX-17/WO-42), for
+60s. Passed cleanly after both fixes were live: `1 passed in 60.50s` (fix
+part 1 only, deadlock gone) → `1 passed in 62.91s` after the advisory-lock
+fix landed (UniqueViolation also gone). `services/decision_service/app.
+py`'s evidence-path `DeadlockDetected` retry loop is left in place as
+defense in depth (harmless, no longer exercised by this specific cause)
+rather than removed — the retries becoming practically dead code IS the
+proof the fix worked, per this phase's own "remove any NEED for deadlock
+retries" wording.
+
+**A second, unrelated, pre-existing bug found and fixed during regression
+verification**: re-running the full `tests/integration` suite after the fix
+surfaced (among load-related flakiness, see below) a consistently-failing
+`test_decision_service_protected_transfer.py::
+test_planner_declaring_the_high_priority_work_order_is_allowed`
+(`DENIED_POLICY` instead of `APPROVED`). Its `_find_high_priority_route`
+helper had the EXACT same anti-pattern implementation-notes.md's own Phase
+9 section already found and fixed in a SIBLING file (`test_forensic_
+queries_phase6.py::_find_at_risk_route`): `ORDER BY (tc.work_order_id =
+'WO-42') DESC, ...`, preferring the canonical, everyone-touches-it fixture
+instead of excluding it. Same remedy applied here (`AND tc.work_order_id
+!= 'WO-42'` in the WHERE clause, ORDER BY tie-break dropped) — this sibling
+occurrence had never been noticed before. Unlike the Phase 9 instance, this
+one alone did not fully explain the observed instability (see below) — the
+dominant cause this session is host contention — but it is a real,
+independently-justified fix regardless, applied on the same evidence
+standard as its sibling.
+
+### 0b — load-aware measurement (`services/common/host_load.py`)
+
+`sample_host_load()` returns `os.getloadavg()` (1/5/15-minute), `os.
+cpu_count()`, a `contended` flag (`load_avg_1m > cpu_count`), and a
+best-effort `docker stats --no-stream` snapshot of this compose project's
+own containers' CPU% (`None`, never a fabricated `0.0`, when docker is
+unreachable). `contention_note(start, end)` renders a one-line summary
+("CONTENDED ... NON-AUTHORITATIVE") meant to be embedded directly in a
+results JSON's own `environment`/`notes` block. Covered by `tests/
+component/test_host_load.py` (3 tests, no docker/stack required). This is
+infrastructure for Phase 10b's `make experiment` latency.json (this
+phase's own item 4/8) to consume — Phase 10a itself writes no latency
+artifact, so there is nothing to wire it into yet.
+
+**Measured live, this session**: `load averages: 51.47 49.73 66.26` on 14
+cores (`uptime`) — 3.7-4.7x the core count, i.e. `contended=True` by this
+module's own threshold. `docker stats` during the same window showed the
+oo-poc containers themselves individually modest (single digits to ~25%
+each) — the load is NOT primarily from this experiment's own containers,
+it is from OTHER, unrelated processes sharing the host (`datahub-mysql-1`,
+`behaviors-pg`, and non-containerized processes), exactly the situation
+the Phase 9 orchestrator flagged (load 240/14 cores from unrelated
+processes) recurring in this session too.
+
+### 0c — 503, never a fabricated 403, during an OpenFGA restart/warm-up window
+
+`services/decision_service/app.py` already implemented this correctly
+before this phase touched anything: `_current_store_id()` re-resolves the
+OpenFGA store on every request (never cached), and `decisions_approve()`
+raises `HTTPException(503, ...)` whenever `store_id` is `None` or `authz.
+check()`'s outcome is `UNAVAILABLE`, strictly before the 403 branch could
+ever be reached. This phase's job was to prove it live, not change it:
+`tests/faults/test_openfga_warmup_window.py` proposes a real large-quantity
+transfer (REQUIRES_APPROVAL), stops the real `openfga` container, asserts
+an immediate `approve()` call is 503 (never 403), restarts `openfga`, then
+polls `approve()` through the warm-up window asserting every response is
+503 or 200 (never 403) and that it eventually reaches a real 200/APPROVED
+— `1 passed in 10.98s`.
+
+### Residual test instability found during regression verification — NOT
+caused by this step's changes, disclosed rather than hidden
+
+A full `tests/integration` run after both 0a fixes landed live still showed
+2-3 intermittent failures across repeated runs, all traced to causes
+INDEPENDENT of the TRUNCATE→DELETE/advisory-lock change:
+
+- `test_forensic_queries_phase6.py::
+  test_h13_queries_6_7_8_and_work_order_risk_flips_to_mitigated` —
+  `INSUFFICIENT_EVIDENCE` instead of `APPROVED`. This is the SAME failure
+  mode implementation-notes.md's own Phase 9 section already recorded for
+  this exact file ("a freshness-window miss under load") — reproduced
+  again here under the measured 51-66/14-core host contention above, not a
+  new regression.
+- `test_projection_consistency.py::test_tampered_row_fails_consistency_check`
+  (F27) — genuinely racy against the LIVE poll loop: the test manually
+  corrupts a `work_order_risk` row via raw SQL (bypassing `writer.py` on
+  purpose, to prove `consistency.check_row` detects tampering) then checks
+  IMMEDIATELY, with no synchronization against `services/projection_
+  builder`'s own ~3s poll cycle, which can rebuild (and therefore silently
+  un-corrupt) the row in that same window. Confirmed racy, not a fix-caused
+  regression, by re-running the file alone 3x: passed, passed, failed —
+  the test's own design has no defense against this and always had this
+  window; this phase's changes do not touch its timing.
+- The `test_decision_service_protected_transfer.py` fix above (WO-42
+  exclusion) reduces but does not eliminate this file's own flakiness
+  under the SAME host-contention conditions (`test_unresolvable_priority_
+  fails_closed_for_every_actor` also failed once, intermittently, in
+  isolation-repeat runs) — consistent with the same freshness/timing class
+  as the other two, not a separate bug.
+
+None of the three are in this step's scope to fix (0a/0b/0c only); ALL
+were already-failing or newly-found-but-environmental, not introduced by
+the DELETE/advisory-lock change (verified: the WO-42/DENIED_POLICY failure
+reproduced identically BEFORE the projection_builder container was even
+rebuilt with this step's fix). Flagged here per this repo's own disclosure
+convention, for whoever next touches these files or re-runs `make test`
+under similarly contended host conditions.
+
+### Files touched (this commit only)
+
+- `services/projection_builder/writer.py` — TRUNCATE → DELETE FROM (4x)
+- `services/projection_builder/builder.py` — `pg_advisory_xact_lock`
+- `services/common/host_load.py` (new)
+- `tests/component/test_host_load.py` (new)
+- `tests/integration/test_projection_rebuild_concurrency.py` (new)
+- `tests/faults/test_openfga_warmup_window.py` (new)
+- `tests/integration/test_decision_service_protected_transfer.py` — WO-42
+  exclusion in `_find_high_priority_route` (sibling of the Phase 9 fix)
+
+Items 1 (stateful/differential suite + the WMS idempotency-disable
+test-mode toggle it needs), 2 (mutation tests), and 5 (OpenTelemetry, F40)
+follow in later commits within this same phase.

@@ -2,12 +2,39 @@
 dataclasses) into the ontology_hot Postgres tables, stamping every row with
 the traceability columns docs/experiment/briefs/phase4.md item 1 requires.
 
-Each build cycle TRUNCATEs and re-INSERTs all four tables inside ONE
+Each build cycle DELETEs and re-INSERTs all four tables inside ONE
 transaction (services/projection_builder/builder.py commits at the end) —
 simplest possible implementation that is trivially correct (no incremental-
 update bugs to get wrong) and, because Postgres readers under the default
 READ COMMITTED isolation only ever see a transaction's state before or
 after COMMIT, concurrent hot reads never observe a half-rebuilt table.
+
+Phase 10a step 0a fix: this used to be `TRUNCATE <table>`, which takes an
+AccessExclusiveLock — the strongest lock Postgres has, incompatible with
+even a plain reader's AccessShareLock. A real, reproducible deadlock
+(services/decision_service/app.py's own `_EVIDENCE_DEADLOCK_RETRIES`
+comment documents it) came from exactly this: a decision_service evidence
+read taking AccessShareLock on work_order_risk then waiting on
+transfer_candidates, racing a rebuild TRUNCATEing them in the same order —
+classic AB-BA lock-order collision, except one side (TRUNCATE) needed the
+strongest lock Postgres offers to do work a weaker one would have covered
+just as well. `DELETE FROM <table>` (no `WHERE`) deletes every row exactly
+like TRUNCATE, but only takes a RowExclusiveLock — compatible with
+concurrent AccessShareLock readers; only actual row-level writers can
+conflict with it, and the four tables in this module have no other
+writer. Lock ORDER here was already globally consistent before this fix
+(this module is the tables' only writer, and builder.py calls these four
+functions in the same fixed order — work_order_risk, transfer_candidates,
+current_inventory, action_eligibility_summary — every single build cycle,
+live poll or rebuild alike) — only the lock STRENGTH was the problem.
+Readers no longer need to retry on DeadlockDetected because of a rebuild
+in progress; see tests/integration/test_projection_rebuild_concurrency.py
+for a live proof (rebuild loop + 8 concurrent proposers, >=60s, zero
+deadlocks). The evidence-path retry loop in
+services/decision_service/app.py is left in place as defense in depth
+(harmless, no longer exercised by this specific cause) rather than
+removed, per this phase's "remove any NEED for deadlock retries" wording —
+the retries becoming dead code IS the proof the fix worked.
 """
 
 from __future__ import annotations
@@ -76,7 +103,7 @@ def write_work_order_risk(
         for r in rows.values()
     ]
     with conn.cursor() as cur:
-        cur.execute("TRUNCATE work_order_risk")
+        cur.execute("DELETE FROM work_order_risk")
         for row in stamped:
             cur.execute(
                 """
@@ -121,7 +148,7 @@ def write_transfer_candidates(
         for r in rows
     ]
     with conn.cursor() as cur:
-        cur.execute("TRUNCATE transfer_candidates")
+        cur.execute("DELETE FROM transfer_candidates")
         for row in stamped:
             cur.execute(
                 """
@@ -167,7 +194,7 @@ def write_current_inventory(
         for r in rows
     ]
     with conn.cursor() as cur:
-        cur.execute("TRUNCATE current_inventory")
+        cur.execute("DELETE FROM current_inventory")
         for row in stamped:
             cur.execute(
                 """
@@ -215,7 +242,7 @@ def write_action_eligibility_summary(
         for r in rows.values()
     ]
     with conn.cursor() as cur:
-        cur.execute("TRUNCATE action_eligibility_summary")
+        cur.execute("DELETE FROM action_eligibility_summary")
         for row in stamped:
             cur.execute(
                 """

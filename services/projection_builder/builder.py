@@ -34,6 +34,28 @@ class BuildStats:
 
 
 def build_all(client: RDF4JClient, conn: psycopg.Connection) -> BuildStats:
+    # Phase 10a step 0a fix, part 2 (found via this phase's OWN concurrency
+    # test, tests/integration/test_projection_rebuild_concurrency.py):
+    # switching services/projection_builder/writer.py's TRUNCATE ->
+    # DELETE FROM (to stop blocking READERS) also removed the WRITER-vs-
+    # WRITER mutual exclusion TRUNCATE's AccessExclusiveLock used to give
+    # for free. Two genuinely concurrent build_all() calls (the live poll
+    # loop + a manual `make rebuild-projections`, or two manual runs) can
+    # interleave their own independent DELETE-then-INSERT cycles across
+    # the SAME table and hit `work_order_risk_pkey`/etc UniqueViolation —
+    # reproduced live. A `pg_advisory_xact_lock` is the right primitive
+    # here: it serializes WRITERS against each other (this function's own
+    # transaction, auto-released at COMMIT/ROLLBACK) while being
+    # completely invisible to plain SELECT readers (advisory locks never
+    # interact with regular table-level locks), so the original AB-BA
+    # deadlock this step fixes cannot come back. Same
+    # `hashtextextended(key, 0)` idiom services/wms/transfers.py already
+    # uses for its own per-key advisory lock — one fixed key here since
+    # there is exactly one shared "the hot projections" resource, not one
+    # per row.
+    with conn.cursor() as cur:
+        cur.execute("SELECT pg_advisory_xact_lock(hashtextextended('oo_poc_projection_rebuild', 0))")
+
     definitions = load_all_definitions()
     computed_at = writer.now_utc()
 
