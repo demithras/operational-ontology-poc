@@ -89,3 +89,21 @@ def connect_rest_url() -> str:
 def ingestion_health_url() -> str:
     host = os.environ.get("OO_SERVICE_HOST", "localhost")
     return f"http://{host}:{os.environ['INGESTION_HEALTH_PORT']}"
+
+
+# --- Phase 5 (docs/experiment/briefs/phase5.md) --------------------------
+
+
+def openfga_api_url() -> str:
+    host = os.environ.get("OO_SERVICE_HOST", "localhost")
+    return f"http://{host}:{os.environ['OPENFGA_HOST_PORT']}"
+
+
+def opa_base_url() -> str:
+    host = os.environ.get("OO_SERVICE_HOST", "localhost")
+    return f"http://{host}:{os.environ['OPA_HOST_PORT']}"
+
+
+def decision_service_url() -> str:
+    host = os.environ.get("OO_SERVICE_HOST", "localhost")
+    return f"http://{host}:{os.environ['DECISION_SERVICE_HTTP_PORT']}"

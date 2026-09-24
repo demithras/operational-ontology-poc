@@ -1,0 +1,80 @@
+# contracts/authorization/v1/model.fga
+#
+# OpenFGA authorization model — docs/experiment/spec/03_domain_scenario.md
+# "Authorization example" (planner/junior_planner/agent) +
+# docs/experiment/spec/05_ontology_and_contracts.md "OpenFGA / authority"
+# examples + docs/experiment/spec/08_test_strategy.md "OpenFGA tests".
+#
+# Design (matches the canonical fixture, seed/fixtures/canonical_incident.yaml
+# `actors:`/`warehouses:` blocks exactly — WH-A/WH-B both in region-1;
+# planner-1/junior-1/supervisor-1/agent-1 are the canonical principals):
+#
+# - `region` groups warehouses for the "planner may execute <= 100 units in
+#   assigned region" rule (03_domain_scenario.md). Region membership is
+#   authority scope ONLY — the <=100 unit threshold itself is a contextual
+#   business-policy question and is evaluated by OPA
+#   (contracts/policies/v1/transfer_inventory.rego), never duplicated here,
+#   per 05's "each rule has one canonical owner" principle.
+# - `warehouse.planner`/`warehouse.supervisor` resolve either a DIRECT grant
+#   on the warehouse or an INHERITED grant via the warehouse's `in_region`
+#   region — so a single region-level tuple authorizes every warehouse in
+#   that region without per-warehouse tuples.
+# - `junior_planner` is a SEPARATE relation from `planner`, but IS unioned
+#   into `can_transfer_inventory` (03: "junior_planner: can propose" — read
+#   literally as "junior can do everything a planner can up through
+#   proposing/executing a transfer"). The one thing 03 says junior CANNOT do
+#   is "approve high-priority-work-order mitigation" — that is the ONLY
+#   relation junior_planner is deliberately excluded from
+#   (`can_approve_large_transfer: supervisor`, never includes
+#   junior_planner). This keeps the planner/junior distinction exactly where
+#   08_test_strategy.md's own test list draws it ("junior denied protected
+#   APPROVAL", never "junior denied propose/transfer").
+# - `agent` is a distinct principal type from `user` (openfga.dev/docs/
+#   modeling/agents/agents-as-principals, contracts/SOURCES.md) with its own
+#   `principal` relation recording which human it acts on behalf of — this
+#   is the "agent-on-behalf-of-user delegation" link phase5.md item 2 calls
+#   out. An agent's own ability to transfer inventory comes ONLY from an
+#   explicit per-warehouse `agent_grant` tuple (task-bound grant, 03: "agent:
+#   can execute only with task-bound grant") — it does NOT inherit its
+#   principal's own `planner`/`supervisor` relations, so a compromised or
+#   over-eager agent can never silently gain its human's full authority
+#   (H9's "agent capability bounded by the same hard controls").
+#
+# Verified against the real `openfga/cli` `model test` runner during
+# implementation (contracts/authorization/v1/tests.yaml, all 7 cases
+# passing) and bootstrapped into a live OpenFGA server
+# (services/decision_service/bootstrap_openfga.py) via
+# `fga model transform --file model.fga --output-format json`, whose output
+# was inspected by hand before being wired into the bootstrap script.
+model
+  schema 1.1
+
+type user
+
+type agent
+  relations
+    # The human this agent acts on behalf of (delegation chain). Recorded
+    # independently of any authority the agent itself holds — see
+    # tests.yaml's "agent-on-behalf-of-user-delegation" case.
+    define principal: [user]
+
+type region
+  relations
+    define planner: [user]
+    define supervisor: [user]
+
+type warehouse
+  relations
+    define in_region: [region]
+    define planner: [user] or planner from in_region
+    define junior_planner: [user]
+    define supervisor: [user] or supervisor from in_region
+    # Task-bound grant: the ONLY path by which an agent gains transfer
+    # authority on a specific warehouse (03: "agent: can execute only with
+    # task-bound grant"). Revoking this tuple immediately removes the
+    # agent's authority (tests.yaml "revoked-grant-denies-immediately";
+    # integration-level revocation is proven live in
+    # tests/integration/test_decision_service_gates.py).
+    define agent_grant: [agent]
+    define can_transfer_inventory: planner or junior_planner or agent_grant
+    define can_approve_large_transfer: supervisor

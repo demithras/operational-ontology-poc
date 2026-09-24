@@ -136,6 +136,40 @@ def wait_until(predicate, timeout_s: float = 20.0, interval_s: float = 0.5):
     return result
 
 
+# --- Phase 5: decision service (docs/experiment/briefs/phase5.md) --------
+
+
+@pytest.fixture(scope="session")
+def decision_service_reachable() -> bool:
+    return _reachable(db_env.decision_service_url())
+
+
+@pytest.fixture()
+def decision_client(decision_service_reachable: bool):
+    if not decision_service_reachable:
+        pytest.skip(
+            f"decision_service not reachable at {db_env.decision_service_url()} — run 'make up' first"
+        )
+    with httpx.Client(base_url=db_env.decision_service_url(), timeout=DEFAULT_TIMEOUT) as client:
+        yield client
+
+
+def bump_freshness_now(conn: psycopg.Connection, table: str, where_column: str, where_value: str) -> None:
+    """Directly sets a hot-projection row's `as_of` to `now()` via SQL — the
+    mirror-image of test_projection_staleness.py's "push as_of BACK to force
+    STALE" technique, used here to force FRESH for a deterministic instant so
+    a decision-service propose() test isn't racing real CDC/poll-cycle
+    latency (services/projection_builder's live poll loop OVERWRITES this
+    within its ~3s cycle from the real oo:SourcePosition value, so callers
+    must call propose() immediately after this, not after any delay).
+    `table`/`where_column` are fixed internal literals from this test suite's
+    own call sites, never caller/request-derived — no SPARQL/SQL-injection
+    surface (contrast services/decision_service/evidence.py's caller-facing
+    SPARQL, which IS validated/escaped)."""
+    with conn.cursor() as cur:
+        cur.execute(f"UPDATE {table} SET as_of = now() WHERE {where_column} = %s", (where_value,))  # noqa: S608
+
+
 def get_lot(client: httpx.Client, part: str, warehouse_id: str) -> dict:
     """Looks up one inventory lot by (part, warehouse_id) via the query-
     filtered list endpoint rather than assuming a lot_id naming convention

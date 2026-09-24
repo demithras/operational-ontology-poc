@@ -69,6 +69,23 @@ class RDF4JClient:
             headers={"Content-Type": "text/turtle"},
         )
 
+    def update(self, sparql_update: str) -> httpx.Response:
+        """SPARQL 1.1 Update (DELETE/INSERT ... WHERE) against the whole
+        repository — used by services/decision_service/rdf_writer.py to
+        transition an already-committed Decision's oo:status (e.g.
+        REQUIRES_APPROVAL -> APPROVED) via one atomic retract+add, since
+        add_turtle() is purely additive and cannot itself remove the old
+        status value (SHACL's `sh:maxCount 1` would otherwise see two).
+        Verified empirically against the running RDF4J 6.1.0 container:
+        `Content-Type: application/sparql-update`, raw SPARQL Update text as
+        the body, HTTP 204 on success, still SHACL-validated (a resulting
+        two-statuses-at-once state would 409 exactly like add_turtle would)."""
+        return self._client.post(
+            f"{self._repo_url}/statements",
+            content=sparql_update.encode("utf-8"),
+            headers={"Content-Type": "application/sparql-update"},
+        )
+
     def clear_graph(self, graph_iri: str) -> None:
         r = self._client.delete(f"{self._repo_url}/statements", params={"context": f"<{graph_iri}>"})
         if r.status_code not in (204, 404):

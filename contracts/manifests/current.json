@@ -1,0 +1,33 @@
+{
+  "actions": {
+    "expedite_purchase_order": {
+      "sha256": "96be9359f6810ff7ea8b0800da07705a8aa8559bdd49d85eb02e222c049dbe09",
+      "version": 1
+    },
+    "reschedule_work_order": {
+      "sha256": "ae4ab25e1312885ac9ff0a2ce2ed9502bc2adb381e6e969f9d1c43e7ee00fe82",
+      "version": 1
+    },
+    "transfer_inventory": {
+      "sha256": "317176cbf00fff8300aeb5802b87221144b1d4e63ac26064f9911ea80ca4a0e3",
+      "version": 1
+    }
+  },
+  "code_git_commit": "0bc8146bf1f439b765e10bb5d733179098842ee8",
+  "ontology": {
+    "sha256": "8bfbdbaa9ba06f684901d8d80e0b3acbd78e12a5f0b892ae661d2ef5501837f2",
+    "version": "v1"
+  },
+  "opa": {
+    "sha256": "231c0df0e149dbe6cb3ee1ae74335179dce2ad0021579d76c835ab35fc75e1c2",
+    "version": "v1"
+  },
+  "openfga": {
+    "sha256": "71ce4837a0afe63b0c27daf4107db1e0cab84fc05e533a5ad25445b21e758eaf",
+    "version": "v1"
+  },
+  "shapes": {
+    "sha256": "187139b64d2795d45317c66b2aad0ce025a0bcd2bfa8752a56871ab004a1a3a1",
+    "version": "v1"
+  }
+}

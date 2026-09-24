@@ -1,0 +1,8 @@
+# H13 query 3 — "Which evidence was available but excluded?"
+PREFIX oo: <https://example.local/oo/>
+SELECT DISTINCT ?excludedFactsJson
+WHERE {
+  ?decision oo:decisionId "%%DECISION_ID%%" ;
+            oo:evidenceSnapshot ?es .
+  ?es oo:excludedFactsJson ?excludedFactsJson .
+}

@@ -1,0 +1,114 @@
+# contracts/authorization/v1/tests.yaml
+#
+# `fga model test --tests contracts/authorization/v1/tests.yaml`, run via the
+# openfga/cli docker image (Makefile `test-contracts` target). Covers the
+# exact list from docs/experiment/spec/08_test_strategy.md "OpenFGA tests"
+# plus phase5.md item 2's "agent-on-behalf-of-user delegation" case. Uses the
+# shared tuples.yaml fixture (also loaded live by
+# services/decision_service/bootstrap_openfga.py) plus per-test extra tuples
+# for the grant/no-grant scenarios.
+#
+# Verified during implementation: `docker run --rm -v <this dir>:/app
+# openfga/cli:latest model test --tests /app/tests.yaml` -> "Tests 7/7
+# passing, Checks 7/7 passing".
+name: authorization-v1-tests
+model_file: model.fga
+tuple_file: tuples.yaml
+
+tests:
+  - name: planner-allowed-in-scope
+    description: >-
+      planner-1 (region-1) may transfer inventory at WH-A, which is in
+      region-1 via the region-level grant (no per-warehouse tuple needed).
+    check:
+      - user: user:planner-1
+        object: warehouse:WH-A
+        assertions:
+          can_transfer_inventory: true
+
+  - name: planner-denied-out-of-scope
+    description: >-
+      planner-1 has no grant on region-2, so WH-OUT-OF-SCOPE (region-2) is
+      denied even though the same principal is allowed at WH-A/WH-B.
+    check:
+      - user: user:planner-1
+        object: warehouse:WH-OUT-OF-SCOPE
+        assertions:
+          can_transfer_inventory: false
+
+  - name: junior-can-transfer-but-not-approve
+    description: >-
+      junior-1 IS a junior_planner on WH-A (03_domain_scenario.md: "can
+      propose") so can_transfer_inventory is allowed, but holds no
+      supervisor relation anywhere, so approval is denied — the exact split
+      08_test_strategy.md's "junior denied protected approval" draws.
+    check:
+      - user: user:junior-1
+        object: warehouse:WH-A
+        assertions:
+          can_transfer_inventory: true
+          can_approve_large_transfer: false
+
+  - name: unauthorized-human-denied
+    description: >-
+      08_test_strategy.md "planner denied outside scope" generalizes to F03
+      ("unauthorized human ... deny"): a user with NO planner/junior_planner/
+      agent_grant relation anywhere is denied everywhere.
+    check:
+      - user: user:unregistered-1
+        object: warehouse:WH-A
+        assertions:
+          can_transfer_inventory: false
+          can_approve_large_transfer: false
+
+  - name: agent-denied-without-task-grant
+    description: agent-1 has no agent_grant tuple in the shared fixture.
+    check:
+      - user: agent:agent-1
+        object: warehouse:WH-A
+        assertions:
+          can_transfer_inventory: false
+
+  - name: agent-allowed-with-exact-task-grant
+    tuples:
+      - user: agent:agent-1
+        relation: agent_grant
+        object: warehouse:WH-A
+    check:
+      - user: agent:agent-1
+        object: warehouse:WH-A
+        assertions:
+          can_transfer_inventory: true
+      - user: agent:agent-1
+        object: warehouse:WH-B
+        assertions:
+          can_transfer_inventory: false
+
+  - name: revoked-grant-denies-immediately
+    description: >-
+      Same principal/object as the previous case, WITHOUT the extra
+      agent_grant tuple (i.e. "after revocation") — proves the allow in the
+      previous case came from that one tuple, not from any other implicit
+      path (agent-1's principal, planner-1, is itself a region-1 planner,
+      so this also proves an agent never inherits its principal's authority).
+    check:
+      - user: agent:agent-1
+        object: warehouse:WH-A
+        assertions:
+          can_transfer_inventory: false
+
+  - name: agent-on-behalf-of-user-delegation
+    description: >-
+      The delegation link itself is queryable via the FGA relation graph,
+      independent of any transfer authority — spec 04's "actor delegation
+      context" and H1's required "actor delegation context if an agent acts
+      for a human" trace back to this tuple.
+    check:
+      - user: user:planner-1
+        object: agent:agent-1
+        assertions:
+          principal: true
+      - user: user:supervisor-1
+        object: agent:agent-1
+        assertions:
+          principal: false

@@ -1,0 +1,11 @@
+# H13 query 4 — "Which policy and authorization model versions were
+# evaluated?"
+PREFIX oo: <https://example.local/oo/>
+SELECT DISTINCT ?policyBundleVersion ?authorizationModelVersion ?policyInputHash ?checkRelation ?checkObject
+WHERE {
+  ?decision oo:decisionId "%%DECISION_ID%%" ;
+            oo:policyBundleVersion ?policyBundleVersion ;
+            oo:authorizationModelVersion ?authorizationModelVersion .
+  OPTIONAL { ?decision oo:policyEvaluation ?pe . ?pe oo:policyInputHash ?policyInputHash . }
+  OPTIONAL { ?decision oo:authorizationCheck ?ac . ?ac oo:checkRelation ?checkRelation ; oo:checkObject ?checkObject . }
+}

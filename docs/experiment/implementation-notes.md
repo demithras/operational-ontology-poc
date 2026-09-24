@@ -974,3 +974,339 @@ session.
   LOT-A-PX17 / LOT-B-PX17 / WH-A / WH-B), which `test_canonical_scenario.py`
   and this phase's own readiness contract both assert absolute state
   against.
+
+## Phase 5 — Decision service + gates
+
+Tag `poc-v0.5-gates`. Brief: `docs/experiment/briefs/phase5.md`. Spec: 01
+(H1/H2/H13/H14), 03, 04, 05, 06, 08, 09, 11, 14.
+
+### Ports
+
+| Service | Host port | Notes |
+|---|---|---|
+| OpenFGA HTTP API | 15481 | `memory` datastore engine — wiped on every container restart, see below |
+| OPA server | 15482 | loads `contracts/policies/v1` as a mounted read-only bundle directory (`--watch`) |
+| `services/decision_service` | 15410 | FastAPI; endpoints below |
+
+### OpenFGA/OPA have no docker-level healthcheck
+
+Both images (`openfga/openfga`, `openpolicyagent/opa`) have **neither a
+shell nor curl/wget** (verified: `docker run --entrypoint /bin/sh ...` ->
+"no such file or directory"), so a `HEALTHCHECK CMD`/`CMD-SHELL` cannot run
+*inside* either container at all — there is nothing to exec. Rather than
+fake one, `docker-compose.yml` declares no `healthcheck:` for these two
+services, and `make wait-healthy` was rewritten from a bash/grep loop into
+`services/common/wait_healthy.py`, which treats a service with **no
+configured healthcheck** as ready once its `State` is `running` (parsed from
+`docker compose ps --format json`). Real API readiness for OpenFGA is
+instead proven from the HOST, in `services/decision_service/bootstrap_openfga.py`,
+by polling the real `GET /healthz` endpoint (`{"status":"SERVING"}`,
+verified empirically) before writing anything — OPA's own bundle-load
+startup was measured to be sub-second and needs no separate wait.
+
+### OpenFGA bootstrap: `fga model transform` (docker CLI), not a hand-written DSL parser
+
+`services/decision_service/bootstrap_openfga.py` shells out to the
+`openfga/cli` docker image's `model transform --file model.fga
+--output-format json` (a pure local-file transform, no network needed) to
+get the JSON authorization-model form OpenFGA's HTTP API actually accepts,
+then POSTs it directly via httpx. Idempotent within one running container's
+lifetime: reuses an existing `oo-poc` store by name (`GET /stores`), writes
+a new model VERSION every run (harmless — OpenFGA keeps every version;
+Checks use the latest), and tolerates "tuple already exists" (HTTP 400,
+`write_failed_due_to_invalid_input`) when re-applying `tuples.yaml`'s
+fixture tuples. **OpenFGA runs with the `memory` datastore engine** — a
+container restart wipes the store/model/tuples entirely (verified via the
+F23 dependency-outage test below), so `make up` always re-runs this
+bootstrap step, and `services/decision_service/app.py`'s `_current_store_id()`
+deliberately does **not** cache the resolved store id across requests (see
+below).
+
+### Authorization model (`contracts/authorization/v1/model.fga`)
+
+`user`, `agent` (with a `principal: [user]` relation — the
+agent-on-behalf-of-user delegation link, openfga.dev's "agents as
+principals" pattern per `contracts/SOURCES.md`), `region` (`planner`/
+`supervisor`), `warehouse` (`in_region: [region]`, `planner`/`supervisor`
+either direct or inherited via `in_region`, `junior_planner`, `agent_grant:
+[agent]`, `can_transfer_inventory: planner or junior_planner or
+agent_grant`, `can_approve_large_transfer: supervisor`).
+
+**Deviation from a first draft, found while writing `tests.yaml`**:
+`junior_planner` was originally NOT unioned into `can_transfer_inventory`
+(reasoning: "let policy-adjacent code enforce propose-vs-approve"). This
+contradicted `03_domain_scenario.md`'s own text ("junior_planner: can
+propose") and made `08_test_strategy.md`'s "junior denied protected
+approval" test impossible to write meaningfully (a junior denied
+`can_transfer_inventory` outright would never even reach an approval
+decision to be denied). Fixed by unioning `junior_planner` into
+`can_transfer_inventory` — the ONLY relation junior lacks is
+`can_approve_large_transfer`, which is exactly where 08's test list draws
+the line.
+
+Verified via the real `fga model test` runner
+(`contracts/authorization/v1/tests.yaml`, `tuple_file: tuples.yaml`): 8/8
+tests, 12/12 checks passing (`docker run --rm -v
+contracts/authorization/v1:/app openfga/cli:latest model test --tests
+/app/tests.yaml`). All three ActionTypes bind authorization to a
+**warehouse** (the model's only typed object with authority relations) —
+`transfer_inventory` uses its own `source_warehouse` parameter directly;
+`expedite_purchase_order`/`reschedule_work_order` resolve the relevant
+warehouse from evidence (a PO's first line's destination-warehouse, a work
+order's own warehouse) rather than needing separate `purchase_order`/
+`work_order` FGA types (`services/decision_service/authz.py::resolve_object`).
+
+### Policy bundle (`contracts/policies/v1/`)
+
+`transfer_inventory.rego` (package `factory.inventory.transfer`) implements
+`03_domain_scenario.md`'s policy example exactly (quantity <= 100 AND
+remaining >= safety_stock AND not quarantined -> allow; above threshold ->
+require_approval with a `can_approve_large_transfer` obligation; quarantine
+or stale evidence -> deny, the latter ALSO carrying a `refresh_evidence`
+obligation). `expedite_purchase_order.rego`/`reschedule_work_order.rego` are
+simpler but real (terminal-status deny, threshold/priority ->
+require_approval) — see "Scoping decision" below for why they get less
+test rigor. `data.json` is the safety_stock source of truth
+(`{part: {warehouse: qty}}` + `default_safety_stock`), read by BOTH OPA (as
+part of its mounted bundle, versioned by the same `opa.sha256`) and
+`services/decision_service/evidence.py` directly (the same file, not a
+copy) — `safety_stock` is modeled as required EVIDENCE per 05's closed-world
+closure example, resolved from this file, not silently defaulted inside
+Rego.
+
+**Rego gotcha found empirically**: a rule defined only as two mutually
+exclusive `if` bodies (`x := A if cond` / `x := B if not cond`) is
+UNDEFINED — not `B` — when a field the `cond` itself reads is entirely
+absent from `input` (e.g. `input.evidence` missing altogether, not just one
+field). `default x := B` fixes it. Caught by
+`transfer_inventory_test.rego::test_missing_evidence_block_entirely_is_non_allow`:
+`obligations` (and therefore the whole `result` object) failed to bind at
+all until `approval_obligation`/`refresh_obligation` were rewritten with
+`default ... := []`. `opa test --fail-on-empty`: 20/20 passing.
+
+### ActionType contracts (`contracts/actions/v1/*.yaml`)
+
+`transfer_inventory` (full rigor — see below), `expedite_purchase_order`,
+`reschedule_work_order`. `context.work_order_id` is accepted in the
+**propose request**, not as a formal ActionType parameter — it exists
+purely so `evidence.py` can attach `linked_work_order_risk` (informational,
+not `closure.required`); an action can legitimately be proposed without
+linking it to a specific at-risk work order (e.g. proactive rebalancing).
+
+### Decision service (`services/decision_service/`)
+
+`propose_flow.py::propose()` implements 06's algorithm with one explicit,
+documented ordering deviation: **all contract versions are captured up
+front** (implied by 06's own "create PROPOSED(evidence, current contract
+versions)"), evidence is frozen and closure-checked FIRST (before
+authz/policy — consistent with 04's trust-boundary list), then authz, then
+policy, and **the SHACL-validated RDF4J write happens EXACTLY ONCE, at the
+very end**, for whatever terminal status was reached — never once per gate.
+RDF4J's add-only statement API has no partial in-place update primitive
+suited to a decision built up over several stages; one atomic write at the
+end means an `INSUFFICIENT_EVIDENCE`/`DENIED_*` decision is exactly as
+complete (all 12 SHACL-required fields) as an `APPROVED` one (H1). "Authenticate
+actor" (04/06) has no separate identity-provider step — there is no login/
+session system anywhere in this repo through Phase 4, and the canonical
+fixture's `actors:` block only ever declares role/region ASSIGNMENTS, never
+credentials; an actor's identity is accepted as asserted by the caller and
+enforced entirely through what OpenFGA does/doesn't grant that principal.
+
+**Version fields are content-addressed** (`services/decision_service/manifest.py::content_addressed`),
+matching 05's exact example (`"inventory-policy@sha256:..."`) rather than a
+bare `"v1"` — `ontologyVersion`/`shapeSetVersion`/`authorizationModelVersion`/
+`policyBundleVersion` are all `"v1@sha256:<hash-of-the-real-files-on-disk>"`.
+`actionVersion` stays a plain `xsd:integer` (the ontology's existing
+datatype constraint) — its content-addressing is the `contracts/manifests/current.json`
+`actions.<name>.sha256` entry instead.
+
+**Fail-closed (F22-F24)**: RDF4J unreachable during evidence
+gathering/write raises `httpx.HTTPError`/`psycopg.Error`, caught by
+`app.py` and returned as HTTP 503 + a `proposal_attempt_failures` Postgres
+row (never a Decision — H1's completeness metric is only over decisions
+that actually exist) — no governed decision object is even attempted, since
+one is genuinely impossible to write. OpenFGA/OPA unreachable are caught
+INSIDE `authz.check()`/`policy.evaluate()` (never raised) and surfaced as
+`outcome: "UNAVAILABLE"` on the gate-result resource, which the propose
+pipeline treats as a normal deny (`DENIED_AUTHORIZATION`/`DENIED_POLICY`) —
+still a complete, queryable Decision record, just with an explicit
+unavailable-vs-actually-denied distinction (acceptance criterion 11:
+"explicit unavailable/pending/unknown state, not fabricated certainty").
+
+**`_current_store_id()` is deliberately NOT cached** across requests (one
+extra `GET /stores` call per proposal, negligible next to the `check()` call
+that follows it) — found empirically via the F23 outage test: OpenFGA's
+`memory` datastore means a restart mints a BRAND NEW store id, and a cached
+old id would silently 404 forever afterward with no way to self-heal short
+of restarting `decision_service` itself.
+
+**SHACL `sh:class prov:Agent` needs an EXPLICIT triple, not a two-hop
+`rdfs:subClassOf` chain**: `oo:HumanActor rdfs:subClassOf prov:Agent`
+(one hop) satisfied RDF4J's `sh:class` check, but `oo:SoftwareAgent
+rdfs:subClassOf prov:SoftwareAgent` (needing a SECOND hop,
+`prov:SoftwareAgent rdfs:subClassOf prov:Agent`, never asserted anywhere
+since this repo never imports real PROV-O axioms) did not — the very first
+agent-actor decision write got a real 409. Fixed by asserting `rdf:type
+prov:Agent` (and `prov:SoftwareAgent` for agents) EXPLICITLY on every actor
+node in `rdf_writer.py::_actor_node`, rather than relying on any inferred
+subclass chain (matches the established "RDF4J's ShaclSail runs no OWL
+inference" finding from Phase 3, generalized: even a single un-asserted
+`rdfs:subClassOf` link in a multi-hop chain breaks a `sh:class` check).
+
+**`conformance_outcome` must be set BEFORE the first RDF4J write, not
+after**: the graph sent to RDF4J is built from `record` as it stood AT WRITE
+TIME. An earlier version set `record.conformance_outcome = record.conformance_outcome
+or "CONFORMS"` only in the SUCCESS branch after `write_decision()` already
+returned — meaning the committed graph itself never carried a
+`oo:ConformanceCheck` resource for the (overwhelmingly common) CONFORMS
+case, even though Postgres and the HTTP response both showed it correctly.
+Caught by `tests/integration/test_forensic_queries.py` querying RDF4J
+directly (H13 query 1) and finding no `conformanceOutcome` binding.
+
+**Approval (`rdf_writer.py::record_approval`)** transitions
+`REQUIRES_APPROVAL` -> `APPROVED` via one atomic SPARQL 1.1 Update
+(`DELETE {...} INSERT {...} WHERE {}`, `Content-Type: application/sparql-update`)
+against RDF4J's `/statements` endpoint — verified empirically to still be
+SHACL-validated (a would-be two-statuses-at-once state 409s and rolls back,
+exactly like `add_turtle`). `RDF4JClient.update()` is the new client method
+this needed; `add_turtle()` alone cannot change `oo:status` in place since
+it is purely additive.
+
+### Security review finding, fixed during implementation: SPARQL injection (F31)
+
+A security review flagged `services/decision_service/evidence.py`'s
+warehouse-existence ASK query building a SPARQL literal via f-string
+interpolation of a caller-supplied `destination_warehouse` value —
+exactly the F31 "tool parameter injection" surface. Fixed with TWO
+independent layers: (1) **primary** —
+`services/decision_service/schemas.py`'s `ProposeRequest`/`ApproveRequest`
+validate every identifier-shaped value (`action_type`, `actor.id`, every
+string anywhere inside `parameters`/`context`, `approver_id`,
+`decision_content_hash`) against a strict `^[A-Za-z0-9_-]{1,64}$` pattern
+(or a 64-char hex pattern for the hash) BEFORE the request can reach
+anything — a non-matching value is HTTP 422 (F01, zero effects), never
+reaching evidence gathering, authorization, or policy evaluation; (2)
+**defense-in-depth** — `services/common/sparql_escape.py::escape_sparql_literal`
+(backslash/quote/newline escaping per the SPARQL 1.1 grammar) is applied
+at both hand-built-SPARQL call sites (`evidence.py`'s ASK,
+`rdf_writer.py::record_approval`'s UPDATE) regardless of the upstream
+validation. Proven live (not just unit-tested) in
+`tests/integration/test_decision_service_injection.py`: a set of hostile
+payloads (`'WH-A" } ; DROP ALL ; #'`, `'" || true || "'`, embedded
+newlines, an attempted OpenFGA object-string smuggling payload) are all
+rejected with zero external WMS effects; the pure-validation proof (no
+network) is `tests/contracts/test_decision_service_input_validation.py`.
+
+### Testing strategy: synthetic SKUs, not the canonical fixture
+
+`tests/integration/test_canonical_scenario.py` (Phase 2) already performs
+the canonical incident's OWN mitigation via a direct WMS `POST /transfers`
+call (bypassing governance by design), which permanently leaves WO-42
+MITIGATED (`shortage=0`) for the rest of any stack's lifetime — so Phase 5's
+governed-decision tests cannot reuse WO-42/PX-17 as an "at-risk" fixture.
+`tests/integration/decision_helpers.py` uses synthetic parts at the REAL
+WH-A/WH-B warehouses instead, with one non-obvious wrinkle: a synthetic part
+id used directly (e.g. `"PX-TEST-01"`) gets **quarantined** by the identity
+resolver (`contracts/identity/v1/mapping_rules.yaml`'s WMS pattern only
+recognizes `^SKU-\d{6}$`) and never reaches the hot projection at all — every
+helper therefore takes a WMS-local `SKU-9NNNNN` (a range the seed generator
+never uses) and derives the CANONICAL id (`sku_to_canonical`) for anything
+touching the hot projection or a propose() request.
+
+**Freshness timing**: the 5s `max_evidence_freshness_s` threshold is
+tighter than one real CDC round trip (WMS write -> Debezium -> ingestion ->
+projection-builder's ~3s poll cycle) can reliably beat, so tests bump a hot
+row's `as_of` directly via SQL to `now()` (mirroring
+`test_projection_staleness.py`'s opposite-direction technique)
+**immediately** before calling `propose()` — any slow operation
+in between (a second `set_inventory_and_wait` call, a `docker compose stop`
+subprocess) reliably eats the whole window and was caught empirically
+during implementation (two tests initially failed with `INSUFFICIENT_EVIDENCE`
+instead of their intended outcome until reordered).
+
+**RDF4J SHACL `sh:maxCount` is checked ACROSS THE WHOLE REPOSITORY, not per
+transaction-graph** — a second empirical confirmation of the Phase 3
+`fac-core-shape.ttl` finding, this time self-inflicted in
+`tests/performance/bench_phase5.py`: reusing one fixed
+`evidence_snapshot_id` across many separate benchmark decision graphs
+accumulated multiple `oo:snapshotObservedAt` triples on that ONE subject
+(one per graph it was written into), and the SHACL `sh:maxCount 1` check —
+evaluated globally — started 409ing once 2+ such graphs existed. Fixed by
+minting a fresh `evidence_snapshot_id` per benchmark iteration too, not just
+a fresh `decision_id` (real `propose()` calls always did this correctly;
+this was purely a benchmark-script bug).
+
+### Pre-existing Phase 3 bug found and fixed: ingestion consumer crashed on `httpx.RemoteProtocolError`
+
+Running `test_f22_rdf4j_down_fails_proposal_safely` (a real `docker compose
+stop/start rdf4j`, same pattern as Phase 3's own
+`test_cdc_ingestion.py::test_rdf4j_outage_backs_off_without_data_loss_and_resumes`)
+crashed the `services/ingestion` container entirely (`docker compose ps` ->
+`Exited (1)`), which then permanently starved every hot-projection-dependent
+test downstream (`current_inventory` rows can never converge with nothing
+consuming Kafka) until manually restarted — this is what caused several
+seemingly-random `INSUFFICIENT_EVIDENCE` failures during implementation
+before the real cause was found. Root cause:
+`services/ingestion/consumer.py`'s `process_message` only caught
+`(httpx.ConnectError, httpx.TimeoutException)` as `RDF4JUnavailable`
+(retry-in-place); a mid-request `docker compose stop rdf4j` can instead make
+the TCP connection accept and then close before a response is sent, raising
+`httpx.RemoteProtocolError` ("Server disconnected without sending a
+response") — a THIRD, previously-unhandled transport failure that propagated
+uncaught out of the consumer's main loop and killed the process. Fixed by
+broadening the except clause to `httpx.TransportError` (the common base of
+`ConnectError`, `TimeoutException`, AND `RemoteProtocolError` — verified via
+`__mro__`), closing this whole class of transport-level hiccup, not just the
+two enumerated by hand in Phase 3. This is a Phase 3 module fixed under
+Phase 5 because Phase 5's own dependency-outage tests are what newly
+exercise a `docker compose stop rdf4j` mid-request; `make test` was re-run
+green 3 consecutive times after the fix (no flakiness).
+
+### Scoping decision: `expedite_purchase_order`/`reschedule_work_order` get lighter test coverage
+
+The brief's explicit negative-test list (F01-F09, F22-F24, F26, F33, plus
+08's OPA/OpenFGA lists) is written against `transfer_inventory` — the
+canonical action. `expedite_purchase_order` and `reschedule_work_order` are
+fully WIRED (propose/evidence/authz/policy/SHACL all real, each with its own
+OPA unit tests) and reachable end-to-end, but are not separately exercised
+by the full F01-F33 integration matrix — an explicit, documented scope
+decision given the time budget, not a gap discovered late.
+
+### `make test` acceptance run (this session)
+
+Exact pytest summary lines, `make test` run 3 consecutive times after the
+ingestion fix above, zero flakiness:
+
+```
+tests/model: 21 passed
+tests/contracts: 55 passed (was 19 before Phase 5)
+tests/component: 15 passed
+tests/integration: 63 passed (was 36 before Phase 5)
+```
+(154 total, all three runs identical.)
+
+`make bench`: `hot_read_p95_ms` PASS (phase 4, unchanged), `gate_evaluation_p95_ms`
+PASS (~10-17ms measured vs 300ms threshold), `decision_proposal_p95_ms` PASS
+(~28-30ms measured vs 500ms threshold). `make reset` verified clean with the
+two new services present (openfga/opa healthy with no docker-level
+healthcheck, decision_service healthy, bootstrap_openfga.py runs
+successfully on a freshly-reset stack).
+
+### What Phase 6 (durable action runtime) needs from here
+
+- `POST /decisions/{id}/execute` already verifies `status == APPROVED` and
+  returns the decision's `decision_content_hash` in its 501 body — Phase 6
+  only needs to replace the 501 with a real Temporal workflow start, the
+  "verify immutable content hash" step is already real.
+- `services/decision_service/authz.py::resolve_object` is the pattern for
+  binding any FUTURE ActionType to the existing warehouse-scoped
+  authorization model without new FGA types — reuse it rather than adding
+  `purchase_order`/`work_order` types.
+- `wms.transfers` CDC topic (Phase 3) is still unmapped into RDF
+  (`services/ingestion/mapping.py` has no `TableSpec` for it) — Phase 6 is
+  where that mapping + its semantic meaning (tied to `oo:ActionExecution`,
+  whose shape already exists since Phase 3) needs to land.
+- `oo:ActionExecution`/`oo:Outcome` RDF population, and the `execution
+  identifier`/`observed outcome identifier` H1 fields (currently always
+  absent — Decision-shape.ttl does not require them, by design, since they
+  don't exist before Phase 6).

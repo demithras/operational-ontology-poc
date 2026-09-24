@@ -1,0 +1,10 @@
+# Positive fixture: a standalone oo:EvidenceSnapshot with both required
+# properties (contracts/shapes/v1/evidence-snapshot-shape.ttl).
+@prefix oo:    <https://example.local/oo/> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix oo-fx: <https://example.local/oo/fixture/> .
+
+oo-fx:es-standalone-1
+  a oo:EvidenceSnapshot ;
+  oo:snapshotContentHash "sha256:fixture-es-standalone-1" ;
+  oo:snapshotObservedAt "2026-09-23T00:00:00Z"^^xsd:dateTime .

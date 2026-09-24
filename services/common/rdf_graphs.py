@@ -31,3 +31,36 @@ PROVENANCE_GRAPH = "https://example.local/oo/graph/provenance"
 # oo:Inferred / oo:Derived / oo:Asserted are declared in the ontology
 # (contracts/ontology/v1/oo-observation.ttl) but have no writer before a
 # later phase (inference rules, Phase 4 projections, Phase 9 agents).
+
+# Phase 5: one named graph PER DECISION (spec 14 R5 candidate design #1,
+# "named immutable graph per decision") — services/decision_service/
+# rdf_writer.py writes the Decision + its EvidenceSnapshot + gate-result
+# resources + actor nodes into this one graph in a SINGLE POST, so the
+# whole self-contained record either commits atomically (SHACL conforms)
+# or nothing does (409, per phase3.md's proven transactional-rejection
+# behavior). Immutable by convention: nothing in this codebase ever POSTs a
+# second time into an already-committed decision's graph.
+DECISIONS_GRAPH_PREFIX = "https://example.local/oo/graph/decisions/"
+
+
+def decision_graph_iri(decision_id: str) -> str:
+    return f"{DECISIONS_GRAPH_PREFIX}{decision_id}"
+
+
+# Entity IRI scheme shared with services/ingestion (implementation-notes.md
+# Phase 3: "Entity IRI scheme: https://example.local/factory/instance/{ClassName}/{localId}").
+FACTORY_INSTANCE_BASE = "https://example.local/factory/instance/"
+
+
+def fac_instance_iri(class_name: str, local_id: str) -> str:
+    return f"{FACTORY_INSTANCE_BASE}{class_name}/{local_id}"
+
+
+# oo: instance IRI scheme for governance objects (decisions, evidence
+# snapshots, actors, gate-result resources) — distinct namespace from the
+# fac: domain-entity instances above.
+OO_INSTANCE_BASE = "https://example.local/oo/instance/"
+
+
+def oo_instance_iri(class_name: str, local_id: str) -> str:
+    return f"{OO_INSTANCE_BASE}{class_name}/{local_id}"

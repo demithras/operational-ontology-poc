@@ -113,7 +113,22 @@ def process_message(msg, resolver: IdentityResolver, ing_store: store.IngestionS
         if status >= 500 or status == 404:
             raise RDF4JUnavailable(f"{msg.topic()}: RDF4J HTTP {status}") from e
         raise PoisonMessage(f"{msg.topic()}: RDF4J HTTP {status}: {e}") from e
-    except (httpx.ConnectError, httpx.TimeoutException) as e:
+    except httpx.TransportError as e:
+        # Broadened from (httpx.ConnectError, httpx.TimeoutException) after a
+        # real Phase 5 finding: `docker compose stop rdf4j` mid-request can
+        # make the TCP connection accept but then close before a response is
+        # sent, raising httpx.RemoteProtocolError ("Server disconnected
+        # without sending a response") — a THIRD distinct transport failure
+        # neither ConnectError nor TimeoutException covers. Uncaught, this
+        # exception propagated out of the consumer's main loop and crashed
+        # the whole `ingestion` container (verified: `docker compose ps`
+        # showed `Exited (1)`, permanently starving every hot-projection
+        # test downstream until manually restarted). httpx.ConnectError,
+        # httpx.TimeoutException, and httpx.RemoteProtocolError are ALL
+        # httpx.TransportError subclasses — catching the base class is both
+        # simpler and closes this whole class of "some other transport-level
+        # hiccup" failure mode, not just the two specific ones enumerated by
+        # hand.
         raise RDF4JUnavailable(f"{msg.topic()}: {e}") from e
 
     if result["applied"]:

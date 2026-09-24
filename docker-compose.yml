@@ -253,6 +253,82 @@ services:
       timeout: 5s
       retries: 60
 
+  # --- Phase 5: decision service + gates (docs/experiment/briefs/phase5.md) --
+
+  openfga:
+    image: openfga/openfga:latest
+    command: ["run"]
+    environment:
+      OPENFGA_DATASTORE_ENGINE: memory
+      OPENFGA_PLAYGROUND_ENABLED: "false"
+    ports:
+      - "${OPENFGA_HOST_PORT}:8080"
+    # openfga/openfga's image has neither a shell nor curl/wget (verified:
+    # `docker run --entrypoint /bin/sh` -> "no such file or directory"), so a
+    # CMD-SHELL/CMD healthcheck cannot run *inside* the container at all.
+    # Rather than fake one, this service intentionally has none — Makefile's
+    # `wait-healthy` (services/common/wait_healthy.py) treats a service with
+    # no configured healthcheck as ready once its State is "running", and
+    # services/decision_service/bootstrap_openfga.py separately polls the
+    # real HTTP /healthz endpoint (verified empirically: returns
+    # {"status":"SERVING"}) with its own retry/backoff before writing the
+    # store/model/tuples — so actual API readiness is still proven, just
+    # from outside the container.
+    depends_on: {}
+
+  opa:
+    image: openpolicyagent/opa:latest
+    command: ["run", "--server", "--addr", "0.0.0.0:8181", "--watch", "/policies"]
+    volumes:
+      - ./contracts/policies/v1:/policies:ro
+    ports:
+      - "${OPA_HOST_PORT}:8181"
+    # Same no-shell/no-curl situation as openfga above (verified empirically)
+    # — no docker-level healthcheck; `wait-healthy` treats "no healthcheck +
+    # running" as ready, and decision_service's own OPA client fails closed
+    # (F24) if a request lands before OPA is actually serving.
+    depends_on: {}
+
+  decision_service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["uvicorn", "services.decision_service.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      SERVICE_DB_HOST: postgres
+      SERVICE_DB_PORT: "5432"
+      SERVICE_DB_NAME: ${ONTOLOGY_HOT_DB_NAME}
+      SERVICE_DB_USER: ${ONTOLOGY_HOT_DB_USER}
+      SERVICE_DB_PASSWORD: ${ONTOLOGY_HOT_DB_PASSWORD}
+      RDF4J_BASE_URL: http://rdf4j:8080/rdf4j-server
+      RDF4J_REPOSITORY: oo
+      OPENFGA_API_URL: http://openfga:8080
+      OPA_BASE_URL: http://opa:8181
+      WMS_BASE_URL: http://wms:8000
+      ERP_BASE_URL: http://erp:8000
+      MES_BASE_URL: http://mes:8000
+      OO_TEST_MODE: ${OO_TEST_MODE}
+    ports:
+      - "${DECISION_SERVICE_HTTP_PORT}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rdf4j:
+        condition: service_healthy
+      projection_builder:
+        condition: service_healthy
+      wms:
+        condition: service_healthy
+      erp:
+        condition: service_healthy
+      mes:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+
 volumes:
   oo-poc-pgdata:
   oo-poc-rdf4j-data:

@@ -95,3 +95,92 @@ oo:ObservedSuccess        a skos:Concept ; skos:inScheme oo:DecisionStatusScheme
 oo:quantity            a owl:DatatypeProperty ; rdfs:domain oo:ActionExecution ; rdfs:range xsd:integer .
 oo:sourceWarehouse      a owl:ObjectProperty   ; rdfs:domain oo:ActionExecution .
 oo:destinationWarehouse a owl:ObjectProperty   ; rdfs:domain oo:ActionExecution .
+
+#############################################
+## Phase 5 additions: actor/delegation, evidence-snapshot content, per-gate
+## result capture, approval, and decision-content hashing.
+## docs/experiment/spec/05_ontology_and_contracts.md "Provenance foundation"
+## ("Domain-specific relations may be added but should preserve a mapping to
+## PROV where sensible" -> prov:used / prov:wasAssociatedWith asserted
+## alongside oo:evidenceSnapshot / oo:actor below, not instead of them);
+## docs/experiment/spec/01_hypotheses.md H1 (actor delegation context,
+## proposed parameters, authorization/policy/conformance results, approval
+## information); H13 (forensic queries, contracts/queries/v1/*.rq).
+#############################################
+
+## --- Actor identity + delegation ---
+## Every actor (human or agent) referenced by oo:actor is a real instance of
+## oo:HumanActor or oo:SoftwareAgent (both already subClassOf prov:Agent /
+## prov:SoftwareAgent above), carrying its principal id and, for an agent,
+## the human it acts on behalf of — the SAME delegation link
+## contracts/authorization/v1/model.fga's agent#principal relation records,
+## kept independently in the semantic core per spec 04 "Every mapping/
+## delegation must record ... creation/change time" applied to decisions.
+oo:actorId       a owl:DatatypeProperty ; rdfs:range xsd:string ; rdfs:comment "e.g. planner-1, agent-1 (matches contracts/authorization/v1/tuples.yaml principal ids)." .
+oo:actorRole     a owl:DatatypeProperty ; rdfs:range xsd:string ; rdfs:comment "planner | junior_planner | supervisor | agent." .
+oo:actsOnBehalfOf a owl:ObjectProperty  ; rdfs:domain oo:SoftwareAgent ; rdfs:range oo:HumanActor ;
+  rdfs:comment "H1 'actor delegation context if an agent acts for a human'. Populated only when oo:actor is a oo:SoftwareAgent." .
+
+## --- Proposed parameters (H1) ---
+## Action parameters vary per ActionType (contracts/actions/v1/*.yaml), so
+## they are not modeled as fixed RDF properties per action; the exact
+## proposed-parameters object is preserved as canonical JSON (the SAME bytes
+## hashed into oo:decisionContentHash below), and also linked as typed
+## fac: object references where the action concerns them (oo:concerns*)
+## so a decision is still traversable to the real domain objects it acted on.
+oo:parametersJson a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string .
+oo:concernsWorkOrder            a owl:ObjectProperty ; rdfs:domain oo:Decision .
+oo:concernsPart                 a owl:ObjectProperty ; rdfs:domain oo:Decision .
+oo:concernsSourceWarehouse      a owl:ObjectProperty ; rdfs:domain oo:Decision .
+oo:concernsDestinationWarehouse a owl:ObjectProperty ; rdfs:domain oo:Decision .
+
+## --- Decision content hash (spec 06 execute(): "verify immutable content
+## hash"; F33: "approval replay on changed decision -> rejected due decision
+## hash mismatch") ---
+oo:decisionContentHash a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string ;
+  rdfs:comment "sha256 over {actor, evidenceSnapshot id, all *Version fields, actionType/actionVersion, parametersJson}, computed once when the decision reaches a terminal gate outcome. Approval must be checked against this exact value (F33)." .
+
+## --- Per-gate result capture (H1: 'authorization result', 'policy result',
+## 'conformance result' each stored, per spec 04 'must not collapse gate
+## results into one opaque boolean'; distinct classes so H13 query 4 'which
+## policy/authorization versions were evaluated' and query 3 'which evidence
+## was available but excluded' are answerable by stable SPARQL, not log
+## scraping) ---
+oo:AuthorizationCheck a owl:Class ; rdfs:subClassOf prov:Entity .
+oo:checkRelation   a owl:DatatypeProperty ; rdfs:domain oo:AuthorizationCheck ; rdfs:range xsd:string .
+oo:checkObject     a owl:DatatypeProperty ; rdfs:domain oo:AuthorizationCheck ; rdfs:range xsd:string .
+oo:checkOutcome    a owl:DatatypeProperty ; rdfs:range xsd:string ; rdfs:comment "ALLOWED | DENIED | UNAVAILABLE (F23: OpenFGA down -> UNAVAILABLE, fails closed as DENIED_AUTHORIZATION at the Decision level)." .
+oo:checkedAt       a owl:DatatypeProperty ; rdfs:range xsd:dateTime .
+
+oo:PolicyEvaluation a owl:Class ; rdfs:subClassOf prov:Entity .
+oo:policyOutcome         a owl:DatatypeProperty ; rdfs:domain oo:PolicyEvaluation ; rdfs:range xsd:string ; rdfs:comment "allow | deny | require_approval | UNAVAILABLE (F24)." .
+oo:policyReasonsJson     a owl:DatatypeProperty ; rdfs:domain oo:PolicyEvaluation ; rdfs:range xsd:string .
+oo:policyObligationsJson a owl:DatatypeProperty ; rdfs:domain oo:PolicyEvaluation ; rdfs:range xsd:string .
+oo:policyInputHash       a owl:DatatypeProperty ; rdfs:domain oo:PolicyEvaluation ; rdfs:range xsd:string ; rdfs:comment "sha256 of the exact JSON input sent to OPA (spec 06: 'persist policy input hash + result + bundle version')." .
+oo:policyInputJson       a owl:DatatypeProperty ; rdfs:domain oo:PolicyEvaluation ; rdfs:range xsd:string ; rdfs:comment "The full input document itself, not only its hash — spec item 5 'persist the input hash + full input + bundle sha256'." .
+
+oo:ConformanceCheck a owl:Class ; rdfs:subClassOf prov:Entity .
+oo:conformanceOutcome        a owl:DatatypeProperty ; rdfs:domain oo:ConformanceCheck ; rdfs:range xsd:string ; rdfs:comment "CONFORMS | VIOLATED." .
+oo:conformanceViolationsJson a owl:DatatypeProperty ; rdfs:domain oo:ConformanceCheck ; rdfs:range xsd:string .
+
+oo:authorizationCheck a owl:ObjectProperty ; rdfs:domain oo:Decision ; rdfs:range oo:AuthorizationCheck .
+oo:policyEvaluation   a owl:ObjectProperty ; rdfs:domain oo:Decision ; rdfs:range oo:PolicyEvaluation .
+oo:conformanceCheck   a owl:ObjectProperty ; rdfs:domain oo:Decision ; rdfs:range oo:ConformanceCheck .
+
+## --- Approval (spec 06 'Human approval': approver/time/decision
+## hash/policy version/scope) ---
+oo:approvedBy           a owl:ObjectProperty   ; rdfs:domain oo:Decision ; rdfs:range prov:Agent .
+oo:approvedAt           a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:dateTime .
+oo:approvalDecisionHash a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string ; rdfs:comment "Must equal oo:decisionContentHash at approval time; a mismatch is F33." .
+oo:approvalScope        a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string .
+
+## --- Evidence snapshot content (spec 04 'Evidence snapshot' hybrid
+## manifest; spec 14 R5 'hybrid manifest with hashes + immutable required
+## facts, then test reconstruction') ---
+oo:snapshotObservedAt   a owl:DatatypeProperty ; rdfs:domain oo:EvidenceSnapshot ; rdfs:range xsd:dateTime .
+oo:snapshotContentHash  a owl:DatatypeProperty ; rdfs:domain oo:EvidenceSnapshot ; rdfs:range xsd:string .
+oo:sourcePositionsJson  a owl:DatatypeProperty ; rdfs:domain oo:EvidenceSnapshot ; rdfs:range xsd:string ; rdfs:comment "JSON list of {system, table, pk, lsn, version, observed_at} cited from oo:SourcePosition (contracts/ontology/v1/oo-observation.ttl)." .
+oo:requiredFactsJson    a owl:DatatypeProperty ; rdfs:domain oo:EvidenceSnapshot ; rdfs:range xsd:string ; rdfs:comment "The ActionType's evidence_requirements, resolved to concrete values at freeze time — the facts the decision actually used (H13 query 2)." .
+oo:excludedFactsJson    a owl:DatatypeProperty ; rdfs:domain oo:EvidenceSnapshot ; rdfs:range xsd:string ; rdfs:comment "Candidate evidence gathered from the same hot-projection rows/RDF entities but NOT part of evidence_requirements for this ActionType — H13 query 3 'which evidence was available but excluded'." .
+oo:projectionRowHashesJson a owl:DatatypeProperty ; rdfs:domain oo:EvidenceSnapshot ; rdfs:range xsd:string ; rdfs:comment "content_hash of every contributing ontology_hot row (services/projection_builder/hashing.py), per R5's 'projection row hashes'." .
+

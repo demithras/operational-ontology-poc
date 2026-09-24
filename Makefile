@@ -1,7 +1,7 @@
 .PHONY: up down reset seed test test-unit test-contracts test-component test-integration \
         test-stateful test-destructive test-determinism test-faults test-replay bench \
-        experiment report replay ensure-env wait-healthy wait-converged wait-connectors \
-        rebuild-projections
+        bench-phase5 experiment report replay ensure-env wait-healthy wait-converged \
+        wait-connectors rebuild-projections
 
 SHELL := /usr/bin/env bash
 VENV_PY := .venv/bin/python
@@ -30,15 +30,15 @@ up: ensure-env
 	$(MAKE) wait-healthy
 	$(VENV_PY) services/ingestion/register_connectors.py
 	$(VENV_PY) services/ingestion/bootstrap_rdf4j.py
+	$(VENV_PY) services/decision_service/bootstrap_openfga.py
 
+## Delegates to services/common/wait_healthy.py (see its docstring for why
+## this stopped being a plain bash/grep loop in Phase 5: openfga/opa have no
+## shell inside their images, so they declare no docker-level healthcheck at
+## all, and a naive "grep -v healthy" loop would wait forever on them).
 wait-healthy:
-	@echo "waiting for postgres/erp/mes/wms/kafka/connect/rdf4j/ingestion to report healthy..."
-	@for i in $$(seq 1 60); do \
-		unhealthy=$$(docker compose ps --format '{{.Name}} {{.Health}}' | grep -v 'healthy' | grep -v '^$$' || true); \
-		if [ -z "$$unhealthy" ]; then echo "all services healthy"; exit 0; fi; \
-		sleep 2; \
-	done; \
-	echo "timed out waiting for healthy services:"; docker compose ps; exit 1
+	@echo "waiting for all compose services to report running (+healthy where a healthcheck is configured)..."
+	@$(VENV_PY) services/common/wait_healthy.py
 
 down:
 	docker compose down
@@ -147,6 +147,13 @@ test: test-unit test-contracts
 # RDF4J-transactional proof of the same shapes (self-skips if the "oo"
 # repository isn't reachable). CI gate (13_repository_contract.md): "SHACL
 # negative fixture unexpectedly conforms" -> these tests fail.
+#
+# Phase 5 (docs/experiment/briefs/phase5.md item 3): also runs the OpenFGA
+# model tests (`fga model test`) and OPA policy tests (`opa test
+# --fail-on-empty`), each via its own docker CLI image (tests/contracts/
+# test_openfga_model.py / test_opa_policies.py shell out to `docker run`,
+# same pattern as the rest of this file — needs DOCKER_CONFIG, see
+# docs/experiment/briefs/common.md).
 test-contracts:
 	$(VENV_PY) -m pytest tests/contracts -q
 
@@ -188,6 +195,15 @@ test-replay:
 # fails — never tuned post hoc.
 bench: ensure-env
 	$(VENV_PY) tests/performance/bench_phase4.py
+	$(MAKE) bench-phase5
+
+## docs/experiment/briefs/phase5.md item 9: gate evaluation p95 (authz/
+## policy/SHACL/persistence stages) and end-to-end proposal-path p95,
+## against the H6/acceptance-criteria SLOs (300ms/500ms). Writes
+## experiments/exp-000/results/bench-phase5.json. Requires the full stack
+## (postgres/rdf4j/openfga/opa/wms/decision_service) reachable.
+bench-phase5: ensure-env
+	$(VENV_PY) tests/performance/bench_phase5.py
 
 experiment:
 	@echo "not implemented yet — Phase 10 (see docs/experiment/spec/12_implementation_plan.md)"

@@ -1,0 +1,11 @@
+# H13 query 2 — "Which evidence was used?"
+PREFIX oo: <https://example.local/oo/>
+SELECT DISTINCT ?requiredFactsJson ?snapshotContentHash ?snapshotObservedAt ?sourcePositionsJson
+WHERE {
+  ?decision oo:decisionId "%%DECISION_ID%%" ;
+            oo:evidenceSnapshot ?es .
+  ?es oo:requiredFactsJson ?requiredFactsJson ;
+      oo:snapshotContentHash ?snapshotContentHash ;
+      oo:snapshotObservedAt ?snapshotObservedAt ;
+      oo:sourcePositionsJson ?sourcePositionsJson .
+}

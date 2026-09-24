@@ -1,0 +1,92 @@
+# contracts/actions/v1/transfer_inventory.yaml
+#
+# docs/experiment/spec/05_ontology_and_contracts.md "ActionType contract"
+# reference YAML, filled in for this repo's real WMS/RDF4J/OPA/OpenFGA
+# wiring. Loaded by services/decision_service/action_types.py; sha256 of
+# this file's raw bytes is pinned in contracts/manifests/current.json.
+name: transfer_inventory
+version: 1
+
+parameters:
+  source_warehouse:
+    type: Warehouse
+  destination_warehouse:
+    type: Warehouse
+  part:
+    type: Part
+  quantity:
+    type: integer
+    min: 1
+
+# Not a formal ActionType parameter (transfer_inventory's own preconditions
+# never depend on it) but accepted in the propose request's `context` object
+# to select which work order this mitigation addresses, purely so
+# evidence.py can attach `linked_work_order_risk` — see
+# docs/experiment/implementation-notes.md Phase 5 section "why context.work_order_id
+# is not a parameter".
+context:
+  work_order_id:
+    type: WorkOrder
+    required_for_evidence: [linked_work_order_risk]
+
+reads:
+  - InventoryLot
+  - Warehouse
+  - WorkOrder
+
+authorization:
+  relation: can_transfer_inventory
+  object_binding: source_warehouse
+  approval_relation: can_approve_large_transfer
+
+policy:
+  package: factory.inventory.transfer
+  # 03_domain_scenario.md's exact number; also the canonical fixture's
+  # policy_config.transfer_approval_threshold_units.
+  approval_threshold_units: 100
+
+evidence_requirements:
+  - current_source_inventory
+  - current_destination_compatibility
+  - linked_work_order_risk
+  - safety_stock
+
+closure:
+  required:
+    - source_available
+    - source_quality_status
+    - safety_stock
+    - destination_exists
+  if_missing: insufficient_evidence
+  # docs/experiment/spec/09_failure_and_adversarial_matrix.md F08 / spec 04's
+  # STALE consistency status: evidence older than this is INSUFFICIENT_EVIDENCE
+  # even if every required field is present (matches the canonical fixture's
+  # policy_config.max_evidence_freshness_s: 5).
+  max_evidence_freshness_s: 5
+
+preconditions:
+  - source != destination
+  - source_available >= quantity
+
+expected_effects:
+  - source.available decreases by quantity
+  - destination.available increases by quantity
+
+external_operation:
+  system: WMS
+  operation: create_transfer
+
+idempotency:
+  key: action_execution_id
+
+observation:
+  source: WMS_CDC
+  timeout: PT30S
+
+compensation:
+  mode: compensatable
+  operation: reverse_transfer
+
+audit:
+  decision_required: true
+  approval_if_policy_requires: true

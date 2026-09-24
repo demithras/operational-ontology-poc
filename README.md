@@ -24,7 +24,7 @@ Build order and exit criteria: `docs/experiment/spec/12_implementation_plan.md`.
 | 3 | Semantic core (RDF4J, ontology, PROV-O, SHACL) + CDC ingestion (Kafka, Debezium) | done |
 | 4 | Hot projections (`work_order_risk`, `transfer_candidates`, `current_inventory`, `action_eligibility_summary`) in PostgreSQL, derived from the semantic core via SPARQL | done |
 | 4fix | Test-suite stability: single readiness contract (`make wait-converged`), destructive tests isolated into `make test-destructive`, root-caused and fixed the flaky CDC-convergence check | done (tag `poc-v0.4.1-stable`) |
-| 5 | Decision service + gates (OpenFGA, OPA, SHACL gate capture) | pending |
+| 5 | Decision service + gates (OpenFGA, OPA, SHACL gate capture) | done |
 | 6 | Durable action runtime (Temporal, WMS action, idempotency, CDC, reconciliation) | pending |
 | 7 | Contract versioning / replay | pending |
 | 8 | A/B baseline (conventional relational implementation) | pending |
@@ -101,14 +101,34 @@ proves `hash(rebuilt) == hash(before)` over deterministic business fields.
 locked `hot_read_p95_ms` SLO plus a counter-test (the same information via
 direct SPARQL), writing `experiments/exp-000/results/bench-phase4.json`.
 
+Since Phase 5, `make up` also brings up `openfga` (authorization,
+memory-store, host port 15481), `opa` (contextual policy, loading
+`contracts/policies/v1` as a mounted bundle, host port 15482), and
+`services/decision_service` (the governed decision API, host port 15410) —
+and idempotently bootstraps the OpenFGA store/model/tuples from
+`contracts/authorization/v1/`. `POST /decisions/propose` runs the full
+evidence → authorization (OpenFGA) → policy (OPA) → SHACL-validated RDF4J
+write pipeline from `docs/experiment/spec/06_decision_and_action_runtime.md`;
+`GET /decisions/{id}`, `POST /decisions/{id}/approve` (human approval, F33
+hash-mismatch rejection), and `POST /decisions/{id}/execute` /
+`POST /replay/{id}` (verified-immutable-tuple / 501 stubs through Phase 6/7)
+round out the API surface. `make test-contracts` now also runs the OpenFGA
+model tests (`fga model test`) and OPA policy tests (`opa test
+--fail-on-empty`), each via its own docker CLI image. `make bench-phase5`
+(folded into `make bench`) measures per-gate latency (authorization/policy/
+SHACL-RDF4J/Postgres) plus the end-to-end proposal path against the locked
+`gate_evaluation_p95_ms`/`decision_proposal_p95_ms` SLOs, writing
+`experiments/exp-000/results/bench-phase5.json`.
+
 Every other mandatory command from the repository contract (`make
 test-faults`, `make test-replay`, `make experiment`, `make
 report`, `make replay DECISION_ID=<id>`) prints which phase it belongs to
 and exits `2` — nothing is faked as passing before its phase actually
 lands. `make test-stateful` is already live: it aliases to Phase 1's own
-Hypothesis stateful/bug-detection tests. `make test-contracts` (Phase 3) is
-live: SHACL positive/negative fixtures via pyshacl, plus the same shapes
-proven transactionally against the real RDF4J repository. `make test`
+Hypothesis stateful/bug-detection tests. `make test-contracts` (Phase 3+) is
+live: SHACL positive/negative fixtures via pyshacl, the same shapes proven
+transactionally against the real RDF4J repository, plus (Phase 5) the
+OpenFGA/OPA suites above. `make test`
 runs `tests/model/` and `tests/contracts/` always, and `tests/component/` +
 `tests/integration/` too if the stack is reachable (otherwise it prints a
 clear skip, per the same honesty rule).

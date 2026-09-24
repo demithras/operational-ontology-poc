@@ -1,0 +1,44 @@
+# contracts/authorization/v1/tuples.yaml
+#
+# Canonical relationship tuples — matches seed/fixtures/canonical_incident.yaml
+# `actors:`/`warehouses:` exactly (planner-1/junior-1/supervisor-1/agent-1,
+# all `regions: [region-1]`; WH-A and WH-B both `region: region-1`).
+#
+# Loaded into the LIVE OpenFGA server by
+# services/decision_service/bootstrap_openfga.py (run by `make up`, same
+# idempotent-bootstrap pattern as services/ingestion/bootstrap_rdf4j.py) AND
+# referenced as `tuple_file: tuples.yaml` by tests.yaml for the standalone
+# `fga model test` run (contracts/authorization/v1/tests.yaml) — one fixture,
+# two consumers, so the live server and the offline model tests can never
+# silently drift apart.
+#
+# agent-1 deliberately has NO agent_grant tuple here (matches the fixture's
+# `task_grants: []` — "no grants by default; grant added per test case").
+# A synthetic out-of-region warehouse (WH-OUT-OF-SCOPE / region-2) is
+# included so the "planner denied out of scope" case has something to be
+# out of scope OF, without inventing a second canonical warehouse — it is
+# never a real WMS warehouse and no test ever expects it to resolve there.
+- user: user:planner-1
+  relation: planner
+  object: region:region-1
+- user: user:supervisor-1
+  relation: supervisor
+  object: region:region-1
+- user: user:junior-1
+  relation: junior_planner
+  object: warehouse:WH-A
+- user: user:junior-1
+  relation: junior_planner
+  object: warehouse:WH-B
+- user: region:region-1
+  relation: in_region
+  object: warehouse:WH-A
+- user: region:region-1
+  relation: in_region
+  object: warehouse:WH-B
+- user: region:region-2
+  relation: in_region
+  object: warehouse:WH-OUT-OF-SCOPE
+- user: user:planner-1
+  relation: principal
+  object: agent:agent-1

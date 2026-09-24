@@ -1,0 +1,9 @@
+{
+  "_comment": "Business-config data document, versioned/hashed together with the .rego files as one policy bundle (contracts/manifests/current.json's opa.sha256 covers this whole directory). safety_stock is treated as REQUIRED EVIDENCE per docs/experiment/spec/05_ontology_and_contracts.md's closed-world-islands example ('closure.required: [..., safety_stock]') -- services/decision_service/evidence.py reads this SAME file (not a copy) to resolve it during evidence-freeze, before OPA ever runs, so a (part, warehouse) with no entry and no default is INSUFFICIENT_EVIDENCE rather than a silent policy default.",
+  "safety_stock": {
+    "PX-17": {
+      "WH-B": 50
+    }
+  },
+  "default_safety_stock": 10
+}
