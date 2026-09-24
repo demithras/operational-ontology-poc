@@ -104,17 +104,32 @@ def _run_job(job: dict) -> JobResult:
     # script for v1 then v2 never collides on the same (part, warehouse).
     base = 972000 if version == "v1" else 973000
     sku = f"SKU-{base + seq:06d}"
+    # Phase 7b fix: tracked OUTSIDE the try block so a failure AFTER
+    # propose() succeeded (e.g. approve()/start_execution() 403/500 —
+    # observed live: a ~4-minute post-`make reset --build` warm-up window
+    # where OpenFGA/decision_service were still settling made 28/110
+    # approve() calls 403 transiently) never loses the decision_id of a
+    # REAL decision that was genuinely created — the except handler below
+    # used to always return decision_id=None here, silently dropping that
+    # decision out of historical-corpus.json's decision_ids list even
+    # though it exists, fully governed, in Postgres/RDF4J. Found and fixed
+    # after having to hand-merge a 50-decision top-up run into the corpus
+    # file post-hoc — see docs/experiment/implementation-notes.md Phase 7b
+    # section.
+    decision_id_so_far: str | None = None
     try:
         if kind == "insufficient_evidence":
             # Never set via WMS at all — current_inventory has no row for
             # this (part, warehouse) pair (F02: "missing evidence").
             canonical = f"PX-{base + seq - 100000:04d}"
             decision = propose(dec, "planner-1", WAREHOUSE_B, WAREHOUSE_A, canonical, 10)
+            decision_id_so_far = decision["decision_id"]
             return JobResult(decision["decision_id"], kind, decision["status"])
 
         if kind == "denied_authz":
             canonical = set_inventory_and_wait(wms, conn, sku, WAREHOUSE_B, on_hand=200)
             decision = propose(dec, "outsider-1", WAREHOUSE_B, WAREHOUSE_A, canonical, 10)
+            decision_id_so_far = decision["decision_id"]
             return JobResult(decision["decision_id"], kind, decision["status"])
 
         if kind == "denied_policy":
@@ -122,6 +137,7 @@ def _run_job(job: dict) -> JobResult:
             # (10) and v2's (15) — uniform across versions.
             canonical = set_inventory_and_wait(wms, conn, sku, WAREHOUSE_B, on_hand=30)
             decision = propose(dec, "planner-1", WAREHOUSE_B, WAREHOUSE_A, canonical, 25)
+            decision_id_so_far = decision["decision_id"]
             return JobResult(decision["decision_id"], kind, decision["status"])
 
         # --- executed chains (normal / diverged / unknown / failed) ---
@@ -131,6 +147,7 @@ def _run_job(job: dict) -> JobResult:
         quantity = 20 + (seq % 7) * 15  # 20..110
         canonical = set_inventory_and_wait(wms, conn, sku, WAREHOUSE_B, on_hand=on_hand)
         decision = propose(dec, "planner-1", WAREHOUSE_B, WAREHOUSE_A, canonical, quantity)
+        decision_id_so_far = decision["decision_id"]
         decision = approve_if_needed(dec, decision)
         if decision["status"] != "APPROVED":
             return JobResult(decision["decision_id"], kind, decision["status"], error="did not reach APPROVED")
@@ -142,7 +159,7 @@ def _run_job(job: dict) -> JobResult:
         final = wait_for_terminal(dec, decision["decision_id"], timeout_s=60.0)
         return JobResult(decision["decision_id"], kind, final["status"])
     except Exception as exc:  # noqa: BLE001 - one job's failure must not kill the batch
-        return JobResult(None, kind, None, error=f"{type(exc).__name__}: {exc}")
+        return JobResult(decision_id_so_far, kind, None, error=f"{type(exc).__name__}: {exc}")
     finally:
         wms.close()
         dec.close()
