@@ -25,7 +25,13 @@ SAMPLE_SIZE = 500  # comfortably over the spec's ">= 300" floor
 def bulk_decision_sample(ontology_hot_conn) -> list[str]:
     with ontology_hot_conn.cursor() as cur:
         cur.execute(
-            "SELECT decision_id FROM decisions WHERE decision_id LIKE 'D-BULK%' ORDER BY decision_id LIMIT %s",
+            # Phase 7b fix: psycopg's client-side %s-placeholder scan treats
+            # ANY bare `%` in the query text as a placeholder marker, even
+            # inside a string literal — `'D-BULK%'` must be `'D-BULK%%'`
+            # here (found live: "only '%s', '%b', '%t' are allowed as
+            # placeholders, got '%'"), matching scripts/replay_report.py's
+            # equivalent query, which already had this right.
+            "SELECT decision_id FROM decisions WHERE decision_id LIKE 'D-BULK%%' ORDER BY decision_id LIMIT %s",
             (SAMPLE_SIZE,),
         )
         ids = [row[0] for row in cur.fetchall()]
