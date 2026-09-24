@@ -10,21 +10,18 @@ from __future__ import annotations
 import httpx
 import psycopg
 
-from tests.integration.decision_helpers import propose_with_freshness_retry, set_inventory_and_wait
+from tests.integration.decision_helpers import set_inventory_and_wait
 
 
 def _propose_requiring_approval(decision_client: httpx.Client, wms_client: httpx.Client, conn: psycopg.Connection, sku: str) -> dict:
     part = set_inventory_and_wait(wms_client, conn, sku, "WH-B", on_hand=1000)
-    r = propose_with_freshness_retry(
-        conn, part, "WH-B",
-        lambda: decision_client.post(
-            "/decisions/propose",
-            json={
-                "action_type": "transfer_inventory",
-                "actor": {"type": "user", "id": "planner-1"},
-                "parameters": {"source_warehouse": "WH-B", "destination_warehouse": "WH-A", "part": part, "quantity": 150},
-            },
-        ),
+    r = decision_client.post(
+        "/decisions/propose",
+        json={
+            "action_type": "transfer_inventory",
+            "actor": {"type": "user", "id": "planner-1"},
+            "parameters": {"source_warehouse": "WH-B", "destination_warehouse": "WH-A", "part": part, "quantity": 150},
+        },
     )
     assert r.status_code == 200
     body = r.json()

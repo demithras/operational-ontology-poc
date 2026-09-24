@@ -307,6 +307,7 @@ services:
       WMS_BASE_URL: http://wms:8000
       ERP_BASE_URL: http://erp:8000
       MES_BASE_URL: http://mes:8000
+      INGESTION_HEALTH_URL: http://ingestion:8090
       OO_TEST_MODE: ${OO_TEST_MODE}
     ports:
       - "${DECISION_SERVICE_HTTP_PORT}:8000"
@@ -316,6 +317,8 @@ services:
       rdf4j:
         condition: service_healthy
       projection_builder:
+        condition: service_healthy
+      ingestion:
         condition: service_healthy
       wms:
         condition: service_healthy

@@ -27,13 +27,15 @@ therefore takes a WMS-local SKU (`SKU-9NNNNN`, a range never used by
 request's `parameters.part` (which is canonical-id-typed, per
 contracts/actions/v1/transfer_inventory.yaml).
 
-Freshness (`max_evidence_freshness_s: 5` on transfer_inventory, matching
-seed/fixtures/canonical_incident.yaml's `policy_config`) is asserted by
-directly bumping `as_of` via SQL to `now()` IMMEDIATELY before propose() —
-the mirror-image of test_projection_staleness.py's technique — because the
-live `services/projection_builder` poll loop only re-derives `as_of` from
-the real `oo:SourcePosition` every ~3s, and a real CDC round trip can itself
-take longer than the 5s window being tested.
+Phase 5 fix (watermark-based evidence freshness — see
+services/decision_service/evidence.py's module docstring and
+docs/experiment/implementation-notes.md's Phase 5 fix section): freshness no
+longer depends on how recently a row's OWN data changed, so
+`set_inventory_and_wait` no longer needs to (and must not) manually bump
+`as_of` to defeat a staleness check — a row set up minutes ago is exactly as
+FRESH as one set up a millisecond ago, as long as the ingestion pipeline is
+alive. The `propose_with_freshness_retry` crutch this file used to export is
+gone entirely; every call site now calls propose() directly.
 """
 
 from __future__ import annotations
@@ -69,13 +71,13 @@ def set_inventory_and_wait(
     timeout_s: float = 20.0,
 ) -> str:
     """Sets exact inventory via WMS's test-mode endpoint (WMS-local `sku`),
-    waits for the change to converge into the `current_inventory` hot
+    and waits for the change to converge into the `current_inventory` hot
     projection under its resolved CANONICAL id (real CDC + identity
     resolution + projection-builder round trip — no shortcuts on VALUE
-    correctness), then bumps that row's `as_of` to `now()` so it is
-    guaranteed FRESH the instant this returns. Callers must call propose()
-    immediately after, with no sleep in between. Returns the canonical part
-    id to use in the propose() request."""
+    correctness). Callers may call propose() any time after this returns —
+    seconds, minutes, whatever — freshness is governed by the pipeline
+    watermark (services/ingestion), not by when this specific row last
+    changed. Returns the canonical part id to use in the propose() request."""
     canonical = sku_to_canonical(sku)
     resp = wms_client.post(
         "/_test/inventory/set",
@@ -83,45 +85,33 @@ def set_inventory_and_wait(
     )
     assert resp.status_code == 200, f"_test/inventory/set failed: {resp.status_code} {resp.text}"
 
-    row = wait_until(lambda: reader.get_current_inventory(conn, canonical, warehouse_id), timeout_s=timeout_s)
-    assert row is not None, f"current_inventory row for canonical part={canonical} (sku={sku}) warehouse={warehouse_id} never converged"
-    assert row["on_hand"] == on_hand, f"expected on_hand={on_hand}, hot projection shows {row['on_hand']} (stale read?)"
+    # Poll for the row to show THIS call's exact value, not merely "a row
+    # exists" — a bare existence check is a false-positive the moment a
+    # test REUSES a (sku, warehouse) pair a previous run already converged
+    # (found empirically: wait_until returned the OLD on_hand immediately,
+    # before the new CDC update had propagated, because "exists" was already
+    # true from the prior value).
+    def _matches() -> dict | None:
+        row = reader.get_current_inventory(conn, canonical, warehouse_id)
+        if row is not None and row["on_hand"] == on_hand and row["quality_status"] == quality_status:
+            return row
+        return None
 
-    with conn.cursor() as cur:
-        cur.execute(
-            "UPDATE current_inventory SET as_of = now() WHERE part = %s AND warehouse = %s", (canonical, warehouse_id)
-        )
+    row = wait_until(_matches, timeout_s=timeout_s)
+    assert row is not None, (
+        f"current_inventory row for canonical part={canonical} (sku={sku}) warehouse={warehouse_id} "
+        f"never converged to on_hand={on_hand} quality_status={quality_status!r}"
+    )
     return canonical
 
 
-def propose_with_freshness_retry(conn: psycopg.Connection, part: str, warehouse_id: str, propose_fn, max_attempts: int = 5) -> httpx.Response:
-    """Re-bumps `as_of` to `now()` and re-calls `propose_fn()` up to
-    `max_attempts` times if (and ONLY if) the response is specifically
-    INSUFFICIENT_EVIDENCE due to a lost freshness race (`source_available_fresh`
-    in `missing`) — never masks any OTHER outcome, so a test asserting a
-    genuinely different status still fails loudly and immediately.
-
-    Found empirically running the full suite against a FRESHLY reseeded
-    stack (heavy CDC backlog just drained): `services/projection_builder`'s
-    live poll loop rebuilds `current_inventory` from the REAL
-    `oo:SourcePosition.lastObservedAt` every ~3s, reverting a test's manual
-    `as_of = now()` bump the moment the next cycle lands. A single
-    bump-then-call is a race against that cycle; retrying is far cheaper and
-    more robust than trying to synchronize with the live poller's phase.
-    Never used for the F08 staleness test, which deliberately WANTS a stale
-    read and must not retry past it."""
-    response = None
-    for _ in range(max_attempts):
-        with conn.cursor() as cur:
-            cur.execute("UPDATE current_inventory SET as_of = now() WHERE part = %s AND warehouse = %s", (part, warehouse_id))
-        response = propose_fn()
-        if response.status_code != 200:
-            return response
-        body = response.json()
-        if body.get("status") == "INSUFFICIENT_EVIDENCE" and "source_available_fresh" in body.get("evidence_snapshot", {}).get("missing", []):
-            continue
-        return response
-    return response
+def ingestion_watermarks(ingestion_client: httpx.Client) -> dict[str, str]:
+    """Reads services/ingestion's per-source watermark directly — used by
+    tests that need to ASSERT freshness came from the watermark mechanism
+    (not just observe the gate's aggregate verdict)."""
+    r = ingestion_client.get("/health")
+    r.raise_for_status()
+    return r.json().get("watermarks", {})
 
 
 def inventory_unchanged(wms_client: httpx.Client, sku: str, warehouse_id: str, expected_on_hand: int) -> bool:

@@ -308,3 +308,20 @@ def test_rdf4j_outage_backs_off_without_data_loss_and_resumes(wms_client: httpx.
             break
         time.sleep(POLL_INTERVAL_S)
     assert converged, "change made during the RDF4J outage was lost instead of resuming after restart"
+
+    # Phase 5 fix (watermark-based evidence freshness,
+    # docs/experiment/implementation-notes.md): the checks above prove NO
+    # DATA WAS LOST, but not that the pipeline is genuinely CAUGHT UP again —
+    # found empirically via a continuous monitor that `current_inventory.
+    # computed_at` (services/projection_builder, an INDEPENDENT poll loop
+    # that also reads from RDF4J and stalls during this same outage) stayed
+    # frozen for 11-19 REAL seconds after this test's own `finally` block
+    # already considered RDF4J "back". Left unfixed, that stale window leaks
+    # into whichever test runs next in the same `pytest tests/integration`
+    # session and can make an unrelated decision-service freshness check
+    # fail for a reason that has nothing to do with what that test is
+    # actually exercising. Waiting for genuine reconvergence here — the same
+    # place `make wait-converged` would — keeps this test's blast radius
+    # contained to itself.
+    readiness.wait_for_ingestion_watermarks(db_env.ingestion_health_url(), timeout_s=30.0)
+    readiness.wait_for_fresh_hot_projection(db_env.ontology_hot_dsn(), timeout_s=30.0)

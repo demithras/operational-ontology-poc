@@ -26,6 +26,19 @@ class HealthState:
         self.poison_messages = 0
         self.last_error: str | None = None
         self.consumer_ready = False
+        # Phase 5 fix (watermark-based evidence freshness, docs/experiment/
+        # implementation-notes.md): per-source-system "verified_through" —
+        # the wall-clock time ingestion last successfully processed EITHER a
+        # real CDC event OR a Debezium heartbeat message for that system.
+        # Updated on every message (see consumer.py::run), so it advances
+        # even when nothing in the source database has changed — this is
+        # the whole point: it answers "is the pipeline caught up right now",
+        # not "did this fact change recently".
+        self.watermarks: dict[str, str] = {}
+
+    def touch_watermark(self, system: str, ts_iso: str) -> None:
+        with self._lock:
+            self.watermarks[system] = ts_iso
 
     def snapshot(self) -> dict:
         with self._lock:
@@ -37,6 +50,7 @@ class HealthState:
                 "messages_quarantined_identity": self.messages_quarantined_identity,
                 "poison_messages": self.poison_messages,
                 "last_error": self.last_error,
+                "watermarks": dict(self.watermarks),
             }
 
     def incr(self, field: str, by: int = 1) -> None:

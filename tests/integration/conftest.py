@@ -154,20 +154,19 @@ def decision_client(decision_service_reachable: bool):
         yield client
 
 
-def bump_freshness_now(conn: psycopg.Connection, table: str, where_column: str, where_value: str) -> None:
-    """Directly sets a hot-projection row's `as_of` to `now()` via SQL — the
-    mirror-image of test_projection_staleness.py's "push as_of BACK to force
-    STALE" technique, used here to force FRESH for a deterministic instant so
-    a decision-service propose() test isn't racing real CDC/poll-cycle
-    latency (services/projection_builder's live poll loop OVERWRITES this
-    within its ~3s cycle from the real oo:SourcePosition value, so callers
-    must call propose() immediately after this, not after any delay).
-    `table`/`where_column` are fixed internal literals from this test suite's
-    own call sites, never caller/request-derived — no SPARQL/SQL-injection
-    surface (contrast services/decision_service/evidence.py's caller-facing
-    SPARQL, which IS validated/escaped)."""
-    with conn.cursor() as cur:
-        cur.execute(f"UPDATE {table} SET as_of = now() WHERE {where_column} = %s", (where_value,))  # noqa: S608
+@pytest.fixture()
+def ingestion_client(stack_up: bool):
+    """services/ingestion's health endpoint — Phase 5 fix (watermark-based
+    evidence freshness): tests read `watermarks` from here directly to
+    ASSERT that a propose() decision's freshness came from the pipeline
+    watermark, not from a per-row timestamp. Reuses the `stack_up` fixture's
+    reachability (ingestion is one of the services it already probes via
+    `BASE_URLS`? no — ingestion has its own health port, so check directly)."""
+    url = db_env.ingestion_health_url()
+    if not _reachable(url):
+        pytest.skip(f"ingestion health endpoint not reachable at {url} — run 'make up' first")
+    with httpx.Client(base_url=url, timeout=DEFAULT_TIMEOUT) as client:
+        yield client
 
 
 def get_lot(client: httpx.Client, part: str, warehouse_id: str) -> dict:

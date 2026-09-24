@@ -41,6 +41,10 @@ async def lifespan(app: FastAPI):
         "wms": httpx.Client(base_url=config.wms_base_url, timeout=5.0),
         "erp": httpx.Client(base_url=config.erp_base_url, timeout=5.0),
         "mes": httpx.Client(base_url=config.mes_base_url, timeout=5.0),
+        # Phase 5 fix (watermark-based evidence freshness): the per-source
+        # "verified_through" watermark ingestion tracks (real CDC events +
+        # Debezium heartbeats) — see evidence.py::_resolve_source_inventory_with_freshness.
+        "ingestion": httpx.Client(base_url=config.ingestion_health_url, timeout=5.0),
     }
     _state.update(
         config=config,

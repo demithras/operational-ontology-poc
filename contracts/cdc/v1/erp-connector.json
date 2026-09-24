@@ -15,7 +15,7 @@
     "table.include.list": "public.suppliers,public.parts,public.purchase_orders,public.purchase_order_lines",
     "tombstones.on.delete": "false",
     "snapshot.mode": "initial",
-    "heartbeat.interval.ms": "5000",
+    "heartbeat.interval.ms": "1000",
     "provide.transaction.metadata": "false"
   }
 }

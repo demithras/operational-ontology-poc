@@ -192,6 +192,80 @@ def wait_for_zero_kafka_lag(
     raise ConvergenceTimeout(f"ingestion consumer lag did not reach 0 within {timeout_s}s; last per-topic lag: {last_lag}")
 
 
+# --- 2.5. ingestion has recorded a watermark for every source system ------
+# (Phase 5 fix: watermark-based evidence freshness). A brand-new ingestion
+# process has an EMPTY watermarks dict until its first heartbeat/CDC message
+# is processed (~1s given contracts/cdc/v1/*-connector.json's
+# heartbeat.interval.ms=1000, but a Kafka consumer-group rebalance can push
+# this out further) — found empirically: a propose() call issued in that
+# narrow window correctly (fail-closed) returns INSUFFICIENT_EVIDENCE, but
+# that is not what `make up`/`make seed`/`make reset` should hand back as
+# "converged". Zero Kafka lag on the ORDINARY CDC topics (step 2) says
+# nothing about the heartbeat topics, which are a separate subscription.
+
+
+def ingestion_watermarks(ingestion_health_url: str) -> dict[str, str]:
+    with httpx.Client(timeout=5.0) as client:
+        r = client.get(f"{ingestion_health_url}/health")
+    r.raise_for_status()
+    return r.json().get("watermarks", {})
+
+
+def wait_for_ingestion_watermarks(
+    ingestion_health_url: str, systems: tuple[str, ...] = ("erp", "mes", "wms"), timeout_s: float = 60.0, poll_interval_s: float = 1.0, log: Logger = _noop
+) -> None:
+    deadline = time.monotonic() + timeout_s
+    last_seen: dict[str, str] = {}
+    while time.monotonic() < deadline:
+        try:
+            last_seen = ingestion_watermarks(ingestion_health_url)
+        except httpx.HTTPError as e:
+            last_seen = {}
+            log(f"[readiness] ingestion health unreachable while waiting for watermarks: {e}")
+        if all(system in last_seen for system in systems):
+            log(f"[readiness] ingestion watermarks present for all sources: {last_seen}")
+            return
+        time.sleep(poll_interval_s)
+    missing = [s for s in systems if s not in last_seen]
+    raise ConvergenceTimeout(f"ingestion watermark missing for {missing} after {timeout_s}s (last seen: {last_seen})")
+
+
+# --- 2.75. hot-projection `computed_at` is recent -------------------------
+# (Phase 5 fix: watermark-based evidence freshness). services/projection_builder
+# is an INDEPENDENT poll loop (every ~3s) that reads FROM RDF4J — an RDF4J
+# outage (or its own restart) stalls its OWN cycle too, and `_wait_healthy`
+# on its bare HTTP endpoint only proves the process is UP, not that its
+# NEXT post-recovery build has actually landed. Found empirically: a
+# continuous monitor during a full `make test` run showed `computed_at`
+# staying frozen for 11-19 REAL seconds after test_cdc_ingestion.py's own
+# RDF4J-outage test's `finally` block already considered RDF4J "back"
+# (`repository_exists()` returning True) — the gap between "RDF4J answers"
+# and "the hot projection has actually caught back up" is exactly what this
+# closes, for ANY test that disrupts RDF4J or projection_builder directly.
+
+
+def wait_for_fresh_hot_projection(dsn: str, max_age_s: float = 5.0, timeout_s: float = 30.0, poll_interval_s: float = 0.5, log: Logger = _noop) -> None:
+    import psycopg as _psycopg
+    from datetime import datetime, timezone
+
+    deadline = time.monotonic() + timeout_s
+    last_age: float | None = None
+    while time.monotonic() < deadline:
+        try:
+            with _psycopg.connect(dsn, connect_timeout=3) as conn, conn.cursor() as cur:
+                cur.execute("SELECT max(computed_at) FROM current_inventory")
+                row = cur.fetchone()
+            if row and row[0] is not None:
+                last_age = (datetime.now(timezone.utc) - row[0]).total_seconds()
+                if last_age <= max_age_s:
+                    log(f"[readiness] hot projection computed_at fresh (age={last_age:.2f}s)")
+                    return
+        except _psycopg.OperationalError as e:
+            log(f"[readiness] ontology_hot not reachable while waiting for fresh computed_at: {e}")
+        time.sleep(poll_interval_s)
+    raise ConvergenceTimeout(f"hot projection computed_at did not become fresh within {timeout_s}s (last age: {last_age})")
+
+
 # --- 3. RDF4J contains the canonical fixture -------------------------------
 
 
@@ -258,6 +332,9 @@ def wait_for_converged(expect_data: bool = True, timeout_s: float = 240.0, log: 
 
     log("[readiness] waiting for ingestion consumer lag to reach 0 against current Kafka high-watermarks...")
     wait_for_zero_kafka_lag(bootstrap_servers, timeout_s=timeout_s, log=log)
+
+    log("[readiness] waiting for ingestion watermarks (Debezium heartbeats) for all sources...")
+    wait_for_ingestion_watermarks(db_env.ingestion_health_url(), timeout_s=60.0, log=log)
 
     if not expect_data:
         log("[readiness] expect_data=False — skipping RDF4J fixture / projection checks (no seed run yet).")

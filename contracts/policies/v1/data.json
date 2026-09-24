@@ -3,6 +3,9 @@
   "safety_stock": {
     "PX-17": {
       "WH-B": 50
+    },
+    "PX-800501": {
+      "WH-B": 50
     }
   },
   "default_safety_stock": 10

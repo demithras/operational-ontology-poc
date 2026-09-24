@@ -13,7 +13,7 @@ import httpx
 import psycopg
 
 from services.common.sparql_escape import escape_sparql_literal
-from tests.integration.decision_helpers import propose_with_freshness_retry, set_inventory_and_wait
+from tests.integration.decision_helpers import set_inventory_and_wait
 
 QUERIES_DIR = Path(__file__).resolve().parents[2] / "contracts" / "queries" / "v1"
 
@@ -26,16 +26,13 @@ def _run_query(rdf4j_client, name: str, decision_id: str) -> list[dict]:
 
 def _propose_approved(decision_client: httpx.Client, wms_client: httpx.Client, conn: psycopg.Connection, sku: str) -> dict:
     part = set_inventory_and_wait(wms_client, conn, sku, "WH-B", on_hand=200)
-    r = propose_with_freshness_retry(
-        conn, part, "WH-B",
-        lambda: decision_client.post(
-            "/decisions/propose",
-            json={
-                "action_type": "transfer_inventory",
-                "actor": {"type": "user", "id": "planner-1"},
-                "parameters": {"source_warehouse": "WH-B", "destination_warehouse": "WH-A", "part": part, "quantity": 60},
-            },
-        ),
+    r = decision_client.post(
+        "/decisions/propose",
+        json={
+            "action_type": "transfer_inventory",
+            "actor": {"type": "user", "id": "planner-1"},
+            "parameters": {"source_warehouse": "WH-B", "destination_warehouse": "WH-A", "part": part, "quantity": 60},
+        },
     )
     assert r.status_code == 200
     return r.json()
@@ -79,16 +76,13 @@ def test_forensic_query_5_traces_delegation_and_approval(
     decision_client: httpx.Client, wms_client: httpx.Client, ontology_hot_conn: psycopg.Connection, rdf4j_client
 ):
     part = set_inventory_and_wait(wms_client, ontology_hot_conn, "SKU-900602", "WH-B", on_hand=1000)
-    r = propose_with_freshness_retry(
-        ontology_hot_conn, part, "WH-B",
-        lambda: decision_client.post(
-            "/decisions/propose",
-            json={
-                "action_type": "transfer_inventory",
-                "actor": {"type": "user", "id": "planner-1"},
-                "parameters": {"source_warehouse": "WH-B", "destination_warehouse": "WH-A", "part": part, "quantity": 150},
-            },
-        ),
+    r = decision_client.post(
+        "/decisions/propose",
+        json={
+            "action_type": "transfer_inventory",
+            "actor": {"type": "user", "id": "planner-1"},
+            "parameters": {"source_warehouse": "WH-B", "destination_warehouse": "WH-A", "part": part, "quantity": 150},
+        },
     )
     decision = r.json()
     assert decision["status"] == "REQUIRES_APPROVAL"

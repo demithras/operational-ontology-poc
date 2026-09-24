@@ -15,7 +15,7 @@
     "table.include.list": "public.warehouses,public.inventory_lots,public.transfers",
     "tombstones.on.delete": "false",
     "snapshot.mode": "initial",
-    "heartbeat.interval.ms": "5000",
+    "heartbeat.interval.ms": "1000",
     "provide.transaction.metadata": "false"
   }
 }

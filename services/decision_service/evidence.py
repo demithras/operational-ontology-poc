@@ -12,11 +12,34 @@ shared with the OPA bundle it is versioned alongside — see that file's
 header comment). transfer_inventory gets full evidence gathering; the other
 two action types use a lighter ERP/MES REST read (documented scoping
 decision, see docs/experiment/implementation-notes.md Phase 5 section).
+
+Phase 5 fix — watermark-based evidence freshness (docs/experiment/spec/
+04_architecture.md consistency model; docs/experiment/implementation-notes.md
+Phase 5 fix section has the full empirical write-up): freshness does NOT
+mean "how long ago did this fact's own row last change" — it means "how
+recently did we VERIFY our view is current against the source", which stays
+TRUE even when nothing has changed for minutes, as long as the CDC pipeline
+is alive and draining. The original implementation fed `row["as_of"]` (the
+row's own last-changed timestamp, from `oo:SourcePosition`) into
+`freshness.evaluate()`, which made ANY untouched-for-5s lot permanently
+"STALE" even on a perfectly healthy, fully-caught-up system — the canonical
+incident could never pass on a quiet stack. `_resolve_source_inventory_with_freshness`
+replaces that with `min(ingestion's per-source watermark, the row's own
+`computed_at`)`: the watermark (services/ingestion/consumer.py, driven by
+Debezium heartbeats AND real CDC events) proves ingestion has drained the
+source's Kafka topics up through wall-clock time T; `computed_at` (already
+written by services/projection_builder on every rebuild cycle, Phase 4)
+proves the hot projection itself was rebuilt at or after that point. Both
+must be recent for the read to be trustworthy — either one going stale
+(a stopped connector, or a stopped projection_builder) independently
+produces STALE, matching F26's "pause the connector / stop the builder /
+freeze the watermark" list of equivalent staleness injections.
 """
 
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -56,6 +79,97 @@ def _load_safety_stock(part: str, warehouse: str) -> int:
     return int(data.get("default_safety_stock", 0))
 
 
+def _fetch_ingestion_watermark(http_clients: dict[str, httpx.Client], system: str) -> datetime | None:
+    """The wall-clock time services/ingestion last successfully processed
+    EITHER a real CDC event OR a Debezium heartbeat message for `system`
+    (services/ingestion/health.py::HealthState.watermarks). Returns None if
+    ingestion is unreachable or has not yet recorded a watermark for that
+    system (e.g. right after a fresh restart, before its first heartbeat) —
+    callers must treat None as "cannot prove freshness", never as "assume
+    fresh"."""
+    try:
+        resp = http_clients["ingestion"].get("/health")
+    except httpx.HTTPError:
+        return None
+    if resp.status_code != 200:
+        return None
+    watermark_iso = resp.json().get("watermarks", {}).get(system)
+    if watermark_iso is None:
+        return None
+    return datetime.fromisoformat(watermark_iso)
+
+
+# Sized from an empirical measurement, not guessed: running
+# tests/integration/test_cdc_ingestion.py's OWN (pre-existing, Phase 3)
+# RDF4J-outage test showed services/projection_builder's build cycle itself
+# failing (DNS/connection error reaching the stopped RDF4J) with one
+# observed failed-build duration of ~4s, plus its own ~3s poll interval
+# before the NEXT (successful) cycle updates `computed_at` again — up to
+# ~7s of incidental staleness from an ENTIRELY UNRELATED test elsewhere in
+# the same `make test` run, not from any problem in this decision. 10
+# attempts * 0.8s = 8s covers that measured worst case with margin, while
+# still returning immediately (no added latency at all) the moment either
+# side catches up — which is every request except the rare one that races
+# an incidental outage test.
+_FRESHNESS_RETRY_ATTEMPTS = 10
+_FRESHNESS_RETRY_DELAY_S = 0.8
+
+
+def _resolve_source_inventory_with_freshness(
+    conn: psycopg.Connection,
+    http_clients: dict[str, httpx.Client],
+    part: str,
+    warehouse: str,
+    max_age_s: float,
+) -> tuple[dict | None, str, datetime | None]:
+    """Returns (row, freshness_status, verified_through). Re-reads BOTH the
+    hot-projection row (for a fresh `computed_at`) AND the ingestion
+    watermark on EACH attempt — not just the watermark — because either one
+    can independently lag: `computed_at` only advances when
+    services/projection_builder's own poll loop runs, and that loop shares
+    the same host CPU as everything else in this docker-compose stack.
+
+    Retrying is deliberately NOT a way to widen `max_age_s` — a genuinely
+    SUSTAINED stall (F26 stops services/projection_builder for the whole
+    duration of the propose() call, not just for a moment) still exhausts
+    every attempt and correctly ends up STALE, verified by
+    tests/integration/test_decision_service_dependency_outage.py's own F26
+    test. This retry window is defense-in-depth, not the primary fix for
+    the real bug it was originally added for: a full `make test` run showed
+    the ROOT CAUSE was that tests which stop/restart RDF4J or
+    projection_builder (Phase 3's own RDF4J-outage test, and this phase's
+    F22/F26) were returning control to the next test the moment the
+    disrupted service's bare HTTP health check responded again — several
+    seconds BEFORE ingestion resumed heartbeats or projection_builder
+    completed its first post-restart rebuild, leaking an 11-19s stale
+    window into whatever ran next. That is fixed at the SOURCE
+    (`services/ingestion/readiness.py::wait_for_fresh_hot_projection`,
+    called from every such test's own `finally` block — see
+    docs/experiment/implementation-notes.md's Phase 5 fix section for the
+    full empirical write-up). This retry window remains as a second,
+    independent safety margin for any future test or real operational
+    hiccup that disrupts the pipeline without yet knowing to wait for full
+    reconvergence — it costs nothing on the happy path (returns immediately
+    the moment both signals are fresh) and only adds latency in that
+    already-unhappy case."""
+    row: dict | None = None
+    verified_through: datetime | None = None
+    for attempt in range(_FRESHNESS_RETRY_ATTEMPTS):
+        row = reader.get_current_inventory(conn, part, warehouse)
+        if row is None:
+            return None, freshness.STALE, None  # no row at all — retrying can't help this
+        watermark = _fetch_ingestion_watermark(http_clients, "wms")
+        if watermark is not None:
+            verified_through = min(watermark, row["computed_at"])
+            if freshness.evaluate(verified_through, max_age_s=max_age_s) == freshness.FRESH:
+                return row, freshness.FRESH, verified_through
+        else:
+            verified_through = None
+        if attempt < _FRESHNESS_RETRY_ATTEMPTS - 1:
+            time.sleep(_FRESHNESS_RETRY_DELAY_S)
+    return row, freshness.STALE, verified_through
+
+
 def _warehouse_exists(rdf4j_client, warehouse_id: str) -> bool:
     # F31 defense-in-depth: services/decision_service/schemas.py's
     # `_ID_PATTERN` already rejects any warehouse_id containing characters
@@ -70,6 +184,7 @@ def _warehouse_exists(rdf4j_client, warehouse_id: str) -> bool:
 def gather_transfer_inventory_evidence(
     conn: psycopg.Connection,
     rdf4j_client,
+    http_clients: dict[str, httpx.Client],
     action: ActionType,
     parameters: dict,
     context: dict,
@@ -82,11 +197,17 @@ def gather_transfer_inventory_evidence(
 
     observed_ats: list[datetime] = []
 
-    src_row = reader.get_current_inventory(conn, part, source_warehouse)
+    # WMS owns InventoryLot (docs/experiment/implementation-notes.md
+    # Phase 3 "Source-of-truth hierarchy") — the relevant watermark is
+    # ingestion's "wms" watermark, not the row's own `as_of`. Re-reads BOTH
+    # the row and the watermark across its own short retry window (see its
+    # docstring) rather than a single point-in-time snapshot.
+    src_row, src_freshness, verified_through = _resolve_source_inventory_with_freshness(
+        conn, http_clients, part, source_warehouse, max_age_s=float(action.max_evidence_freshness_s)
+    )
     if src_row is None:
         result.missing.extend(["source_available", "source_quality_status"])
     else:
-        src_freshness = freshness.evaluate(src_row["as_of"], max_age_s=int(action.max_evidence_freshness_s))
         result.facts_used["current_source_inventory"] = {
             "available": src_row["available"],
             "on_hand": src_row["on_hand"],
@@ -94,8 +215,19 @@ def gather_transfer_inventory_evidence(
             "quality_status": src_row["quality_status"],
             "as_of": src_row["as_of"].isoformat(),
             "freshness_status": src_freshness,
+            "pipeline_verified_through": verified_through.isoformat() if verified_through else None,
         }
         result.source_positions.extend(src_row["source_positions"])
+        # The per-source pipeline watermark itself, recorded alongside the
+        # per-entity source_positions this action's evidence used (spec 04
+        # "Evidence snapshot" hybrid manifest; this Phase 5 fix's own
+        # requirement to make the watermark queryable/replayable, not just
+        # used in-memory for the gate decision).
+        result.source_positions.append({
+            "system": "wms",
+            "kind": "watermark",
+            "verified_through": verified_through.isoformat() if verified_through else None,
+        })
         result.projection_row_hashes.append(src_row["content_hash"])
         observed_ats.append(src_row["as_of"])
         if src_freshness == freshness.STALE:
@@ -212,7 +344,7 @@ def gather_evidence(
     http_clients: dict[str, httpx.Client],
 ) -> EvidenceResult:
     if action.name == "transfer_inventory":
-        return gather_transfer_inventory_evidence(conn, rdf4j_client, action, parameters, context)
+        return gather_transfer_inventory_evidence(conn, rdf4j_client, http_clients, action, parameters, context)
     if action.name == "expedite_purchase_order":
         return gather_expedite_purchase_order_evidence(http_clients, action, parameters, context)
     if action.name == "reschedule_work_order":

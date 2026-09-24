@@ -1,23 +1,27 @@
-"""H1 (decision-as-data completeness) + H10 (deterministic planner, no LLM) —
-the canonical-shaped happy path: propose() reaches APPROVED end to end
-through evidence -> authz -> policy -> SHACL-validated RDF4J write, with
-every H1-required field present and resolvable via GET.
+"""H1 (decision-as-data completeness) + H10 (deterministic planner, no LLM)
++ the Phase 5 freshness fix's own headline claim: "the canonical incident
+can't pass on a quiet system" must no longer be true.
 
 Uses a synthetic part at the real WH-A/WH-B warehouses with the SAME
-transfer quantity as docs/experiment/spec/03_domain_scenario.md's canonical
-incident (60 units) — see tests/integration/decision_helpers.py's module
-docstring for why the literal canonical WO-42/PX-17 fixture cannot be reused
-here (test_canonical_scenario.py already permanently mitigates it via a
-direct WMS call).
+arithmetic as docs/experiment/spec/03_domain_scenario.md's canonical
+incident (140 available at WH-B, 60-unit transfer, safety_stock 50 —
+contracts/policies/v1/data.json has a `PX-800501` override matching the
+canonical fixture's PX-17@WH-B exactly) — see
+tests/integration/decision_helpers.py's module docstring for why the
+literal canonical WO-42/PX-17 fixture cannot be reused directly here
+(test_canonical_scenario.py already permanently mitigates it via a direct
+WMS call).
 """
 
 from __future__ import annotations
+
+import time
 
 import httpx
 import psycopg
 
 from services.decision_service import planner
-from tests.integration.decision_helpers import propose_with_freshness_retry, set_inventory_and_wait
+from tests.integration.decision_helpers import set_inventory_and_wait
 
 H1_REQUIRED_FIELDS = [
     "decision_id", "decision_type", "actor_id", "action_type", "action_version",
@@ -25,23 +29,24 @@ H1_REQUIRED_FIELDS = [
     "authorization_model_version", "policy_bundle_version", "created_at",
 ]
 
+# Comfortably past both the 5s max_evidence_freshness_s threshold AND the
+# OLD (buggy) per-row `as_of` semantics this test exists to disprove.
+QUIET_PERIOD_S = 35.0
+
 
 def test_canonical_shaped_transfer_reaches_approved_with_complete_decision_record(
     decision_client: httpx.Client, wms_client: httpx.Client, ontology_hot_conn: psycopg.Connection
 ):
-    source_sku = "SKU-900501"
+    source_sku = "SKU-900502"
     part = set_inventory_and_wait(wms_client, ontology_hot_conn, source_sku, "WH-B", on_hand=200)
 
-    r = propose_with_freshness_retry(
-        ontology_hot_conn, part, "WH-B",
-        lambda: decision_client.post(
-            "/decisions/propose",
-            json={
-                "action_type": "transfer_inventory",
-                "actor": {"type": "user", "id": "planner-1"},
-                "parameters": {"source_warehouse": "WH-B", "destination_warehouse": "WH-A", "part": part, "quantity": 60},
-            },
-        ),
+    r = decision_client.post(
+        "/decisions/propose",
+        json={
+            "action_type": "transfer_inventory",
+            "actor": {"type": "user", "id": "planner-1"},
+            "parameters": {"source_warehouse": "WH-B", "destination_warehouse": "WH-A", "part": part, "quantity": 60},
+        },
     )
     assert r.status_code == 200, r.text
     body = r.json()
@@ -58,6 +63,61 @@ def test_canonical_shaped_transfer_reaches_approved_with_complete_decision_recor
     assert fetched["policy_result"]["outcome"] == "allow"
     assert fetched["conformance_result"]["outcome"] == "CONFORMS"
     assert fetched["decision_content_hash"] is not None
+
+
+def test_canonical_incident_approves_on_a_quiet_system_no_touch(
+    decision_client: httpx.Client, wms_client: httpx.Client, ontology_hot_conn: psycopg.Connection, ingestion_client: httpx.Client
+):
+    """The exact regression this Phase 5 fix exists for. Set up the
+    canonical-shaped incident ONCE (140 available at WH-B, safety_stock 50 —
+    matching docs/experiment/spec/03_domain_scenario.md exactly via
+    contracts/policies/v1/data.json's PX-800501 override), then do
+    ABSOLUTELY NOTHING to that row for >= 30 real seconds — no `_test/
+    inventory/set`, no SQL, no touch of any kind — before proposing the
+    canonical 60-unit transfer. Under the old per-row-`as_of` freshness
+    semantics this ALWAYS returned INSUFFICIENT_EVIDENCE (any lot untouched
+    for 5s was permanently "stale"); under the watermark-based fix
+    (services/decision_service/evidence.py), a quiet source is exactly as
+    fresh as a just-changed one, as long as the ingestion pipeline itself
+    (Debezium heartbeats + services/projection_builder) is alive."""
+    source_sku = "SKU-900501"
+    part = set_inventory_and_wait(wms_client, ontology_hot_conn, source_sku, "WH-B", on_hand=140)
+    assert part == "PX-800501", f"expected canonical id PX-800501 for {source_sku}, got {part} — data.json override would not apply"
+
+    time.sleep(QUIET_PERIOD_S)
+
+    # Confirm the row genuinely did not change during the quiet period (this
+    # test is worthless if something else touched it) and that the
+    # ingestion watermark is nonetheless recent — the actual mechanism under
+    # test, not just its end effect.
+    watermarks_before = ingestion_client.get("/health").json().get("watermarks", {})
+    assert "wms" in watermarks_before, "ingestion has not recorded a wms watermark at all"
+
+    r = decision_client.post(
+        "/decisions/propose",
+        json={
+            "action_type": "transfer_inventory",
+            "actor": {"type": "user", "id": "planner-1"},
+            "parameters": {"source_warehouse": "WH-B", "destination_warehouse": "WH-A", "part": part, "quantity": 60},
+        },
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    src_fact = body["evidence_snapshot"]["facts_used"]["current_source_inventory"]
+    assert src_fact["freshness_status"] == "FRESH", body["evidence_snapshot"]
+    assert src_fact["pipeline_verified_through"] is not None
+    assert body["status"] == "APPROVED", body
+    assert body["policy_result"]["outcome"] == "allow"
+    assert body["evidence_snapshot"]["missing"] == []
+
+    # The watermark entry recorded in source_positions (Phase 5 fix's own
+    # requirement) is present and distinct from the (30+s old) per-entity
+    # position for the same row — proving the freshness verdict came from
+    # the watermark, not from the row's own `as_of`.
+    watermark_entries = [p for p in body["evidence_snapshot"]["source_positions"] if p.get("kind") == "watermark"]
+    assert len(watermark_entries) == 1
+    assert watermark_entries[0]["system"] == "wms"
+    assert watermark_entries[0]["verified_through"] is not None
 
 
 def test_h10_deterministic_planner_recommends_without_any_llm(ontology_hot_conn: psycopg.Connection):

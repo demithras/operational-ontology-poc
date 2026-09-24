@@ -24,6 +24,7 @@ class DecisionServiceConfig:
     wms_base_url: str
     erp_base_url: str
     mes_base_url: str
+    ingestion_health_url: str
 
 
 def from_env() -> DecisionServiceConfig:
@@ -35,4 +36,8 @@ def from_env() -> DecisionServiceConfig:
         wms_base_url=os.environ["WMS_BASE_URL"],
         erp_base_url=os.environ["ERP_BASE_URL"],
         mes_base_url=os.environ["MES_BASE_URL"],
+        # Phase 5 fix (watermark-based evidence freshness): decision_service
+        # reads services/ingestion's per-source watermark from its health
+        # endpoint rather than re-deriving pipeline lag itself.
+        ingestion_health_url=os.environ["INGESTION_HEALTH_URL"],
     )

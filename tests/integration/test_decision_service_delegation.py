@@ -13,7 +13,7 @@ import pytest
 
 from seed import db_env
 from services.decision_service import authz
-from tests.integration.decision_helpers import inventory_unchanged, propose_with_freshness_retry, set_inventory_and_wait
+from tests.integration.decision_helpers import inventory_unchanged, set_inventory_and_wait
 
 
 @pytest.fixture()
@@ -49,16 +49,13 @@ def test_agent_allowed_with_exact_task_grant_then_denied_after_revoke(
     part = set_inventory_and_wait(wms_client, ontology_hot_conn, source_sku, "WH-B", on_hand=100)
     _write_agent_grant(openfga_store_id, "WH-B")
     try:
-        r = propose_with_freshness_retry(
-            ontology_hot_conn, part, "WH-B",
-            lambda: decision_client.post(
-                "/decisions/propose",
-                json={
-                    "action_type": "transfer_inventory",
-                    "actor": {"type": "agent", "id": "agent-1"},
-                    "parameters": {"source_warehouse": "WH-B", "destination_warehouse": "WH-A", "part": part, "quantity": 30},
-                },
-            ),
+        r = decision_client.post(
+            "/decisions/propose",
+            json={
+                "action_type": "transfer_inventory",
+                "actor": {"type": "agent", "id": "agent-1"},
+                "parameters": {"source_warehouse": "WH-B", "destination_warehouse": "WH-A", "part": part, "quantity": 30},
+            },
         )
         body = r.json()
         assert body["authorization_result"]["outcome"] == "ALLOWED"
@@ -71,16 +68,13 @@ def test_agent_allowed_with_exact_task_grant_then_denied_after_revoke(
     # Immediately after revocation: the SAME request now denies (no caching
     # of the earlier grant anywhere in the decision service's own path).
     part2 = set_inventory_and_wait(wms_client, ontology_hot_conn, "SKU-900402", "WH-B", on_hand=100)
-    r2 = propose_with_freshness_retry(
-        ontology_hot_conn, part2, "WH-B",
-        lambda: decision_client.post(
-            "/decisions/propose",
-            json={
-                "action_type": "transfer_inventory",
-                "actor": {"type": "agent", "id": "agent-1"},
-                "parameters": {"source_warehouse": "WH-B", "destination_warehouse": "WH-A", "part": part2, "quantity": 30},
-            },
-        ),
+    r2 = decision_client.post(
+        "/decisions/propose",
+        json={
+            "action_type": "transfer_inventory",
+            "actor": {"type": "agent", "id": "agent-1"},
+            "parameters": {"source_warehouse": "WH-B", "destination_warehouse": "WH-A", "part": part2, "quantity": 30},
+        },
     )
     body2 = r2.json()
     assert body2["status"] == "DENIED_AUTHORIZATION"
@@ -97,16 +91,13 @@ def test_agent_cannot_claim_a_different_principal(
     from OpenFGA's own agent#principal tuple, so there is nothing for a
     malicious caller to spoof."""
     part = set_inventory_and_wait(wms_client, ontology_hot_conn, "SKU-900403", "WH-B", on_hand=100)
-    r = propose_with_freshness_retry(
-        ontology_hot_conn, part, "WH-B",
-        lambda: decision_client.post(
-            "/decisions/propose",
-            json={
-                "action_type": "transfer_inventory",
-                "actor": {"type": "agent", "id": "agent-1", "principal": "supervisor-1"},  # extra field, must be ignored
-                "parameters": {"source_warehouse": "WH-B", "destination_warehouse": "WH-A", "part": part, "quantity": 30},
-            },
-        ),
+    r = decision_client.post(
+        "/decisions/propose",
+        json={
+            "action_type": "transfer_inventory",
+            "actor": {"type": "agent", "id": "agent-1", "principal": "supervisor-1"},  # extra field, must be ignored
+            "parameters": {"source_warehouse": "WH-B", "destination_warehouse": "WH-A", "part": part, "quantity": 30},
+        },
     )
     body = r.json()
     # Regardless of the extra (ignored) field, the recorded delegation is

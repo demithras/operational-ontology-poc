@@ -1310,3 +1310,221 @@ successfully on a freshly-reset stack).
   identifier`/`observed outcome identifier` H1 fields (currently always
   absent — Decision-shape.ttl does not require them, by design, since they
   don't exist before Phase 6).
+
+## Phase 5 fix — watermark-based evidence freshness
+
+Tag `poc-v0.5-gates` (moved, `git tag -f`, after this fix — see the
+"Amendment" note at the end of this section). Reported by an independent
+live probe against the running stack, not discovered internally.
+
+### Root cause (with evidence)
+
+`services/decision_service/evidence.py`'s original freshness check fed
+`current_inventory.as_of` (the row's own last-CHANGED timestamp, sourced
+from `oo:SourcePosition.lastObservedAt`) into `freshness.evaluate()`. That
+answers "how long ago did this fact change", not "how recently did we
+verify our view is current" — docs/experiment/spec/04_architecture.md's
+consistency model explicitly wants the latter (FRESH/STALE describe the
+PIPELINE's relationship to the source, not a fact's own age). The practical
+consequence, reproduced exactly as reported: `POST /decisions/propose`
+{planner-1, transfer_inventory WH-B->WH-A, part PX-17, qty 60} on a
+perfectly healthy, fully-caught-up stack returned `INSUFFICIENT_EVIDENCE`,
+`missing: ["source_available_fresh"]`, because PX-17's WH-B lot genuinely
+had not changed in the last `max_evidence_freshness_s` (5s) — and since
+nothing in the canonical incident's steady state ever touches that lot
+again after the initial seed, it was STALE FOREVER, on a system with zero
+problems. `tests/integration/decision_helpers.py`'s `set_inventory_and_wait`
+had been additionally bumping `as_of` to `now()` immediately before every
+propose() call specifically to defeat this, which is exactly the "masked it
+with a touch-before-propose crutch" the bug report named.
+
+### Design: per-source watermark = min(ingestion's CDC-drain watermark, the hot row's own `computed_at`)
+
+**Ingestion watermark** (`services/ingestion/consumer.py` /
+`services/ingestion/health.py`): Debezium's `heartbeat.interval.ms` was
+ALREADY configured on every connector since Phase 3
+(`contracts/cdc/v1/*-connector.json`, lowered from 5000ms to 1000ms this
+fix) but nothing had ever consumed the heartbeat topics it produces —
+verified empirically that `__debezium-heartbeat.oo.{erp,mes,wms}` topics
+already existed with a fresh `{"ts_ms": ...}` message every interval, even
+on a database with zero writes (`kafka-console-consumer` against the live,
+idle stack). `run()` now subscribes to `all_topics() + heartbeat_topics()`
+together (one consumer, one Kafka group) and calls
+`state.touch_watermark(system, now())` on EVERY message for that
+system — heartbeat OR real CDC OR poison (a poison message still proves the
+CONNECTION is alive; only an `RDF4JUnavailable` retry leaves the watermark
+untouched, correctly, since that is the one case where we genuinely cannot
+prove we're caught up). Heartbeat topics are deliberately NOT added to
+`services/ingestion/readiness.py`'s `CDC_TOPICS` (the `wait_for_zero_kafka_lag`
+gate `make wait-converged` depends on) — folding a topic that receives a new
+message every second into a "stable zero lag across two 2s samples" check
+would make that gate flaky by construction; the two are separate concerns
+checked separately (readiness.py gained its OWN `wait_for_ingestion_watermarks`
+step instead, see below). Exposed via `GET /health`'s new `watermarks:
+{erp, mes, wms}` field (ISO8601 per source).
+
+**Combined pipeline watermark** (`services/decision_service/evidence.py::
+_pipeline_verified_through`): `min(ingestion_watermark_for_system,
+row["computed_at"])`. `computed_at` (Phase 4, already written by
+`services/projection_builder` on every rebuild cycle regardless of whether
+data changed) needed no new mechanism — it was already exactly "the
+projection builder's own verified_through", just under a different name.
+Taking the MORE STALE of the two means either failure mode independently
+produces STALE: a paused connector (ingestion watermark stops advancing)
+OR a stopped projection_builder (`computed_at` stops advancing) — matching
+docs/experiment/spec/09_failure_and_adversarial_matrix.md F26's own
+"pause the connector, stop the builder" framing as two equivalent staleness
+injections. `_pipeline_verified_through` returns `None` (treated as STALE,
+never as an exemption) if ingestion is unreachable or has not yet recorded
+a watermark for that system — a real, narrow race at ingestion's own
+process startup (empirically observed: ~50s after a fresh `docker compose
+start ingestion`, `GET /health` still showed `watermarks: {}` because the
+consumer group was mid-rebalance). Closed by adding
+`readiness.py::wait_for_ingestion_watermarks` as a new step in
+`wait_for_converged()` (between the Kafka-lag check and the RDF4J-fixture
+check) — `make up`/`make seed`/`make reset` now block until every source
+has a recorded watermark, not just until CDC topic lag is zero.
+
+The watermark is recorded in the evidence snapshot's `source_positions`
+list alongside the per-entity positions the action's evidence actually
+used, tagged `"kind": "watermark"` (no new RDF property needed — it
+serializes into the same `oo:sourcePositionsJson` field
+`rdf_writer.py` already writes).
+
+`services/projection_builder/freshness.py::evaluate()` itself is UNCHANGED
+— it is a pure "is this timestamp within N seconds of now" function, used
+correctly both by Phase 4's OWN per-row staleness concept (still valid for
+ITS purpose, e.g. `tests/integration/test_projection_staleness.py`, a
+dashboard-style "is this specific fact possibly outdated" question) and now
+by evidence.py's pipeline-watermark concept (a governance-decision
+"can I trust the pipeline enough to decide" question) — same function,
+different INPUT semantics for two legitimately different questions.
+
+### A second, more important bug found validating the fix: outage-recovery tests weren't waiting for genuine reconvergence
+
+`make test` run 3x after the watermark fix above landed was NOT immediately
+green — `tests/integration/test_decision_service_approval.py` (and, in one
+run, `test_decision_service_canonical.py` too) intermittently failed with
+`INSUFFICIENT_EVIDENCE`, always among the FIRST decision-service tests to
+run. Root-caused with a continuous background monitor sampling
+`current_inventory.max(computed_at)` age and the ingestion `wms` watermark
+age every 500ms across a full `make test` run: both sat in a normal 0-3s
+sawtooth almost the whole time, but showed THREE separate 11-19 SECOND
+stalls, each correlated with a real container stop/start — Phase 3's
+pre-existing `test_cdc_ingestion.py::test_rdf4j_outage_backs_off_without_data_loss_and_resumes`,
+and this phase's own F22 (RDF4J) and F26 (projection_builder) outage tests.
+
+Each of those tests' `finally` block already waited for the STOPPED
+service's bare HTTP health check to respond again before returning — but a
+responding health check is NOT the same as `services/ingestion` having
+resumed heartbeat processing or `services/projection_builder` having
+completed its first post-restart rebuild. Both are INDEPENDENT processes
+that also read from/write to the disrupted dependency, so both stall for
+several extra seconds AFTER the disrupted service itself reports healthy —
+and every one of those three tests returned control to pytest during that
+gap, leaking a stale window into whatever test ran next. This is the exact
+"looks like flakiness in the NEW code, is actually a pre-existing
+insufficient-convergence-check in tests that mutate shared infrastructure"
+pattern this repo's Phase 4 fix already named once (docs/experiment/implementation-notes.md's
+Phase 4 fix section: "the reported failure had two independent contributing
+causes... a false-positive convergence detector").
+
+**Fix**: `services/ingestion/readiness.py` gained
+`wait_for_fresh_hot_projection(dsn, max_age_s, timeout_s)` (polls
+`max(computed_at)` until it is genuinely recent). Every test that disrupts
+RDF4J or `services/projection_builder` now calls it (and, where relevant,
+`wait_for_ingestion_watermarks`) in its OWN `finally` block, right after its
+bare health-check wait, before returning control to the rest of the suite:
+`test_cdc_ingestion.py`'s outage test (Phase 3, fixed under this Phase 5
+session since Phase 5's own tests are what surfaced it), and this phase's
+F22/F26 (`test_decision_service_dependency_outage.py`). F23/F24 (OpenFGA/OPA)
+need no such wait — neither dependency feeds RDF4J or the hot projection.
+
+**`_resolve_source_inventory_with_freshness`'s own retry window
+(`services/decision_service/evidence.py`, 10 attempts × 0.8s = 8s) is kept
+as defense-in-depth**, not removed now that the root cause is fixed — it
+protects against any FUTURE test (or real operational hiccup) that
+disrupts the pipeline without yet knowing to wait for full reconvergence,
+at the cost of a few seconds of added latency only in that unhappy case.
+`make test` was re-run 3 consecutive times after BOTH fixes (watermark
+semantics + reconvergence waits) with zero failures, matching the acceptance
+run below.
+
+### Test changes
+
+- `tests/integration/decision_helpers.py::set_inventory_and_wait` no
+  longer bumps `as_of` — a row set up seconds or minutes before propose()
+  is called is now equally FRESH, so the manual bump (which only ever
+  worked by racing `services/projection_builder`'s ~3s poll cycle) is
+  simply gone. Found and fixed a SEPARATE, unrelated real bug while
+  removing it: the helper's `wait_until` polled for "a row exists" rather
+  than "a row exists WITH THIS CALL'S OWN VALUES" — harmless as long as
+  every test used a never-before-seen SKU (true throughout the original
+  Phase 5 suite), but a false-positive the instant a test reused a
+  (sku, warehouse) pair a PRIOR run had already converged to a DIFFERENT
+  value, which the new quiet-system test below did (SKU-900501, previously
+  200, now 140) — caught immediately by its own assertion, fixed by
+  matching on-hand/quality_status in the wait predicate, not just row
+  presence.
+- `propose_with_freshness_retry` (the bump-and-retry crutch this file
+  exported) is deleted entirely; every call site now calls propose()
+  directly.
+- F08's old "push `as_of` back 30s via SQL"
+  (`tests/integration/test_decision_service_gates.py`) is replaced by a
+  REAL pipeline stall: `test_f26_stalled_projection_builder_yields_insufficient_evidence`
+  (`tests/integration/test_decision_service_dependency_outage.py`) stops
+  `services/projection_builder`, waits past `max_evidence_freshness_s`, and
+  asserts `INSUFFICIENT_EVIDENCE` with zero WMS effects, then restarts it —
+  same `docker compose stop/start` pattern as the F22-F24 outage tests it
+  now lives alongside.
+- NEW: `tests/integration/test_decision_service_canonical.py::
+  test_canonical_incident_approves_on_a_quiet_system_no_touch` — the exact
+  regression proof. Sets up the canonical incident's own arithmetic (140
+  available at WH-B, 60-unit transfer, safety_stock 50 — a
+  `contracts/policies/v1/data.json` override for the synthetic
+  `PX-800501` maps it to the SAME 50 as the real PX-17@WH-B), sleeps 35 real
+  seconds touching NOTHING, then proposes and asserts `APPROVED` with
+  `freshness_status: FRESH` and a populated `pipeline_verified_through` —
+  and separately asserts the `"kind": "watermark"` entry in
+  `source_positions`, proving the freshness verdict traces to the watermark
+  mechanism, not to a lucky recent write.
+
+### Acceptance run (this session, after the fix)
+
+```
+make test (x3): tests/model 21 passed, tests/contracts 55 passed,
+  tests/component 15 passed, tests/integration 64 passed — identical all
+  three runs, zero flakiness.
+make bench: gate_evaluation_p95_ms and decision_proposal_p95_ms both PASS
+  (unaffected by this fix — the watermark fetch is one extra local HTTP
+  call to services/ingestion, negligible next to the OpenFGA/OPA/RDF4J
+  round trips already being measured).
+```
+
+### Amendment note
+
+This fix landed as a SEPARATE commit ("Phase 5 fix: watermark-based
+evidence freshness") after the original Phase 5 commit, per the
+coordinator's explicit instruction — NOT squashed/amended into the
+original. `poc-v0.5-gates` was moved (`git tag -f`) to point at this fix
+commit, so the tag always reflects the phase's true final, working state.
+
+### What Phase 6 needs from here (in addition to the section above)
+
+- `services/ingestion/health.py`'s `watermarks` field and
+  `services/decision_service/evidence.py::_pipeline_verified_through` (now
+  `_resolve_source_inventory_with_freshness`) are the reusable pattern for
+  any FUTURE evidence requirement that needs "is the pipeline caught up",
+  not "did this fact change recently" — applies equally to
+  `expedite_purchase_order`/`reschedule_work_order` if their evidence
+  gathering ever grows a freshness requirement of its own (currently it
+  does not — they read ERP/MES live via REST, not through the
+  hot-projection/CDC path).
+- `services/ingestion/readiness.py::wait_for_fresh_hot_projection` is now
+  the established convention for ANY FUTURE test that stops/restarts RDF4J
+  or `services/projection_builder` — call it (alongside
+  `wait_for_ingestion_watermarks` when RDF4J/ingestion was the disrupted
+  side) in the test's own `finally` block before returning, exactly like
+  `test_cdc_ingestion.py`'s outage test and this phase's F22/F26 now do.
+  Skipping this is precisely what caused the 11-19s stale windows this
+  fix's own acceptance run found and closed.

@@ -15,7 +15,7 @@
     "table.include.list": "public.production_lines,public.work_orders,public.bom_requirements",
     "tombstones.on.delete": "false",
     "snapshot.mode": "initial",
-    "heartbeat.interval.ms": "5000",
+    "heartbeat.interval.ms": "1000",
     "provide.transaction.metadata": "false"
   }
 }

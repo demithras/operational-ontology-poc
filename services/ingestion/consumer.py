@@ -42,6 +42,40 @@ TABLES = {
 }
 DLQ_TOPIC = "oo.ingestion.dlq"
 
+# Phase 5 fix (watermark-based evidence freshness): Debezium's
+# `heartbeat.interval.ms` (contracts/cdc/v1/*-connector.json, now 1000ms)
+# was ALREADY configured since Phase 3 but nothing ever consumed the
+# heartbeat topics it produces — verified empirically that they exist and
+# carry a fresh `{"ts_ms": ...}` message every second even on a completely
+# idle source database (`__debezium-heartbeat.<topic.prefix>`, confirmed via
+# `kafka-console-consumer` against a live idle stack). These are subscribed
+# to SEPARATELY from `all_topics()` (which services/ingestion/readiness.py's
+# `wait_for_zero_kafka_lag` also uses for its own convergence gate) —
+# heartbeats arrive every ~1s, so folding them into that SAME lag
+# calculation would make "stable zero lag across 2 samples" flaky by
+# construction. `run()` subscribes to `all_topics() + heartbeat_topics()`
+# together (one consumer, one Kafka group), but readiness.py's lag check
+# stays scoped to `all_topics()` only.
+HEARTBEAT_TOPIC_PREFIX = "__debezium-heartbeat."
+
+
+def all_topics() -> list[str]:
+    return [f"{TOPIC_PREFIX[system]}.public.{table}" for system, tables in TABLES.items() for table in tables]
+
+
+def heartbeat_topics() -> list[str]:
+    return [f"{HEARTBEAT_TOPIC_PREFIX}{prefix}" for prefix in TOPIC_PREFIX.values()]
+
+
+def system_from_heartbeat_topic(topic: str) -> str | None:
+    if not topic.startswith(HEARTBEAT_TOPIC_PREFIX):
+        return None
+    prefix = topic[len(HEARTBEAT_TOPIC_PREFIX):]
+    for system, topic_prefix in TOPIC_PREFIX.items():
+        if topic_prefix == prefix:
+            return system
+    return None
+
 
 class PoisonMessage(Exception):
     """Non-retryable: routed to the DLQ, offset committed, pipeline continues."""
@@ -49,10 +83,6 @@ class PoisonMessage(Exception):
 
 class RDF4JUnavailable(Exception):
     """Retryable: same message retried with backoff, offset NOT committed."""
-
-
-def all_topics() -> list[str]:
-    return [f"{TOPIC_PREFIX[system]}.public.{table}" for system, tables in TABLES.items() for table in tables]
 
 
 def parse_topic(topic: str) -> tuple[str, str]:
@@ -154,7 +184,7 @@ def send_to_dlq(producer: Producer, msg, error: str) -> None:
 
 
 def run(consumer: Consumer, producer: Producer, resolver: IdentityResolver, ing_store: store.IngestionStore, state: health.HealthState) -> None:
-    consumer.subscribe(all_topics())
+    consumer.subscribe(all_topics() + heartbeat_topics())
     state.set_ready(True)
     backoff = 1.0
     while True:
@@ -165,11 +195,26 @@ def run(consumer: Consumer, producer: Producer, resolver: IdentityResolver, ing_
             state.set_error(str(msg.error()))
             continue
 
+        heartbeat_system = system_from_heartbeat_topic(msg.topic())
+        if heartbeat_system is not None:
+            # A heartbeat message needs no CDC processing at all — its mere
+            # arrival IS the fact being recorded: "the Debezium connector
+            # for this system is alive and there is nothing new to report as
+            # of now" (docs/experiment/spec/04_architecture.md consistency
+            # model). Committing its offset only tracks this consumer
+            # group's own position in that topic; it has no bearing on data
+            # correctness (unlike a real CDC topic's offset).
+            state.touch_watermark(heartbeat_system, datetime.now(timezone.utc).isoformat())
+            consumer.commit(msg)
+            continue
+
         state.incr("messages_consumed")
         while True:
             try:
                 process_message(msg, resolver, ing_store, state)
                 consumer.commit(msg)
+                system, _table = parse_topic(msg.topic())
+                state.touch_watermark(system, datetime.now(timezone.utc).isoformat())
                 backoff = 1.0
                 state.set_error(None)  # clear a stale error once processing recovers
                 break
@@ -178,6 +223,13 @@ def run(consumer: Consumer, producer: Producer, resolver: IdentityResolver, ing_
                 send_to_dlq(producer, msg, str(e))
                 state.incr("poison_messages")
                 consumer.commit(msg)
+                # A poison message still PROVES the connector/topic itself is
+                # being drained live (the failure is in OUR mapping/SHACL,
+                # not source connectivity) — touch the watermark so one bad
+                # row doesn't manufacture a false staleness verdict for
+                # every other fact from the same source.
+                system, _table = parse_topic(msg.topic())
+                state.touch_watermark(system, datetime.now(timezone.utc).isoformat())
                 break
             except RDF4JUnavailable as e:
                 state.set_error(str(e))
