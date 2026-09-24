@@ -19,6 +19,7 @@ from rdflib import Literal, URIRef
 from rdflib.namespace import RDF, XSD
 
 from services.common import rdf_graphs
+from services.common.iri import assert_safe_iri, safe_iri_component
 from services.common.rdf4j_client import RDF4JClient
 from services.identity_resolver.resolver import Quarantined, Resolved
 from services.ingestion.lsn import ordering_key
@@ -29,18 +30,29 @@ OO_INST = rdflib.Namespace("https://example.local/oo/instance/")
 
 
 def position_iri(system: str, table: str, pk: str) -> URIRef:
-    return OO_INST[f"pos/{system}/{table}/{pk}"]
+    # `pk` is a RAW source-database primary key value (a WMS lot_id, an
+    # ERP/MES id, ...) — a plain TEXT column with no charset constraint,
+    # read straight off Debezium's CDC payload (services/ingestion/
+    # consumer.py::process_message). Percent-encoded (services/common/iri.py)
+    # so it can never break out of the `<...>` this value is f-string-
+    # interpolated into by get_position/_update_position/_replace_subject_atomic
+    # below — a crafted primary key (F37: a direct manual DB edit; F38: a
+    # poison CDC row) must never become a SPARQL injection.
+    return OO_INST[f"pos/{safe_iri_component(system)}/{safe_iri_component(table)}/{safe_iri_component(pk)}"]
 
 
 def identity_mapping_iri(rule_id: str, system: str, local_id: str) -> URIRef:
     # Deterministic (not random) -> re-writing the same resolution is a
     # true no-op (RDF is a set), never grows unbounded across repeated CDC
-    # events referencing the same source id.
-    return OO_INST[f"idmap/{rule_id}/{system}/{local_id}"]
+    # events referencing the same source id. `local_id` is raw source data
+    # — see position_iri's docstring above for why it is percent-encoded.
+    return OO_INST[
+        f"idmap/{safe_iri_component(rule_id)}/{safe_iri_component(system)}/{safe_iri_component(local_id)}"
+    ]
 
 
 def quarantine_iri(system: str, local_id: str) -> URIRef:
-    return OO_INST[f"quarantine/{system}/{local_id}"]
+    return OO_INST[f"quarantine/{safe_iri_component(system)}/{safe_iri_component(local_id)}"]
 
 
 class IngestionStore:
@@ -68,6 +80,15 @@ class IngestionStore:
         racing an in-flight governed transfer. N-Triples (not Turtle) so
         every IRI is emitted fully-qualified with no `@prefix` header
         needed inside a bare `INSERT DATA` block."""
+        # Defense-in-depth (services/common/iri.py's own docstring): `iri`
+        # is already built via a safe_iri_component-encoded helper
+        # (position_iri/identity_mapping_iri/quarantine_iri above) at
+        # every current caller — assert it here too, at the actual point of
+        # raw f-string interpolation, so a FUTURE caller that forgets to
+        # encode a component fails loudly instead of silently reaching
+        # RDF4J with an injectable query.
+        assert_safe_iri(str(iri))
+        assert_safe_iri(graph_iri)
         nt = graph.serialize(format="nt")
         sparql = f"""
 DELETE WHERE {{ GRAPH <{graph_iri}> {{ <{iri}> ?p ?o }} }} ;
@@ -79,7 +100,7 @@ INSERT DATA {{ GRAPH <{graph_iri}> {{
         resp.raise_for_status()
 
     def get_position(self, system: str, table: str, pk: str) -> tuple[str | None, int | None] | None:
-        iri = position_iri(system, table, pk)
+        iri = assert_safe_iri(str(position_iri(system, table, pk)))
         rows = self.client.select(
             f"""
             SELECT ?lsn ?ver WHERE {{
@@ -117,7 +138,7 @@ INSERT DATA {{ GRAPH <{graph_iri}> {{
         applied: bool,
         entity_iri: URIRef | None,
     ) -> None:
-        obs_iri = OO_INST[f"obs/{system}/{table}/{pk}/{uuid.uuid4()}"]
+        obs_iri = OO_INST[f"obs/{safe_iri_component(system)}/{safe_iri_component(table)}/{safe_iri_component(pk)}/{uuid.uuid4()}"]
         g = rdflib.Graph()
         g.add((obs_iri, RDF.type, OO.Observation))
         g.add((obs_iri, OO.factKind, OO.Observed))

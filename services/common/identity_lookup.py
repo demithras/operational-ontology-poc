@@ -15,13 +15,25 @@ reverse, at EXECUTION time, to build a request WMS can actually act on.
 
 from __future__ import annotations
 
+from services.common.iri import assert_safe_iri, safe_iri_component
 from services.common.sparql_escape import escape_sparql_literal
 
 OO_PREFIX = "PREFIX oo: <https://example.local/oo/>"
 
 
 def resolve_canonical_part_to_source_local(rdf4j_client, canonical_part_id: str, system: str) -> str | None:
-    canonical_iri = f"https://example.local/factory/instance/Part/{escape_sparql_literal(canonical_part_id)}"
+    # canonical_part_id is embedded inside `<...>` (an IRIREF position) —
+    # escape_sparql_literal is the WRONG function for that grammar
+    # production (it escapes for a quoted STRING LITERAL, a different set
+    # of unsafe characters — see services/common/iri.py's module
+    # docstring); safe_iri_component is the correct one. In this specific
+    # call path canonical_part_id is already `_ID_PATTERN`-validated
+    # (it is always `parameters["part"]` from a propose() request), but
+    # this is a general-purpose lookup function and must be correct
+    # regardless of what any future caller passes.
+    canonical_iri = assert_safe_iri(
+        f"https://example.local/factory/instance/Part/{safe_iri_component(canonical_part_id)}"
+    )
     safe_system = escape_sparql_literal(system)
     query = f"""
 {OO_PREFIX}

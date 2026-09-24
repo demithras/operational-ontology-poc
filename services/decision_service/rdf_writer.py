@@ -186,7 +186,12 @@ def record_approval(
     function builds a query by string interpolation."""
     graph = decision_graph_iri(decision_id)
     decision_iri = oo_instance_iri("Decision", decision_id)
-    approver_iri = oo_instance_iri("HumanActor", escape_sparql_literal(approved_by))
+    # oo_instance_iri percent-encodes local_id internally
+    # (services/common/iri.py) — escape_sparql_literal is for a DIFFERENT
+    # SPARQL grammar production (a quoted string literal) and is the wrong
+    # function for this IRIREF position; used correctly below for
+    # safe_approver_id/safe_hash/safe_scope, which ARE literal contexts.
+    approver_iri = oo_instance_iri("HumanActor", approved_by)
     safe_approver_id = escape_sparql_literal(approved_by)
     safe_hash = escape_sparql_literal(approval_decision_hash)
     safe_scope = escape_sparql_literal(approval_scope)

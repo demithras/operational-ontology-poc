@@ -94,10 +94,15 @@ def write_execution_started(
     if quantity is not None:
         transfer_fields += f'\n    oo:quantity "{int(quantity)}"^^xsd:integer ;'
     if source_warehouse is not None:
-        source_iri = fac_instance_iri("Warehouse", escape_sparql_literal(source_warehouse))
+        # fac_instance_iri percent-encodes local_id internally
+        # (services/common/iri.py) — escape_sparql_literal would be the
+        # WRONG function for this IRIREF position (a different SPARQL
+        # grammar production than a quoted string literal); never pass it
+        # here.
+        source_iri = fac_instance_iri("Warehouse", source_warehouse)
         transfer_fields += f"\n    oo:sourceWarehouse <{source_iri}> ;"
     if destination_warehouse is not None:
-        dest_iri = fac_instance_iri("Warehouse", escape_sparql_literal(destination_warehouse))
+        dest_iri = fac_instance_iri("Warehouse", destination_warehouse)
         transfer_fields += f"\n    oo:destinationWarehouse <{dest_iri}> ;"
 
     sparql = f"""
@@ -145,7 +150,10 @@ def write_execution_finalized(
     decision_iri = oo_instance_iri("Decision", decision_id)
     ae_iri = oo_instance_iri("ActionExecution", action_execution_id)
     outcome_iri = oo_instance_iri("Outcome", outcome_id)
-    executor_iri = oo_instance_iri("HumanActor", escape_sparql_literal(executed_by_actor_id))
+    # oo_instance_iri percent-encodes local_id internally — see the
+    # source_iri/dest_iri comment above (write_execution_started) for why
+    # escape_sparql_literal must never be used for this IRIREF position.
+    executor_iri = oo_instance_iri("HumanActor", executed_by_actor_id)
     old_status = status_concept_iri(from_status)
     new_status = status_concept_iri(final_status)
 

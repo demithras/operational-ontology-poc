@@ -27,6 +27,7 @@ import rdflib
 from rdflib import Literal, URIRef
 from rdflib.namespace import RDF, RDFS, XSD
 
+from services.common.iri import safe_iri_component
 from services.identity_resolver.resolver import IdentityResolver, Quarantined, Resolved
 
 FAC = rdflib.Namespace("https://example.local/factory/")
@@ -34,11 +35,22 @@ FAC_INST = rdflib.Namespace("https://example.local/factory/instance/")
 
 
 def entity_iri(class_name: str, local_id: str) -> URIRef:
-    return FAC_INST[f"{class_name}/{local_id}"]
+    # local_id is a RAW source-database primary key/column value (a WMS
+    # lot_id/warehouse_id, an ERP/MES id, or — for kind="ref" fields in
+    # map_row below — another row's foreign-key value) with no charset
+    # constraint at the schema level. Percent-encoded (services/common/iri.py)
+    # so a crafted id (F37: a direct manual DB edit; F38: a poison CDC row)
+    # can never break out of the `<...>` this IRI is later f-string-
+    # interpolated into.
+    return FAC_INST[f"{class_name}/{safe_iri_component(local_id)}"]
 
 
 def part_iri(canonical_id: str) -> URIRef:
-    return FAC_INST[f"Part/{canonical_id}"]
+    # canonical_id comes from services/identity_resolver's OWN resolution
+    # (contracts/identity/v1/mapping_rules.yaml — always a narrow,
+    # regex-constrained shape for a Resolved result), but percent-encoded
+    # anyway for the same defense-in-depth reason as entity_iri above.
+    return FAC_INST[f"Part/{safe_iri_component(canonical_id)}"]
 
 
 @dataclass(frozen=True)

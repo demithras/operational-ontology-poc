@@ -14,6 +14,8 @@ ever copied out of its graph.
 
 from __future__ import annotations
 
+from services.common.iri import safe_iri_component
+
 RDF4J_SHACL_SHAPES_GRAPH = "http://rdf4j.org/schema/rdf4j#SHACLShapeGraph"
 
 ONTOLOGY_GRAPH = "https://example.local/oo/graph/ontology"
@@ -44,7 +46,12 @@ DECISIONS_GRAPH_PREFIX = "https://example.local/oo/graph/decisions/"
 
 
 def decision_graph_iri(decision_id: str) -> str:
-    return f"{DECISIONS_GRAPH_PREFIX}{decision_id}"
+    # decision_id is normally server-generated (f"D-{uuid4().hex[:20]}",
+    # services/decision_service/propose_flow.py) and IRIREF-safe by
+    # construction, but percent-encoded anyway (services/common/iri.py) —
+    # defense-in-depth costs nothing here and this function has no way to
+    # know a future caller won't pass something else through.
+    return f"{DECISIONS_GRAPH_PREFIX}{safe_iri_component(decision_id)}"
 
 
 # Entity IRI scheme shared with services/ingestion (implementation-notes.md
@@ -53,7 +60,15 @@ FACTORY_INSTANCE_BASE = "https://example.local/factory/instance/"
 
 
 def fac_instance_iri(class_name: str, local_id: str) -> str:
-    return f"{FACTORY_INSTANCE_BASE}{class_name}/{local_id}"
+    # local_id here is frequently RAW SOURCE-DATABASE DATA (a WMS
+    # warehouse_id/lot_id, an ERP/MES primary key) with no charset
+    # constraint at the schema level — see services/common/iri.py's module
+    # docstring (F37/F38: a direct manual DB edit or a poison CDC row could
+    # otherwise inject SPARQL via a crafted id landing unescaped inside
+    # `<...>`). class_name is always a hardcoded literal from this
+    # codebase's own source, never external data — left unencoded so the
+    # resulting IRI stays exactly the well-known, documented scheme.
+    return f"{FACTORY_INSTANCE_BASE}{class_name}/{safe_iri_component(local_id)}"
 
 
 # oo: instance IRI scheme for governance objects (decisions, evidence
@@ -63,4 +78,12 @@ OO_INSTANCE_BASE = "https://example.local/oo/instance/"
 
 
 def oo_instance_iri(class_name: str, local_id: str) -> str:
-    return f"{OO_INSTANCE_BASE}{class_name}/{local_id}"
+    # Same rationale as fac_instance_iri above — local_id here includes
+    # actor ids (services/decision_service/rdf_writer.py's approved_by,
+    # services/common/action_rdf.py's executed_by_actor_id) that are NOT
+    # always the strictly-validated propose()/approve() request fields
+    # (an approver_id IS validated by schemas.py's _ID_PATTERN today, but
+    # this function has no way to enforce that stays true at every future
+    # call site, and action_execution_id/decision_id-derived local_ids
+    # passed through here are cheap to protect regardless).
+    return f"{OO_INSTANCE_BASE}{class_name}/{safe_iri_component(local_id)}"
