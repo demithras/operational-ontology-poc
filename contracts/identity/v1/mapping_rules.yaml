@@ -86,3 +86,16 @@ rules:
       MES: {regex: '^COMP-(\d{5})$', offset: 0}
       WMS: {regex: '^SKU-(\d{6})$',  offset: 100000}
     canonical_template: 'PX-{i:04d}'
+
+  # Phase 8 W2 (A/B experiment): one new source-identifier mapping, added
+  # live to prove the identical mechanism/effort applies to both variants.
+  - rule_id: ab-w2-mapping-change
+    version: "1"
+    kind: explicit_override
+    authority: fixture-override
+    confidence: 1.0
+    comment: "tests/ab/test_w2_identifier_mismatch.py — synthetic mapping change."
+    entries:
+      - canonical_id: PX-7002
+        source_ids:
+          WMS: SKU-777777

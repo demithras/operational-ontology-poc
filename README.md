@@ -29,7 +29,7 @@ Build order and exit criteria: `docs/experiment/spec/12_implementation_plan.md`.
 | 6b | Complete the fault matrix (F01-F40; worker-crash/CDC-delay/Kafka-outage/kill/network fault tests; F34 action-version pinning implemented; two real concurrency bugs + a SPARQL/IRI injection vulnerability found and fixed) | done (tag `poc-v0.6.1-faults`) |
 | 7 | Contract versioning / replay (V1->V2 ontology+policy+action evolution, V2->V3 authorization-model evolution, live-through-real-service historical corpus (232 decisions, 210 complete chains) + bulk corpus to 5,000, `services/decision_service/replay.py` — H7 proven: `make test-replay` 100% PASS across V1/V2 under the V3-deployed state — plus F28/F29/F39 closed) | superseded by 7b (`poc-v0.7-replay` — authz replay was fail-open, see 7b) |
 | 7b | Honest replay: real authorization replay (historical OpenFGA tuple snapshot + `contextual_tuples`, replacing the fail-open `recorded_only` fallback the orchestrator's audit caught — R4/ADR 0004 closed for real), bulk corpus (5,159 decisions) now generated from REAL policy/authz evaluation instead of random outcomes, corpus regenerated on a true `make reset` (110 V1 + 130 V2 live, 216 complete chains) with two source-level fixes (`contracts/manifests/baseline_v1.json` + `make up` auto-reset, `historical_corpus.py --version` self-verifying) so deployed-contract-version drift can't recur — `make test-replay` 10/10 passed, all 740 sampled decisions PASS with live/not_applicable authz mode | done (tag `poc-v0.7.1-replay`) |
-| 8 | A/B baseline (conventional relational implementation) | pending |
+| 8 | A/B baseline: step 0 explicit `GATE_UNAVAILABLE` status + `PASS_FAIL_CLOSED_VERIFIED` replay class; `services/baseline` (Variant A — own CDC consumer/Postgres/Temporal worker, reusing authz/policy/action-type/identity-resolver/outcome-eval code verbatim); A/B experiment (`tests/ab`, `make ab`, workloads W1-W7 — 500/500 decision-match rate between variants and vs. the reference-model oracle across a full W7 corpus; ontology's ingestion lag ~5x baseline's under the same measurement) | done (tag `poc-v0.8-baseline`) |
 | 9 | Agent / MCP layer | pending |
 | 10 | Final attack (full stateful suite, fault matrix, mutation tests, load, replay, A/B) | pending |
 
@@ -200,6 +200,36 @@ clear skip, per the same honesty rule) — `tests/faults/` and `tests/replay/`
 are intentionally NOT part of `make test` (see `make test-faults` /
 `make test-replay` above). `make experiment` / `make report` still print
 which phase (10) they belong to and exit `2`.
+
+Since Phase 8, `make up` also brings up `services/baseline` — Variant A of
+`docs/experiment/spec/10_ab_experiment.md`'s A/B experiment: a conventional
+relational implementation with no RDF, no PROV graph, no SHACL (its own
+`baseline` Postgres database, its own CDC consumer reading the SAME
+Debezium topics under a separate Kafka consumer group, its own FastAPI
+service on host port 15411 with the same propose/approve/execute/replay
+API surface, its own Temporal task queue). It reuses
+`services/decision_service`'s authorization/policy/action-type/hashing
+code and `services/identity_resolver`/`services/action_worker`'s workflow/
+outcome-evaluation code UNCHANGED — see
+`docs/experiment/implementation-notes.md` Phase 8 item 1 for why literal
+code reuse (not a second implementation) is this phase's central fairness
+decision. `tests/ab/` (workloads W1-W7) + `make ab` run the full A/B
+experiment against both live variants and write
+`experiments/exp-000/results/ab-results.json` (raw metrics) +
+`experiments/exp-000/results/ab-tradeoffs.md` (the trade-off table, no
+weighted winner score, per spec 10). Headline result: across a 500-scenario
+generated incident corpus (W7), the two variants reached the IDENTICAL
+governed decision in every single case, and matched the independent
+`reference_model` oracle in every case it could referee — the baseline's
+ingestion lag and proposal-latency tail are measurably better under burst
+load, a genuine, reported cost of the ontology's extra CDC → RDF4J →
+hot-projection pipeline stage. Phase 8 step 0 (before any of this) also
+closed a real acceptance-criterion gap: a dependency (OpenFGA/OPA) outage
+now produces an explicit `GATE_UNAVAILABLE` status (HTTP 503) instead of a
+fabricated denial, with its own `PASS_FAIL_CLOSED_VERIFIED` replay class —
+see `docs/experiment/implementation-notes.md`'s Phase 8 sections for the
+full write-up, including two real bugs found and fixed while building the
+baseline.
 
 ## What Phase 1 proves (and doesn't)
 

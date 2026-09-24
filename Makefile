@@ -286,6 +286,24 @@ bench-phase5: ensure-env
 bench-phase6: ensure-env
 	$(VENV_PY) tests/performance/bench_phase6.py
 
+## Phase 8 items 2+3 (docs/experiment/spec/10_ab_experiment.md): the A/B
+# experiment — workloads W1-W7 against BOTH live variants
+# (decision_service on 15410, services/baseline on 15411), raw metrics
+# (correctness/explainability/replay/performance/engineering-cost/
+# complexity-tax, no weighted winner score) written to
+# experiments/exp-000/results/ab-results.json +
+# experiments/exp-000/results/ab-tradeoffs.md. `pytest tests/ab` first as
+# the fast CI-style gate (a small W7 smoke sample, OO_AB_W7_SMOKE_N,
+# default 15); `scripts/run_ab.py` then runs the FULL W7 corpus
+# (OO_AB_W7_N, default 500) and every other workload for the real report.
+# Requires the full stack (`make up`) reachable, including
+# baseline_service/baseline_ingestion/baseline_action_worker.
+ab: ensure-env
+	$(VENV_PY) -m pytest tests/ab -q
+	$(VENV_PY) scripts/run_ab.py --w7-n $${OO_AB_W7_N:-500}
+	$(VENV_PY) scripts/baseline_replay_sweep.py
+	$(VENV_PY) scripts/gen_ab_tradeoffs.py
+
 experiment:
 	@echo "not implemented yet — Phase 10 (see docs/experiment/spec/12_implementation_plan.md)"
 	@exit 2

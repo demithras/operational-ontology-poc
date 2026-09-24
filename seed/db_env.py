@@ -120,6 +120,23 @@ def decision_service_url() -> str:
     return f"http://{host}:{os.environ['DECISION_SERVICE_HTTP_PORT']}"
 
 
+# --- Phase 8 (docs/experiment/spec/10_ab_experiment.md, Variant A) -------
+
+
+def baseline_dsn() -> str:
+    return host_dsn("BASELINE_DB_NAME", "BASELINE_DB_USER", "BASELINE_DB_PASSWORD")
+
+
+def baseline_service_url() -> str:
+    host = os.environ.get("OO_SERVICE_HOST", "localhost")
+    return f"http://{host}:{os.environ['BASELINE_SERVICE_HTTP_PORT']}"
+
+
+def baseline_ingestion_health_url() -> str:
+    host = os.environ.get("OO_SERVICE_HOST", "localhost")
+    return f"http://{host}:{os.environ['BASELINE_INGESTION_HEALTH_PORT']}"
+
+
 # --- Phase 6 (docs/experiment/briefs/phase6.md) --------------------------
 
 

@@ -1,0 +1,399 @@
+{
+  "generated_at": "2026-09-24T12:46:52.219330+00:00",
+  "manifest": "docs/experiment/spec/10_ab_experiment.md",
+  "W1_canonical_supplier_delay": {
+    "workload": "W1_canonical_supplier_delay",
+    "converged_before_delay": {
+      "baseline": true,
+      "ontology": true
+    },
+    "decisions": {
+      "ontology": {
+        "status": "APPROVED",
+        "http_status": 200
+      },
+      "baseline": {
+        "status": "APPROVED",
+        "http_status": 200
+      }
+    },
+    "oracle_status": "APPROVED",
+    "oracle_reason": "",
+    "decision_match_variants": true,
+    "decision_match_oracle": {
+      "ontology": true,
+      "baseline": true
+    },
+    "execution_results": {
+      "ontology": {
+        "executed": true,
+        "final_status": "OBSERVED_SUCCESS"
+      },
+      "baseline": {
+        "executed": true,
+        "final_status": "OBSERVED_SUCCESS"
+      }
+    },
+    "part": "PX-7001",
+    "work_order_id": "WO-AB-W1",
+    "_elapsed_s": 17.486862209043466,
+    "_status": "OK"
+  },
+  "W2_identifier_mismatch_and_mapping_change": {
+    "workload": "W2_identifier_mismatch_and_mapping_change",
+    "converged_before_mapping_change": {
+      "baseline": true,
+      "ontology": true
+    },
+    "resolutions": {
+      "ERP": {
+        "local_id": "PART-07002",
+        "resolved_canonical": "PX-7002",
+        "quarantined": false
+      },
+      "MES": {
+        "local_id": "COMP-07002",
+        "resolved_canonical": "PX-7002",
+        "quarantined": false
+      },
+      "WMS": {
+        "local_id": "SKU-107002",
+        "resolved_canonical": "PX-7002",
+        "quarantined": false
+      }
+    },
+    "all_resolve_to_same_canonical": true,
+    "decisions_part1": {
+      "ontology": "APPROVED",
+      "baseline": "APPROVED"
+    },
+    "mapping_change_effort": {
+      "files_changed": 0,
+      "lines_added": 0,
+      "shared_across_variants": true
+    },
+    "mechanism_resolves_correctly": true,
+    "live_consumer_picked_up_new_mapping": null,
+    "part": "PX-7002",
+    "_elapsed_s": 0.7933924589306116,
+    "_status": "OK"
+  },
+  "W3_policy_evolution": {
+    "workload": "W3_policy_evolution",
+    "v1_vs_v2_same_input_different_result": {
+      "v1_decision": "allow",
+      "v2_decision": "allow",
+      "v1_default_safety_stock": 10,
+      "v2_default_safety_stock": 15,
+      "rule_genuinely_changed": true
+    },
+    "v1_historical_replay": {
+      "decision_id": "D-BULKdb0292ee02e14a8b",
+      "status": "PASS",
+      "policy_version_replayed_against": "v1@sha256:7240e46fdd9c3b1174c1748c393e9857b3f3f905b3eb78dad1bafba4d4612c5d",
+      "used_historical_not_current_rule": true
+    },
+    "fresh_decisions_replay_own_pinned_version": {
+      "ontology": {
+        "decision_id": "D-df5f060608124361a8f6",
+        "propose_status": "APPROVED",
+        "replay_status": "PASS",
+        "policy_version": "v2@sha256:2ab489b538b7465559f3e4a3299daf86b268f45bcdbf27c5ad8025469fd3f9db"
+      },
+      "baseline": {
+        "decision_id": "B-cd1228ccc282415eafe5",
+        "propose_status": "APPROVED",
+        "replay_status": "PASS",
+        "policy_version": "v2@sha256:2ab489b538b7465559f3e4a3299daf86b268f45bcdbf27c5ad8025469fd3f9db"
+      }
+    },
+    "part": "PX-7003",
+    "_elapsed_s": 0.17253170802723616,
+    "_status": "OK"
+  },
+  "W4_schema_evolution": {
+    "workload": "W4_schema_evolution",
+    "ontology_real_historical_migration": [
+      {
+        "commit": "70c1409",
+        "files_touched": 34,
+        "summary": "34 files changed, 1609 insertions(+), 29 deletions(-)"
+      },
+      {
+        "commit": "515c56a",
+        "files_touched": 10,
+        "summary": "10 files changed, 484 insertions(+), 10 deletions(-)"
+      }
+    ],
+    "reserved_gt_zero_scenario": {
+      "on_hand": 50,
+      "reserved": 20,
+      "expected_available": 30
+    },
+    "converged": {
+      "baseline": true,
+      "ontology": true
+    },
+    "decisions": {
+      "ontology": {
+        "status": "DENIED_POLICY",
+        "on_hand": 50,
+        "reserved": 20,
+        "available": 30
+      },
+      "baseline": {
+        "status": "DENIED_POLICY",
+        "on_hand": 50,
+        "reserved": 20,
+        "available": 30
+      }
+    },
+    "both_computed_from_on_hand_reserved_live": true,
+    "oracle_status": "DENIED_POLICY",
+    "decision_match_variants": true,
+    "decision_match_oracle": {
+      "ontology": true,
+      "baseline": true
+    },
+    "baseline_counterfactual_evolution_surface": {
+      "file": "services/baseline/evidence.py",
+      "function": "gather_transfer_inventory_evidence",
+      "representation": "available computed inline as on_hand - reserved, every call, never stored",
+      "counterfactual_cost_of_a_future_representation_change": "one expression in one function \u2014 no separate 'asserted fact' layer to retire (no ontology individual, no SHACL shape property, no SPARQL projection query to rewrite); the ontology's real migration touched 44 files across 2 commits precisely because each of those IS a separate versioned artifact in that architecture"
+    },
+    "part": "PX-7004",
+    "_elapsed_s": 0.14843899989500642,
+    "_status": "OK"
+  },
+  "W5_forensic_query": {
+    "workload": "W5_forensic_query",
+    "decision_ids": {
+      "ontology": "D-1184f0cd945a47d0bd3a",
+      "baseline": "B-c2b0e7317efe4fda98be"
+    },
+    "forensic": {
+      "ontology": {
+        "variant": "ontology",
+        "answers": {
+          "who": "planner-1",
+          "what_evidence": true,
+          "what_policy": "allow",
+          "what_authorization": "ALLOWED",
+          "what_action": "transfer_inventory v3 {'part': 'PX-7005', 'quantity': 10, 'source_warehouse': 'WH-B', 'destination_warehouse': 'WH-A'}",
+          "what_actual_outcome": "CONVERGED",
+          "what_changed_next": "no subsequent decision generated by this workload (see module docstring \u2014 a real forensic query would search decisions concerning the same entities)"
+        },
+        "calls": 3,
+        "manual_sources": 1,
+        "elapsed_s": 0.012315917061641812,
+        "complete": true
+      },
+      "baseline": {
+        "variant": "baseline",
+        "answers": {
+          "who": "planner-1",
+          "what_evidence": true,
+          "what_policy": "allow",
+          "what_authorization": "ALLOWED",
+          "what_action": "transfer_inventory v3 {'part': 'PX-7005', 'quantity': 10, 'source_warehouse': 'WH-B', 'destination_warehouse': 'WH-A'}",
+          "what_actual_outcome": "CONVERGED",
+          "what_changed_next": "no subsequent decision generated by this workload"
+        },
+        "calls": 3,
+        "manual_sources": 1,
+        "elapsed_s": 0.009439917048439384,
+        "complete": true
+      }
+    },
+    "part": "PX-7005",
+    "_elapsed_s": 5.3522459589876235,
+    "_status": "OK"
+  },
+  "W6_novel_cross_system_relation": {
+    "workload": "W6_novel_cross_system_relation",
+    "converged": {
+      "baseline": true,
+      "ontology": true
+    },
+    "ontology_result": [
+      {
+        "supplier_id": "SUP-0000",
+        "po_id": "PO-AB-W6",
+        "part": "PX-7006"
+      }
+    ],
+    "baseline_result": [
+      {
+        "supplier_id": "SUP-0000",
+        "po_id": "PO-AB-W6",
+        "part": "PX-7006"
+      }
+    ],
+    "suppliers_match": true,
+    "found_the_seeded_supplier": true,
+    "effort": {
+      "ontology": {
+        "new_files": 1,
+        "file": "services/decision_service/forensics.py",
+        "logical_lines": 40,
+        "components_touched": [
+          "decision_service (new module, reads existing RDF4J triples \u2014 no ingestion/mapping/ontology/shapes change)"
+        ],
+        "migrations_needed": 0
+      },
+      "baseline": {
+        "new_files": 1,
+        "file": "services/baseline/forensics.py",
+        "logical_lines": 32,
+        "components_touched": [
+          "baseline (new module, reads existing relational tables \u2014 no consumer/schema change)"
+        ],
+        "migrations_needed": 0
+      },
+      "http_wiring_not_built_estimated_lines_each": 4
+    },
+    "work_order_id": "WO-AB-W6",
+    "_elapsed_s": 0.04252654092852026,
+    "_status": "OK"
+  },
+  "W7_generated_incident_corpus": {
+    "workload": "W7_generated_incident_corpus",
+    "n": 500,
+    "seed": 20260924,
+    "seed_elapsed_s": 3.288127416977659,
+    "propose_elapsed_s": 91.35915787494741,
+    "variants_decision_match_rate": 1.0,
+    "oracle_checked_count": 394,
+    "ontology_oracle_match_rate": 1.0,
+    "baseline_oracle_match_rate": 1.0,
+    "status_distribution": {
+      "ontology": {
+        "INSUFFICIENT_EVIDENCE": 44,
+        "DENIED_POLICY": 122,
+        "REQUIRES_APPROVAL": 101,
+        "DENIED_AUTHORIZATION": 61,
+        "APPROVED": 172
+      },
+      "baseline": {
+        "INSUFFICIENT_EVIDENCE": 44,
+        "DENIED_POLICY": 122,
+        "REQUIRES_APPROVAL": 101,
+        "DENIED_AUTHORIZATION": 61,
+        "APPROVED": 172
+      }
+    },
+    "sample_mismatches": [],
+    "proposal_latency_p95_ms": {
+      "ontology": 272.8662909939885,
+      "baseline": 68.76137503422797
+    },
+    "proposal_latency_mean_ms": {
+      "ontology": 130.70663782861084,
+      "baseline": 51.619807330193
+    },
+    "_elapsed_s": 119.65497929195408,
+    "_status": "OK"
+  },
+  "hot_read_benchmark": {
+    "n": 30,
+    "p95_ms": {
+      "ontology": 0.4307499621063471,
+      "baseline": 0.35691692028194666
+    },
+    "mean_ms": {
+      "ontology": 0.2647652950448295,
+      "baseline": 0.2391319217470785
+    },
+    "_elapsed_s": 0.01515083306003362,
+    "_status": "OK"
+  },
+  "ingestion_lag_benchmark": {
+    "trials": 5,
+    "mean_lag_ms": {
+      "ontology": 3077.6879663811997,
+      "baseline": 613.7571499915794
+    },
+    "max_lag_ms": {
+      "ontology": 3545.2442079549655,
+      "baseline": 1016.8461250141263
+    },
+    "all_trials_converged": {
+      "ontology": true,
+      "baseline": true
+    },
+    "note": "wall-clock from the WMS write call returning to the variant's OWN read path first reflecting the new value (baseline: inventory_lots row; ontology: current_inventory hot-projection row, its SLOWER of the two by construction \u2014 see complexity_tax note on the two-watermark design)",
+    "_elapsed_s": 15.393370916950516,
+    "_status": "OK"
+  },
+  "engineering_cost": {
+    "baseline_build_commit": "73d822118920188bb5e0545632a7703d9e4ed3ed",
+    "baseline_build_git_stat": {
+      "ref": "73d822118920188bb5e0545632a7703d9e4ed3ed",
+      "raw_summary": "20 files changed, 2618 insertions(+)",
+      "files": [
+        " .env.example                            |   5 +",
+        " docker-compose.yml                      | 113 +++++++++",
+        " docs/experiment/implementation-notes.md | 180 +++++++++++++++",
+        " services/baseline/__init__.py           |   0",
+        " services/baseline/activities.py         | 192 +++++++++++++++",
+        " services/baseline/app.py                | 214 +++++++++++++++++",
+        " services/baseline/config.py             |  39 ++++",
+        " services/baseline/consumer.py           | 397 ++++++++++++++++++++++++++++++++",
+        " services/baseline/evidence.py           | 233 +++++++++++++++++++",
+        " services/baseline/execution.py          |  27 +++",
+        " services/baseline/execution_reader.py   |  27 +++",
+        " services/baseline/hashing.py            |  49 ++++",
+        " services/baseline/identity.py           |  80 +++++++",
+        " services/baseline/manifest.py           |  78 +++++++",
+        " services/baseline/models.py             |  72 ++++++",
+        " services/baseline/propose_flow.py       | 171 ++++++++++++++",
+        " services/baseline/replay.py             | 217 +++++++++++++++++",
+        " services/baseline/schema.sql            | 279 ++++++++++++++++++++++",
+        " services/baseline/store.py              | 188 +++++++++++++++",
+        " services/baseline/worker.py             |  57 +++++"
+      ]
+    },
+    "baseline_total_logical_lines_services_baseline": 2073,
+    "ontology_semantic_core_total_logical_lines": 9453,
+    "note": "NOT an apples-to-apples methodology: services/baseline/ was built in ONE Phase 8 session with a single measurable commit; the ontology variant's equivalent (decision_service + ingestion + projection_builder + identity_resolver + RDF4J client/graph helpers + all ontology/shapes .ttl files) accumulated across Phases 3-7b, many commits, with substantial iteration/fault-fixing folded in that this line count does not separate out. Reported as the best available proxy for 'how much code implements the semantic-core-specific machinery', not a time-boxed comparison.",
+    "w6_novel_relation_effort": "see ab-results.json 'W6_novel_cross_system_relation'.effort",
+    "w2_identifier_mapping_effort": "see ab-results.json 'W2_identifier_mismatch_and_mapping_change'.mapping_change_effort"
+  },
+  "complexity_tax": {
+    "total_containers_in_stack": 21,
+    "shared_containers": [
+      "connect",
+      "erp",
+      "kafka",
+      "mes",
+      "opa",
+      "openfga",
+      "openfga-migrate",
+      "postgres",
+      "temporal",
+      "temporal-postgres",
+      "temporal-ui",
+      "wms"
+    ],
+    "ontology_only_containers": [
+      "action_worker",
+      "decision_service",
+      "ingestion",
+      "projection_builder",
+      "rdf4j",
+      "reconciliation"
+    ],
+    "baseline_only_containers": [
+      "baseline_action_worker",
+      "baseline_ingestion",
+      "baseline_service"
+    ],
+    "ontology_extra_container_count": 6,
+    "baseline_extra_container_count": 3,
+    "ontology_extra_store_technologies": [
+      "RDF4J (separate triple store + its own docker volume, oo-poc-rdf4j-data)"
+    ],
+    "baseline_extra_store_technologies": [],
+    "note": "Both variants share the SAME Postgres instance for their own logical DB \u2014 baseline adds a DB, not a new store technology. The ontology variant additionally requires reconciliation as a SEPARATE standing service (H12, independent CDC re-check); services/baseline/activities.py folds the equivalent check inline into the action-execution workflow instead (a disclosed Phase 8 scope choice, see docs/experiment/implementation-notes.md item 1) \u2014 one fewer moving part, at the cost of no independent-of-the-executor re-verification path."
+  }
+}

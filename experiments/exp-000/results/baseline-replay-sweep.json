@@ -1,0 +1,13 @@
+{
+  "total_decisions": 1191,
+  "pass_like_count": 1188,
+  "pass_like_pct": 99.75,
+  "fail_or_partial_count": 3,
+  "f29_errors": 0,
+  "counts": {
+    "PASS|live": 1089,
+    "PASS|not_applicable": 99,
+    "FAIL|live": 1,
+    "FAIL|not_applicable": 2
+  }
+}

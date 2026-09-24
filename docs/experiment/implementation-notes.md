@@ -3286,3 +3286,311 @@ between the two restoration attempts) is outside this session's control —
 documented here so the next phase knows this happened and why. Every
 subsequent probe in this phase (item 2 onward) uses synthetic identifiers
 exclusively, per the standing rule.
+
+## Phase 8 items 2+3 — the A/B experiment (spec 10)
+
+`tests/ab/` (workloads W1-W7) + `scripts/run_ab.py`/`scripts/baseline_replay_sweep.py`/
+`scripts/gen_ab_tradeoffs.py` (`make ab`) — raw metrics to
+`experiments/exp-000/results/ab-results.json`, the trade-off table to
+`experiments/exp-000/results/ab-tradeoffs.md`. No weighted winner score
+(spec 10). Every workload uses SYNTHETIC identifiers exclusively
+(`tests/ab/synthetic.py` — a reserved `PX-7000+`/`PART-070xx`/`COMP-070xx`/
+`SKU-1070xx` index range for W1-W6, `PX-8000+` for W7's 500-scenario
+corpus) — the canonical fixture (PX-17/SKU-88429/WH-A/WH-B/WO-42) is never
+touched by any Phase 8 code (see item 1's "process note" for the one
+interactive-testing lapse this rule exists to prevent).
+
+### Harness
+
+`tests/ab/harness.py`'s `Harness` bundles both variants' HTTP clients plus
+every DB/RDF4J connection a workload might need — reused by `pytest tests/ab`
+(module-scoped fixture, `tests/ab/conftest.py`) and `scripts/run_ab.py`
+(direct construction, so one orchestrated run can aggregate every
+workload's metrics into ONE results file). `tests/ab/oracle.py` reuses
+`reference_model.transitions.propose_transfer` (the Phase 1 pure-Python
+oracle) UNCHANGED, configured to the CURRENTLY-deployed V2/V3 contract
+values (threshold=80, safety_stock=15 — contracts/actions/v2/.../
+contracts/policies/v2/data.json's `default_safety_stock_v2`) rather than
+V1's stale defaults.
+
+**A real, documented gap found in the Phase 1 oracle** (not introduced by
+Phase 8): `reference_model.transitions._authz_gate`'s role handling does
+NOT match the live `contracts/authorization/v1/model.fga` exactly —
+`_authz_gate` denies `junior_planner` for ANY transfer (comment: "read
+literally, but simplified") and allows `supervisor` the same as `planner`.
+The REAL model unions `junior_planner` INTO `can_transfer_inventory`
+(spec 03: junior CAN propose/execute, only approval is denied) and does
+**NOT** grant `supervisor` `can_transfer_inventory` at all (supervisor only
+holds `can_approve_large_transfer`/`can_mitigate_high_priority` — an
+APPROVER role, never a PROPOSER). Found live during Phase 8 build: both
+variants agreed with EACH OTHER and with the REAL model (junior-1 APPROVED,
+supervisor-1 DENIED as a proposer) while disagreeing with the oracle in
+BOTH directions — proving the divergence was in the Phase-1 oracle, not
+either live variant. `tests/ab/generator.py` works around this by never
+using `supervisor-1` as a proposing actor and flagging the
+`denied_authorization_role` (junior) bucket `skip_oracle=True` — inter-variant
+comparison still applies to it, only the oracle referee is skipped.
+
+### W1 — canonical-shape supplier delay (synthetic)
+
+Same shape as the canonical incident (20 @ WH-A / 140 @ WH-B, HIGH-priority
+WO requiring 80, a covering PO delayed past `planned_start`) on synthetic
+ids. Both variants: `APPROVED`, matches the reference_model oracle,
+`execute()` -> real WMS transfer -> `OBSERVED_SUCCESS` on both.
+
+### W2 — identifier mismatch + a live mapping change
+
+Part 1: `PART-07002`/`COMP-07002`/`SKU-107002` (three different
+source-local ids) all resolve to the SAME canonical `PX-7002` in both
+variants; both propose `APPROVED` identically. Part 2: one new
+`explicit_override` entry added to `contracts/identity/v1/mapping_rules.yaml`
+(a SHARED contract, reused verbatim by both variants per item 1's central
+fairness decision) — engineering cost: **1 file, 12 lines, IDENTICAL for
+both variants** (zero variant-specific code). Mechanism verified via a
+fresh `IdentityResolver()` instantiation; the live-consumer-restart half
+(does a genuinely running, long-lived consumer pick up the change) was
+verified once by hand
+(`tests/ab/test_w2_identifier_mismatch.py::verify_live_consumer_picks_up_mapping_change`,
+run after the full W7=500 corpus completed, so it never raced it):
+`baseline_ingestion_restart_seconds: 34.1`, `live_consumer_picked_up_new_mapping: true`
+— confirms the mechanism works operationally, not just in a fresh
+in-process instantiation, at the real ~30-50s consumer-group-rebalance
+cost this phase already documented (item 1's "Operational note").
+
+### W3 — policy evolution
+
+`contracts/policies/v1/data.json`'s `default_safety_stock` (10) vs
+`contracts/policies/v2/data.json`'s `default_safety_stock_v2` (15) — a
+REAL, live-verifiable rule change (both packages served simultaneously by
+the SAME live OPA instance forever, per Phase 7's design). An EXISTING
+V1-era historical decision from the ontology's real corpus replays under
+its ARCHIVED V1 policy (not today's V2) — `used_historical_not_current_rule:
+true`. A fresh decision proposed on EACH variant today replays correctly
+under its OWN pinned V2 version. Honest asymmetry: `services/baseline`
+was built in Phase 8, after V1->V2 already happened — it has no V1-era
+history of its own to replay; only the ontology variant demonstrates the
+"replay under historical rules" half directly.
+
+### W4 — schema evolution (`available` -> `on_hand - reserved`)
+
+This evolution already happened for real (Phase 7's V1->V2 migration:
+`migrations/v1_to_v2/migrate_rdf.py` + 44 files across 2 commits,
+1609+484 insertions — the REAL number, read via `git show --stat`, not
+estimated). `services/baseline` was born AFTER that migration and was
+never exposed to the retired representation — it computes
+`available = on_hand - reserved` inline, every call, with no separate
+"asserted fact" layer to retire. Behavioral check (both variants, TODAY):
+a `reserved=20, on_hand=50` scenario is computed correctly (`available=30`)
+by both, live, and both correctly `DENIED_POLICY` (30 - 25 = 5 remaining
+< safety_stock 15), matching the oracle. Honest, disclosed finding: this
+SPECIFIC class of evolution (retiring a derived-but-separately-asserted
+fact) has near-zero cost in a relational design **by construction** — a
+plain SQL expression has no equivalent of a separately-versioned RDF
+individual/SHACL property/SPARQL projection query to retire. This is a
+real architectural property, not a scoping trick — see
+`services/baseline/schema.sql`'s header comment for the underlying design
+decision that produces it.
+
+### W5 — forensic query ("six months later")
+
+Per spec 14 R10, treats an already-completed decision as the "six months
+later" target (Phase 7's own historical-replay tests take the identical
+stance). Both variants: **3 distinct calls**, **1 manual log source**
+(the service's own API — no separate log-scraping needed either side),
+all 7 forensic sub-questions (who/evidence/policy/authorization/action/
+outcome/what-changed-next) answered completely, comparable latency
+(tens of ms). Honest finding: at the REST-API level, explainability
+completeness is EQUAL between variants — the ontology's PROV-graph benefit
+(if any) would show up in a DEEPER query (arbitrary novel traversal — see
+W6), not this one.
+
+### W6 — novel cross-system relation + measured effort
+
+New capability: "for an at-risk work order, which supplier(s) does its
+shortage trace back to" (MES `BomRequirement`/`WorkOrder` -> ERP
+`PurchaseOrderLine`/`PurchaseOrder`/`Supplier`, joined via WMS's warehouse
+id) — never queried anywhere in this repo before Phase 8.
+`services/decision_service/forensics.py` (new SPARQL query, 40 logical
+lines incl. docstring) / `services/baseline/forensics.py` (new SQL join,
+32 lines) — **both are NEW QUERIES over data ALREADY THERE**: zero
+ingestion/mapping/ontology/shapes change for the ontology variant, zero
+consumer/schema change for the baseline (every column both queries touch
+already existed before this workload). Results match exactly. Honest
+finding AGAINST a naive ontology-thesis reading: for THIS specific novel
+relation, both architectures already had the necessary data modeled, and
+the marginal implementation effort was comparable (slightly SMALLER for
+the relational SQL join than the SPARQL query, in raw line count) — not
+the "ontology wins because the data model anticipates unknown future
+queries" story one might expect going in. (HTTP endpoint wiring itself
+was not built for either variant this phase — estimated ~4 lines each,
+the same shape either side; see the module docstring for the scoping
+reason.)
+
+### W7 — 500-scenario generated corpus
+
+`tests/ab/generator.py` — deterministic (`seed=20260924`), a controlled
+MIX across gate-outcome buckets (never pure-uniform random, so N=500
+reliably exercises every status class). Final run (N=500):
+
+```
+variants_decision_match_rate: 1.0   (500/500 — perfect agreement)
+oracle_checked_count: 394           (scenarios the Phase 1 oracle can referee — see the gap above)
+ontology_oracle_match_rate: 1.0     (394/394)
+baseline_oracle_match_rate: 1.0     (394/394)
+status_distribution (both variants, IDENTICAL):
+  INSUFFICIENT_EVIDENCE: 44   DENIED_POLICY: 122   REQUIRES_APPROVAL: 101
+  DENIED_AUTHORIZATION: 61    APPROVED: 172
+sample_mismatches: 0
+```
+
+**Zero decision mismatches across 500 real, independent scenarios spanning
+every gate-outcome class, and zero mismatches against the independent
+Phase 1 oracle on the 394 it can referee.** This is the headline
+correctness result of Phase 8: for this domain's `transfer_inventory`
+action, the relational baseline and the operational ontology reach
+IDENTICAL governed decisions, always, under real evidence gathered
+through real CDC pipelines from real (synthetic) source data.
+
+**A genuine, reportable performance finding** (not tuned away, and
+reported from TWO independent full runs rather than the single best one):
+latency under this SAME 500-scenario burst —
+
+```
+Run 1 (stack cold-ish after a prior N=30 smoke run):
+  proposal_latency_mean_ms:  ontology 382ms   baseline  73ms
+  proposal_latency_p95_ms:   ontology 3075ms  baseline 189ms   (ontology's p95 EXCEEDS the 500ms SLO)
+
+Run 2 (immediately after run 1, stack already warm):
+  proposal_latency_mean_ms:  ontology 131ms   baseline  52ms
+  proposal_latency_p95_ms:   ontology 273ms   baseline  69ms   (both comfortably under the 500ms SLO)
+```
+
+Both runs agree perfectly on CORRECTNESS (500/500 decision match, 394/394
+oracle match, both runs, zero mismatches) — only the LATENCY figures vary
+run-to-run, and specifically the ontology's p95, which swings from
+"exceeds the SLO" to "comfortably under it" depending on how warmed-up
+the pipeline already is. The gap is NOT present in Phase 5's isolated
+single-decision benchmark (bench-phase5.json: 29.6ms p95, "warm", no
+concurrent burst) — it appears specifically under a burst of ~500 DISTINCT
+new synthetic entities seeded in quick succession, which the ontology's
+CDC -> RDF4J -> projection_builder pipeline (its own ~3s poll cycle,
+rebuilding hot-projection tables) has to fully absorb before
+`evidence.py`'s freshness gate stops hitting its own internal 8-second
+retry window; `services/baseline`'s simpler pipeline (CDC writes straight
+into the SAME tables evidence gathering reads, no separate rebuild stage)
+shows a consistently tighter distribution across BOTH runs (p95/mean ratio
+~2.6x/1.3x vs ontology's ~8x/2.1x).
+
+A cleaner, more reproducible signal of the SAME underlying cost — 5 direct
+trials, no corpus-burst confound — is `ingestion_lag_benchmark` (wall-clock
+from a real WMS write to the moment each variant's OWN read path first
+reflects it, one fresh synthetic part per trial, no concurrent load):
+
+```
+ingestion_lag mean:  ontology 3078ms   baseline 614ms   (~5x)
+ingestion_lag max:   ontology 3545ms   baseline 1017ms
+all 5 trials converged within the 30s timeout, both variants
+```
+
+This is the STABLE number to cite for "ingestion lag": the ontology
+variant's extra CDC -> RDF4J SHACL-validated write -> projection_builder
+rebuild pipeline genuinely costs several seconds more, consistently,
+than the baseline's direct CDC -> table write — independent of burst
+conditions. The W7 corpus p95 figures above are a downstream SYMPTOM of
+this same cost interacting with `evidence.py`'s freshness-retry window
+under load; this benchmark isolates the cost itself.
+
+### Replay/evolution — the whole `baseline.decisions` table
+
+`scripts/baseline_replay_sweep.py` (the baseline analogue of
+`scripts/replay_full_sweep.py`): **1,188/1,191 (99.75%) PASS-like**
+(re-run after both full W7=500 runs — the population grew from 686 to
+1,191 decisions, same 3 pre-existing FAILs, nothing new), 0 F29
+errors. The 3 `FAIL` (`evidence_hash_mismatch`) are `B-2c112c5160054ab4ac1a`,
+`B-c5ef1d2b26074df58600`, `B-c83f522072af43b1bdeb` — all created at
+11:53-11:55 during this session's own EARLY interactive debugging, BEFORE
+a real bug was found and fixed (`services/baseline/store.py` initially
+omitted `projection_row_hashes` from the stored `evidence_snapshot`,
+so the recomputed hash at replay time could never match — see item 1's
+"Two real bugs found" section, now amended: this was a SECOND, closely
+related bug in the same area, found via this exact replay sweep). These 3
+records are genuinely, correctly detected as hash-mismatched by replay —
+proof the mechanism works, not a live defect: every decision created AFTER
+the fix (all of W1-W7's, all further ad-hoc testing) replays clean. Left
+in the table as-is (immutable history, per this whole experiment's own
+decision-as-data philosophy) rather than deleted, and disclosed here
+rather than swept under the rug.
+
+### Complexity tax
+
+21 total containers in the stack; 12 shared (postgres, erp, mes, wms,
+kafka, connect, openfga(+migrate), opa, temporal(+its own postgres+UI)).
+Ontology-only: 6 (rdf4j, ingestion, projection_builder, decision_service,
+action_worker, reconciliation) + 1 extra store TECHNOLOGY (RDF4J, its own
+docker volume). Baseline-only: 3 (baseline_ingestion, baseline_service,
+baseline_action_worker) + 0 extra store technologies (adds a logical DB
+to the SAME shared Postgres instance). The ontology variant also runs a
+SEPARATE standing `reconciliation` service (H12, independent-of-the-executor
+re-check) — `services/baseline/activities.py` folds the equivalent check
+inline into the action-execution workflow instead (a disclosed Phase 8
+scope choice: one fewer moving part, at the cost of no independent
+re-verification path outside the executor itself).
+
+### Engineering cost
+
+`services/baseline/` total: **2,073 logical lines**, built in ONE Phase 8
+session, ONE measurable commit (`73d8221`, 20 files, 2,618 insertions
+including docs/tests/compose/env changes). The ontology's equivalent
+semantic-core-specific code (`decision_service` + `ingestion` +
+`projection_builder` + `identity_resolver` + the RDF4J/graph/action-RDF
+common helpers + every `.ttl` file under `contracts/ontology`/`contracts/shapes`):
+**~9,453 logical lines**, accumulated across Phases 3-7b (many commits,
+substantial fault-fixing folded in that this raw count can't separate
+out). Explicitly NOT an apples-to-apples methodology (one clean session vs.
+many iterative phases) — reported as the best available proxy for
+"how much code implements the semantic-core-specific machinery", not a
+time-boxed comparison. `tests/ab/` itself (the 7 workload files + harness/
+oracle/synthetic/generator/client helpers) is shared infrastructure that
+exercises BOTH variants identically — there is no separate baseline-only
+or ontology-only test suite this phase added beyond what already existed
+(`tests/model`/`tests/contracts`/`tests/component`/`tests/integration`/
+`tests/faults`/`tests/replay` for the ontology variant; no baseline-specific
+unit-test suite was written this phase — the A/B workloads themselves are
+baseline's only test coverage so far, a disclosed scope limitation).
+
+### What Phase 9+ needs from here
+
+- The stack now runs BOTH variants simultaneously and permanently:
+  `decision_service` (15410) and `services/baseline` (15411), sharing
+  OpenFGA/OPA/Temporal/WMS/ERP/MES/Postgres.
+- `contracts/identity/v1/mapping_rules.yaml` carries one additional
+  `ab-w2-mapping-change` override entry (harmless, additive, only ever
+  matched by the synthetic `SKU-777777` id W2 uses) — left in place rather
+  than reverted (a second revert-and-restart cycle was judged not worth
+  the consumer-group-rebalance cost for a change nothing else references).
+- `contracts/ontology/v3`/`contracts/shapes/v3` and
+  `deployed_version.json`'s `ontology`/`shapes` pointers (both now `v3`,
+  from Phase 8 step 0) are unrelated to the A/B work but are the final
+  live state either way.
+- Full raw metrics: `experiments/exp-000/results/ab-results.json`. Trade-off
+  table: `experiments/exp-000/results/ab-tradeoffs.md`. Baseline replay
+  sweep: `experiments/exp-000/results/baseline-replay-sweep.json`.
+
+### Final acceptance run (this phase, items 2+3)
+
+```
+pytest tests/ab -q:  7 passed in 29.42s
+make test:
+  tests/model:        21 passed in 99.79s
+  tests/contracts:     67 passed in 9.99s (+ compat_check OK)
+  tests/component:    19 passed in 0.22s
+  tests/integration:  67 passed, 4 skipped in 154.33s
+```
+
+One `make test` run mid-phase hit a single `httpx.ReadTimeout` in
+`tests/integration/test_forensic_queries.py::test_forensic_query_5_traces_delegation_and_approval`
+— confirmed transient (passed in 10s standalone immediately after;
+`docker stats` at the time showed RDF4J at 71-82% CPU and Kafka at
+139-157%, real, measurable load left over from the two full W7=500
+corpus runs) rather than a Phase 8 regression: the FULL suite re-run
+above, after that load had a chance to drain, is 100% clean.
