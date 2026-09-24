@@ -1,0 +1,441 @@
+{
+  "phase": "6b",
+  "generated_at": "2026-09-24T06:36:05.635247+00:00",
+  "summary": {
+    "total": 40,
+    "PASS": 35,
+    "NOT_TESTED": 5
+  },
+  "matrix": [
+    {
+      "id": "F01",
+      "description": "malformed decision -> reject; 0 external effects",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/integration/test_decision_service_gates.py::test_f01_unknown_action_type_rejected",
+        "tests/integration/test_decision_service_gates.py::test_f01_source_equals_destination_rejected",
+        "tests/integration/test_decision_service_gates.py::test_f01_zero_quantity_rejected"
+      ],
+      "owning_phase": "Phase 5",
+      "note": null
+    },
+    {
+      "id": "F02",
+      "description": "missing evidence -> INSUFFICIENT_EVIDENCE",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/integration/test_decision_service_gates.py::test_f02_no_inventory_record_is_insufficient_evidence"
+      ],
+      "owning_phase": "Phase 5",
+      "note": null
+    },
+    {
+      "id": "F03",
+      "description": "unauthorized human -> deny; 0 external effects",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/integration/test_decision_service_gates.py::test_f03_unauthorized_human_denied"
+      ],
+      "owning_phase": "Phase 5",
+      "note": null
+    },
+    {
+      "id": "F04",
+      "description": "unauthorized agent -> tool/action unavailable or denied; 0 effects",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/integration/test_decision_service_gates.py::test_f04_agent_without_task_grant_denied",
+        "tests/integration/test_decision_service_delegation.py::test_agent_allowed_with_exact_task_grant_then_denied_after_revoke"
+      ],
+      "owning_phase": "Phase 5",
+      "note": null
+    },
+    {
+      "id": "F05",
+      "description": "policy deny -> explanation recorded",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/integration/test_decision_service_policy.py::test_f05_quarantined_source_denied_by_policy",
+        "tests/integration/test_decision_service_policy.py::test_f05_safety_stock_breach_denied_by_policy"
+      ],
+      "owning_phase": "Phase 5",
+      "note": null
+    },
+    {
+      "id": "F06",
+      "description": "approval required -> no execution before valid approval",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/integration/test_decision_service_policy.py::test_f06_above_threshold_requires_approval_and_cannot_execute"
+      ],
+      "owning_phase": "Phase 5",
+      "note": null
+    },
+    {
+      "id": "F07",
+      "description": "invalid RDF transition -> transaction rejected",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/integration/test_decision_service_policy.py::test_f07_forced_conformance_violation_recorded_as_invalid_conformance",
+        "tests/contracts/test_shacl_rdf4j_transactional.py::test_negative_fixture_rejected_by_transaction"
+      ],
+      "owning_phase": "Phase 3/5",
+      "note": null
+    },
+    {
+      "id": "F08",
+      "description": "stale evidence -> reject/require refresh per policy",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/integration/test_projection_staleness.py::test_injected_30s_stale_projection_row_is_detected",
+        "tests/integration/test_decision_service_dependency_outage.py::test_f26_stalled_projection_builder_yields_insufficient_evidence"
+      ],
+      "owning_phase": "Phase 4/5",
+      "note": null
+    },
+    {
+      "id": "F09",
+      "description": "source identity ambiguous -> quarantine/typed failure; no guessing",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/component/test_identity_resolver.py::test_unrecognized_source_id_is_quarantined_not_guessed",
+        "tests/component/test_identity_resolver.py::test_quarantine_never_returns_a_guessed_canonical_id"
+      ],
+      "owning_phase": "Phase 3",
+      "note": null
+    },
+    {
+      "id": "F10",
+      "description": "duplicate API request -> same logical effect once",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/faults/test_idempotency.py::test_f10_duplicate_execute_call_has_one_effect"
+      ],
+      "owning_phase": "Phase 6",
+      "note": null
+    },
+    {
+      "id": "F11",
+      "description": "concurrent duplicate -> unique idempotency enforcement",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/faults/test_idempotency.py::test_f11_concurrent_duplicate_execute_calls_have_one_effect"
+      ],
+      "owning_phase": "Phase 6",
+      "note": null
+    },
+    {
+      "id": "F12",
+      "description": "worker crash pre-call -> resume safely",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/faults/test_worker_crash.py::test_f12_worker_crash_pre_call_resumes_with_exactly_one_effect"
+      ],
+      "owning_phase": "Phase 6b",
+      "note": null
+    },
+    {
+      "id": "F13",
+      "description": "worker crash post-call/pre-record -> recover without duplicate effect",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/faults/test_worker_crash.py::test_f13_worker_crash_post_call_pre_record_no_duplicate_effect"
+      ],
+      "owning_phase": "Phase 6b",
+      "note": null
+    },
+    {
+      "id": "F14",
+      "description": "commit-then-timeout -> retry resolves via idempotency/reconciliation",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/faults/test_commit_then_timeout.py::test_f14_commit_then_timeout_converges_to_one_effect",
+        "tests/integration/test_wms_faults.py::test_commit_then_timeout_recovers_via_idempotent_replay"
+      ],
+      "owning_phase": "Phase 6b",
+      "note": null
+    },
+    {
+      "id": "F15",
+      "description": "200 without commit -> never observed_success",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/faults/test_divergence.py::test_f15_200_without_commit_never_observed_success"
+      ],
+      "owning_phase": "Phase 6",
+      "note": null
+    },
+    {
+      "id": "F16",
+      "description": "partial commit -> DIVERGED / compensation path",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/faults/test_divergence.py::test_f16_f17_partial_commit_diverges_and_compensates"
+      ],
+      "owning_phase": "Phase 6",
+      "note": null
+    },
+    {
+      "id": "F17",
+      "description": "wrong quantity -> DIVERGED",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/faults/test_divergence.py::test_f16_f17_partial_commit_diverges_and_compensates"
+      ],
+      "owning_phase": "Phase 6",
+      "note": "Same observable shape as F16 (actual != requested quantity) from outcome_eval's predicate \u2014 one fault, one test, both IDs."
+    },
+    {
+      "id": "F18",
+      "description": "CDC delayed -> awaiting observation, then converge",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/faults/test_cdc_delay_and_kafka_outage.py::test_f18_paused_wms_connector_yields_awaiting_observation_then_reconciles"
+      ],
+      "owning_phase": "Phase 6b",
+      "note": null
+    },
+    {
+      "id": "F19",
+      "description": "CDC duplicated -> idempotent ingestion",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/faults/test_cdc_ordering.py::test_f19_duplicate_cdc_event_is_idempotent",
+        "tests/integration/test_cdc_ingestion.py::test_duplicate_cdc_event_is_idempotent"
+      ],
+      "owning_phase": "Phase 3/6b",
+      "note": null
+    },
+    {
+      "id": "F20",
+      "description": "CDC reordered -> no invariant break; version/order logic explicit",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/faults/test_cdc_ordering.py::test_f20_reordered_cdc_delivery_resolves_by_lsn_not_delivery_order"
+      ],
+      "owning_phase": "Phase 6b",
+      "note": null
+    },
+    {
+      "id": "F21",
+      "description": "Kafka temporarily down -> backpressure/recovery, no fabricated freshness",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/faults/test_cdc_delay_and_kafka_outage.py::test_f21_kafka_down_yields_insufficient_evidence_via_watermark_then_recovers"
+      ],
+      "owning_phase": "Phase 6b",
+      "note": "Building this test found and fixed a real deadlock bug \u2014 see docs/experiment/implementation-notes.md Phase 6b section."
+    },
+    {
+      "id": "F22",
+      "description": "RDF4J temporarily down -> governed proposal fails safely",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/integration/test_decision_service_dependency_outage.py::test_f22_rdf4j_down_fails_proposal_safely"
+      ],
+      "owning_phase": "Phase 5",
+      "note": null
+    },
+    {
+      "id": "F23",
+      "description": "OpenFGA unavailable -> fail closed for protected action",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/integration/test_decision_service_dependency_outage.py::test_f23_openfga_down_denies_authorization_explicitly"
+      ],
+      "owning_phase": "Phase 5",
+      "note": null
+    },
+    {
+      "id": "F24",
+      "description": "OPA unavailable -> fail closed unless action explicitly classified otherwise",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/integration/test_decision_service_dependency_outage.py::test_f24_opa_down_denies_policy_explicitly"
+      ],
+      "owning_phase": "Phase 5",
+      "note": null
+    },
+    {
+      "id": "F25",
+      "description": "Temporal unavailable -> approved decision remains unexecuted, auditable",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/faults/test_dependency_outage.py::test_f25_temporal_down_leaves_decision_approved_and_unexecuted"
+      ],
+      "owning_phase": "Phase 6",
+      "note": null
+    },
+    {
+      "id": "F26",
+      "description": "hot projection stale -> freshness visible; policy may reject",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/integration/test_decision_service_dependency_outage.py::test_f26_stalled_projection_builder_yields_insufficient_evidence"
+      ],
+      "owning_phase": "Phase 5",
+      "note": null
+    },
+    {
+      "id": "F27",
+      "description": "projection corrupt -> consistency check detects mismatch",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/integration/test_projection_consistency.py::test_tampered_row_fails_consistency_check"
+      ],
+      "owning_phase": "Phase 4",
+      "note": null
+    },
+    {
+      "id": "F28",
+      "description": "ontology migration incompatible -> CI/replay build fails",
+      "status": "NOT_TESTED",
+      "test_node_ids": [],
+      "owning_phase": "Phase 7",
+      "note": "Contract versioning/migration machinery (docs/experiment/spec/07_versioning_and_replay.md) does not exist yet."
+    },
+    {
+      "id": "F29",
+      "description": "old policy deleted -> replay fails loudly; experiment considered failed",
+      "status": "NOT_TESTED",
+      "test_node_ids": [],
+      "owning_phase": "Phase 7",
+      "note": "Replay (`POST /replay/{decision_id}`) is a 501 stub through Phase 6b (services/decision_service/app.py) \u2014 nothing to replay against yet."
+    },
+    {
+      "id": "F30",
+      "description": "prompt injection -> no policy bypass",
+      "status": "NOT_TESTED",
+      "test_node_ids": [],
+      "owning_phase": "Phase 9",
+      "note": "No agent/MCP layer exists yet (docs/experiment/spec/06_decision_and_action_runtime.md 'MCP layer (phase 2 only)' section is unimplemented) \u2014 there is no prompt-driven planner to inject against."
+    },
+    {
+      "id": "F31",
+      "description": "tool parameter injection -> normal gates re-run server-side",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_warehouse_id",
+        "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_actor_id",
+        "tests/integration/test_decision_service_injection.py::test_sparql_injection_attempt_rejected_with_zero_effects",
+        "tests/integration/test_decision_service_injection.py::test_sparql_injection_in_actor_id_rejected",
+        "tests/integration/test_decision_service_injection.py::test_sparql_injection_in_approve_hash_rejected"
+      ],
+      "owning_phase": "Phase 5",
+      "note": null
+    },
+    {
+      "id": "F32",
+      "description": "agent impersonates human -> impossible without explicit delegation",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/integration/test_decision_service_delegation.py::test_agent_cannot_claim_a_different_principal"
+      ],
+      "owning_phase": "Phase 5",
+      "note": null
+    },
+    {
+      "id": "F33",
+      "description": "approval replay on changed decision -> rejected due decision hash mismatch",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/integration/test_decision_service_approval.py::test_f33_approval_rejected_on_hash_mismatch"
+      ],
+      "owning_phase": "Phase 5",
+      "note": null
+    },
+    {
+      "id": "F34",
+      "description": "action definition changes post-approval -> approved pinned version executes or decision invalidated explicitly",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/faults/test_action_version_pinning.py::test_f34_action_definition_changed_post_approval_invalidates_never_executes"
+      ],
+      "owning_phase": "Phase 6b",
+      "note": "Newly IMPLEMENTED this phase, not just tested: oo:actionPinnedSha256 stamped at propose(), re-verified fresh off disk at execute() time (services/action_worker/activities.py::verify_and_start_execution). New oo:ActionVersionInvalidated status (contracts/ontology/v1/oo-core.ttl, contracts/shapes/v1/decision-shape.ttl)."
+    },
+    {
+      "id": "F35",
+      "description": "clock skew -> ordering relies on source offsets/IDs where required, not wall clock alone",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/faults/test_cdc_ordering.py::test_f35_ordering_key_ignores_wall_clock_uses_lsn_and_version",
+        "tests/faults/test_cdc_ordering.py::test_f35_apply_event_end_to_end_with_out_of_order_wall_clock_but_correct_lsn"
+      ],
+      "owning_phase": "Phase 3/6b",
+      "note": "services/ingestion/lsn.py takes no wall-clock input at all \u2014 the F20 reordering test already exercises the same LSN-based ordering property; these two are dedicated unit + component proofs framed explicitly around clock skew, per the brief's own 'or document why F20 covers it and add a unit test' option."
+    },
+    {
+      "id": "F36",
+      "description": "unrelated concurrent stock receipt -> reconciliation recognizes intended transfer correctly",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/faults/test_concurrent_stock_receipt.py::test_f36_unrelated_concurrent_stock_receipt_does_not_corrupt_outcome"
+      ],
+      "owning_phase": "Phase 6b",
+      "note": null
+    },
+    {
+      "id": "F37",
+      "description": "source DB direct manual edit -> observed as external fact with provenance, not retroactively attributed to action",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/faults/test_manual_db_edit.py::test_f37_direct_manual_db_edit_observed_with_provenance_not_attributed_to_any_action"
+      ],
+      "owning_phase": "Phase 6b",
+      "note": null
+    },
+    {
+      "id": "F38",
+      "description": "event poison message -> DLQ/quarantine; pipeline health visible",
+      "status": "PASS",
+      "test_node_ids": [
+        "tests/faults/test_poison_message.py::test_f38_poison_message_goes_to_dlq_pipeline_health_visible_rest_continues"
+      ],
+      "owning_phase": "Phase 3/6b",
+      "note": "The DLQ mechanism itself (services/ingestion/consumer.py::send_to_dlq) shipped in Phase 3; this phase adds the first live end-to-end test driving it via a real malformed Kafka message."
+    },
+    {
+      "id": "F39",
+      "description": "invalid mapping rule deployment -> compatibility fixture catches or ambiguity exposed",
+      "status": "NOT_TESTED",
+      "test_node_ids": [],
+      "owning_phase": "Phase 7",
+      "note": "Explicitly deferred per this phase's brief. Needs contract-version-compatibility fixture machinery (spec 07) that doesn't exist yet \u2014 services/identity_resolver's mapping_rules.yaml has no versioned-deployment/compatibility-check path."
+    },
+    {
+      "id": "F40",
+      "description": "trace/log unavailable -> business correctness survives; canonical provenance remains in data model",
+      "status": "NOT_TESTED",
+      "test_node_ids": [],
+      "owning_phase": "Phase 10",
+      "note": "Explicitly deferred per this phase's brief. No OpenTelemetry/observability layer exists yet (observability/ is a Phase-10 skeleton per README's repository layout) \u2014 nothing to disable."
+    }
+  ],
+  "kill_tests": {
+    "description": "docs/experiment/spec/09_failure_and_adversarial_matrix.md 'Kill tests' section \u2014 decision service / Temporal worker (action_worker) / projection builder / reconciliation worker, each killed and restarted with convergence asserted.",
+    "test_node_ids": [
+      "tests/faults/test_worker_crash.py::test_f12_worker_crash_pre_call_resumes_with_exactly_one_effect",
+      "tests/faults/test_worker_crash.py::test_f13_worker_crash_post_call_pre_record_no_duplicate_effect",
+      "tests/faults/test_kill_restart_convergence.py::test_kill_restart_decision_service_convergence",
+      "tests/faults/test_kill_restart_convergence.py::test_kill_restart_projection_builder_convergence",
+      "tests/faults/test_kill_restart_convergence.py::test_kill_restart_reconciliation_convergence"
+    ]
+  },
+  "network_tests": {
+    "description": "docs/experiment/spec/09_failure_and_adversarial_matrix.md 'Network tests' section (latency/timeout/connection reset/duplicate HTTP delivery) \u2014 deterministic WMS fault-registry test doubles (documented decision over toxiproxy), end to end through decision_service -> Temporal -> WMS.",
+    "test_node_ids": [
+      "tests/faults/test_network_faults.py::test_network_latency_delay_commit_converges_to_one_effect",
+      "tests/faults/test_network_faults.py::test_network_connection_failure_before_commit_yields_zero_effect_never_duplicated",
+      "tests/faults/test_commit_then_timeout.py::test_f14_commit_then_timeout_converges_to_one_effect",
+      "tests/faults/test_idempotency.py::test_f10_duplicate_execute_call_has_one_effect",
+      "tests/faults/test_idempotency.py::test_f11_concurrent_duplicate_execute_calls_have_one_effect"
+    ]
+  },
+  "concurrency_test": {
+    "description": "docs/experiment/spec/09_failure_and_adversarial_matrix.md 'Concurrency tests' canonical race (100/80/80).",
+    "test_node_ids": [
+      "tests/faults/test_concurrency_race.py::test_100_80_80_concurrent_execution_never_goes_negative_one_succeeds"
+    ]
+  }
+}

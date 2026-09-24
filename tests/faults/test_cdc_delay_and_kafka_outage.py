@@ -70,6 +70,13 @@ def test_f18_paused_wms_connector_yields_awaiting_observation_then_reconciles(
         pause = client.put(f"{connect_url}/connectors/{WMS_CONNECTOR_NAME}/pause")
     if pause.status_code not in (200, 202, 204):
         pytest.skip(f"could not pause {WMS_CONNECTOR_NAME}: HTTP {pause.status_code} {pause.text}")
+    # Kafka Connect's pause is ASYNC — the task can take a moment to
+    # actually stop consuming after the REST call returns 202. Settle
+    # before triggering execute() so the WMS commit's own CDC event is
+    # genuinely blocked, not racing a still-draining task (found flaky
+    # empirically: a `make test-faults` run without this margin let the
+    # transfer's CDC event through before the pause fully applied).
+    time.sleep(2.0)
 
     try:
         start_execution(decision_client, decision["decision_id"])
