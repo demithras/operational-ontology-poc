@@ -41,8 +41,19 @@ def _fault_ids(fault_doc: dict, *ids: str) -> dict[str, str]:
     return {i: by_id.get(i, "MISSING") for i in ids}
 
 
-def _all_pass(statuses: dict[str, str]) -> bool:
-    return statuses and all(v == "PASS" for v in statuses.values())
+def _all_pass(statuses: dict[str, str]) -> bool | None:
+    """Orchestrator-requested sweep (Phase 10b, second pass) for the same
+    "no evidence silently reads as ok/not-ok" class of bug H6 had: an empty
+    `statuses` dict used to fall through `statuses and all(...)` to the
+    dict itself ({} — falsy, but not a clean False/None), and any id the
+    fault matrix doesn't recognize comes back "MISSING" (unknown) from
+    _fault_ids(), which `v == "PASS"` was quietly folding into "not all
+    pass" (REJECTED-contributing) rather than "we don't know"
+    (INCONCLUSIVE-contributing). Both are now explicit: no ids -> None;
+    any MISSING id -> None; otherwise the real all-PASS boolean."""
+    if not statuses or "MISSING" in statuses.values():
+        return None
+    return all(v == "PASS" for v in statuses.values())
 
 
 def _status(*oks: bool | None) -> str:
@@ -159,13 +170,18 @@ def derive(results_dir: Path, exp_version: str) -> dict:
     else:
         add("H6", "INCONCLUSIVE", [], "latency.json not available this run")
 
-    # H7 — historical replay across evolution
+    # H7 — historical replay across evolution. Orchestrator-requested
+    # sweep (Phase 10b, second pass): `rs.get("ontology_exit_code") == 0`
+    # used to read a missing/absent `replay_sweep` block (a real gap, e.g.
+    # if item 7's own pipeline crashed before writing it) as a genuine
+    # False -> REJECTED, rather than None -> INCONCLUSIVE.
     if evolution:
-        rs = evolution.get("replay_sweep", {})
-        ont_clean = rs.get("ontology_exit_code") == 0
+        rs = evolution.get("replay_sweep")
+        ont_clean = (rs.get("ontology_exit_code") == 0) if isinstance(rs, dict) and "ontology_exit_code" in rs else None
+        rs = rs or {}
         base_summary = rs.get("baseline_summary") or {}
         base_clean = base_summary.get("fail_or_partial_count", 1) == 0
-        status = "SUPPORTED" if ont_clean else "REJECTED"
+        status = _status(ont_clean)
         add("H7", status,
             ["evolution-comparison.json#replay_sweep", "evolution-comparison.json#corpus"],
             f"ontology full replay sweep exit_code={rs.get('ontology_exit_code')} (0=all PASS/PASS_FAIL_CLOSED_VERIFIED), "
@@ -175,11 +191,15 @@ def derive(results_dir: Path, exp_version: str) -> dict:
     else:
         add("H7", "INCONCLUSIVE", [], "evolution-comparison.json not available this run — item 7 evolution pipeline did not complete")
 
-    # H8 — ontology evolution controlled, not accidental
+    # H8 — ontology evolution controlled, not accidental. Same sweep: a
+    # missing replay_sweep block now reads as "unknown" (None), not as a
+    # real "yes there were silent breaks" (True).
     compat_ok, compat_bad = _test_files_clean(tests, "test_compat_check.py")
     f28_f29 = _fault_ids(fault_doc, "F28", "F29") if fault_doc else {}
-    silent_breaks = (evolution or {}).get("replay_sweep", {}).get("ontology_exit_code", 1) != 0
-    add("H8", _status(compat_ok, _all_pass(f28_f29) if fault_doc else None, not silent_breaks if evolution else None),
+    _h8_rs = (evolution or {}).get("replay_sweep") if evolution else None
+    silent_breaks = (_h8_rs.get("ontology_exit_code", 1) != 0) if isinstance(_h8_rs, dict) else None
+    no_silent_breaks = None if silent_breaks is None else not silent_breaks
+    add("H8", _status(compat_ok, _all_pass(f28_f29) if fault_doc else None, no_silent_breaks),
         ["test-results.json#test_compat_check.py", "fault-results.json#F28,F29", "evolution-comparison.json#replay_sweep"],
         f"compat_check clean={compat_ok}, F28/F29={f28_f29}, replay sweep shows silent breaks={silent_breaks} "
         f"(any real break surfaces as a LOUD FAIL/PARTIAL status, never silence, per services/decision_service/replay.py).")
@@ -215,11 +235,16 @@ def derive(results_dir: Path, exp_version: str) -> dict:
         f"F16/F17={f16_f17}, divergence suite clean={ok3}, RECONCILIATION_QUANTITY mutation killed target="
         f"{recon_killed if recon_mut else 'n/a (mutation-results.json not available this run)'}.")
 
-    # H13 — provenance queryable
+    # H13 — provenance queryable. Orchestrator-requested sweep (Phase 10b,
+    # second pass): `bool(queries) and all(...)` used to fold "the h13
+    # timing step didn't run / produced an empty queries dict" into a real
+    # False (REJECTED-contributing) — the same "no evidence silently reads
+    # as a verdict" class of bug as H6. An empty `queries` now reads as
+    # None (INCONCLUSIVE-contributing), matching `_status()`'s contract.
     if latency:
         h13 = latency.get("h13_forensic_query_latency", {}).get("ontology", {})
         queries = h13.get("queries", {})
-        all_answered = bool(queries) and all(v.get("count", 0) > 0 for v in queries.values())
+        all_answered = all(v.get("count", 0) > 0 for v in queries.values()) if queries else None
         forensic_ok, forensic_bad = _test_files_clean(tests, "test_forensic_queries", "test_forensic_query_scaling.py")
         add("H13", _status(all_answered, forensic_ok), ["latency.json#h13_forensic_query_latency", "test-results.json#test_forensic_queries*"],
             f"all {len(queries)} q1-q9 queries answered with >0 timed samples={all_answered}, "
@@ -227,10 +252,12 @@ def derive(results_dir: Path, exp_version: str) -> dict:
     else:
         add("H13", "INCONCLUSIVE", [], "latency.json not available this run")
 
-    # H14 — semantic openness and operational closure coexist
+    # H14 — semantic openness and operational closure coexist. Same sweep:
+    # zero action files found (a path/environment problem, not evidence
+    # the contracts lack requirements) now reads as None, not False.
     f02 = _fault_ids(fault_doc, "F02") if fault_doc else {}
     per_action = _actions_declare_required_evidence()
-    all_actions_declare = bool(per_action) and all(per_action.values())
+    all_actions_declare = all(per_action.values()) if per_action else None
     add("H14", _status(f02.get("F02") == "PASS" if fault_doc else None, all_actions_declare),
         ["fault-results.json#F02", f"contracts/actions evidence_requirements+closure.required per file: {per_action}"],
         f"F02 (missing evidence -> INSUFFICIENT_EVIDENCE)={f02.get('F02')}; every published action type/version "
@@ -294,19 +321,54 @@ def _actions_declare_required_evidence() -> dict:
 
 
 def _h6_slo_check(latency: dict) -> dict:
+    """Orchestrator correction (Phase 10b, second pass): this function had
+    TWO bugs, both instances of "no evidence silently reads as an OK", the
+    exact anti-pattern _status()'s whole contract exists to forbid:
+
+    1. Same wrong-key bug as gen_acceptance_verdict.py's `_slo_pass()`
+       (fixed there first, missed here): bench-phase4.json's real verdict
+       is at top-level `slo.pass` (a flat object), not inside `hot_read`
+       (raw cold/warm samples, no `pass` field at all) — always read None.
+    2. Two DIFFERENT "None/empty means ok" shortcuts hid that bug's effect
+       instead of surfacing it: `hot_read_pass is not False` treats None
+       as passing (a missing measurement waved through as SUPPORTED), and
+       `all(...) if slo else False` treats a genuinely EMPTY slo dict as a
+       real False/REJECTED rather than "no evidence" (None/INCONCLUSIVE).
+
+    Fixed to use the exact same lookup gen_acceptance_verdict.py's
+    `_slo_pass()` uses, and to route every signal through this module's
+    own `_status()` helper — the single, tested None-propagation contract
+    (see tests/experiment/test_verdict_derivation.py) — rather than a
+    second, ad hoc boolean formula that could quietly diverge from it.
+    """
     bench5 = latency.get("stage_benchmarks", {}).get("bench_phase5", {})
-    slo = bench5.get("slo", {})
+    slo5 = bench5.get("slo", {})
+    gate_proposal_pass = all(v.get("pass") for v in slo5.values()) if slo5 else None
+
     bench4 = latency.get("stage_benchmarks", {}).get("bench_phase4", {})
-    hot_read_pass = bench4.get("hot_read", {}).get("pass") if isinstance(bench4.get("hot_read"), dict) else bench4.get("slo", {}).get("pass")
-    all_pass = all(v.get("pass") for v in slo.values()) if slo else False
-    contended = latency.get("host_load", {}).get("start", {}).get("contended") or latency.get("host_load", {}).get("end", {}).get("contended")
-    if all_pass and hot_read_pass is not False:
-        status = "SUPPORTED"
-    elif contended:
+    bench4_slo = bench4.get("slo", {})
+    hot_read_pass = bench4_slo.get("pass")
+    hot_read_p95_ms = bench4_slo.get("measured_warm_p95_ms")
+
+    contended = bool(latency.get("host_load", {}).get("start", {}).get("contended") or latency.get("host_load", {}).get("end", {}).get("contended"))
+
+    status = _status(gate_proposal_pass, hot_read_pass)
+    if status == "REJECTED" and contended:
+        # A genuine SLO miss under measured host contention is reported,
+        # but not authoritative (services/common/host_load.py's own
+        # convention) — downgraded to INCONCLUSIVE, never silently upgraded
+        # to SUPPORTED.
         status = "INCONCLUSIVE"
-    else:
-        status = "REJECTED"
-    return {"status": status, "notes": f"gate/proposal SLOs pass={all_pass}, hot_read pass={hot_read_pass}, host contended at measurement={contended}."}
+    gate_p95 = slo5.get("gate_evaluation_p95_ms", {}).get("measured_worst_stage_p95_ms")
+    proposal_p95 = slo5.get("decision_proposal_p95_ms", {}).get("measured_p95_ms")
+    return {
+        "status": status,
+        "notes": (
+            f"gate/proposal SLOs pass={gate_proposal_pass} (gate_p95={gate_p95}ms, proposal_p95={proposal_p95}ms, "
+            f"thresholds 300ms/500ms), hot_read pass={hot_read_pass} (measured_warm_p95={hot_read_p95_ms}ms, "
+            f"threshold 200ms), host contended at measurement={contended}."
+        ),
+    }
 
 
 def _h11_derive(ab: dict, mutation: dict, evolution: dict, structural_probe: dict | None) -> dict:
@@ -336,7 +398,6 @@ def _h11_derive(ab: dict, mutation: dict, evolution: dict, structural_probe: dic
 
     baseline_effort_zero = not (evolution.get("migration_effort", {}).get("baseline_v1_to_v2_files_touched")
                                  or evolution.get("migration_effort", {}).get("baseline_v2_to_v3_files_touched"))
-    ont_replay_clean = evolution.get("replay_sweep", {}).get("ontology_exit_code") == 0
     base_replay_summary = evolution.get("replay_sweep", {}).get("baseline_summary") or {}
     base_replay_pct = base_replay_summary.get("pass_like_pct") or (
         100.0 * base_replay_summary.get("pass_like_count", 0) / base_replay_summary["total_decisions"]

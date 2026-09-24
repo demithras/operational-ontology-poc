@@ -317,6 +317,40 @@ def test_h6_contended_is_inconclusive_not_rejected(golden, tmp_path):
     assert _hyp(d2, "H6") == "INCONCLUSIVE"
 
 
+def test_h6_missing_hot_read_verdict_is_inconclusive_not_supported(golden, tmp_path):
+    """Direct regression test for the orchestrator's second-pass finding:
+    H6 used to read bench-phase4's missing/wrong-key "pass" as None, then
+    `hot_read_pass is not False` waved it through as SUPPORTED. A real
+    missing hot-read verdict must now produce INCONCLUSIVE, never
+    SUPPORTED — no evidence is not evidence of success."""
+    def patch(d):
+        del d["stage_benchmarks"]["bench_phase4"]["slo"]["pass"]
+    d2 = _mutate(golden, tmp_path, "latency.json", patch)
+    assert _hyp(d2, "H6") == "INCONCLUSIVE"
+
+
+def test_h6_real_hot_read_failure_is_rejected(golden, tmp_path):
+    """The other half of the same regression: when hot_read genuinely DOES
+    fail (a real measured False, not a missing key), H6 must be REJECTED,
+    not silently passed through by the same bug in the other direction."""
+    def patch(d):
+        d["stage_benchmarks"]["bench_phase4"]["slo"]["pass"] = False
+    d2 = _mutate(golden, tmp_path, "latency.json", patch)
+    assert _hyp(d2, "H6") == "REJECTED"
+
+
+def test_h6_cites_real_measured_numbers_in_notes(golden):
+    """The orchestrator asked to confirm H6 cites a real hot-read p95
+    number in the final report — verified here at the source: the notes
+    string must embed the actual measured values, not just a bare pass
+    boolean."""
+    doc = gen_hypothesis_results.derive(golden, "test-exp")
+    notes = doc["hypotheses"]["H6"]["notes"]
+    assert "measured_warm_p95=0.3ms" in notes
+    assert "gate_p95=8.0ms" in notes
+    assert "proposal_p95=30.0ms" in notes
+
+
 def test_h7_positive(golden):
     assert _hyp(golden, "H7") == "SUPPORTED"
 
@@ -571,3 +605,54 @@ def test_status_helper_contract(inputs, expected):
 def test_hyp_bool_never_reads_inconclusive_as_false(status, expected):
     hyps = {"H1": {"status": status}} if status != "MISSING_KEY" else {}
     assert gen_acceptance_verdict._hyp_bool(hyps, "H1") is expected
+
+
+# ---------------------------------------------------------------------------
+# Broader sweep (orchestrator-requested, Phase 10b second pass): every OTHER
+# "id not found" / "block missing" path that could silently read as ok/not-ok
+# instead of None/INCONCLUSIVE.
+# ---------------------------------------------------------------------------
+
+def test_all_pass_empty_and_missing_id_are_none_not_false():
+    assert gen_hypothesis_results._all_pass({}) is None
+    assert gen_hypothesis_results._all_pass({"F01": "PASS", "F02": "MISSING"}) is None
+    assert gen_hypothesis_results._all_pass({"F01": "PASS", "F02": "PASS"}) is True
+    assert gen_hypothesis_results._all_pass({"F01": "PASS", "F02": "FAIL"}) is False
+
+
+def test_h13_empty_queries_is_inconclusive_not_rejected(golden, tmp_path):
+    def patch(full):
+        full["h13_forensic_query_latency"]["ontology"]["queries"] = {}
+    d2 = _mutate(golden, tmp_path, "latency.json", patch)
+    assert _hyp(d2, "H13") == "INCONCLUSIVE"
+
+
+def test_h7_missing_replay_sweep_is_inconclusive_not_rejected(golden, tmp_path):
+    def patch(d):
+        del d["replay_sweep"]
+    d2 = _mutate(golden, tmp_path, "evolution-comparison.json", patch)
+    assert _hyp(d2, "H7") == "INCONCLUSIVE"
+
+
+def test_h8_missing_replay_sweep_is_inconclusive_not_rejected(golden, tmp_path):
+    def patch(d):
+        del d["replay_sweep"]
+    d2 = _mutate(golden, tmp_path, "evolution-comparison.json", patch)
+    assert _hyp(d2, "H8") == "INCONCLUSIVE"
+
+
+def test_fault_pass_missing_id_is_none_not_false():
+    fault_doc = {"matrix": [{"id": "F01", "status": "PASS"}]}
+    assert gen_acceptance_verdict._fault_pass(fault_doc, "F01") is True
+    assert gen_acceptance_verdict._fault_pass(fault_doc, "F99_DOES_NOT_EXIST") is None
+    assert gen_acceptance_verdict._fault_pass(None, "F01") is None
+
+
+def test_acceptance_item_5_missing_fault_id_is_inconclusive(golden, tmp_path):
+    """F03 present-but-missing-from-the-matrix (not merely FAIL) must read
+    as INCONCLUSIVE for item 5, never a silently fabricated FAIL."""
+    def patch(d):
+        d["matrix"] = [m for m in d["matrix"] if m["id"] != "F03"]
+    d2 = _mutate(golden, tmp_path, "fault-results.json", patch)
+    v, _ = _verdict_and_hyps(d2)
+    assert v["can_decide_now_items"]["5_unauthorized_zero_effects"] is None

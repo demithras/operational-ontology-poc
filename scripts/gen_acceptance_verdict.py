@@ -45,6 +45,22 @@ def _fault(fault_doc: dict | None, fid: str) -> str | None:
     return None
 
 
+def _fault_pass(fault_doc: dict | None, fid: str) -> bool | None:
+    """Orchestrator-requested sweep (Phase 10b, second pass): every call
+    site used to write `_fault(fault_doc, X) == "PASS" if fault_doc else
+    None` — correct when fault_doc is absent, but if fault_doc EXISTS and
+    id X is simply missing from its matrix (a real, if currently
+    unexercised, data gap), `_fault()` returns None and `None == "PASS"`
+    silently evaluates to a real False (FAIL-contributing), not None
+    (INCONCLUSIVE-contributing) — the same class of bug as H6's hot_read
+    lookup. Centralized here so every acceptance item reads "id not found"
+    as genuinely unknown."""
+    status = _fault(fault_doc, fid)
+    if status is None:
+        return None
+    return status == "PASS"
+
+
 def derive(results_dir: Path) -> dict:
     test_results = _load(results_dir, "test-results.json")
     fault_doc = _load(results_dir, "fault-results.json")
@@ -65,11 +81,14 @@ def derive(results_dir: Path) -> dict:
         "2_hot_read_p95": _slo_pass(latency, "bench_phase4"),
         "3_gate_p95": _slo_pass(latency, "bench_phase5", "gate_evaluation_p95_ms"),
         "4_proposal_p95": _slo_pass(latency, "bench_phase5", "decision_proposal_p95_ms"),
-        "5_unauthorized_zero_effects": _fault(fault_doc, "F03") == "PASS" if fault_doc else None,
-        "6_policy_denied_zero_effects": _fault(fault_doc, "F05") == "PASS" if fault_doc else None,
+        "5_unauthorized_zero_effects": _fault_pass(fault_doc, "F03"),
+        "6_policy_denied_zero_effects": _fault_pass(fault_doc, "F05"),
         "7_shacl_invalid_no_commit": _status_and(clean("test_shacl_fixtures.py", "test_shacl_rdf4j_transactional.py"),
-                                                  _fault(fault_doc, "F07") == "PASS" if fault_doc else None),
-        "8_concurrency_invariants": (fault_doc.get("concurrency_test", {}).get("status") == "PASS") if fault_doc else None,
+                                                  _fault_pass(fault_doc, "F07")),
+        "8_concurrency_invariants": (
+            (fault_doc.get("concurrency_test", {}) or {}).get("status") == "PASS"
+            if fault_doc and "concurrency_test" in fault_doc else None
+        ),
         "9_duplicate_retry_one_effect": clean("test_idempotency.py"),
         "10_no_premature_observed_success": clean("test_divergence.py", "test_wms_faults.py"),
         "11_component_failure_explicit_state": (fault_doc["summary"]["NOT_TESTED"] == 0) if fault_doc else None,
@@ -78,7 +97,10 @@ def derive(results_dir: Path) -> dict:
     can_decide_now = "PASS" if all(v is True for v in a_items.values()) else ("FAIL" if any(v is False for v in a_items.values()) else "INCONCLUSIVE")
 
     # ---- Headline B: can we prove why later? (11 mandatory items) -----
-    ont_replay_clean = (evolution or {}).get("replay_sweep", {}).get("ontology_exit_code") == 0 if evolution else None
+    # Same sweep: only read a real True/False once `replay_sweep` is
+    # confirmed present, not whenever `evolution` merely exists.
+    _rs = (evolution or {}).get("replay_sweep") if evolution else None
+    ont_replay_clean = (_rs.get("ontology_exit_code") == 0) if isinstance(_rs, dict) else None
     b_items = {
         "1_all_successful_link_to_decision": _hyp_bool(hyps, "H1"),
         "2_decision_pins_contract_versions": _hyp_bool(hyps, "H1"),

@@ -1,0 +1,134 @@
+# Experiment lock — exp-000
+#
+# Phase 0 deliverable per docs/experiment/spec/12_implementation_plan.md.
+# Thresholds recorded here are FROZEN for this experiment version. They may be
+# changed before implementation begins, but not after results are observed,
+# without creating a new experiment version (docs/experiment/spec/01_hypotheses.md,
+# preamble).
+
+experiment_version: exp-002
+status: LOCKED  # copied unchanged from exp-000 per spec 01 preamble
+created: "2026-09-23"
+spec_source: docs/experiment/spec/
+spec_pack_version: "0.1"
+
+# ---------------------------------------------------------------------------
+# Service-level objectives (docs/experiment/spec/01_hypotheses.md H6,
+# docs/experiment/spec/11_acceptance_criteria.md items 2-4)
+# ---------------------------------------------------------------------------
+slo:
+  hot_read_p95_ms: 200
+  gate_evaluation_p95_ms: 300
+  decision_proposal_p95_ms: 500   # excludes human approval wait and external write duration
+  cdc_observation_timeout_s: 30   # docs/experiment/spec/05_ontology_and_contracts.md action YAML `observation.timeout`
+
+# ---------------------------------------------------------------------------
+# Business/policy thresholds (docs/experiment/spec/03_domain_scenario.md,
+# docs/experiment/spec/05_ontology_and_contracts.md)
+# ---------------------------------------------------------------------------
+policy:
+  transfer_approval_threshold_units: 100   # quantity > threshold => REQUIRES_APPROVAL
+  max_evidence_freshness_s: 5              # docs/experiment/spec/09_failure_and_adversarial_matrix.md staleness tests
+  staleness_injection_s: 30                # deliberately-stale test fixture age
+
+# ---------------------------------------------------------------------------
+# Dataset volume targets (docs/experiment/spec/02_scope_and_non_goals.md
+# "Data volume target")
+# ---------------------------------------------------------------------------
+dataset_sizes:
+  suppliers: 20
+  parts: 500
+  purchase_orders: 2000
+  warehouses: 4
+  inventory_lots: 10000
+  work_orders: 200
+  production_lines: 8
+  historical_decisions: 5000
+
+# ---------------------------------------------------------------------------
+# Replay corpus sizes (docs/experiment/spec/08_test_strategy.md "Replay tests",
+# docs/experiment/spec/11_acceptance_criteria.md "Replay acceptance corpus")
+# ---------------------------------------------------------------------------
+replay_corpus:
+  min_total_historical_decisions: 5000
+  min_with_complete_action_outcome_chain: 200
+  min_v1_decisions: 100
+  min_v2_decisions: 100
+  outcome_kinds_required: [successful, denied, failed, diverged, unknown]
+
+# ---------------------------------------------------------------------------
+# Exit statuses (docs/experiment/spec/11_acceptance_criteria.md "Exit statuses")
+# ---------------------------------------------------------------------------
+exit_codes:
+  0: all mandatory acceptance criteria passed
+  10: safety failure
+  11: correctness/invariant failure
+  12: replay failure
+  13: performance SLO failure
+  14: experiment/baseline invalid
+  15: infrastructure/test harness failure
+  2: mandatory command not yet implemented for the current phase (this repo's own convention, see Makefile)
+
+# ---------------------------------------------------------------------------
+# Hypothesis ledger — docs/experiment/spec/01_hypotheses.md
+# All hypotheses start PENDING and must end SUPPORTED, REJECTED, or
+# INCONCLUSIVE. None may be silently dropped (README.md "Definition of done").
+# ---------------------------------------------------------------------------
+hypotheses:
+  H1:
+    title: Decision-as-data completeness
+    status: PENDING
+  H2:
+    title: Gates prevent invalid effects
+    status: PENDING
+  H3:
+    title: Closed-loop truth beats command success
+    status: PENDING
+  H4:
+    title: Durable actions survive faults without duplicate business effects
+    status: PENDING
+  H5:
+    title: Concurrency preserves invariants
+    status: PENDING
+  H6:
+    title: Hot-path projection provides operational latency without destroying semantic traceability
+    status: PENDING
+  H7:
+    title: Historical replay remains valid across evolution
+    status: PENDING
+  H8:
+    title: Ontology evolution is controlled rather than accidental
+    status: PENDING
+  H9:
+    title: Agent capability is bounded by the same hard controls as human/API callers
+    status: PENDING
+  H10:
+    title: Deterministic architecture works without AI
+    status: PENDING
+  H11:
+    title: The operational ontology produces measurable benefit over a simpler baseline
+    status: PENDING
+  H12:
+    title: Independent reality checks detect model/world divergence
+    status: PENDING
+  H13:
+    title: Provenance is queryable, not merely logged
+    status: PENDING
+  H14:
+    title: Semantic openness and operational closure can coexist
+    status: PENDING
+
+# ---------------------------------------------------------------------------
+# Bug-injection catalog exercised against this experiment version
+# (docs/experiment/spec/08_test_strategy.md "Mutation testing")
+# ---------------------------------------------------------------------------
+bug_catalog:
+  - POLICY_THRESHOLD_LT
+  - SKIP_IDEMPOTENCY
+  - SKIP_EXECUTION_RECHECK
+  - SKIP_AUTHZ
+
+notes: >
+  Phase 1 (reference_model/) runs in lite mode per docs/adr/0001-lite-mode-for-phase-1.md:
+  pure Python, no infrastructure. Lite mode must not be used to support final
+  fault-tolerance/CDC/latency claims (docs/experiment/spec/02_scope_and_non_goals.md).
