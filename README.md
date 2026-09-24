@@ -31,7 +31,8 @@ Build order and exit criteria: `docs/experiment/spec/12_implementation_plan.md`.
 | 7b | Honest replay: real authorization replay (historical OpenFGA tuple snapshot + `contextual_tuples`, replacing the fail-open `recorded_only` fallback the orchestrator's audit caught — R4/ADR 0004 closed for real), bulk corpus (5,159 decisions) now generated from REAL policy/authz evaluation instead of random outcomes, corpus regenerated on a true `make reset` (110 V1 + 130 V2 live, 216 complete chains) with two source-level fixes (`contracts/manifests/baseline_v1.json` + `make up` auto-reset, `historical_corpus.py --version` self-verifying) so deployed-contract-version drift can't recur — `make test-replay` 10/10 passed, all 740 sampled decisions PASS with live/not_applicable authz mode | done (tag `poc-v0.7.1-replay`) |
 | 8 | A/B baseline: step 0 explicit `GATE_UNAVAILABLE` status + `PASS_FAIL_CLOSED_VERIFIED` replay class; `services/baseline` (Variant A — own CDC consumer/Postgres/Temporal worker, reusing authz/policy/action-type/identity-resolver/outcome-eval code verbatim); A/B experiment (`tests/ab`, `make ab`, workloads W1-W7 — 500/500 decision-match rate between variants and vs. the reference-model oracle across a full W7 corpus; ontology's ingestion lag ~5x baseline's under the same measurement) | done (tag `poc-v0.8-baseline`) |
 | 9 | Agent / MCP layer: `services/mcp` (7 tools only — get_object/query_work_order_risk/list_transfer_candidates/propose_transfer_inventory/get_decision/execute_approved_decision/explain_decision; no run_sql/write_triple/approve tool exists), `tests/agent` deterministic adversarial suite (21 tests, F04/F30-F34) driven against the real MCP server, `scripts/agent_llm_probe.py` (optional real-LLM sub-experiment, SKIPPED — no API key this session) — plus step 0's forensic-query scaling fix (q1-q8 GRAPH-scoped, reproduced the old unscoped q5's `httpx.ReadTimeout` directly against the corpus) and historical-corpus rebuild (5,002 decisions) | done (tag `poc-v0.9-agent`) |
-| 10 | Final attack (full stateful suite, fault matrix, mutation tests, load, replay, A/B) | pending |
+| 10a | Hardening: fixed a real projection-rebuild deadlock at the source (`TRUNCATE`->`DELETE FROM` + an advisory lock, `services/projection_builder`) + a writer-vs-writer race the fix itself exposed; load-aware measurement (`services/common/host_load.py`); live 503-not-403 proof across an OpenFGA restart warm-up window; a Hypothesis stateful/differential suite against the REAL stack (`tests/stateful`, 14-rule `LiveTransferMachine` + a dedicated `IdempotencyBugHuntMachine` that found and shrunk a deliberately injected H4 violation to a 1-step repro); mutation testing (`scripts/mutate.py` + `tests/mutation`, all 5 spec-08 categories confirmed RED-on-assertion with green controls, `6 passed in 66.46s`); minimal OpenTelemetry tracing + F40 closed (fault matrix now 40/40 PASS, 0 NOT_TESTED) | done |
+| 10b | `make experiment`/`make report`, load benchmark at full seed sizes, fair evolution comparison (V1-origin A/B), H13 forensic query timing, clean-machine check | pending |
 
 Phase 1 runs in **lite mode taken to its logical extreme**: pure Python, no
 infrastructure at all (no RDF4J, no Postgres, no OpenFGA/OPA, no Temporal,
@@ -255,6 +256,36 @@ which fanned out into an `httpx.ReadTimeout` once the corpus reached
 thousands of decisions by the same actor — see
 `docs/experiment/implementation-notes.md`'s Phase 9 section for the full
 write-up.
+
+Since Phase 10a, `make up` also brings up `otel-collector` (host port
+15491, OTLP/HTTP -> a file exporter on a host bind mount,
+`observability/otel/traces/`) — minimal OpenTelemetry tracing on
+`services/decision_service`'s propose/approve/execute endpoints
+(`services/common/tracing.py`), best-effort and F40-safe (a dead collector
+never adds latency or fails a real request). `scripts/gen_traces_
+reference.py` regenerates `experiments/exp-000/results/traces-reference.txt`
+from real exported spans. `tests/stateful/` (`make test-stateful` still
+aliases to Phase 1's own model-level suite; the real-stack one is `.venv/
+bin/python -m pytest tests/stateful -q`, run alone) drives the live stack
+with a Hypothesis `RuleBasedStateMachine`, differential-tested against
+`reference_model` where directly comparable, and includes a dedicated
+proof that Hypothesis finds and shrinks a deliberately injected bug (WMS's
+own idempotency check disabled via a real test-mode toggle) to a one-step
+minimal reproduction. `scripts/mutate.py` + `tests/mutation/` (run alone,
+`.venv/bin/python -m pytest tests/mutation -q`) apply each of spec 08's 5
+mutation categories to the REAL running implementation, confirm the
+relevant suite goes RED on a genuine assertion with its paired control
+staying GREEN, then revert — `experiments/exp-000/results/mutation-results.json`.
+Phase 10a step 0 also fixed a real projection-rebuild deadlock at its
+source (`services/projection_builder`: `TRUNCATE` -> `DELETE FROM` + a
+`pg_advisory_xact_lock`, proven live over 60s of concurrent rebuild + 8
+proposers) and closed F40 in the fault matrix (now 40/40 PASS, 0
+NOT_TESTED) — see `docs/experiment/implementation-notes.md`'s Phase 10a
+sections for the full write-up, including several real defects found
+while building this phase's own tests (an OpenFGA model-versioning gap in
+`bootstrap_openfga.py`'s reuse logic, and a Temporal idempotency subtlety
+that made an earlier retry-testing design vacuously safe regardless of any
+real bug).
 
 ## What Phase 1 proves (and doesn't)
 
