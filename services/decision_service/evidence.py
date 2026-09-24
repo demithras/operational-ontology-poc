@@ -185,6 +185,32 @@ def _resolve_source_inventory_with_freshness(
         else:
             verified_through = None
         if attempt < _FRESHNESS_RETRY_ATTEMPTS - 1:
+            # F21 deadlock, found empirically while building
+            # tests/faults/test_cdc_delay_and_kafka_outage.py: this whole
+            # function runs on the SAME connection/transaction propose()'s
+            # caller passed in (services/decision_service/app.py's one
+            # `with get_conn() as conn:` per request, autocommit=False —
+            # services/common/db.py), so a SUSTAINED-stale run (Kafka down
+            # for the whole request, not just one poll gap — exactly F21)
+            # held the `current_inventory` read's AccessShareLock for the
+            # ENTIRE up-to-8s retry window, INSTEAD OF releasing it between
+            # polls. services/projection_builder's own TRUNCATE order
+            # (work_order_risk -> transfer_candidates -> current_inventory
+            # -> action_eligibility_summary, one transaction per ~3s poll
+            # cycle) then reliably queued up behind that lock, and this
+            # request's LATER read (services/decision_service/evidence.py::
+            # _resolve_route_protection's transfer_candidates/work_order_risk
+            # JOIN, later in the SAME transaction) reliably completed the
+            # AB-BA cycle against it — turning the documented-as-rare Phase 6
+            # deadlock window (implementation-notes.md, "verified with 5
+            # consecutive clean runs") into a NEAR-CERTAIN one under any
+            # sustained staleness. This read-only function has nothing
+            # pending to lose by committing between polls (propose()'s first
+            # WRITE is store.insert_decision's own commit, at the very end
+            # of the whole request) — releasing the lock here lets
+            # projection_builder's cycle interleave normally instead of
+            # queuing up behind an 8-second-long read transaction.
+            conn.commit()
             time.sleep(_FRESHNESS_RETRY_DELAY_S)
     return row, freshness.STALE, verified_through
 
