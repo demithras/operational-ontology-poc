@@ -2728,3 +2728,261 @@ make test-replay: 8 passed
 make test-faults: 25 passed in 269.10s (0:04:29) — includes the new
   tests/faults/test_openfga_persistence.py
 ```
+
+## Phase 7b — Honest replay (tag `poc-v0.7.1-replay`)
+
+The orchestrator's independent verification of Phase 7 (tag
+`poc-v0.7-replay`) found two defects that undermined acceptance criterion
+B and H7 despite `make test-replay` reporting 100% PASS:
+
+1. **Authorization was never actually replayed.** `authz_replay_mode`
+   was `"recorded_only"` for 232/232 corpus decisions — the honest
+   ADR-0004 fallback (live re-Check impossible because the historical
+   model id no longer resolved, from the `memory`-datastore incident) was
+   silently treated identically to a genuine live re-verification when
+   computing `status: PASS`. Fail-open, the opposite of F29's own design
+   intent applied to the authorization gate specifically.
+2. **~4,800 of 5,201 bulk decisions carried fabricated, self-contradicting
+   gate outcomes** (`D-BULK*`, `origin` unset) — allow/deny/require_approval
+   was randomly assigned rather than derived from evaluating real policy
+   against the fabricated evidence, so replay's own re-evaluation refuted
+   them.
+
+### Fix 1 — real authorization replay (`docs/adr/0004`'s "Update (Phase 7b)")
+
+`services/decision_service/authz.py::check()` now best-effort captures the
+OpenFGA store's **whole tuple population** (`_read_all_tuples` — this
+model has ~10 real tuples, cheap to snapshot whole rather than trying to
+infer which subset is "relevant" to one Check's graph traversal) onto
+every `AuthzResult` it returns (`tuples_snapshot`), written to RDF4J as a
+new `oo:checkTuplesSnapshotJson` property
+(`contracts/ontology/v1/oo-core.ttl`; no SHACL shape constrains
+`oo:AuthorizationCheck`'s properties, so this needed no shape/migration
+work). `services/decision_service/replay.py` now replays authorization by
+re-issuing the **exact same Check** — same relation/object/actor, the
+**historical** `authorization_model_id` — with that historical tuple
+snapshot supplied as OpenFGA's own `contextual_tuples` field (additional
+tuples considered for that one call only, never written to the store), so
+a live re-Check proves authorization against the relationship state that
+existed at propose() time, not whatever the live store looks like later —
+closing the one real gap ADR 0004 originally left open (a future in-place
+tuple mutation).
+
+**Found live, fixed, and documented in the ADR**: OpenFGA validates every
+`contextual_tuples` entry against the **pinned** `authorization_model_id`'s
+own schema, not the store's latest model. This experiment's real
+`senior_approver` relation (`migrations/v2_to_v3/migrate_authz.py`) is
+absent from the v1 model's `region` type, so an unfiltered whole-store
+snapshot replayed against a v1-era decision made OpenFGA reject the
+**entire** Check (HTTP 400) — `authz.check()` correctly reported this as
+`UNAVAILABLE`, but that meant every v1-era decision silently fell back to
+`recorded_only` again, defeating the fix. `authz.py::_filter_tuples_for_model`
+(cached per model id, immutable, safe forever) keeps only snapshot tuples
+whose (object type, relation) the **target historical model** actually
+defines before sending them — correct, not a workaround: an older model
+could never have resolved a relation it didn't know about either.
+
+`ReplayResult.status` gained a third value, `PARTIAL_RECORDED_ONLY` — a
+decision whose evidence/action/policy all reconstruct correctly but whose
+authorization could only fall back to `recorded_only` no longer silently
+reports `PASS`. `authz_replay_mode` gained `"not_applicable"` for
+decisions that never reached an authorization check at all (e.g.
+`INSUFFICIENT_EVIDENCE`) — vacuously fine, distinct from a genuine
+fallback. `tests/replay/test_replay_corpus.py` and the new
+`tests/replay/test_bulk_replay_sample.py` (500-decision sample) both now
+assert `authz_replay_mode == "live"` for every decision that has an
+authorization check, not merely aggregate `PASS`.
+
+A **second, pre-existing bug**, unrelated to any Phase 7b change but found
+while smoke-testing this fix against the live stack: `contracts/queries/v1/q9_replay_authz_fields.rq`'s
+`?decision oo:actor ?actor . ?actor oo:actorId ?actorId` had no `GRAPH`
+scoping. The shared `HumanActor` node it targets is re-asserted, as its
+own quad, into **every** decision's own named graph by the same actor, so
+an unscoped query returned one row per *other* decision by that actor
+across the whole corpus — 2,656 rows for a single `decision_id`, confirmed
+present even on a decision generated before any Phase 7b change existed.
+`replay.py`'s own `rows[0]` happened to make this harmless functionally
+(every OTHER field was constant across the duplicate rows), but it would
+have made replaying hundreds of decisions in `test-replay`/the new report
+prohibitively slow at this corpus's scale, and made the tuple-snapshot fix
+needlessly hard to debug live. Fixed by scoping just that one `OPTIONAL`
+block to `GRAPH <decision_graph_iri>` (every other pattern in q9 already
+targets decision-unique IRIs) — verified 2,656 rows → 1, ~5ms.
+
+New F29-style test, `tests/replay/test_f29_tuple_snapshot_integrity.py`:
+since OpenFGA's `contextual_tuples` are **additive** to the store's
+persisted tuples (a Check can never "subtract" a genuinely-stored tuple by
+omitting it from `contextual_tuples`), the test finds a `DENIED`
+decision and **injects** a forged `junior_planner` grant into its
+snapshot — proving the tampered snapshot flips `DENIED` → `ALLOWED` and
+fails replay loudly (`gate_result_mismatch`), never a silent pass-through.
+(An earlier draft tried to prove this by *clearing* an `ALLOWED`
+decision's snapshot to empty — that cannot work, since the real, still-
+stored grant tuple resolves `ALLOWED` regardless of what's supplied as
+additional context.)
+
+### Fix 2 — bulk corpus generates real gate outcomes
+
+`seed/generators/bulk_historical_decisions.py` no longer randomly assigns
+authorization/policy outcomes. Every record's `authz_result` is now a
+**real** OpenFGA Check (era-pinned `authorization_model_id`, real tuples,
+via `authz.check()` — which also auto-captures the tuple snapshot the fix
+above needs) and every `policy_result` a **real** `opa eval` (era-pinned
+package, via the live OPA server, which serves every published package
+simultaneously) against fabricated-but-internally-consistent evidence,
+mirroring `propose_flow.py`'s exact logic — including exactly when
+`decision_content_hash` gets computed (a first draft got this wrong: it
+must be set for **both** `REQUIRES_APPROVAL` and the allow branch, not
+only allow). `context.origin` distinguishes `"live"`
+(`historical_corpus.py`, real HTTP through `decision_service`) from
+`"bulk-evaluated"` (this script — real gates, but direct-write, no
+HTTP/Temporal) as a queryable provenance field, alongside the existing
+`is_bulk_generated`/`D-BULK` markers. `scripts/replay_report.py` (wired
+into `make test-replay`) prints the corpus-size-by-origin ×
+generation × replay-status × authz-mode table this phase's Verification
+section asks for.
+
+### Two more real bugs found regenerating the corpus (source-level fixes, orchestrator-directed)
+
+Regenerating the corpus from a true `make reset` surfaced a THIRD real
+bug, this one in the **regeneration process itself**, not in the Phase 7
+code the orchestrator flagged:
+
+`contracts/manifests/deployed_version.json` is a **host file**, not a
+Docker volume — `docker compose down -v` wipes Postgres/RDF4J/OpenFGA
+state but never touches it. A freshly reset, genuinely v1-shaped stack
+was therefore paired with the STALE `v3` label a prior session had left
+behind, and `seed/generators/historical_corpus.py --version v1` silently
+generated 132 decisions labeled `"v1"` while the live `decision_service`
+was still actually serving v3 contracts — the `--version` CLI flag was
+cosmetic (SKU numbering / which `results.json` key gets written) and
+never itself changed what the live service serves. Caught downstream:
+`tests/replay/test_forensic_queries_v1_post_v3.py` asserted
+`policyBundleVersion` starts with `"v1@sha256:"` and got `"v2@sha256:..."`
+instead; both F29 policy-tamper tests failed with "DID NOT RAISE" (the
+decisions were never actually pinned to the v1 policy file the tests
+tampered with). The underlying DATA was never wrong — `evidence.py`
+always populates `on_hand`/`reserved`/`available` into every evidence
+snapshot regardless of declared ontology version (see
+`reevaluate_under_current`'s own comment) — only the version STAMP was
+wrong, but that is exactly what H7/replay is supposed to prove correct.
+
+Fixed two ways, both committed (per the orchestrator's explicit
+direction, so this class of bug cannot recur, including on the Phase 10
+clean-machine run):
+
+1. **`contracts/manifests/baseline_v1.json`** (new, tracked) holds the
+   canonical V1 baseline. **`services/common/reset_deployed_version_if_empty.py`**
+   checks whether `ontology_hot.decisions` is empty (true right after
+   `make reset`'s `down -v`, or a brand-new environment's very first
+   `make up`) and, if so, copies the baseline onto
+   `deployed_version.json` and deletes the equally-stale
+   `contracts/manifests/openfga_model_ids.json` (OpenFGA's own store lives
+   in the SAME shared Postgres volume `down -v` wipes, so any recorded
+   `v2`/`v3` model id is stale too). `Makefile`'s `up:` target now runs
+   this **before** `bootstrap_openfga.py`, so that script always writes a
+   completely clean file afterward. Never resets a populated stack; never
+   fails `make up` if the DB isn't reachable yet (conservative default:
+   leave everything untouched).
+2. **`historical_corpus.py --version vN`** now asserts the LIVE deployed
+   manifest (read fresh off `deployed_version.json` — the exact file/no-
+   caching mechanism `decision_service` itself reads per-request, so this
+   is as "live" a check as an HTTP round-trip) actually matches vN's
+   expected contract state, and aborts loudly (`RuntimeError`, non-zero
+   exit — never fakes success) if not. Verified live: raises with a clear
+   diagnostic when run against a v3-deployed stack requesting `--version
+   v1`; passes silently once the stack is genuinely at that baseline.
+
+`seed/generators/historical_corpus.py`'s `_run_job` also had its own,
+smaller bug (found the same way, live): its exception handler always
+returned `decision_id=None` on ANY failure, even one **after** `propose()`
+had already succeeded (e.g. a transient `approve()` 403 during a ~4-minute
+post-`make reset --build` warm-up window — verified transient: the very
+next `--version v2` run, 90s later once the stack was warm, had 0/110
+errors) — silently dropping a real, fully-governed decision out of the
+corpus's `decision_ids` tracking. Fixed: `decision_id` is now captured
+right after `propose()` succeeds, outside the try/except, so a later
+failure still returns the real id.
+
+The final, correctly-pinned corpus was generated with the two source
+fixes in place (the live-manifest assertion self-verified each batch):
+**110 V1 decisions / 99 complete chains**, **130 V2 decisions / 117
+complete chains** — 216 total complete action/outcome chains (>= the
+brief's 200 floor), 0 generation errors in either batch. `deployed_version.json`
+was returned to its final Phase-7b state (`ontology=v2, shapes=v2,
+actions=v3, policies=v2, authorization=v2, identity=v1, projections=v2,
+reconciliation=v1`) after each temporary baseline/interim revert, verified
+by a direct smoke `propose()` each time (`action_version` reads 1, 3, or
+2 as expected at each step — never guessed).
+
+### Corpus size
+
+`ontology_hot.decisions`: **5,159 total** (>= the spec's 5,000 floor) —
+4,728 `bulk-evaluated`, 384 `live` (232 tracked in
+`historical-corpus.json` + orphaned decisions from the mislabeled-v1
+incident above and manual smoke probes, harmless and untracked), 47 with
+no `origin` (created by `make test`'s own `tests/integration` fixtures,
+unrelated to corpus generation).
+
+### `make test-replay`: corpus size by origin × generation × replay status × authz mode
+
+```
+origin          generation  replay_status  authz_mode      count
+--------------  ----------  -------------  --------------  -----
+bulk-evaluated  v1          PASS           live            141
+bulk-evaluated  v1          PASS           not_applicable  4
+bulk-evaluated  v2          PASS           live            165
+bulk-evaluated  v2          PASS           not_applicable  6
+bulk-evaluated  v3          PASS           live            172
+bulk-evaluated  v3          PASS           not_applicable  12
+live            v1          PASS           live            106
+live            v1          PASS           not_applicable  4
+live            v2          PASS           live            126
+live            v2          PASS           not_applicable  4
+```
+740 decisions replayed (all 232 tracked live decisions + a deterministic
+500-decision `D-BULK*` sample) — every single one `status=PASS` with
+`authz_replay_mode` in `{live, not_applicable}`; zero `FAIL`, zero
+`PARTIAL_RECORDED_ONLY`. `scripts/replay_report.py` (run automatically by
+`make test-replay`) reproduces this table on demand.
+
+### Final acceptance run (this phase, on a true `make reset`)
+
+```
+make test: tests/model 21 passed, tests/contracts 67 passed
+  (+ compat_check OK), tests/component 19 passed,
+  tests/integration 71 passed (168.21s) — 178 passed total
+make test-replay: 10 passed (15.36s) — includes both F29 tests,
+  the new tuple-snapshot F29 test, the 500-bulk-decision sample test,
+  and the V1-post-V3 forensic-query test, all green for the RIGHT
+  reason (policyBundleVersion reads v1@sha256:... for the V1 decision)
+make test-faults: 25 passed in 290.70s (0:04:49)
+```
+
+Sequence run (per this phase's own Verification requirement): `make
+reset && SEED=42 make seed && historical_corpus.py --version v1 --n 110 &&
+make deploy-v2 && historical_corpus.py --version v2 --n 130 && make
+deploy-v3 && bulk_historical_decisions.py --target 5000 --seed 42 &&
+make test && make test-replay && make test-faults` — with the mid-run
+warm-up-timeout recovery and the v1-mislabeling recovery both documented
+above; the sequence's LAST leg (the two source fixes + the clean v1/v2
+regeneration + this final `make test-replay`) was re-run cleanly start to
+finish with no further failures.
+
+### What Phase 8+ needs from here
+
+- `docs/adr/0004`'s "Update (Phase 7b)" section is now the authoritative
+  read on authorization replay — R4 is closed for real (live re-Check with
+  a historical tuple snapshot), not just documented as a known gap.
+- **Always verify `contracts/manifests/deployed_version.json` matches your
+  intent before generating ANYTHING through the live decision_service** —
+  it is a host file that survives `docker compose down -v`.
+  `services/common/reset_deployed_version_if_empty.py` now handles the
+  reset-to-baseline case automatically (wired into `make up`), but any
+  SCRIPT that expects a SPECIFIC deployed version (not "whatever is
+  currently live") should assert it explicitly, the way
+  `historical_corpus.py` now does — copy that pattern rather than trusting
+  a CLI flag to be more than a label.
+- The stack's final state is unchanged from Phase 7's own close:
+  `ontology=v2, shapes=v2, actions=v3, policies=v2, authorization=v2,
+  identity=v1, projections=v2, reconciliation=v1`.
