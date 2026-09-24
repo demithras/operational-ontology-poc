@@ -47,6 +47,37 @@ class IngestionStore:
     def __init__(self, client: RDF4JClient):
         self.client = client
 
+    def _replace_subject_atomic(self, iri, graph: rdflib.Graph, graph_iri: str) -> None:
+        """Retract every existing triple for `iri` in `graph_iri` and insert
+        `graph`'s triples in ONE SPARQL Update (one RDF4J transaction) —
+        NEVER two separate HTTP calls (RDF4JClient.delete_subject then
+        add_turtle). Found empirically (Phase 6b, tests/faults/
+        test_concurrent_stock_receipt.py's F36 test): the two-call version
+        left a real, narrow window where the subject's triples were
+        ABSENT — a concurrent reader (services/common/identity_lookup.py's
+        reverse IdentityMapping lookup, called mid-execution by
+        services/action_worker/activities.py::call_external_action) could
+        observe "no mapping" for a part that has a real, unchanged mapping
+        both immediately before and immediately after. `_update_position`
+        and `_write_identity_record` both retract-then-reassert their
+        subject's triples on every CDC event that touches it AT ALL (even
+        one that doesn't change the mapped value, e.g. an unrelated
+        `on_hand` update to the same row still carries `part` in its
+        Debezium `after` image) — under concurrent load this window is
+        real, not theoretical, reproduced via a genuine WMS-API write
+        racing an in-flight governed transfer. N-Triples (not Turtle) so
+        every IRI is emitted fully-qualified with no `@prefix` header
+        needed inside a bare `INSERT DATA` block."""
+        nt = graph.serialize(format="nt")
+        sparql = f"""
+DELETE WHERE {{ GRAPH <{graph_iri}> {{ <{iri}> ?p ?o }} }} ;
+INSERT DATA {{ GRAPH <{graph_iri}> {{
+{nt}
+}} }}
+"""
+        resp = self.client.update(sparql)
+        resp.raise_for_status()
+
     def get_position(self, system: str, table: str, pk: str) -> tuple[str | None, int | None] | None:
         iri = position_iri(system, table, pk)
         rows = self.client.select(
@@ -66,7 +97,6 @@ class IngestionStore:
 
     def _update_position(self, system: str, table: str, pk: str, source_lsn, source_version) -> None:
         iri = position_iri(system, table, pk)
-        self.client.delete_subject(str(iri), graph_iri=rdf_graphs.PROVENANCE_GRAPH)
         g = rdflib.Graph()
         g.add((iri, RDF.type, OO.SourcePosition))
         if source_lsn is not None:
@@ -74,8 +104,7 @@ class IngestionStore:
         if source_version is not None:
             g.add((iri, OO.lastVersion, Literal(int(source_version), datatype=XSD.integer)))
         g.add((iri, OO.lastObservedAt, Literal(_now(), datatype=XSD.dateTime)))
-        resp = self.client.add_turtle(g.serialize(format="turtle"), graph_iri=rdf_graphs.PROVENANCE_GRAPH)
-        resp.raise_for_status()
+        self._replace_subject_atomic(iri, g, rdf_graphs.PROVENANCE_GRAPH)
 
     def _write_observation(
         self,
@@ -111,7 +140,6 @@ class IngestionStore:
         g = rdflib.Graph()
         if isinstance(result, Resolved):
             iri = identity_mapping_iri(result.rule_id, result.source_system, result.source_local_id)
-            self.client.delete_subject(str(iri), graph_iri=rdf_graphs.PROVENANCE_GRAPH)
             g.add((iri, RDF.type, OO.IdentityMapping))
             g.add((iri, OO.mappingRuleId, Literal(result.rule_id, datatype=XSD.string)))
             g.add((iri, OO.mappingRuleVersion, Literal(result.rule_version, datatype=XSD.string)))
@@ -123,14 +151,18 @@ class IngestionStore:
             g.add((iri, OO.createdAtMapping, Literal(result.resolved_at.isoformat(), datatype=XSD.dateTime)))
         else:
             iri = quarantine_iri(result.source_system, result.source_local_id)
-            self.client.delete_subject(str(iri), graph_iri=rdf_graphs.PROVENANCE_GRAPH)
             g.add((iri, RDF.type, OO.QuarantinedIdentity))
             g.add((iri, OO.sourceSystem, Literal(result.source_system, datatype=XSD.string)))
             g.add((iri, OO.sourceLocalId, Literal(result.source_local_id, datatype=XSD.string)))
             g.add((iri, OO.quarantineReason, Literal(result.reason, datatype=XSD.string)))
             g.add((iri, OO.createdAtMapping, Literal(result.resolved_at.isoformat(), datatype=XSD.dateTime)))
-        resp = self.client.add_turtle(g.serialize(format="turtle"), graph_iri=rdf_graphs.PROVENANCE_GRAPH)
-        resp.raise_for_status()
+        # F36-exposed race (see _replace_subject_atomic's own docstring):
+        # this mapping is re-asserted on EVERY CDC event for the source
+        # row, even one that leaves the mapped value unchanged (e.g. an
+        # unrelated on_hand update still carries `part` in Debezium's
+        # `after` image) — a concurrent reverse-lookup reader must never be
+        # able to observe "no mapping" mid-rewrite.
+        self._replace_subject_atomic(iri, g, rdf_graphs.PROVENANCE_GRAPH)
 
     def apply_event(
         self,
