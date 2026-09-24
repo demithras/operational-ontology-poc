@@ -1,18 +1,18 @@
 {
   "experiment_version": "exp-001",
-  "generated_at": "2026-09-24T20:39:40Z",
+  "generated_at": "2026-09-24T20:48:31Z",
   "git_commit": "b899fc9329658c2f37177b9080ad56bfcecd05b2",
   "hypotheses": {
     "H1": {
       "evidence": [
         "fault-results.json#F01",
         "test-results.json#test_shacl_fixtures.py",
-        "completeness_sql: {'total': 9120, 'missing_count': 0, 'required_fields': ['decision_id', 'actor_id', 'action_type', 'action_version', 'evidence_snapshot_id', 'ontology_version', 'shape_set_version', 'authorization_model_version', 'policy_bundle_version', 'status']}"
+        "completeness_sql: {'total': 0, 'missing_count': 0, 'required_fields': ['decision_id', 'actor_id', 'action_type', 'action_version', 'evidence_snapshot_id', 'ontology_version', 'shape_set_version', 'authorization_model_version', 'policy_bundle_version', 'status']}"
       ],
       "experiment_version": "exp-001",
       "git_commit": "b899fc9329658c2f37177b9080ad56bfcecd05b2",
       "hypothesis": "H1",
-      "notes": "F01=PASS, SHACL fixtures clean=True (bad=[]), completeness sweep over 9120 ontology decisions found 0 missing a required linked field.",
+      "notes": "F01=PASS, SHACL fixtures clean=True (bad=[]), completeness sweep over 0 ontology decisions found 0 missing a required linked field.",
       "status": "SUPPORTED"
     },
     "H10": {
@@ -28,16 +28,15 @@
     },
     "H11": {
       "evidence": [
-        "ab-results.json#W7_generated_incident_corpus,W5_forensic_query,W6_novel_cross_system_relation,ingestion_lag_benchmark,complexity_tax",
+        "ab-results.json#W7_generated_incident_corpus,hot_read_benchmark,ingestion_lag_benchmark",
         "mutation-results.json#SHACL_CARDINALITY",
-        "evolution-comparison.json#migration_effort,replay_sweep",
-        "baseline-structural-mutation-probe.json"
+        "evolution-comparison.json#migration_effort"
       ],
       "experiment_version": "exp-001",
       "git_commit": "b899fc9329658c2f37177b9080ad56bfcecd05b2",
       "hypothesis": "H11",
-      "notes": "REJECTED: no dimension measured this run shows an ontology-specific advantage once tested like-for-like. Correctness and forensic completeness were at PARITY; replay-across-evolution outcome was at PARITY (both variants' own real V1/V2-era history replayed cleanly this run); the baseline was AHEAD on change effort, latency, and complexity; and the one dimension that looked like an ontology advantage in an earlier, non-like-for-like check (SHACL structural validation) turned out to be PARITY once the baseline's own equivalent guard was actually mutated and tested live \u2014 the baseline's Postgres NOT NULL constraint rejected the same corrupting write at write time, and its replay mechanism independently caught it after the constraint was removed. Per spec 10's own explicitly sanctioned outcome: 'operational ontology is not necessary for this bounded domain.' Dimension-by-dimension: {\"correctness\": \"PARITY \\u2014 500/500 W7 decisions matched between variants and vs. the reference-model oracle (ab-results.json#W7_generated_incident_corpus); no ontology advantage.\", \"forensic\": \"PARITY \\u2014 both variants answered all forensic sub-questions in the same number of calls (ontology=3, baseline=3); W6's novel cross-system query needed comparable new code either side (40 SPARQL vs 32 SQL logical lines, 1 new file each) \\u2014 no ontology advantage.\", \"replay_across_evolution\": \"PARITY on outcome \\u2014 ontology replay sweep exit_code=0 (0=all PASS/PASS_FAIL_CLOSED_VERIFIED), baseline 100.0% PASS-like (220 decisions) \\u2014 both variants replayed their OWN real V1/V2-era history cleanly this run (evolution-comparison.json).\", \"change_effort\": \"baseline ADVANTAGE \\u2014 ZERO baseline-specific files touched for either contract evolution step (git status over services/baseline empty before/after `make deploy-v2`/`deploy-v3`); the ontology's own V1->V2/V2->V3 migrations are real, measured multi-file diffs (evolution-comparison.json#migration_effort)\", \"latency\": \"baseline ADVANTAGE \\u2014 ingestion lag ontology=2954.7422416042536ms vs baseline=725.3631501924247ms (ab-results.json#ingestion_lag_benchmark).\", \"complexity\": \"baseline ADVANTAGE \\u2014 23 total containers, 6 ontology-only extra containers + a second store technology (RDF4J) vs 3 baseline-only (ab-results.json#complexity_tax).\", \"structural_validation_like_for_like\": \"PARITY \\u2014 SHACL_CARDINALITY mutation killed=True; live like-for-like probe against the baseline's own equivalent guard (decisions.evidence_snapshot NOT NULL, the closest real analogue) found baseline_caught_it=True. Baseline's write-time guard (Postgres NOT NULL on `decisions.evidence_snapshot`) DID reject the corrupting write before the mutation was applied \\u2014 structurally the same role SHACL_CARDINALITY's target field plays for the ontology variant (reject a write missing required evidence), coarser-grained (whole column, not one nested field). After the mutation removed that guard, the write succeeded, and the baseline's OWN replay mechanism DID independently catch the corruption via hash mismatch (services/baseline/replay.py's evidence_hash_match check, which treats a missing content_hash as an automatic mismatch). The revert was clean.\"}",
-      "status": "REJECTED"
+      "notes": "SUPPORTED, narrowly: the operational ontology's one measurable, ontology-specific advantage this run is declarative structural/state-transition conformance (SHACL) \u2014 a general-purpose validator the baseline has no equivalent of. On every OTHER declared dimension this run measured, the baseline matched or beat the ontology: identical governed decisions (correctness parity, not ontology superiority), lower latency/ingestion lag, and materially less engineering effort to support replay across the SAME real contract evolution both variants went through in this run. Read plainly: for THIS bounded domain, operational-ontology machinery is not necessary for correctness or for replay \u2014 its measurable value is audit/change-safety governance, exactly one of spec 10's own listed 'expected useful outcomes'. Dimension-by-dimension: {\"correctness\": \"PARITY (no ontology advantage \\u2014 identical decisions both variants)\", \"performance\": \"ontology WORSE (higher ingestion lag / burst p95 \\u2014 see ab-results ingestion_lag_benchmark/hot_read_benchmark)\", \"change_safety\": \"ontology BETTER \\u2014 SHACL catches a structural/cardinality violation baseline has no equivalent mechanism for (mutation-results.json SHACL_CARDINALITY killed the target with a green control; Phase 8's own baseline build disclosed 'no SHACL-equivalent structural validator' as an honest gap)\", \"replay_evolution_effort\": \"baseline REQUIRES ZERO baseline-specific code to pick up a contract redeploy (shared deployed_version.json); ontology's V1->V2/V2->V3 migrations are real, measured multi-file changes (see evolution-comparison.json#migration_effort)\"}",
+      "status": "SUPPORTED"
     },
     "H12": {
       "evidence": [
@@ -65,24 +64,23 @@
     "H14": {
       "evidence": [
         "fault-results.json#F02",
-        "contracts/actions evidence_requirements+closure.required per file: {'contracts/actions/v1/expedite_purchase_order.yaml': True, 'contracts/actions/v1/reschedule_work_order.yaml': True, 'contracts/actions/v1/transfer_inventory.yaml': True, 'contracts/actions/v2/expedite_purchase_order.yaml': True, 'contracts/actions/v2/reschedule_work_order.yaml': True, 'contracts/actions/v2/transfer_inventory.yaml': True, 'contracts/actions/v3/expedite_purchase_order.yaml': True, 'contracts/actions/v3/reschedule_work_order.yaml': True, 'contracts/actions/v3/transfer_inventory.yaml': True}"
+        "contracts/actions declared required_evidence: False"
       ],
       "experiment_version": "exp-001",
       "git_commit": "b899fc9329658c2f37177b9080ad56bfcecd05b2",
       "hypothesis": "H14",
-      "notes": "F02 (missing evidence -> INSUFFICIENT_EVIDENCE)=PASS; every published action type/version declares both `evidence_requirements` and `closure.required`=True (9/9 files).",
-      "status": "SUPPORTED"
+      "notes": "F02 (missing evidence -> INSUFFICIENT_EVIDENCE)=PASS; every published transfer_inventory action version declares its required evidence keys=False.",
+      "status": "REJECTED"
     },
     "H2": {
       "evidence": [
-        "fault-results.json#F01,F02,F03,F04,F05,F06,F07,F08,F09,F22,F23,F24,F26,F30,F31,F32,F33,F34",
-        "test-results.json#tests/agent/*"
+        "fault-results.json#summary"
       ],
       "experiment_version": "exp-001",
       "git_commit": "b899fc9329658c2f37177b9080ad56bfcecd05b2",
       "hypothesis": "H2",
-      "notes": "gate-relevant faults (18 ids) clean=True (FAIL=none, missing=none), agent adversarial suite clean=True (bad=[]). F27 (projection consistency, a data-quality check per spec 11) is deliberately NOT in this set.",
-      "status": "SUPPORTED"
+      "notes": "F01-F40 + kill/network/concurrency aux: 39 PASS, 1 FAIL, 0 NOT_TESTED this run.",
+      "status": "REJECTED"
     },
     "H3": {
       "evidence": [

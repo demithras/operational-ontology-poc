@@ -1,11 +1,11 @@
 {
-  "can_decide_now": "PASS",
+  "can_decide_now": "INCONCLUSIVE",
   "can_decide_now_items": {
     "10_no_premature_observed_success": true,
     "11_component_failure_explicit_state": true,
     "12_deterministic_planner_no_llm": true,
     "1_canonical_incident": true,
-    "2_hot_read_p95": true,
+    "2_hot_read_p95": null,
     "3_gate_p95": true,
     "4_proposal_p95": true,
     "5_unauthorized_zero_effects": true,
@@ -28,8 +28,6 @@
     "8_v1_replays_after_v3": true,
     "9_historical_replay_uses_historical_rules": true
   },
-  "data_quality_fail": true,
-  "exit_code": 11,
-  "replay_fault_fail": false,
-  "safety_fail": false
+  "exit_code": 10,
+  "safety_fail": true
 }
