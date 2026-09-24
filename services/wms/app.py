@@ -13,7 +13,13 @@ from fastapi.responses import JSONResponse
 from services.common.db import close_pool, get_conn, open_pool
 from services.common.faults import registry
 from services.wms import db_ops, transfers
-from services.wms.schemas import ArmFaultRequest, ReverseTransferRequest, SetInventoryRequest, TransferRequest
+from services.wms.schemas import (
+    ArmFaultRequest,
+    IdempotencyCheckRequest,
+    ReverseTransferRequest,
+    SetInventoryRequest,
+    TransferRequest,
+)
 
 TEST_MODE = os.environ.get("OO_TEST_MODE") == "1"
 
@@ -123,6 +129,19 @@ if TEST_MODE:
     @app.get("/_test/faults")
     def get_faults():
         return registry.snapshot()
+
+    @app.post("/_test/idempotency-check")
+    def set_idempotency_check(body: IdempotencyCheckRequest):
+        """Phase 10a item 1: process-wide toggle, distinct from the
+        per-action_execution_id fault registry above — see
+        services/common/faults.py::FaultRegistry's docstring for why a
+        separate mechanism is needed to model "idempotency itself is
+        broken" rather than "the first attempt misbehaves"."""
+        if body.enabled:
+            registry.enable_idempotency_check()
+        else:
+            registry.disable_idempotency_check()
+        return {"idempotency_check_enabled": registry.idempotency_check_enabled()}
 
     @app.post("/_test/inventory/set")
     def set_inventory(body: SetInventoryRequest):

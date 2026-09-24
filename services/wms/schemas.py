@@ -33,3 +33,11 @@ class SetInventoryRequest(BaseModel):
     on_hand: int
     reserved: int = 0
     quality_status: str = "OK"
+
+
+class IdempotencyCheckRequest(BaseModel):
+    """Phase 10a item 1: process-wide idempotency-check toggle for the
+    tests/stateful deliberately-injected-bug proof. See
+    services/common/faults.py::FaultRegistry's docstring."""
+
+    enabled: bool

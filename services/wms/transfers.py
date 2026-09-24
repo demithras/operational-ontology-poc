@@ -70,10 +70,53 @@ def create_transfer(
 
         cur.execute("SELECT * FROM transfers WHERE action_execution_id = %s", (action_execution_id,))
         existing = cur.fetchone()
+        if existing is not None and existing["body_hash"] == body_hash:
+            if (not test_mode) or registry.idempotency_check_enabled():
+                conn.commit()  # releases the advisory lock
+                return 200, _transfer_response(existing, replayed=True)
+            # Phase 10a item 1 deliberately-injected bug (test-mode only,
+            # see services/common/faults.py::FaultRegistry's idempotency
+            # toggle): idempotency check "disabled" -> re-apply the SAME
+            # inventory mutation again instead of deduping. This models a
+            # caller whose retry contract exists (same logical request) but
+            # whose SERVER has no dedup at all — the inventory side effect
+            # doubles, silently, which is exactly the H4 property
+            # ("one logical action creates at most one intended business
+            # effect") tests/stateful is built to catch. The `transfers` row
+            # itself is left untouched (mutating it would collide with its
+            # own PRIMARY KEY) — only inventory_lots moves twice.
+            wh_pair = sorted([source_warehouse, destination_warehouse])
+            cur.execute(
+                """
+                SELECT * FROM inventory_lots
+                WHERE part = %s AND warehouse_id = ANY(%s)
+                ORDER BY warehouse_id
+                FOR UPDATE
+                """,
+                (part, wh_pair),
+            )
+            dup_rows = {r["warehouse_id"]: r for r in cur.fetchall()}
+            dup_source = dup_rows.get(source_warehouse)
+            dup_dest = dup_rows.get(destination_warehouse)
+            dup_qty = existing["actual_quantity"]
+            if dup_source is not None and dup_qty > 0:
+                cur.execute(
+                    "UPDATE inventory_lots SET on_hand = on_hand - %s, version = version + 1, updated_at = now() "
+                    "WHERE lot_id = %s",
+                    (dup_qty, dup_source["lot_id"]),
+                )
+            if dup_dest is not None and dup_qty > 0:
+                cur.execute(
+                    "UPDATE inventory_lots SET on_hand = on_hand + %s, version = version + 1, updated_at = now() "
+                    "WHERE lot_id = %s",
+                    (dup_qty, dup_dest["lot_id"]),
+                )
+            conn.commit()
+            duped = dict(existing)
+            duped["note"] = "TEST-MODE BUG: idempotency check disabled — mutation re-applied, not deduped"
+            return 200, _transfer_response(duped, replayed=False)
         if existing is not None:
             conn.commit()  # releases the advisory lock
-            if existing["body_hash"] == body_hash:
-                return 200, _transfer_response(existing, replayed=True)
             return 409, {
                 "error": "action_execution_id already used with a different request body",
                 "action_execution_id": action_execution_id,

@@ -1,0 +1,84 @@
+{
+  "mutations": [
+    {
+      "control": [
+        "tests/contracts/test_opa_policies.py::test_opa_test_suite_passes_and_is_not_empty[v2]"
+      ],
+      "control_output_tail": null,
+      "control_stayed_green": true,
+      "description": "OPA policy comparator (spec 08's own example category): the safety-stock hard_deny boundary `remaining < safety_stock` -> `remaining <= safety_stock` in contracts/policies/v1/transfer_inventory.rego",
+      "mutation_id": "POLICY_COMPARATOR",
+      "reverted": true,
+      "target": [
+        "tests/contracts/test_opa_policies.py::test_opa_test_suite_passes_and_is_not_empty[v1]"
+      ],
+      "target_green_after_revert": true,
+      "target_output_tail": "           \"openpolicyagent/opa:latest\",\n                \"test\", \"/policies\", \"--fail-on-empty\",\n            ],\n            capture_output=True, text=True, timeout=60,\n        )\n>       assert result.returncode == 0, (\n            f\"opa test failed for {version} (exit {result.returncode}) \u2014 CI gate 'OPA test suite empty/fails' \"\n            f\"(docs/experiment/spec/13_repository_contract.md):\\nstdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: opa test failed for v1 (exit 2) \u2014 CI gate 'OPA test suite empty/fails' (docs/experiment/spec/13_repository_contract.md):\nE         stdout:\nE         /policies/transfer_inventory_test.rego:112:\nE         data.factory.inventory.transfer_test.test_exactly_at_safety_stock_is_allowed: FAIL (427.583\u00b5s)\nE         --------------------------------------------------------------------------------\nE         PASS: 19/20\nE         FAIL: 1/20\nE         \nE         stderr:\nE         \nE       assert 2 == 0\nE        +  where 2 = CompletedProcess(args=['docker', 'run', '--rm', '-v', '/Users/d_surchis/work/operational-ontology-poc/contracts/polici...-------------------------------------------------------------------------------\\nPASS: 19/20\\nFAIL: 1/20\\n', stderr='').returncode\n\ntests/contracts/test_opa_policies.py:54: AssertionError\n=========================== short test summary info ============================\nFAILED tests/contracts/test_opa_policies.py::test_opa_test_suite_passes_and_is_not_empty[v1]\n1 failed in 0.35s\n\n",
+      "target_went_red_on_assertion": true
+    },
+    {
+      "control": [
+        "tests/contracts/test_shacl_fixtures.py::test_negative_fixture_does_not_conform[decision-missing-evidence.ttl]"
+      ],
+      "control_output_tail": null,
+      "control_stayed_green": true,
+      "description": "SHACL cardinality: oo:EvidenceSnapshot's required oo:snapshotContentHash minCount 1 -> 0 in contracts/shapes/v1/evidence-snapshot-shape.ttl",
+      "mutation_id": "SHACL_CARDINALITY",
+      "reverted": true,
+      "target": [
+        "tests/contracts/test_shacl_fixtures.py::test_negative_fixture_does_not_conform[evidence-snapshot-missing-content-hash.ttl]"
+      ],
+      "target_green_after_revert": true,
+      "target_output_tail": "        [100%]\n=================================== FAILURES ===================================\n_ test_negative_fixture_does_not_conform[evidence-snapshot-missing-content-hash.ttl] _\n\nfixture_path = PosixPath('/Users/d_surchis/work/operational-ontology-poc/tests/contracts/shacl/negative/evidence-snapshot-missing-content-hash.ttl')\nontology_graph = <Graph identifier=N33f440fc61594c66b886c67d6798b756 (<class 'rdflib.graph.Graph'>)>\nshapes_graph = <Graph identifier=N80d868d9819f4cf89757c8912ed49136 (<class 'rdflib.graph.Graph'>)>\n\n    @pytest.mark.parametrize(\"fixture_path\", negative_fixtures(), ids=lambda p: p.name)\n    def test_negative_fixture_does_not_conform(fixture_path, ontology_graph, shapes_graph):\n        conforms, report_text = _validate(fixture_path, ontology_graph, shapes_graph)\n>       assert not conforms, (\n            f\"{fixture_path.name} was expected to VIOLATE the shape set (CI gate: \"\n            f\"'SHACL negative fixture unexpectedly conforms') but it conformed.\"\n        )\nE       AssertionError: evidence-snapshot-missing-content-hash.ttl was expected to VIOLATE the shape set (CI gate: 'SHACL negative fixture unexpectedly conforms') but it conformed.\nE       assert not True\n\ntests/contracts/test_shacl_fixtures.py:42: AssertionError\n=========================== short test summary info ============================\nFAILED tests/contracts/test_shacl_fixtures.py::test_negative_fixture_does_not_conform[evidence-snapshot-missing-content-hash.ttl]\n1 failed in 0.16s\n\n",
+      "target_went_red_on_assertion": true
+    },
+    {
+      "control": [
+        "tests/integration/test_decision_service_approval.py::test_supervisor_can_approve_and_decision_becomes_approved"
+      ],
+      "control_output_tail": null,
+      "control_stayed_green": true,
+      "description": "OpenFGA authorization relation: widen can_approve_large_transfer_v2 to also include junior_planner in contracts/authorization/v2/model.fga (v2, NOT v1 -- the live stack has contracts/manifests/deployed_version.json's authorization pointer at v2, per action v3's approval_relation=can_approve_large_transfer_v2)",
+      "mutation_id": "AUTHZ_RELATION",
+      "reverted": true,
+      "target": [
+        "tests/integration/test_decision_service_approval.py::test_junior_planner_denied_protected_approval"
+      ],
+      "target_green_after_revert": true,
+      "target_output_tail": "F                                                                        [100%]\n=================================== FAILURES ===================================\n________________ test_junior_planner_denied_protected_approval _________________\n\ndecision_client = <httpx.Client object at 0x10a7b6d70>\nwms_client = <httpx.Client object at 0x10a7fa0f0>\nontology_hot_conn = <psycopg.Connection [IDLE] (host=localhost port=15432 user=ontology_hot_role database=ontology_hot) at 0x10a7286e0>\n\n    def test_junior_planner_denied_protected_approval(\n        decision_client: httpx.Client, wms_client: httpx.Client, ontology_hot_conn: psycopg.Connection\n    ):\n        decision = _propose_requiring_approval(decision_client, wms_client, ontology_hot_conn, \"SKU-900302\")\n        r = decision_client.post(\n            f\"/decisions/{decision['decision_id']}/approve\",\n            json={\"approver_id\": \"junior-1\", \"decision_content_hash\": decision[\"decision_content_hash\"]},\n        )\n>       assert r.status_code == 403\nE       assert 200 == 403\nE        +  where 200 = <Response [200 OK]>.status_code\n\ntests/integration/test_decision_service_approval.py:59: AssertionError\n=========================== short test summary info ============================\nFAILED tests/integration/test_decision_service_approval.py::test_junior_planner_denied_protected_approval\n1 failed in 0.24s\n\n",
+      "target_went_red_on_assertion": true
+    },
+    {
+      "control": [
+        "tests/faults/test_divergence.py::test_f15_200_without_commit_never_observed_success"
+      ],
+      "control_output_tail": null,
+      "control_stayed_green": true,
+      "description": "Reconciliation quantity comparator: the F16/F17 divergence check's `actual_quantity != requested_quantity` -> `== ` (inverted) in services/action_worker/outcome_eval.py",
+      "mutation_id": "RECONCILIATION_QUANTITY",
+      "reverted": true,
+      "target": [
+        "tests/faults/test_divergence.py::test_f16_f17_partial_commit_diverges_and_compensates"
+      ],
+      "target_green_after_revert": true,
+      "target_output_tail": "================ FAILURES ===================================\n_____________ test_f16_f17_partial_commit_diverges_and_compensates _____________\n\ndecision_client = <httpx.Client object at 0x10a996190>\nwms_client = <httpx.Client object at 0x10a96b1d0>\nontology_hot_conn = <psycopg.Connection [IDLE] (host=localhost port=15432 user=ontology_hot_role database=ontology_hot) at 0x10a7d34d0>\nwms_faults_reset = None\n\n    def test_f16_f17_partial_commit_diverges_and_compensates(\n        decision_client: httpx.Client, wms_client: httpx.Client, ontology_hot_conn: psycopg.Connection, wms_faults_reset\n    ):\n        part = set_inventory_and_wait(wms_client, ontology_hot_conn, \"SKU-910202\", \"WH-B\", on_hand=200)\n        final, action_execution_id = propose_approve_arm_execute(\n            decision_client, wms_client, \"planner-1\", \"WH-B\", \"WH-A\", part, 60,\n            fault_mode=\"partial_commit\", fault_params={\"actual_quantity\": 50},\n        )\n>       assert final[\"status\"] == \"DIVERGED\", final\nE       AssertionError: {'decision_id': 'D-313017b1f9654f08b3cd', 'decision_type': 'transfer_inventory', 'actor_type': 'user', 'actor_id': 'planner-1', ...}\nE       assert 'OUTCOME_UNKNOWN' == 'DIVERGED'\nE         \nE         - DIVERGED\nE         + OUTCOME_UNKNOWN\n\ntests/faults/test_divergence.py:50: AssertionError\n=========================== short test summary info ============================\nFAILED tests/faults/test_divergence.py::test_f16_f17_partial_commit_diverges_and_compensates\n1 failed in 2.43s\n\n",
+      "target_went_red_on_assertion": true
+    },
+    {
+      "control": [
+        "tests/integration/test_wms_idempotency.py::test_same_key_different_body_is_409"
+      ],
+      "control_output_tail": null,
+      "control_stayed_green": true,
+      "description": "WMS idempotency check: process-wide runtime toggle (services/common/faults.py::FaultRegistry.disable_idempotency_check) makes a deduped retry re-apply its inventory mutation instead of being dropped",
+      "mutation_id": "IDEMPOTENCY_HANDLING",
+      "reverted": true,
+      "target": [
+        "tests/integration/test_wms_idempotency.py::test_same_key_ten_concurrent_requests_exactly_one_effect"
+      ],
+      "target_green_after_revert": true,
+      "target_output_tail": "=============\n___________ test_same_key_ten_concurrent_requests_exactly_one_effect ___________\n\nwms_client_factory = <function wms_client_factory.<locals>._make at 0x1083245c0>\n\n    def test_same_key_ten_concurrent_requests_exactly_one_effect(wms_client_factory):\n        action_id = f\"ae-idem-concurrent-{uuid.uuid4().hex}\"\n        body = {\"action_execution_id\": action_id, \"source\": SOURCE, \"destination\": DEST, \"part\": PART, \"quantity\": 25}\n    \n        setup_client = wms_client_factory()\n        _reset_stock(setup_client, 1000)\n    \n        def fire(_: int) -> httpx.Response:\n            with wms_client_factory() as client:\n                return client.post(\"/transfers\", json=body)\n    \n        with ThreadPoolExecutor(max_workers=10) as pool:\n            responses = list(pool.map(fire, range(10)))\n    \n        assert all(r.status_code == 200 for r in responses)\n        committed_quantities = {r.json()[\"actual_quantity\"] for r in responses}\n        assert committed_quantities == {25}\n    \n        lot = get_lot(setup_client, PART, SOURCE)\n        # exactly one 25-unit effect applied, no matter how many of the 10\n        # requests raced to be \"first\"\n>       assert lot[\"on_hand\"] == 975\nE       assert 750 == 975\n\ntests/integration/test_wms_idempotency.py:87: AssertionError\n=========================== short test summary info ============================\nFAILED tests/integration/test_wms_idempotency.py::test_same_key_ten_concurrent_requests_exactly_one_effect\n1 failed in 0.15s\n\n",
+      "target_went_red_on_assertion": true
+    }
+  ]
+}

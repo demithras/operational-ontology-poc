@@ -33,6 +33,34 @@ class FaultRegistry:
         self._lock = threading.Lock()
         self._next_n: deque[ArmedFault] = deque()
         self._by_key: dict[str, ArmedFault] = {}
+        # Phase 10a item 1 (docs/experiment/briefs/phase10a.md): a coarser,
+        # PROCESS-WIDE toggle distinct from the per-request ArmedFault
+        # mechanism above. The per-key/next_n faults above only ever
+        # `resolve()` on the FIRST time a given action_execution_id is seen
+        # (services/wms/transfers.py returns early on a dedup hit before
+        # ever calling resolve()) — they cannot express "idempotency itself
+        # is broken", only "the first attempt misbehaves". This flag lets
+        # tests/stateful's deliberately-injected-bug proof (docs 08's
+        # "confirm Hypothesis finds + shrinks at least one deliberately
+        # injected failure... e.g. a test-mode flag disabling the WMS
+        # idempotency check") make DUPLICATE requests re-apply their
+        # inventory mutation instead of being deduped, without redesigning
+        # the transfers table's PRIMARY KEY. Defaults to enabled (correct
+        # behavior); `reset()` restores it, so no test can leave a later
+        # test running against a secretly-broken WMS.
+        self._idempotency_check_enabled = True
+
+    def disable_idempotency_check(self) -> None:
+        with self._lock:
+            self._idempotency_check_enabled = False
+
+    def enable_idempotency_check(self) -> None:
+        with self._lock:
+            self._idempotency_check_enabled = True
+
+    def idempotency_check_enabled(self) -> bool:
+        with self._lock:
+            return self._idempotency_check_enabled
 
     def arm(
         self,
@@ -69,12 +97,14 @@ class FaultRegistry:
         with self._lock:
             self._next_n.clear()
             self._by_key.clear()
+            self._idempotency_check_enabled = True
 
     def snapshot(self) -> Mapping[str, Any]:
         with self._lock:
             return {
                 "next_n": [f.mode for f in self._next_n],
                 "by_key": {k: f.mode for k, f in self._by_key.items()},
+                "idempotency_check_enabled": self._idempotency_check_enabled,
             }
 
 

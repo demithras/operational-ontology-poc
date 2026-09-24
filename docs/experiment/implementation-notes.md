@@ -4318,3 +4318,116 @@ correlate them).
 - `tests/faults/test_f40_traces_unavailable.py` (new)
 - `experiments/exp-000/results/traces-reference.txt` (generated artifact,
   committed as evidence — regenerate any time with the script above)
+
+## Phase 10a item 2 — mutation testing (spec 08 "Mutation testing (recommended)")
+
+`scripts/mutate.py` (apply/revert/status CLI + the 5 mutation definitions)
+and `tests/mutation/test_mutations.py` (the actual pass/fail authority: for
+each mutation — apply -> run the TARGET suite as a real subprocess and
+confirm it goes RED on a genuine assertion (never a setup/connection
+error, per common.md's own "read the failure reason" discipline — parsed
+from pytest's own final summary counts) -> run the CONTROL suite and
+confirm it stays GREEN -> revert -> re-run the target suite and confirm it
+is green again). Deliberately NOT part of `make test` (same family as
+test-faults/test-destructive). Results:
+`experiments/exp-000/results/mutation-results.json`. Final clean run:
+`6 passed in 66.46s` — all 5 mutations RED-on-assertion while active,
+every control stayed GREEN, every target returned GREEN after revert.
+
+Each mutation needed a DIFFERENT "deploy" mechanism to actually become live
+against whatever component evaluates it — this took real investigation,
+not just a file edit:
+
+1. **POLICY_COMPARATOR** — `contracts/policies/v1/transfer_inventory.rego`'s
+   safety-stock `hard_deny` boundary, `remaining < safety_stock` ->
+   `remaining <= safety_stock`. No deploy step needed: `opa test` (the
+   target, `tests/contracts/test_opa_policies.py`) reads the bundle
+   directly off disk via a standalone `docker run`, no live OPA server
+   involved. Kills `test_exactly_at_safety_stock_is_allowed`. Control: the
+   SAME test file parametrized on `v2` (untouched, separate package).
+
+2. **SHACL_CARDINALITY** — `contracts/shapes/v1/evidence-snapshot-shape.ttl`'s
+   `oo:snapshotContentHash` minCount 1 -> 0. No deploy step: `tests/
+   contracts/test_shacl_fixtures.py` runs pyshacl directly against the
+   files on disk. **First attempt picked the wrong fixture pairing** —
+   `decision-shape.ttl`'s `oo:actor` cardinality paired with `decision-
+   missing-actor.ttl` looked right but that fixture is a COMPOUND
+   violation (it also references a bare `oo:EvidenceSnapshot` missing
+   BOTH `snapshotContentHash` and `snapshotObservedAt`), so it stayed
+   non-conforming via a completely different shape regardless of the
+   mutation — the target suite never went red. Fixed by re-reading every
+   fixture file directly to find ones with exactly ONE violation
+   (`evidence-snapshot-missing-content-hash.ttl` as target, `decision-
+   missing-evidence.ttl` — already clean — as control). Generalizes past
+   this one case: a negative SHACL fixture with multiple `oo:...` triples
+   omitted is not automatically a clean single-shape mutation target; read
+   the fixture, don't assume from its filename.
+
+3. **AUTHZ_RELATION** — widen `can_approve_large_transfer_v2:
+   senior_approver` to `senior_approver or junior_planner`. **This one
+   found and had to work around a real gap in this repo's own OpenFGA
+   bootstrap design.** First attempt mutated `contracts/authorization/
+   v1/model.fga` and deployed via plain `bootstrap_openfga.py` — wrong
+   file: `contracts/manifests/deployed_version.json` has `"authorization":
+   "v2"`, and the live approval flow resolves `can_approve_large_
+   transfer_v2` (from `contracts/authorization/v2/model.fga`), which v1
+   doesn't even define. Worse, `bootstrap_openfga.py` always pushes v1 —
+   running it (for either apply OR revert) actually PUSHED A NEW, V1-
+   SHAPED "latest" OpenFGA authorization model into the live store,
+   because `_write_model()`'s own content-DEDUPLICATION (its docstring
+   literally says: "this store alternates between v1 and v2 model content
+   across this function's own re-runs and migrations/v2_to_v3/
+   migrate_authz.py's, so 'the latest' is frequently the OTHER era's
+   content") means reverting back to v1's ORIGINAL content just returns
+   the existing OLD v1 model id rather than creating anything new — so
+   "latest" stayed on whatever v1-shaped model got pushed, breaking
+   `test_supervisor_can_approve_and_decision_becomes_approved` (the
+   CONTROL, not just the target) with `relation 'warehouse#can_approve_
+   large_transfer_v2' not found`. **Recovered live**: force-wrote a
+   genuinely NEW v2-content model directly against the OpenFGA API
+   (bypassing `_write_model()`'s dedup), confirmed it became "latest",
+   and re-ran `tests/integration/test_decision_service_approval.py` clean
+   (4/4) before touching anything else. **Fixed properly** by writing
+   `scripts/mutate.py::_deploy_authz_v2_forced()` — targets `contracts/
+   authorization/v2/model.fga` (the correct file), always publishes a
+   genuinely NEW model on both apply and revert (bypassing the dedup
+   reuse path, which is right for `make up`'s idempotent bring-up but
+   wrong for a test that needs "latest" to track exactly what it just
+   published), pins `authorization_model_id` explicitly on every tuple
+   write (a propagation lag was also observed once, immediately after a
+   brand-new model's creation, causing a transient `relation ... not
+   found` on an UNSCOPED write — pinning the id sidesteps needing to
+   diagnose that further), and verifies "latest" actually matches the
+   model it just wrote before returning. **Any future phase that needs to
+   push a temporary/experimental OpenFGA model version should use this
+   pattern, not `bootstrap_openfga.py`'s `bootstrap()` — that function is
+   correctly idempotent for its own one job (`make up`) and wrong for
+   anything that toggles between two content eras.**
+
+4. **RECONCILIATION_QUANTITY** — `services/action_worker/outcome_eval.py`'s
+   F16/F17 divergence check, `actual_quantity != requested_quantity` ->
+   `== ` (inverted). Deploy: `docker compose up -d --build action_worker`
+   (baked into the shared image, same "services/ isn't bind-mounted"
+   lesson from step 0a). Kills `tests/faults/test_divergence.py::
+   test_f16_f17_partial_commit_diverges_and_compensates` (a real partial-
+   commit fault now falls through to `OUTCOME_UNKNOWN`/unresolved instead
+   of `DIVERGED`). Control: `test_f15_200_without_commit_never_
+   observed_success` (a different code path — no correlated WMS record at
+   all — untouched by this mutation).
+
+5. **IDEMPOTENCY_HANDLING** — not a file mutation: a process-wide runtime
+   toggle (`services/common/faults.py::FaultRegistry.disable_idempotency_
+   check()`, `services/wms/app.py`'s new `POST /_test/idempotency-check`,
+   used by `services/wms/transfers.py`'s `create_transfer`) that makes a
+   deduped SAME-key-same-body retry RE-APPLY its inventory mutation
+   instead of being dropped — the real code path this toggle exists in was
+   built for exactly this mutation category (see item 1's own notes for
+   why the PK-based dedup can't be defeated any other way without
+   redesigning the schema). Kills `tests/integration/test_wms_idempotency.py
+   ::test_same_key_ten_concurrent_requests_exactly_one_effect` (on_hand
+   ends up short of the expected single 25-unit effect). Control:
+   `test_same_key_different_body_is_409` (a genuinely different body was
+   never deduped in the first place, untouched by this toggle).
+   `tests/integration/conftest.py::wms_faults_reset` (already existing,
+   runs before/after every fault test) now also resets this toggle to
+   enabled, so no other test can inherit a disabled idempotency check.
