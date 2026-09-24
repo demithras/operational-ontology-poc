@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS decisions (
     authorization_model_version      TEXT NOT NULL,
     policy_bundle_version             TEXT NOT NULL,
     decision_content_hash              TEXT,
+    action_pinned_sha256                TEXT,
     evidence_snapshot_id                TEXT NOT NULL,
     evidence_snapshot                    JSONB NOT NULL,
     authorization_result                  JSONB,
@@ -47,6 +48,15 @@ CREATE TABLE IF NOT EXISTS decisions (
 
 CREATE INDEX IF NOT EXISTS idx_decisions_status ON decisions (status);
 CREATE INDEX IF NOT EXISTS idx_decisions_action_type ON decisions (action_type);
+
+-- Phase 6b / F34 (docs/experiment/implementation-notes.md "ALTER TABLE ...
+-- ADD COLUMN IF NOT EXISTS" workaround, same pattern as work_order_risk's
+-- `priority` column in Phase 6 step 0): the CREATE TABLE above already
+-- declares this column for a from-scratch `make reset`, but an
+-- ALREADY-RUNNING stack's `decisions` table predates it — this makes the
+-- column show up on the next decision_service restart without a
+-- data-losing reset.
+ALTER TABLE decisions ADD COLUMN IF NOT EXISTS action_pinned_sha256 TEXT;
 
 -- F22-style "the proposal never even became a governed Decision" record
 -- (RDF4J was unreachable, so no SHACL-validated Decision write was even

@@ -83,6 +83,6 @@ oo:DecisionShape
     sh:in ( oo:Draft oo:Proposed oo:InsufficientEvidence oo:DeniedAuthorization
             oo:DeniedPolicy oo:InvalidConformance oo:RequiresApproval oo:Approved
             oo:Executing oo:ExecutionFailed oo:OutcomeUnknown oo:AwaitingObservation
-            oo:Diverged oo:ObservedSuccess ) ;
+            oo:Diverged oo:ObservedSuccess oo:ActionVersionInvalidated ) ;
     sh:message "oo:Decision requires exactly one oo:status from the v1 DecisionStatusScheme (bare 'SUCCESS' is not a valid status)." ;
   ] .

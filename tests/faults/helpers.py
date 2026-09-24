@@ -15,7 +15,10 @@ import httpx
 
 from services.decision_service.execution import action_execution_id_for
 
-TERMINAL_STATUSES = {"OBSERVED_SUCCESS", "DIVERGED", "OUTCOME_UNKNOWN", "EXECUTION_FAILED"}
+TERMINAL_STATUSES = {
+    "OBSERVED_SUCCESS", "DIVERGED", "OUTCOME_UNKNOWN", "EXECUTION_FAILED",
+    "ACTION_VERSION_INVALIDATED",  # Phase 6b / F34
+}
 
 
 def arm_wms_fault(wms_client: httpx.Client, mode: str, action_execution_id: str, params: dict | None = None) -> None:

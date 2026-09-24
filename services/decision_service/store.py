@@ -71,7 +71,7 @@ def insert_decision(conn: psycopg.Connection, record: DecisionRecord) -> None:
                 decision_id, decision_type, actor_type, actor_id, principal_actor_id,
                 action_type, action_version, parameters, context, status,
                 ontology_version, shape_set_version, authorization_model_version, policy_bundle_version,
-                decision_content_hash, evidence_snapshot_id, evidence_snapshot,
+                decision_content_hash, action_pinned_sha256, evidence_snapshot_id, evidence_snapshot,
                 authorization_result, policy_result, conformance_result,
                 approved_by, approved_at, approval_decision_hash, approval_scope,
                 rdf_graph, created_at
@@ -79,7 +79,7 @@ def insert_decision(conn: psycopg.Connection, record: DecisionRecord) -> None:
                 %s, %s, %s, %s, %s,
                 %s, %s, %s, %s, %s,
                 %s, %s, %s, %s,
-                %s, %s, %s,
+                %s, %s, %s, %s,
                 %s, %s, %s,
                 %s, %s, %s, %s,
                 %s, %s
@@ -89,7 +89,7 @@ def insert_decision(conn: psycopg.Connection, record: DecisionRecord) -> None:
                 record.decision_id, record.decision_type, record.actor_type, record.actor_id, record.principal_actor_id,
                 record.action_type, record.action_version, json.dumps(record.parameters), json.dumps(record.context), record.status,
                 record.ontology_version, record.shape_set_version, record.authorization_model_version, record.policy_bundle_version,
-                record.decision_content_hash, record.evidence_snapshot_id, json.dumps(evidence_snapshot),
+                record.decision_content_hash, record.action_pinned_sha256, record.evidence_snapshot_id, json.dumps(evidence_snapshot),
                 json.dumps(authz_json) if authz_json else None,
                 json.dumps(policy_json) if policy_json else None,
                 json.dumps(conformance_json) if conformance_json else None,

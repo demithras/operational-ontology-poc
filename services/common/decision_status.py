@@ -25,6 +25,7 @@ STATUS_CONCEPT_LOCAL: dict[str, str] = {
     "AWAITING_OBSERVATION": "AwaitingObservation",
     "DIVERGED": "Diverged",
     "OBSERVED_SUCCESS": "ObservedSuccess",
+    "ACTION_VERSION_INVALIDATED": "ActionVersionInvalidated",
 }
 
 

@@ -187,6 +187,44 @@ WHERE {{}}
     return False, resp.text
 
 
+def write_action_version_invalidated(
+    rdf4j_client,
+    decision_id: str,
+    pinned_sha256: str,
+    current_sha256: str,
+    detected_at: datetime,
+    from_status: str = "APPROVED",
+) -> tuple[bool, str]:
+    """F34: contracts/actions/v1/<name>.yaml changed after this decision was
+    APPROVED (oo:actionPinnedSha256, stamped at propose() time, no longer
+    matches a FRESH on-disk hash) — services/action_worker/activities.py::
+    verify_and_start_execution calls this INSTEAD of ever writing
+    oo:ActionExecution/calling the external system. No ActionExecution/
+    Outcome resource is created (nothing was executed); this is a pure
+    Decision-status transition, same replay-safe DELETE/INSERT pattern as
+    write_execution_started/write_execution_finalized above."""
+    graph = decision_graph_iri(decision_id)
+    decision_iri = oo_instance_iri("Decision", decision_id)
+    old_status = status_concept_iri(from_status)
+    new_status = status_concept_iri("ACTION_VERSION_INVALIDATED")
+
+    sparql = f"""
+PREFIX oo: <{OO}>
+PREFIX xsd: <{XSD}>
+DELETE {{ GRAPH <{graph}> {{ <{decision_iri}> oo:status <{old_status}> }} }}
+INSERT {{ GRAPH <{graph}> {{
+  <{decision_iri}> oo:status <{new_status}> ;
+    oo:actionSha256AtExecute "{escape_sparql_literal(current_sha256)}" ;
+    oo:actionVersionInvalidatedAt "{_dt(detected_at)}"^^xsd:dateTime .
+}} }}
+WHERE {{}}
+"""
+    resp = rdf4j_client.update(sparql)
+    if resp.status_code in (200, 204):
+        return True, ""
+    return False, resp.text
+
+
 def write_reconciliation_state_update(
     rdf4j_client,
     decision_id: str,

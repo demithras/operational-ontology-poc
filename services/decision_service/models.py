@@ -27,6 +27,9 @@ DENIED_POLICY = "DENIED_POLICY"
 INVALID_CONFORMANCE = "INVALID_CONFORMANCE"
 REQUIRES_APPROVAL = "REQUIRES_APPROVAL"
 APPROVED = "APPROVED"
+# Phase 6b / F34 — set by services/action_worker/activities.py at execute()
+# time, never by propose_flow.py itself.
+ACTION_VERSION_INVALIDATED = "ACTION_VERSION_INVALIDATED"
 
 
 @dataclass
@@ -58,6 +61,12 @@ class DecisionRecord:
     conformance_violations: list[str] = field(default_factory=list)
 
     decision_content_hash: str | None = None
+
+    # Phase 6b / F34: the ActionType's contract sha256 pinned at propose()
+    # time (contracts/manifests/current.json, via ProposeDeps.manifest) —
+    # services/action_worker/activities.py re-verifies this against a FRESH
+    # on-disk hash at execute() time.
+    action_pinned_sha256: str | None = None
 
     approved_by: str | None = None
     approved_at: datetime | None = None

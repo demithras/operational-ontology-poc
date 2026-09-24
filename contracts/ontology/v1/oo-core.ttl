@@ -85,6 +85,8 @@ oo:OutcomeUnknown         a skos:Concept ; skos:inScheme oo:DecisionStatusScheme
 oo:AwaitingObservation    a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "AWAITING_OBSERVATION" .
 oo:Diverged               a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "DIVERGED" .
 oo:ObservedSuccess        a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "OBSERVED_SUCCESS" .
+oo:ActionVersionInvalidated a skos:Concept ; skos:inScheme oo:DecisionStatusScheme ; skos:notation "ACTION_VERSION_INVALIDATED" ;
+  skos:definition "Phase 6b / F34: the pinned contracts/actions/v1/<name>.yaml sha256 recorded at propose() time no longer matches the file's CURRENT sha256 at execute() time — the approved decision is never silently executed against a changed action definition; it terminates here instead." .
 
 #############################################
 ## ActionExecution parameters (phase3.md item 3; shape in
@@ -223,4 +225,22 @@ oo:observedAtOutcome      a owl:DatatypeProperty ; rdfs:domain oo:Outcome ; rdfs
 oo:compensationStatus     a owl:DatatypeProperty ; rdfs:domain oo:Outcome ; rdfs:range xsd:string ; rdfs:comment "NONE | NOT_APPLICABLE | COMPENSATING | COMPENSATED | COMPENSATION_FAILED — H12/F16. Only ever non-NONE for an ActionType whose contract declares compensation.mode: compensatable." .
 oo:compensatingActionExecutionId a owl:DatatypeProperty ; rdfs:domain oo:Outcome ; rdfs:range xsd:string ; rdfs:comment "The reversal/compensating action's OWN idempotency key, when one was issued." .
 oo:sourceEvidenceLsn      a owl:DatatypeProperty ; rdfs:domain oo:Outcome ; rdfs:range xsd:string ; rdfs:comment "The Debezium source LSN (oo:SourcePosition.oo:lastLsn) of the CDC observation reconciliation correlated this outcome to — H13 acceptance criterion 10's 'what actual outcome ... what changed next' traces to a real source position, not a timestamp guess." .
+
+## --- Phase 6b: action-definition version pinning (F34) ---
+## contracts/manifests/current.json's per-action sha256 is REFERENCED at
+## propose() time (services/decision_service/propose_flow.py stamps
+## oo:actionPinnedSha256 from that same manifest) but, before Phase 6b, was
+## never actively re-verified at execute() time — see
+## docs/experiment/implementation-notes.md Phase 6 section's own handoff
+## note. services/action_worker/activities.py::verify_and_start_execution
+## now re-hashes contracts/actions/v1/<name>.yaml FRESH off disk (never the
+## cached services/decision_service/action_types.py registry) and compares
+## against oo:actionPinnedSha256; a mismatch writes oo:actionSha256AtExecute
+## + oo:actionVersionInvalidatedAt and moves oo:status to
+## oo:ActionVersionInvalidated instead of ever calling the external system.
+oo:actionPinnedSha256 a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string ;
+  rdfs:comment "sha256 of contracts/actions/v1/<action_type>.yaml's raw bytes, captured from contracts/manifests/current.json at propose() time (services/decision_service/manifest.py) — the PINNED version execute() must still match." .
+oo:actionSha256AtExecute a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string ;
+  rdfs:comment "Only present when a mismatch was detected: the action definition file's ACTUAL sha256 at execute() time, for forensic comparison against oo:actionPinnedSha256." .
+oo:actionVersionInvalidatedAt a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:dateTime .
 

@@ -26,6 +26,8 @@ make each activity idempotent, not to reimplement durability.
 
 from __future__ import annotations
 
+import hashlib
+import os
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -36,14 +38,26 @@ from temporalio.exceptions import ApplicationError
 
 from services.action_worker import outcome_eval
 from services.action_worker.config import ActionWorkerConfig
-from services.common import action_rdf
+from services.common import action_rdf, test_hooks
 from services.common.db import get_conn
 from services.common.identity_lookup import resolve_canonical_part_to_source_local
 from services.common.rdf4j_client import RDF4JClient
 from services.common.wms_transfer_observation import fetch_wms_transfer_record
-from services.decision_service.action_types import get_action_type
+from services.decision_service.action_types import ACTIONS_DIR, get_action_type
 from services.decision_service.store import get_decision, update_status
 from services.projection_builder.reader import get_current_inventory
+
+TEST_MODE = os.environ.get("OO_TEST_MODE") == "1"
+
+
+def _current_action_sha256(action_type_name: str) -> str:
+    """F34: a FRESH sha256 of contracts/actions/v1/<name>.yaml's raw bytes,
+    read directly off disk — deliberately NOT via
+    services/decision_service/action_types.py::get_action_type, whose
+    _REGISTRY is cached for the lifetime of this process and would never
+    observe a post-startup file change (exactly the scenario this check
+    exists to catch)."""
+    return hashlib.sha256((ACTIONS_DIR / f"{action_type_name}.yaml").read_bytes()).hexdigest()
 
 _TERMINAL_NON_EXECUTABLE = {
     "DRAFT", "PROPOSED", "INSUFFICIENT_EVIDENCE", "DENIED_AUTHORIZATION",
@@ -93,6 +107,33 @@ class ActionActivities:
         if row["decision_content_hash"] is None:
             raise ApplicationError(f"decision {decision_id!r} has no decision_content_hash", non_retryable=True)
 
+        # F34: verify the pinned action-definition version BEFORE ever
+        # writing execution-started or calling the external system. Only
+        # checked when a pin was actually captured (pre-Phase-6b decisions
+        # have none — nothing to compare against, so let those through
+        # unchanged rather than retroactively invalidating history).
+        pinned_sha256 = row.get("action_pinned_sha256")
+        if pinned_sha256 is not None:
+            current_sha256 = _current_action_sha256(row["action_type"])
+            if current_sha256 != pinned_sha256:
+                rdf4j_client = self._rdf4j_client()
+                try:
+                    committed, detail = action_rdf.write_action_version_invalidated(
+                        rdf4j_client, decision_id, pinned_sha256, current_sha256, datetime.now(timezone.utc),
+                        from_status="APPROVED" if row["status"] == "APPROVED" else "EXECUTING",
+                    )
+                finally:
+                    rdf4j_client.close()
+                if not committed:
+                    raise ApplicationError(f"could not record action-version invalidation for {decision_id!r}: {detail[:300]}")
+                with get_conn() as conn:
+                    update_status(conn, decision_id, "ACTION_VERSION_INVALIDATED")
+                raise ApplicationError(
+                    f"decision {decision_id!r} pinned action {row['action_type']!r} sha256={pinned_sha256!r} "
+                    f"but the current contract is sha256={current_sha256!r} (F34) — invalidated, never executed",
+                    non_retryable=True,
+                )
+
         from_status = "APPROVED" if row["status"] == "APPROVED" else "EXECUTING"
         action = get_action_type(row["action_type"])
         parameters = row["parameters"]
@@ -136,6 +177,11 @@ class ActionActivities:
         persistence itself happens in observe_and_finalize, once the
         outcome is known — see services/common/action_rdf.py's module
         docstring for why exactly two writes, not three)."""
+        if TEST_MODE:
+            # F12 checkpoint: "worker crash pre-call" — BEFORE any external
+            # HTTP call is even built. No-op unless a test armed this exact
+            # action_execution_id (services/common/test_hooks.py).
+            test_hooks.maybe_pause(get_conn, action_execution_id, "pre_call", heartbeat=activity.heartbeat)
         before: dict[str, Any] = {}
 
         if action_type == "transfer_inventory":
@@ -201,6 +247,15 @@ class ActionActivities:
         """spec 06: "wait for correlated CDC observation; evaluate outcome
         predicate; set final status". The SECOND (and last) RDF write per
         ActionExecution — see services/common/action_rdf.py."""
+        if TEST_MODE:
+            # F13 checkpoint: "worker crash post-call/pre-record" — the WMS
+            # call in call_external_action already COMPLETED (its Temporal
+            # activity result is durably recorded), but nothing has been
+            # observed/written yet. A crash here means Temporal replays only
+            # THIS activity on restart — call_external_action is never
+            # re-invoked, so no duplicate WMS effect is possible by
+            # construction.
+            test_hooks.maybe_pause(get_conn, action_execution_id, "post_call_pre_record", heartbeat=activity.heartbeat)
         action = get_action_type(action_type)
         observation_timeout_s = 30.0  # contracts/actions/v1/*.yaml observation.timeout: PT30S, all three
 

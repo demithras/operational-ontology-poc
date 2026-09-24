@@ -31,7 +31,8 @@ from services.action_worker import health  # noqa: E402
 from services.action_worker.activities import ActionActivities  # noqa: E402
 from services.action_worker.config import TASK_QUEUE, from_env  # noqa: E402
 from services.action_worker.workflows import ActionExecutionWorkflow  # noqa: E402
-from services.common.db import open_pool  # noqa: E402
+from services.common import test_hooks  # noqa: E402
+from services.common.db import get_conn, open_pool  # noqa: E402
 
 
 async def run() -> None:
@@ -40,6 +41,13 @@ async def run() -> None:
     health.start_health_server(state, int(os.environ.get("OO_ACTION_WORKER_HEALTH_PORT", "8092")))
 
     open_pool()
+    if os.environ.get("OO_TEST_MODE") == "1":
+        # F12/F13 test-mode pause hooks (services/common/test_hooks.py) —
+        # only needed when the fault-injection test suite might arm one;
+        # applying it unconditionally in production would be harmless too,
+        # but this keeps prod startup free of test-only schema.
+        with get_conn() as conn:
+            test_hooks.apply_schema(conn)
     activities = ActionActivities(config)
 
     client = await Client.connect(config.temporal_address, namespace="default")

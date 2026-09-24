@@ -79,6 +79,8 @@ def build_decision_graph(record: DecisionRecord) -> rdflib.Graph:
     g.add((decision, OO.parametersJson, Literal(canonical_json(record.parameters))))
     if record.decision_content_hash:
         g.add((decision, OO.decisionContentHash, Literal(record.decision_content_hash)))
+    if record.action_pinned_sha256:
+        g.add((decision, OO.actionPinnedSha256, Literal(record.action_pinned_sha256)))
 
     actor_node = _actor_node(g, record.actor_type, record.actor_id)
     g.add((decision, OO.actor, actor_node))

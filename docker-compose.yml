@@ -423,6 +423,15 @@ services:
       OO_TEST_MODE: ${OO_TEST_MODE}
     ports:
       - "${ACTION_WORKER_HEALTH_PORT}:8092"
+    # Phase 6b / F34: verify_and_start_execution re-hashes
+    # contracts/actions/v1/<name>.yaml FRESH off disk at execute() time —
+    # the image's baked-in COPY (Dockerfile) is a build-time snapshot, so a
+    # bind mount is required for tests/faults/test_action_version_pinning.py
+    # to exercise a real post-approval file change without a full image
+    # rebuild. Read-only (action_worker never writes contracts/), same
+    # pattern as opa's `./contracts/policies/v1:/policies:ro` above.
+    volumes:
+      - ./contracts:/app/contracts:ro
     depends_on:
       postgres:
         condition: service_healthy
