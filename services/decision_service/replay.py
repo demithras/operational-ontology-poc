@@ -28,6 +28,7 @@ from typing import Any
 import httpx
 
 from services.common.rdf4j_client import RDF4JClient
+from services.common.rdf_graphs import decision_graph_iri
 from services.common.sparql_escape import escape_sparql_literal
 from services.decision_service import authz, hashing, store
 from services.decision_service.action_types import get_action_type
@@ -108,6 +109,13 @@ def _verify_archive(kind: str, version_dir: str, expected_sha: str, pattern: str
 def _fetch_rdf_fields(rdf4j_client: RDF4JClient, decision_id: str) -> dict[str, str]:
     template = (QUERIES_DIR / "q9_replay_authz_fields.rq").read_text()
     sparql = template.replace("%%DECISION_ID%%", escape_sparql_literal(decision_id))
+    # Phase 7b fix (see the query's own header comment): scope the
+    # oo:actor lookup to this decision's own named graph — that shared
+    # HumanActor node's oo:actorId triple is re-asserted in every OTHER
+    # decision by the same actor, and an unscoped pattern fans out into
+    # one row per such decision (found empirically: 2656 rows for one
+    # decision_id before this fix).
+    sparql = sparql.replace("%%GRAPH_IRI%%", decision_graph_iri(decision_id))
     rows = rdf4j_client.select(sparql)
     if not rows:
         raise DecisionNotFound(f"decision {decision_id!r} not found in RDF4J (or has no oo:status)")

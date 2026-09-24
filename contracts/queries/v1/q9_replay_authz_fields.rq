@@ -10,6 +10,23 @@
 # docs/adr/0004-openfga-historical-model-and-tuple-snapshot.md — plus
 # decisionContentHash/status as a cross-check that RDF4J (authoritative)
 # and the Postgres index still agree.
+#
+# Phase 7b fix: the `oo:actor` block below is explicitly scoped to
+# `GRAPH <%%GRAPH_IRI%%>` (this decision's own named graph,
+# services/common/rdf_graphs.py::decision_graph_iri — every OTHER pattern
+# here already resolves to decision-unique IRIs so this is the one place
+# it matters). `services/decision_service/rdf_writer.py`'s HumanActor node
+# is a SHARED IRI, deliberately reused across every decision by the same
+# actor — an unscoped `?decision oo:actor ?actor . ?actor oo:actorId
+# ?actorId` therefore matches once per (graph, quad) the shared node's
+# `oo:actorId` triple was ever asserted in, i.e. once per OTHER decision
+# by the same actor across the WHOLE corpus (thousands of duplicate rows,
+# found empirically querying a real decision — 2656 rows for one
+# decision_id, all with identical DATA except which duplicate graph
+# supplied the actor triple, since `rdf4j_client.select` has no `GRAPH
+# ?g` in its own SELECT list so RDF4J returns one row per matching QUAD's
+# graph). Scoping to this one graph makes it exactly 1 row again, as this
+# query's every OTHER pattern already implicitly is.
 PREFIX oo: <https://example.local/oo/>
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 SELECT ?decisionContentHash ?status ?openfgaAuthorizationModelId ?checkAuthorizationModelId
@@ -30,7 +47,7 @@ WHERE {
     OPTIONAL { ?check oo:checkOutcome ?checkOutcome . }
     OPTIONAL { ?check oo:checkTuplesSnapshotJson ?checkTuplesSnapshotJson . }
   }
-  OPTIONAL { ?decision oo:actor ?actor . ?actor oo:actorId ?actorId . }
+  OPTIONAL { GRAPH <%%GRAPH_IRI%%> { ?decision oo:actor ?actor . ?actor oo:actorId ?actorId . } }
   OPTIONAL {
     ?decision oo:evidenceSnapshot ?es .
     OPTIONAL { ?es oo:snapshotContentHash ?snapshotContentHash . }
