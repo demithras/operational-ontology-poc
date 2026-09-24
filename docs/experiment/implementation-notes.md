@@ -4594,3 +4594,65 @@ independently via `GET /_test/faults`).
   records the model id `_deploy_authz_v2_forced()` (item 2) actually left
   as "latest" on the live store, reconciling this tracking file with the
   real recovered state rather than leaving it silently stale.
+
+## Phase 10a close-out — final `make test` state (honest disclosure)
+
+Final official run (after all four items + F40 closure were committed):
+
+```
+tests/model:       21 passed in 48.31s
+tests/contracts:   67 passed in 2.71s
+tests/component:   26 passed in 4.34s
+tests/integration: 2 failed, 71 passed in 166.35s (0:02:46)
+```
+
+`make test` exits 2 (test-integration's own failure propagates) — NOT
+fully green. The 2 failures are:
+
+- `test_decision_service_protected_transfer.py::
+  test_planner_declaring_the_high_priority_work_order_is_allowed`
+  (`DENIED_POLICY`)
+- `test_forensic_queries_phase6.py::
+  test_h13_queries_6_7_8_and_work_order_risk_flips_to_mitigated`
+  (`INSUFFICIENT_EVIDENCE`)
+
+Both are the SAME two pre-existing, disclosed failures documented in this
+phase's own step-0 section above, reproduced identically across every run
+this session (including with the `_find_high_priority_route` WO-42-
+exclusion fix live, and in isolation, alone, 0.70s — so this is not a
+full-suite-only contention artifact for the first one specifically; the
+WO-42 fix was real and independently justified, but evidently not the
+SOLE cause of that test's flakiness). Neither touches anything Phase 10a
+changed: `git diff` between this phase's first and last commit does not
+touch `tests/integration/test_forensic_queries_phase6.py`, and `test_
+decision_service_protected_transfer.py`'s only change this phase is the
+WO-42 exclusion itself (a fix, not a new failure mode). Contributing
+factors observed live this session: host load measured at 51-66/14 cores
+during the same window (step 0's own host-load section), and direct
+evidence of a SEPARATE process recreating `rdf4j`/`openfga`/`opa`/
+`projection_builder` mid-session (`docker compose ps` showing "Up about a
+minute" on all four with no corresponding action from this session) —
+consistent with another concurrent agent active in this same multi-agent
+orchestration, per this brief's own system reminder listing one
+(`iri-injection-survey`).
+
+**Not fixed, disclosed rather than hidden**: the residual cause of `test_
+planner_declaring_the_high_priority_work_order_is_allowed`'s `DENIED_
+POLICY` beyond the WO-42 exclusion was not further root-caused — it is a
+dynamically-selected-route TOCTOU class (the route is picked live, then
+proposed against, with no synchronization against whatever else in the
+same multi-hour, multi-agent, shared-stack session might move its
+headroom in between), same family as `test_forensic_queries_phase6.py`'s
+own already-documented freshness-window sensitivity, and out of this
+phase's assigned scope (items 0/1/2/5) to chase further. Flagged for
+whoever next touches either file, the same way Phase 9's WO-42 finding was
+flagged for this phase.
+
+All of this phase's OWN deliverables — `tests/component/test_host_load.py`,
+`tests/component/test_tracing.py`, `tests/integration/
+test_projection_rebuild_concurrency.py`, `tests/faults/
+test_openfga_warmup_window.py`, `tests/faults/test_f40_traces_unavailable.py`,
+`tests/integration/test_otel_tracing.py`, `tests/mutation/
+test_mutations.py` (6/6), `tests/stateful/test_live_differential.py` (2/2)
+— pass cleanly and independently of this residual issue; none of them are
+among the 2 failures above.
