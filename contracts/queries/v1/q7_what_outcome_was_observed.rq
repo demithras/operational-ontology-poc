@@ -1,14 +1,18 @@
 # H13 query 7 — "What outcome was actually observed?" (Phase 6)
+# Phase 9 step 0b: scoped to GRAPH <%%GRAPH_IRI%%> (see q1's header comment
+# for the full rationale).
 PREFIX oo: <https://example.local/oo/>
 SELECT DISTINCT ?outcomeId ?reconciliationState ?expectedEffectJson ?observedEffectJson ?observedAtOutcome ?compensationStatus
 WHERE {
-  ?decision oo:decisionId "%%DECISION_ID%%" ;
-            oo:actionExecution ?ae .
-  ?ae oo:outcome ?outcome .
-  ?outcome oo:outcomeId ?outcomeId ;
-           oo:reconciliationState ?reconciliationState ;
-           oo:expectedEffectJson ?expectedEffectJson ;
-           oo:observedEffectJson ?observedEffectJson ;
-           oo:observedAtOutcome ?observedAtOutcome ;
-           oo:compensationStatus ?compensationStatus .
+  GRAPH <%%GRAPH_IRI%%> {
+    ?decision oo:decisionId "%%DECISION_ID%%" ;
+              oo:actionExecution ?ae .
+    ?ae oo:outcome ?outcome .
+    ?outcome oo:outcomeId ?outcomeId ;
+             oo:reconciliationState ?reconciliationState ;
+             oo:expectedEffectJson ?expectedEffectJson ;
+             oo:observedEffectJson ?observedEffectJson ;
+             oo:observedAtOutcome ?observedAtOutcome ;
+             oo:compensationStatus ?compensationStatus .
+  }
 }

@@ -10,17 +10,35 @@
 # causal-adjacency interpretation, not a claim of provenance/evidence-level
 # dependency (which would need each LATER decision to have cited D's
 # specific evidence snapshot — not modeled at that granularity in v1).
+#
+# Phase 9 step 0b: TWO graph scopes, not one — this query, unlike q1-q7,
+# genuinely spans two different decisions' own named graphs (the anchor
+# decision D and each later decision that shares D's oo:concernsWorkOrder
+# object, which is itself a shared fac:WorkOrder node by design — that
+# fan-OUT across decisions is the whole point of the query, not a bug to
+# scope away). The anchor is bound to its own graph via %%GRAPH_IRI%%
+# (known up front from the caller's decision_id, same substitution q1-q7
+# use). Each candidate later decision is scoped via GRAPH ?laterGraph — a
+# VARIABLE, not a literal — so every pattern inside that block (including
+# the ?actorNode oo:actorId ?laterActor join, the same shared-node shape
+# q5's fix addresses) is forced to resolve within that ONE later decision's
+# own graph, never fanning out across every OTHER graph that actor/work
+# order was ever referenced in.
 PREFIX oo: <https://example.local/oo/>
 SELECT DISTINCT ?laterDecisionId ?laterCreatedAt ?laterStatus ?laterActor WHERE {
-  ?decision oo:decisionId "%%DECISION_ID%%" ;
-            oo:createdAt ?createdAt ;
-            oo:concernsWorkOrder ?workOrder .
-  ?laterDecision oo:concernsWorkOrder ?workOrder ;
-                 oo:decisionId ?laterDecisionId ;
-                 oo:createdAt ?laterCreatedAt ;
-                 oo:status ?laterStatusConcept .
+  GRAPH <%%GRAPH_IRI%%> {
+    ?decision oo:decisionId "%%DECISION_ID%%" ;
+              oo:createdAt ?createdAt ;
+              oo:concernsWorkOrder ?workOrder .
+  }
+  GRAPH ?laterGraph {
+    ?laterDecision oo:concernsWorkOrder ?workOrder ;
+                   oo:decisionId ?laterDecisionId ;
+                   oo:createdAt ?laterCreatedAt ;
+                   oo:status ?laterStatusConcept .
+    OPTIONAL { ?laterDecision oo:actor ?actorNode . ?actorNode oo:actorId ?laterActor . }
+  }
   BIND(STRAFTER(STR(?laterStatusConcept), "https://example.local/oo/") AS ?laterStatus)
-  OPTIONAL { ?laterDecision oo:actor ?actorNode . ?actorNode oo:actorId ?laterActor . }
   FILTER(?laterCreatedAt > ?createdAt)
 }
 ORDER BY ?laterCreatedAt

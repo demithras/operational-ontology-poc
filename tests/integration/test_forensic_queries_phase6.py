@@ -10,27 +10,16 @@ mitigated it by the time this file runs as part of the full suite).
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import httpx
 import psycopg
 import pytest
 from psycopg.rows import dict_row
 
+from services.common.forensic_queries import run_forensic_query as _run_query
 from services.decision_service.execution import action_execution_id_for
 from services.projection_builder.reader import get_work_order_risk
 from tests.faults.helpers import start_execution, wait_for_terminal_status
 from tests.integration.conftest import wait_until
-
-QUERIES_DIR = Path(__file__).resolve().parents[2] / "contracts" / "queries" / "v1"
-
-
-def _run_query(rdf4j_client, name: str, decision_id: str) -> list[dict]:
-    from services.common.sparql_escape import escape_sparql_literal
-
-    template = (QUERIES_DIR / name).read_text()
-    sparql = template.replace("%%DECISION_ID%%", escape_sparql_literal(decision_id))
-    return rdf4j_client.select(sparql)
 
 
 def _find_at_risk_route(conn: psycopg.Connection) -> dict | None:

@@ -1,11 +1,16 @@
 # H13 query 2 — "Which evidence was used?"
+# Phase 9 step 0b: scoped to GRAPH <%%GRAPH_IRI%%> (see q1's header comment
+# for the full rationale; services/common/forensic_queries.py substitutes
+# both placeholders).
 PREFIX oo: <https://example.local/oo/>
 SELECT DISTINCT ?requiredFactsJson ?snapshotContentHash ?snapshotObservedAt ?sourcePositionsJson
 WHERE {
-  ?decision oo:decisionId "%%DECISION_ID%%" ;
-            oo:evidenceSnapshot ?es .
-  ?es oo:requiredFactsJson ?requiredFactsJson ;
-      oo:snapshotContentHash ?snapshotContentHash ;
-      oo:snapshotObservedAt ?snapshotObservedAt ;
-      oo:sourcePositionsJson ?sourcePositionsJson .
+  GRAPH <%%GRAPH_IRI%%> {
+    ?decision oo:decisionId "%%DECISION_ID%%" ;
+              oo:evidenceSnapshot ?es .
+    ?es oo:requiredFactsJson ?requiredFactsJson ;
+        oo:snapshotContentHash ?snapshotContentHash ;
+        oo:snapshotObservedAt ?snapshotObservedAt ;
+        oo:sourcePositionsJson ?sourcePositionsJson .
+  }
 }

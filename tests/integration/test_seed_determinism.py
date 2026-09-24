@@ -32,6 +32,19 @@ from seed import db_env  # noqa: E402
 
 BUSINESS_FIELDS = ("lot_id", "part", "warehouse_id", "on_hand", "reserved", "quality_status")
 
+# Phase 9 step 0a (orchestrator finding from the Phase 8 review): this is
+# the one test in the whole suite that tears the shared stack down and
+# rebuilds it (`make reset` TWICE, via subprocess). Makefile's own
+# `test-integration` target already `--ignore`s this file, but a plain
+# `pytest tests/integration` (the whole directory, no Makefile) bypasses
+# that ignore entirely and silently wipes whatever historical corpus was
+# loaded — exactly what happened reviewing Phase 8. The guard now lives in
+# the test itself, not only in the Makefile wiring around it: this test
+# SKIPS unless OO_ALLOW_DESTRUCTIVE=1 is set, which only `make
+# test-destructive` sets (see Makefile) — so no plain pytest invocation,
+# from any directory or working style, can ever destroy data again.
+pytestmark = pytest.mark.destructive
+
 
 def _hash_wms_lots(client: httpx.Client) -> str:
     lots = client.get("/inventory_lots").json()
@@ -45,6 +58,12 @@ def _reset_and_seed(seed: int) -> None:
 
 
 def test_same_seed_gives_same_loaded_wms_state(stack_up: bool):
+    if os.environ.get("OO_ALLOW_DESTRUCTIVE") != "1":
+        pytest.skip(
+            "destructive test (runs 'make reset' twice, wiping the shared stack incl. any historical "
+            "corpus) — set OO_ALLOW_DESTRUCTIVE=1 to run it explicitly, or use 'make test-destructive', "
+            "which sets that for you and is documented as needing to run ALONE"
+        )
     if not stack_up:
         pytest.skip("stack not reachable — run 'make up' first (this test performs its own reset+reseed)")
 

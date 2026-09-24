@@ -11,17 +11,8 @@ a forensic query is not just possible once, it survives contract evolution.
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
-from services.common.sparql_escape import escape_sparql_literal
-
-QUERIES_DIR = Path(__file__).resolve().parents[2] / "contracts" / "queries" / "v1"
-
-
-def _run_query(rdf4j_client, name: str, decision_id: str) -> list[dict]:
-    template = (QUERIES_DIR / name).read_text()
-    sparql = template.replace("%%DECISION_ID%%", escape_sparql_literal(decision_id))
-    return rdf4j_client.select(sparql)
+from services.common.forensic_queries import run_forensic_query as _run_query
 
 
 def test_forensic_queries_1_through_5_answer_for_v1_decision_after_v3_migration(historical_corpus, rdf4j_client):

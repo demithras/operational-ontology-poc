@@ -2,13 +2,29 @@
 # `executedBy` is populated starting Phase 6 (services/common/action_rdf.py::
 # write_execution_finalized) — absent (unbound) for any decision that was
 # never executed, which is itself an honest, queryable fact (not a guess).
+#
+# Phase 9 step 0b: scoped to GRAPH <%%GRAPH_IRI%%>. This is the query the
+# orchestrator's Phase 8 review flagged directly: ?proposer/?principal/
+# ?approver/?executor are all shared HumanActor/SoftwareAgent nodes
+# re-asserted into EVERY decision's own named graph (same root cause as
+# q9's Phase 7b fix), so the unscoped joins here fan out N times per shared
+# node — once per OTHER decision that actor ever appeared in — and
+# multiply again across the FOUR separate actor joins (proposer, principal,
+# approver, executor) before DISTINCT can collapse them, i.e. up to N^4
+# intermediate rows. Confirmed as the cause of
+# test_forensic_query_5_traces_delegation_and_approval's httpx.ReadTimeout
+# once the corpus reached ~5k decisions. Scoping the whole block to this
+# decision's own graph makes every one of those joins resolve to exactly
+# the one re-asserted copy that lives there.
 PREFIX oo: <https://example.local/oo/>
 SELECT DISTINCT ?proposerId ?principalOf ?approvedById ?executedById
 WHERE {
-  ?decision oo:decisionId "%%DECISION_ID%%" ;
-            oo:actor ?proposer .
-  ?proposer oo:actorId ?proposerId .
-  OPTIONAL { ?proposer oo:actsOnBehalfOf ?principal . ?principal oo:actorId ?principalOf . }
-  OPTIONAL { ?decision oo:approvedBy ?approver . ?approver oo:actorId ?approvedById . }
-  OPTIONAL { ?decision oo:executedBy ?executor . ?executor oo:actorId ?executedById . }
+  GRAPH <%%GRAPH_IRI%%> {
+    ?decision oo:decisionId "%%DECISION_ID%%" ;
+              oo:actor ?proposer .
+    ?proposer oo:actorId ?proposerId .
+    OPTIONAL { ?proposer oo:actsOnBehalfOf ?principal . ?principal oo:actorId ?principalOf . }
+    OPTIONAL { ?decision oo:approvedBy ?approver . ?approver oo:actorId ?approvedById . }
+    OPTIONAL { ?decision oo:executedBy ?executor . ?executor oo:actorId ?executedById . }
+  }
 }

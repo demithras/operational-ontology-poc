@@ -8,21 +8,12 @@ scraping logs.
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
 import httpx
 import psycopg
 
-from services.common.sparql_escape import escape_sparql_literal
+from services.common.forensic_queries import run_forensic_query as _run_query
 from tests.integration.decision_helpers import set_inventory_and_wait
-
-QUERIES_DIR = Path(__file__).resolve().parents[2] / "contracts" / "queries" / "v1"
-
-
-def _run_query(rdf4j_client, name: str, decision_id: str) -> list[dict]:
-    template = (QUERIES_DIR / name).read_text()
-    sparql = template.replace("%%DECISION_ID%%", escape_sparql_literal(decision_id))
-    return rdf4j_client.select(sparql)
 
 
 def _propose_approved(decision_client: httpx.Client, wms_client: httpx.Client, conn: psycopg.Connection, sku: str) -> dict:

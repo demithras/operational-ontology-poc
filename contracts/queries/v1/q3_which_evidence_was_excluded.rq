@@ -1,8 +1,12 @@
 # H13 query 3 — "Which evidence was available but excluded?"
+# Phase 9 step 0b: scoped to GRAPH <%%GRAPH_IRI%%> (see q1's header comment
+# for the full rationale).
 PREFIX oo: <https://example.local/oo/>
 SELECT DISTINCT ?excludedFactsJson
 WHERE {
-  ?decision oo:decisionId "%%DECISION_ID%%" ;
-            oo:evidenceSnapshot ?es .
-  ?es oo:excludedFactsJson ?excludedFactsJson .
+  GRAPH <%%GRAPH_IRI%%> {
+    ?decision oo:decisionId "%%DECISION_ID%%" ;
+              oo:evidenceSnapshot ?es .
+    ?es oo:excludedFactsJson ?excludedFactsJson .
+  }
 }

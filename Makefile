@@ -122,8 +122,13 @@ test-integration: ensure-env
 # `make bench`, ...) resets THEIR stack out from under them
 # (docs/experiment/briefs/phase4fix.md item 3: this, not an external
 # process, was the real cause of the Phase 4 flakiness). Run it alone.
+## Phase 9 step 0a: OO_ALLOW_DESTRUCTIVE=1 is the actual gate the test
+# itself checks (pytest.mark.destructive) — this is the ONLY target that
+# sets it, so a plain `pytest tests/integration` (bypassing this Makefile
+# entirely, as the Phase 8 review's own reproduction did) now skips rather
+# than silently wiping the shared stack's historical corpus.
 test-destructive: ensure-env
-	$(VENV_PY) -m pytest tests/integration/test_seed_determinism.py -q
+	OO_ALLOW_DESTRUCTIVE=1 $(VENV_PY) -m pytest tests/integration/test_seed_determinism.py -q -m destructive
 
 test-determinism: test-destructive
 

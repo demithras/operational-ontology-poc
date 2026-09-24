@@ -1,27 +1,42 @@
 # H13 query 1 — "Why was decision D made?"
 # docs/experiment/spec/01_hypotheses.md H13: "answerable by stable
 # query/API without log scraping." Substitute %%DECISION_ID%% with the
-# decision's oo:decisionId value (services/decision_service writes exactly
-# one Decision per decision_id, in its own named graph — see
-# services/common/rdf_graphs.py::decision_graph_iri).
+# decision's oo:decisionId value and %%GRAPH_IRI%% with
+# services/common/rdf_graphs.py::decision_graph_iri(decision_id) (see
+# services/common/forensic_queries.py::run_forensic_query, the one place
+# every caller substitutes both).
+#
+# Phase 9 step 0b: the whole body is scoped to GRAPH <%%GRAPH_IRI%%> — the
+# same fix Phase 7b applied to q9 alone, generalized here. Every resource a
+# single decision's own record touches (the Decision, its
+# PolicyEvaluation/AuthorizationCheck/ConformanceCheck) is written into
+# this ONE named graph in a single POST
+# (services/decision_service/rdf_writer.py::write_decision), so scoping the
+# whole pattern to it is both correct (this decision's own record lives
+# nowhere else) and forecloses any future fan-out the way an unscoped
+# ?proposer/?approver/?executor oo:actorId join did in q5 (found live once
+# the corpus reached ~5k decisions: httpx.ReadTimeout on
+# test_forensic_query_5_traces_delegation_and_approval).
 PREFIX oo: <https://example.local/oo/>
 SELECT DISTINCT ?status ?actionType ?parametersJson ?policyOutcome ?policyReasonsJson ?authzOutcome ?conformanceOutcome
 WHERE {
-  ?decision oo:decisionId "%%DECISION_ID%%" ;
-            oo:status ?statusConcept ;
-            oo:actionType ?actionType ;
-            oo:parametersJson ?parametersJson .
+  GRAPH <%%GRAPH_IRI%%> {
+    ?decision oo:decisionId "%%DECISION_ID%%" ;
+              oo:status ?statusConcept ;
+              oo:actionType ?actionType ;
+              oo:parametersJson ?parametersJson .
+    OPTIONAL {
+      ?decision oo:policyEvaluation ?pe .
+      ?pe oo:policyOutcome ?policyOutcome ; oo:policyReasonsJson ?policyReasonsJson .
+    }
+    OPTIONAL {
+      ?decision oo:authorizationCheck ?ac .
+      ?ac oo:checkOutcome ?authzOutcome .
+    }
+    OPTIONAL {
+      ?decision oo:conformanceCheck ?cc .
+      ?cc oo:conformanceOutcome ?conformanceOutcome .
+    }
+  }
   BIND(STRAFTER(STR(?statusConcept), "https://example.local/oo/") AS ?status)
-  OPTIONAL {
-    ?decision oo:policyEvaluation ?pe .
-    ?pe oo:policyOutcome ?policyOutcome ; oo:policyReasonsJson ?policyReasonsJson .
-  }
-  OPTIONAL {
-    ?decision oo:authorizationCheck ?ac .
-    ?ac oo:checkOutcome ?authzOutcome .
-  }
-  OPTIONAL {
-    ?decision oo:conformanceCheck ?cc .
-    ?cc oo:conformanceOutcome ?conformanceOutcome .
-  }
 }
