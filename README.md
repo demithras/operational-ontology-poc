@@ -26,6 +26,7 @@ Build order and exit criteria: `docs/experiment/spec/12_implementation_plan.md`.
 | 4fix | Test-suite stability: single readiness contract (`make wait-converged`), destructive tests isolated into `make test-destructive`, root-caused and fixed the flaky CDC-convergence check | done (tag `poc-v0.4.1-stable`) |
 | 5 | Decision service + gates (OpenFGA, OPA, SHACL gate capture) | done |
 | 6 | Durable action runtime (Temporal, WMS action, idempotency, CDC, reconciliation) | done (tag `poc-v0.6-actions`) |
+| 6b | Complete the fault matrix (F01-F40; worker-crash/CDC-delay/Kafka-outage/kill/network fault tests; F34 action-version pinning implemented; two real concurrency bugs + a SPARQL/IRI injection vulnerability found and fixed) | done (tag `poc-v0.6.1-faults`) |
 | 7 | Contract versioning / replay | pending |
 | 8 | A/B baseline (conventional relational implementation) | pending |
 | 9 | Agent / MCP layer | pending |
@@ -133,9 +134,13 @@ ActionType's outcome predicate, and sets `OBSERVED_SUCCESS` / `DIVERGED` /
 `OUTCOME_UNKNOWN` / `EXECUTION_FAILED` — auto-compensating (`reverse_transfer`)
 where the contract says `compensatable`. `GET /executions/{id}` /
 `GET /outcomes/{id}` are real. `make test-faults` drives this end to end
-(idempotency, divergence, the 100/80/80 concurrency race, Temporal-down)
-against the real stack — run it alone (`docker compose stop/start temporal`),
-never inside `make test`. `make bench-phase6` (folded into `make bench`)
+against the real stack (F01-F40 from `docs/experiment/spec/09_failure_and_adversarial_matrix.md`
+— idempotency, divergence, the 100/80/80 concurrency race, worker-crash
+kill/restart, CDC delay/dedup/reorder, Kafka/Temporal outage, action-
+version pinning, kill tests for every long-running service, network
+faults; `experiments/exp-000/results/fault-matrix-phase6b.json` is the
+full per-fault status) — run it alone (real `docker compose kill`/`stop`/
+`start` throughout), never inside `make test`. `make bench-phase6` (folded into `make bench`)
 measures external-action duration / CDC-observation lag / end-to-end
 execution time, writing `experiments/exp-000/results/bench-phase6.json`
 (no SLO gate locked for these three — measurement reporting).
