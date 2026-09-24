@@ -34,12 +34,88 @@ from __future__ import annotations
 
 import os
 import sys
+import time
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
 from services.common.reset_deployed_version_if_empty import _decisions_table_is_empty  # noqa: E402
+
+
+def _quiesce_projections(log=print, max_wait_s: float = 120.0, poll_s: float = 3.0) -> dict:
+    """Root cause (orchestrator correction, Phase 10b, 2026-09-24): the
+    first live run of this module hit `migrations/v1_to_v2/deploy.py`'s
+    own before/after projection-hash check failing
+    (work_order_risk/transfer_candidates/action_eligibility_summary
+    mismatched; current_inventory matched) immediately after `make seed`'s
+    wait-converged returned. wait-converged only proves Kafka CDC lag is 0
+    and ONE canonical row (WO-42) exists in work_order_risk — it does NOT
+    prove `services/projection_builder`'s own ~3s-interval LIVE POLL LOOP
+    has finished rebuilding all 200 work orders'/1988 lots' rows from the
+    now-fully-ingested RDF4J graph. `deploy_v2()`'s "before" snapshot is
+    whatever the live loop had written by that exact moment — a moving
+    target — while its "after" snapshot follows an EXPLICIT, complete
+    rebuild; the two can legitimately differ by nothing more than "which
+    poll cycle happened to be in flight when we looked."
+
+    Proven live (diagnostic probe, same stack, ~14 minutes after seed had
+    long since settled): calling build_all() twice in a row produces
+    IDENTICAL hashes for all four tables, and matches the then-current
+    live-poll-loop state too — the compute is fully deterministic once
+    inputs stop changing; this was a timing race, not a migration
+    correctness bug, and not a case for weakening the check.
+
+    Fix: call build_all() (the SAME function the live poll loop and `make
+    rebuild-projections` both use — see its own module docstring) directly
+    here, in a loop, until TWO CONSECUTIVE calls produce identical
+    business-field hashes for all four tables — the same fixed-point
+    definition of "settled" wait_converged.py already uses for Kafka lag.
+    Raises loudly (never silently proceeds) if quiescence isn't reached
+    within max_wait_s — a genuinely non-converging projection pipeline is
+    exactly the kind of thing that must not be papered over."""
+    import psycopg
+    from seed import db_env
+    from services.common.rdf4j_client import RDF4JClient
+    from services.projection_builder.builder import build_all
+    from services.projection_builder.hashing import BUSINESS_COLUMNS, table_hash
+
+    def table_hashes(conn) -> dict[str, str]:
+        hashes = {}
+        with conn.cursor() as cur:
+            for table, cols in BUSINESS_COLUMNS.items():
+                cur.execute(f"SELECT {', '.join(cols)} FROM {table}")  # noqa: S608 - fixed internal column list
+                col_names = [d.name for d in cur.description]
+                rows = [dict(zip(col_names, row)) for row in cur.fetchall()]
+                hashes[table] = table_hash(table, rows)
+        return hashes
+
+    db_env.load_dotenv()
+    conn = psycopg.connect(db_env.ontology_hot_dsn())
+    rdf_client = RDF4JClient(base_url=db_env.rdf4j_server_url(), repository="oo")
+    t0 = time.monotonic()
+    prev: dict[str, str] | None = None
+    attempts = 0
+    try:
+        while True:
+            attempts += 1
+            build_all(rdf_client, conn)
+            cur = table_hashes(conn)
+            if prev is not None and cur == prev:
+                elapsed = round(time.monotonic() - t0, 1)
+                log(f"[advance_fresh_stack_to_current] projections quiesced after {attempts} build_all() "
+                    f"calls ({elapsed}s) — two consecutive rebuilds produced identical business-field hashes")
+                return {"quiesced": True, "attempts": attempts, "elapsed_s": elapsed}
+            if time.monotonic() - t0 > max_wait_s:
+                raise RuntimeError(
+                    f"projections did not quiesce within {max_wait_s}s ({attempts} build_all() attempts) — "
+                    f"last two hashes differed: {prev} vs {cur}"
+                )
+            prev = cur
+            time.sleep(poll_s)
+    finally:
+        rdf_client.close()
+        conn.close()
 
 
 def advance_if_fresh(log=print) -> dict:
@@ -58,6 +134,11 @@ def advance_if_fresh(log=print) -> dict:
 
     log("[advance_fresh_stack_to_current] fresh stack detected (0 decisions) — advancing V1 -> V2 -> V3 "
         "(the product's current published contract state) via the real migration deploy() functions")
+
+    log("[advance_fresh_stack_to_current] quiescing services/projection_builder before deploy-v2's own "
+        "before/after hash check — wait-converged proves CDC lag is 0, not that the live poll loop has "
+        "finished rebuilding every row from the now-fully-ingested graph")
+    _quiesce_projections(log=log)
 
     from migrations.v1_to_v2.deploy import deploy as deploy_v2
     from migrations.v2_to_v3.deploy import deploy as deploy_v3
