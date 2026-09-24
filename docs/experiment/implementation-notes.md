@@ -4431,3 +4431,166 @@ not just a file edit:
    `tests/integration/conftest.py::wms_faults_reset` (already existing,
    runs before/after every fault test) now also resets this toggle to
    enabled, so no other test can inherit a disabled idempotency check.
+
+## Phase 10a item 1 — stateful/differential suite against the real stack (spec 08)
+
+`tests/stateful/` — a Hypothesis `RuleBasedStateMachine` driving the REAL
+live stack (never a fake/in-process double), differential-tested against
+`reference_model` where the two are directly comparable, plus system
+invariants checked continuously. Two entry points:
+
+- `test_live_transfer_machine_holds_invariants` (`LiveTransferMachine`, 14
+  rules: receive/reserve/release inventory, propose/approve/execute/
+  retry_execution transfer, reschedule_work_order + a terminal-work-order
+  variant, supplier_delay/supplier_recovery, change_permission,
+  restart_service, delay_cdc). Bound: `max_examples=5,
+  stateful_step_count=8` (~40 real HTTP/infra draws) — documented, with an
+  explicit "honest coverage caveat" in the module docstring: with 14
+  eligible rules this small a budget does NOT guarantee every rule fires
+  in a given run (verified: an earlier, even smaller bound completed in
+  3.5s with zero `propose_transfer` calls at all).
+- `test_stateful_finds_and_shrinks_disabled_idempotency_bug`
+  (`IdempotencyBugHuntMachine`) — the deliberately-injected-failure proof
+  docs/experiment/briefs/phase10a.md item 1 asks for.
+
+**Scope disclosure**: `change_policy` and `duplicate_cdc` are NOT
+live-mutating rules — see `tests/stateful/live_helpers.py`'s own
+docstring. `restart_service`/`delay_cdc` are budget-capped to fire at most
+once per machine instance (real docker/Kafka-Connect operations).
+`reschedule/cancel work order`: this repo's MES fake API has no live
+"cancel" endpoint at all, so the "cancel" half is covered by asserting the
+real invariant a terminal work order enforces (reschedule on an
+already-DONE/CANCELLED seeded work order always 409s), not a literal
+cancel call.
+
+### Differential design
+
+`receive_inventory`/`reserve_inventory`/`release_inventory` call the REAL
+`reference_model.transitions` functions of the same name (pure inventory
+arithmetic, no actor/policy/gate config needed) against a parallel
+`WorldState`, then compare against WMS's own `/inventory_lots` read for
+the same (part, warehouse) — genuine A-vs-B differential testing.
+`execute_transfer`'s inventory effect is mirrored using the exact same
+dataclass-replace formula `reference_model.transitions.execute_transfer`
+applies internally (verified by reading its source), rather than calling
+that function directly — it requires a fully-gated `Decision` living
+inside the same `WorldState`, which would mean replicating decision_
+service's own authz/policy/evidence config just to get an oracle for a
+value the real system computes independently. That gate-parity work was
+judged out of scope for this property (H5's inventory-arithmetic
+correctness, not "the gate reached the same verdict for the same made-up
+reason"); `propose_transfer`/`approve_transfer`'s own structural/
+immutability properties are checked as invariants instead.
+
+### Real defects found and fixed in this suite's OWN code, before either
+committed test ever ran clean
+
+Four, in order of discovery — each one caught by actually reading a
+result before trusting it, not by assuming the design was correct:
+
+1. **Desynced reference ledgers.** An early draft tracked `execute_
+   transfer`'s inventory effect in a SEPARATE dict from the one receive_
+   inventory/reserve_inventory/release_inventory maintained on `ref_
+   state.inventory` — the two never agreed with each other, so any
+   exercised differential check for execute_transfer would have compared
+   against a ledger that never accounted for prior receives. Fixed by
+   unifying both onto `ref_state.inventory`, the one place reference_model
+   itself would track it.
+2. **Retry-on-not-yet-executed.** `retry_execution`'s original precondition
+   was "status is APPROVED or terminal" — for an APPROVED-but-never-
+   executed decision, calling execute() IS a genuine first execution (a
+   real inventory change is expected), so asserting "before == after"
+   would have been actively WRONG whenever that case was hit. Fixed to
+   require an already-TERMINAL status.
+3. **Stale Bundle status.** Hypothesis `Bundle` values are immutable —
+   `execute_transfer`'s `decision` argument was whatever `propose_
+   transfer` originally pushed (often still "REQUIRES_APPROVAL"), even
+   after a LATER, separate `approve_transfer` rule call approved it live.
+   Without re-fetching, a decision that needed approval could never reach
+   `execute_transfer` at all — silently narrowing the rule to auto-
+   approved decisions only, a scope-narrowing that would never show up as
+   a failure, only as reduced coverage. Fixed by re-fetching the real
+   current decision via GET before checking status.
+4. **The retry never reached the thing being tested.** `services/
+   decision_service/execution.py::start_or_get_execution` calls Temporal's
+   `start_workflow` with the SAME deterministic workflow id every time;
+   for an already-completed workflow this raises `WorkflowAlreadyStarted
+   Error` and the code just returns the EXISTING handle — so calling
+   decision_service's own `/execute` a second time can STRUCTURALLY NEVER
+   reach WMS again, regardless of any bug in WMS's own idempotency check.
+   `retry_execution`'s original design (re-POST to `/decisions/{id}
+   /execute`) was therefore vacuously safe no matter what — exactly the
+   "green test that never runs the condition" trap this repo's own
+   conventions warn about. Confirmed by reading `start_or_get_execution`'s
+   source before trusting the design, not after a failed run. Fixed by
+   retrying at the layer that actually matters: a direct `POST /transfers`
+   to WMS with the EXACT SAME `action_execution_id` (`services/
+   decision_service/execution.py::action_execution_id_for`) and body the
+   real execution used — the same technique `tests/integration/
+   test_wms_idempotency.py` already proves this property with, now driven
+   from inside the stateful loop so Hypothesis can shrink a failing
+   sequence.
+
+### A fifth defect found by actually running it: WMS state doesn't reset
+between Hypothesis examples
+
+Hypothesis instantiates a FRESH machine (fresh `ref_state`, always
+starting at `on_hand=0`) per example, but WMS is a REAL external system
+whose state persists across examples and across separate pytest
+invocations of the same test. First real run: `assert 30 == 1` on
+`receive_inventory` — 30 was leftover from an EARLIER example's own
+receive calls, not from this example at all. Fixed by resetting the
+tracked lots to `on_hand=0/reserved=0` at the top of every machine
+instance. A SIXTH, related defect surfaced next: with the source
+warehouse now genuinely starting at 0 every time, EVERY `propose_
+transfer` across an 80-step diagnostic run came back `DENIED_POLICY`
+(safety-stock `remaining < safety_stock` fails immediately when available
+stock is 0) — so `execute_transfer`/`retry_execution`, this suite's most
+important rules, never ran at all, a silent vacuous pass no assertion
+would ever have caught. Fixed by seeding the source warehouse with a
+large (`SEED_ON_HAND = 100_000`), CDC-CONVERGED starting balance in
+`__init__` (`tests/integration/decision_helpers.py::set_inventory_and_wait`,
+same convergence-polling helper every other real-stack test in this repo
+already uses) — comfortably above `default_safety_stock` (10) regardless
+of timing.
+
+### Live proof the injected bug is genuinely found and shrunk
+
+`IdempotencyBugHuntMachine` collapses propose->approve->execute->WMS-level-
+retry into ONE rule (not 4 separate Bundle-drawn rules like the pattern
+above) — a Bundle-based version of THIS class was tried first too and
+proved unreliable even at 15 examples x 8 steps (120 draws): `retry_
+execution` only fires usefully when it happens to re-draw a bundle entry
+some EARLIER `execute_transfer` draw already made terminal, and with ~13
+proposals accumulating per example against 1-4 actual executions, that
+compound-probability draw never landed once in 120 tries. Collapsing to
+one rule makes every step a genuine attempt at the exact scenario.
+
+Live result (idempotency check disabled via `services/wms/app.py`'s real
+`POST /_test/idempotency-check`, the actual running WMS service): Hypothesis
+raised a real `AssertionError` — `('WMS-level retry mutated source
+inventory (H4 violation)', {..., 'on_hand': 99999, ...}, {..., 'on_hand':
+99998, ...})` — and shrunk to a ONE-STEP minimal reproduction:
+`state.propose_approve_execute_and_retry(qty=1)`. **A seventh defect, in
+the TEST's own assertion, not the system**: Hypothesis 6.x (this repo:
+6.168.1, Python 3.14) attaches the shrunk reproduction as a PEP 678
+exception NOTE ("Failing test case: ...") rather than the plain-`@given`
+reporter's "Falsifying example:" stdout text this test originally checked
+for — the first version of this test failed its own "did it shrink" check
+even though Hypothesis genuinely had (the trace was on the exception, not
+in stdout). Fixed by checking both stdout and `exc.__notes__`, and by the
+real header text ("Failing test case:") rather than the wrong literal
+string. Final clean run: `1 passed in 5.74s`, idempotency check confirmed
+restored to enabled afterward (the test's own `finally` block, verified
+independently via `GET /_test/faults`).
+
+### Files touched (item 1)
+
+- `tests/stateful/__init__.py`, `conftest.py` (fixture re-export, same
+  pattern as tests/faults, tests/agent, tests/replay), `live_helpers.py`
+  (HTTP/infra wrappers), `test_live_differential.py` (both machines + both
+  test entry points)
+- `contracts/manifests/openfga_model_ids.json` — the `v2` entry now
+  records the model id `_deploy_authz_v2_forced()` (item 2) actually left
+  as "latest" on the live store, reconciling this tracking file with the
+  real recovered state rather than leaving it silently stale.
