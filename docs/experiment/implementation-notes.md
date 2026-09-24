@@ -3106,3 +3106,183 @@ replay `PASS_FAIL_CLOSED_VERIFIED` directly-verified by decision id.
 
 The stack's final state: `ontology=v3, shapes=v3, actions=v3, policies=v2,
 authorization=v2, identity=v1, projections=v2, reconciliation=v1`.
+
+## Phase 8 item 1 — the baseline (Variant A: conventional relational implementation)
+
+`services/baseline/` — a genuinely good, non-strawman conventional
+implementation of the same governed-decision service (spec 10's "Variant
+A"): its own `baseline` Postgres database (already provisioned since
+Phase 2 — `db/init/00_init.sh`), its own CDC consumer (`services/baseline/consumer.py`,
+Kafka consumer group `oo-baseline`, the SAME Debezium topics as the
+ontology variant's `oo-ingestion` group, fully independent), and its own
+FastAPI service (`services/baseline/app.py`, host port 15411, docker
+service `baseline_service`) with the same propose/get/approve/execute/
+executions/outcomes/replay API surface. `baseline_ingestion` and
+`baseline_action_worker` (its own Temporal task queue
+`oo-baseline-action-execution`) round out the docker-compose services.
+
+### The central fairness decision: reuse, not reimplementation, of everything that ISN'T storage architecture
+
+Spec 10's fairness rules (1: "same business semantics", 4: "same
+authorization/policy where applicable") are honored by literal code reuse
+wherever a module has zero RDF/SPARQL dependency — never a second,
+hand-written implementation that could silently drift from the first and
+manufacture a spurious A/B difference:
+
+- **`services/decision_service/{action_types,authz,policy}.py`** — imported
+  UNCHANGED. `action_types.py` just parses YAML; `authz.py`/`policy.py` are
+  plain HTTP clients for OpenFGA/OPA. Both variants' authorization/policy
+  GATES are the literal same code and the literal same live OpenFGA/OPA
+  servers — this is as fair as fairness rule 4 can get.
+- **`services/decision_service/evidence.py`**'s `gather_expedite_purchase_order_evidence`/
+  `gather_reschedule_work_order_evidence` — pure ERP/MES HTTP reads, zero
+  RDF dependency, reused unchanged. Those two ActionTypes' evidence
+  gathering is IDENTICAL code in both variants.
+- **`services/projection_builder/compute.py`**'s shortage/candidate/
+  current-inventory pure functions (dicts in, dicts out) — reused unchanged
+  by `services/baseline/evidence.py`, fed from this variant's own
+  relational tables instead of SPARQL results. Deliberate: isolates the A/B
+  comparison to the storage/provenance architecture question (H11), not a
+  second "whose shortage formula is right" question.
+- **`services/identity_resolver.IdentityResolver`** — reused unchanged
+  (`services/baseline/identity.py`), same `contracts/identity/v1/mapping_rules.yaml`.
+- **`services/action_worker/{outcome_eval,workflows}.py`** — `outcome_eval.py`
+  is pure (no RDF dependency); `workflows.py`'s `ActionExecutionWorkflow`
+  references its three activities by NAME STRING only (Temporal's own
+  workflow-sandbox constraint already forced this), so
+  `services/baseline/worker.py` registers the SAME workflow CLASS on its
+  own task queue with `services/baseline/activities.BaselineActionActivities`'s
+  activities — literally the same durable-execution workflow code for both
+  variants (fairness rule 5).
+- **`services/decision_service/schemas.py`** (`ProposeRequest`/
+  `ApproveRequest`, pure Pydantic) and **`services/decision_service/hashing.py`**/
+  **`manifest.py`**'s `content_addressed()`/`_sha256_of_*` — reused
+  unchanged or thinly wrapped (`services/baseline/hashing.py`,
+  `services/baseline/manifest.py`).
+
+What's genuinely variant-specific: the decision RECORD itself (a flat
+Postgres row set — `decisions`/`gate_results`/`action_executions`/
+`outcomes`, no SHACL, no PROV graph), evidence STORAGE (plain relational
+tables fed by CDC instead of RDF4J + a separately-polled hot-projection
+layer), and `services/baseline/consumer.py`/`replay.py`.
+
+### The "well-designed relational audit table"
+
+`gate_results` — one row per gate EVALUATION, normalized out of
+`decisions` (never a JSONB blob dump): `gate_type IN ('authorization',
+'policy')`, `outcome`, `reasons`/`obligations`/`input_json`, and — this
+matters for replay parity below — `authorization_model_id`/
+`tuples_snapshot` for the authorization gate. `decisions.status` is
+constrained by a real Postgres `CHECK (status IN (...))`, the relational
+analogue of `decision-shape.ttl`'s `sh:in` enumeration (spec 10: "normal
+schema constraints").
+
+### Freshness: genuinely simpler, not merely different
+
+The ontology variant needs TWO watermarks (ingestion's per-source
+watermark AND the hot-projection's own `computed_at`) because a separate
+poll/rebuild layer sits between CDC and the read path (Phase 5's own fix
+section documents the real bug that caused: a projection stale for
+seconds even on a caught-up pipeline). This variant's consumer writes
+STRAIGHT into the queried tables — no second layer to go stale
+independently — so `ingestion_watermarks` (one row per source system,
+touched by every real CDC event AND every Debezium heartbeat) is the only
+freshness signal `services/baseline/evidence.py` needs. This is a REAL
+architectural simplification worth reporting under "complexity tax", not
+an oversight — see the module's own docstring.
+
+### Honest gaps (spec 10 item 1: "record why" where parity isn't reached)
+
+1. **No SHACL-equivalent structural validator.** `services/baseline/propose_flow.py`'s
+   `_finalize` has no `INVALID_CONFORMANCE` path — the CHECK constraint
+   above enforces "status is one of N literal values", but there is no
+   general-purpose "arbitrary state-transition shape is valid" gate the
+   way SHACL is. Any future status-transition rule needs its own
+   hand-written check; SHACL would enforce a NEW shape declaratively.
+2. **Evidence integrity rests on one fewer independent layer.** The
+   ontology variant's evidence hash is checked against a SEPARATE
+   RDF4J-stored `EvidenceSnapshot` resource — a second artifact that has
+   to independently agree. This variant's `evidence_snapshot` lives in the
+   SAME `decisions` row as everything else; "the hash still matches" here
+   proves the JSONB column wasn't tampered with since INSERT, but doesn't
+   benefit from a second artifact's independent agreement.
+3. **Authorization replay parity is NOT a gap** — `gate_results` captures
+   the same `authorization_model_id`/`tuples_snapshot` fields
+   `authz.check()` already returns for free (Phase 7b/ADR-0004's
+   mechanism), so `services/baseline/replay.py` achieves the identical
+   "live" re-Check-against-historical-snapshot mode. This was a deliberate
+   fix during Phase 8 build (the first cut omitted it, which would have
+   made the comparison unfair for a reason that had nothing to do with
+   architecture — see fairness rule 6, "no ontology-specific question
+   should be counted as a baseline failure unless it represents a real
+   required capability").
+4. **`PASS_FAIL_CLOSED_VERIFIED` (Phase 8 step 0's replay class) is
+   implemented identically** in `services/baseline/replay.py` — a decision
+   whose gate outcome was itself UNAVAILABLE is verified fail-closed
+   (status, zero linked effects, evidence/action hash integrity) rather
+   than re-deriving a live answer to compare against a resolved outage.
+
+### Verified live (end to end, against the real stack — synthetic data only)
+
+- `propose()` for all three gate paths: `APPROVED` (auto), `DENIED_AUTHORIZATION`
+  (real unauthorized actor), `INSUFFICIENT_EVIDENCE` (nonexistent part).
+- `execute()` -> real WMS `POST /transfers` -> CDC-observed via this
+  variant's OWN consumer -> `OBSERVED_SUCCESS`, correct `expected_effect`/
+  `observed_effect` in the `outcomes` row.
+- `POST /replay/{id}`: `PASS` with `evidence_hash_match`/`gate_result_match`/
+  `action_input_match` all true and `authz_replay_mode: "live"`.
+
+### Two real bugs found building this (both fixed)
+
+1. **`services/baseline/consumer.py`**: `source_version` was fed
+   `source.get("lsn")` (Postgres's raw WAL log sequence number — a
+   monotonically growing value that exceeds a 32-bit `INT` range) instead
+   of the row's own small `version` column. Caused `psycopg.errors.NumericValueOutOfRange`
+   ("integer out of range") on a real `inventory_lots` update, which wedged
+   the WHOLE consumer (the retry-without-committing design, matching the
+   ontology variant's own `RDF4JUnavailable` retry pattern, means one
+   poisoned-by-a-type-mismatch message blocks every OTHER topic behind it
+   too — same failure MODE as the ontology variant, this was a data-type
+   bug in this variant's own new code, not an architectural asymmetry).
+   Fixed: `source_version` is now the row's own `version` field.
+2. **`services/baseline/manifest.py`** initially omitted `actions` from
+   the built manifest (`propose_flow.py` needs `manifest["actions"][name]["sha256"]`
+   to pin `action_pinned_sha256`) — `KeyError` on the very first live
+   `propose()` call. Fixed by reusing `action_types.action_type_paths()`,
+   same as `services/decision_service/manifest.py`.
+
+### Operational note: consumer-group rebalance after a container restart
+
+Restarting `baseline_ingestion` (or any dependent service, which — an
+observed docker-compose behavior, not something this phase's changes
+caused — sometimes cascades a restart onto `baseline_ingestion` too even
+when it isn't the `--build` target) costs roughly 20-50s before the Kafka
+consumer group `oo-baseline` completes a rebalance and resumes consuming
+(the previous member's session has to time out first). Evidence freshness
+(`max_evidence_freshness_s: 5`) correctly reports `STALE` during that
+window — this is the SAME class of "component briefly unavailable ->
+explicit unavailable state, never fabricated certainty" behavior
+acceptance criterion A.11 requires, just triggered operationally rather
+than by a fault-injection test. Worth factoring into `make ab`'s own
+ingestion-lag measurement (item 2/3): always wait for both variants'
+watermarks to stabilize before timing anything.
+
+### A process note, not a code note: canonical-fixture contention
+
+This session ran alongside another concurrent agent also active in the
+same worktree/stack (a fact of this particular orchestration run, not a
+Phase 8 design decision). Early interactive smoke-testing of
+`services/baseline/app.py` used the canonical fixture (PX-17/SKU-88429/
+WH-A/WH-B/WO-42) directly — a violation of this repo's own standing rule
+("Use SYNTHETIC SKUs/warehouses in any new test or probe... test_canonical_scenario
+asserts its absolute state") — and briefly desynced `tests/integration/test_canonical_scenario.py`'s
+expected absolute state. Restored via WMS's `POST /_test/inventory/set`
+(on_hand=20 @ WH-A, 140 @ WH-B) and by deleting the stale
+`ae-canonical-transfer-60` idempotency row so the canonical test's own
+60-unit transfer executes for real on its next run; `make test` reconfirmed
+178/178 passing afterward. The OTHER agent's own concurrent activity
+against the same fixture (visible as `AX-D-*`-prefixed WMS transfers
+between the two restoration attempts) is outside this session's control —
+documented here so the next phase knows this happened and why. Every
+subsequent probe in this phase (item 2 onward) uses synthetic identifiers
+exclusively, per the standing rule.

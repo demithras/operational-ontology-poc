@@ -545,6 +545,119 @@ services:
       timeout: 5s
       retries: 60
 
+  # --- Phase 8: A/B baseline (Variant A, docs/experiment/spec/10_ab_experiment.md) ---
+  # A conventional relational implementation — its OWN CDC consumer
+  # (separate Kafka consumer group, SAME topics), its OWN `baseline`
+  # Postgres database (db/init/00_init.sh), reusing the SAME OpenFGA/OPA/
+  # Temporal/WMS/ERP/MES as the ontology variant (fairness rules 3-5).
+
+  baseline_ingestion:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["python3", "-m", "services.baseline.consumer"]
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SERVICE_DB_HOST: postgres
+      SERVICE_DB_PORT: "5432"
+      SERVICE_DB_NAME: ${BASELINE_DB_NAME}
+      SERVICE_DB_USER: ${BASELINE_DB_USER}
+      SERVICE_DB_PASSWORD: ${BASELINE_DB_PASSWORD}
+      OO_BASELINE_INGESTION_HEALTH_PORT: "8090"
+    ports:
+      - "${BASELINE_INGESTION_HEALTH_PORT}:8090"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      connect:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8090/health', timeout=2)"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+
+  baseline_service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["uvicorn", "services.baseline.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      SERVICE_DB_HOST: postgres
+      SERVICE_DB_PORT: "5432"
+      SERVICE_DB_NAME: ${BASELINE_DB_NAME}
+      SERVICE_DB_USER: ${BASELINE_DB_USER}
+      SERVICE_DB_PASSWORD: ${BASELINE_DB_PASSWORD}
+      OPENFGA_API_URL: http://openfga:8080
+      OPA_BASE_URL: http://opa:8181
+      WMS_BASE_URL: http://wms:8000
+      ERP_BASE_URL: http://erp:8000
+      MES_BASE_URL: http://mes:8000
+      BASELINE_INGESTION_HEALTH_URL: http://baseline_ingestion:8090
+      TEMPORAL_ADDRESS: temporal:7233
+      OO_TEST_MODE: ${OO_TEST_MODE}
+    ports:
+      - "${BASELINE_SERVICE_HTTP_PORT}:8000"
+    # Same read-only bind mount as decision_service — action_types.py/
+    # authz.py/policy.py (all REUSED unmodified) read contracts/ live.
+    volumes:
+      - ./contracts:/app/contracts:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      baseline_ingestion:
+        condition: service_healthy
+      wms:
+        condition: service_healthy
+      erp:
+        condition: service_healthy
+      mes:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+
+  baseline_action_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["python3", "-m", "services.baseline.worker"]
+    environment:
+      SERVICE_DB_HOST: postgres
+      SERVICE_DB_PORT: "5432"
+      SERVICE_DB_NAME: ${BASELINE_DB_NAME}
+      SERVICE_DB_USER: ${BASELINE_DB_USER}
+      SERVICE_DB_PASSWORD: ${BASELINE_DB_PASSWORD}
+      TEMPORAL_ADDRESS: temporal:7233
+      WMS_BASE_URL: http://wms:8000
+      ERP_BASE_URL: http://erp:8000
+      MES_BASE_URL: http://mes:8000
+      OO_BASELINE_ACTION_WORKER_HEALTH_PORT: "8094"
+    ports:
+      - "${BASELINE_ACTION_WORKER_HEALTH_PORT}:8094"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+      wms:
+        condition: service_healthy
+      erp:
+        condition: service_healthy
+      mes:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8094/health', timeout=2)"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+
 volumes:
   oo-poc-pgdata:
   oo-poc-rdf4j-data:
