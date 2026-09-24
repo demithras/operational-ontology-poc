@@ -290,7 +290,32 @@ def outcomes_get(outcome_id: str):
 
 @app.post("/replay/{decision_id}")
 def replay(decision_id: str):
-    raise HTTPException(status_code=501, detail="not implemented yet — Phase 7 (contract versioning / replay)")
+    from services.decision_service import replay as replay_mod
+
+    with get_conn() as conn:
+        try:
+            result = replay_mod.replay_decision(
+                decision_id, conn, _state["rdf4j_client"], _state["config"].openfga_api_url,
+            )
+        except replay_mod.DecisionNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except replay_mod.ReplayIntegrityError as exc:
+            # F29: "old policy deleted -> replay fails loudly" — a real
+            # error status, never a silently-degraded 200.
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return result.as_dict()
+
+
+@app.post("/reevaluate/{decision_id}")
+def reevaluate(decision_id: str):
+    from services.decision_service import replay as replay_mod
+
+    with get_conn() as conn:
+        try:
+            result = replay_mod.reevaluate_under_current(decision_id, conn, _state["config"].opa_base_url)
+        except replay_mod.DecisionNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return result
 
 
 if TEST_MODE:

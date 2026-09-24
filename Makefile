@@ -227,9 +227,13 @@ historical-corpus: ensure-env
 test-faults: ensure-env
 	$(VENV_PY) -m pytest tests/faults -q
 
-test-replay:
-	@echo "not implemented yet — Phase 7 (see docs/experiment/spec/12_implementation_plan.md)"
-	@exit 2
+## docs/experiment/spec/07_versioning_and_replay.md "replay(all V1
+# decisions); replay(all V2 decisions)" -- 100% PASS required, run under
+# whatever contract version is CURRENTLY deployed (this experiment leaves
+# the stack at V3 -- see experiments/exp-000/results/historical-corpus.json
+# for the exact decision id lists this replays).
+test-replay: ensure-env
+	$(VENV_PY) -m pytest tests/replay -q
 
 ## docs/experiment/spec/08_test_strategy.md "Performance methodology" /
 # docs/experiment/spec/01_hypotheses.md H6 (partial: hot-projection read
@@ -267,6 +271,7 @@ report:
 	@echo "not implemented yet — Phase 10 (see docs/experiment/spec/12_implementation_plan.md)"
 	@exit 2
 
-replay:
-	@echo "not implemented yet — Phase 7 (see docs/experiment/spec/12_implementation_plan.md)"
-	@exit 2
+## docs/experiment/spec/07_versioning_and_replay.md "Replay output" —
+# `make replay DECISION_ID=<id>`.
+replay: ensure-env
+	$(VENV_PY) scripts/replay_cli.py $(DECISION_ID)

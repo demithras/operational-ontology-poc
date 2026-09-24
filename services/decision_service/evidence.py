@@ -94,20 +94,28 @@ class EvidenceResult:
         return self.route_protection_status == "PROTECTED"
 
 
-def _load_safety_stock(part: str, warehouse: str, action_version_dir: str = "v1") -> int:
-    """Phase 7 V2 'changed safety-stock policy': V2+ reads
-    contracts/policies/v2/data.json's `safety_stock_v2`/`default_safety_stock_v2`
-    keys instead of v1's `safety_stock`/`default_safety_stock` — a
-    genuinely different (higher) number for the same (part, warehouse), see
-    that file's header comment. `action_version_dir` is the ActionType's OWN
-    contract directory (services/decision_service/action_types.py's
-    `version_dir`), never the global deployed_version pointer directly —
-    this function must use whatever version the CALLING action was actually
-    loaded from, so a historical V1 evaluation (replay) never accidentally
-    reads V2 numbers."""
-    key = "safety_stock" if action_version_dir == "v1" else "safety_stock_v2"
-    default_key = "default_safety_stock" if action_version_dir == "v1" else "default_safety_stock_v2"
-    data_path = POLICIES_ROOT / action_version_dir / "data.json"
+def _load_safety_stock(part: str, warehouse: str, policy_package: str) -> int:
+    """Phase 7 V2 'changed safety-stock policy': the V2 OPA package
+    (factory.inventory.transfer_v2) reads contracts/policies/v2/data.json's
+    `safety_stock_v2`/`default_safety_stock_v2` keys instead of v1's
+    `safety_stock`/`default_safety_stock` — a genuinely different (higher)
+    number for the same (part, warehouse), see that file's header comment.
+
+    Keyed off `policy_package` (contracts/actions/<dir>/transfer_inventory.yaml's
+    `policy.package` field), NOT the ActionType's own contract directory
+    (`version_dir`) — those are DIFFERENT contract kinds that evolve
+    independently (found empirically: contracts/actions/v3/transfer_inventory.yaml
+    exists but contracts/policies/v3/ never does, because V3 is purely an
+    authorization-model change; `action.policy_package` still correctly
+    says "factory.inventory.transfer_v2", so this must follow THAT, not
+    action.version_dir). Only ever called at LIVE propose() time — replay
+    never re-derives evidence, it re-runs the STORED policy input_json
+    against the archived bundle (services/decision_service/replay.py), so
+    there is no historical-correctness concern here."""
+    key = "safety_stock" if policy_package == "factory.inventory.transfer" else "safety_stock_v2"
+    default_key = "default_safety_stock" if policy_package == "factory.inventory.transfer" else "default_safety_stock_v2"
+    data_version_dir = "v1" if policy_package == "factory.inventory.transfer" else "v2"
+    data_path = POLICIES_ROOT / data_version_dir / "data.json"
     data = json.loads(data_path.read_text())
     per_part = data.get(key, {}).get(part, {})
     if warehouse in per_part:
@@ -317,7 +325,7 @@ def gather_transfer_inventory_evidence(
                 observed_ats.append(dest_row["as_of"])
 
     if "safety_stock" in action.closure_required:
-        result.facts_used["safety_stock"] = _load_safety_stock(part, source_warehouse, action.version_dir)
+        result.facts_used["safety_stock"] = _load_safety_stock(part, source_warehouse, action.policy_package)
 
     # Phase 7 V2 'new required evidence field': reservation_ok (V2+ only —
     # contracts/actions/v2/transfer_inventory.yaml's closure.required).
