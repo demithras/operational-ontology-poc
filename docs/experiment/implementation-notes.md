@@ -2657,3 +2657,74 @@ scope, untouched).
   returning unexpected `UNAVAILABLE`/`recorded_only`, re-run
   `services/decision_service/bootstrap_openfga.py` then
   `migrations/v2_to_v3/migrate_authz.py` before assuming a code bug.
+
+### Post-hoc fix: OpenFGA moved to a persistent (postgres) datastore
+
+Found the same day, via the orchestrator's own investigation: this
+phase's `make test` runs were intermittently failing a PRE-EXISTING
+Phase 5 test (`tests/integration/test_forensic_queries.py::test_forensic_query_5_traces_delegation_and_approval`,
+a real approval check 403ing instead of 200ing) — not from any external
+process, but from this repo's OWN `tests/integration/test_decision_service_dependency_outage.py`
+(F22-F26), which does real `docker compose stop/start` against
+`rdf4j`/`openfga`/`opa`/`projection_builder` as part of `make test`'s own
+`tests/integration` run. F23 restarts the real `openfga` container; with
+the `memory` datastore engine that wiped the store, and F23's own
+rebootstrap-on-restart helper only re-ran `services/decision_service/bootstrap_openfga.py`
+(the V1 model) — never `migrations/v2_to_v3/migrate_authz.py`'s V2 model
+— so any V3-era approval check made by a LATER test in the same session
+403'd. Confirmed mechanistically (grepping the outage test file), not
+just asserted.
+
+**Fixed properly, not papered over**: OpenFGA now runs on the `postgres`
+datastore engine — its own database (`OPENFGA_DB_NAME=openfga`,
+`db/init/00_init.sh`), migrated via a new one-shot `openfga-migrate`
+compose service (`openfga migrate --datastore-engine postgres`) that
+`openfga` depends on via `service_completed_successfully`. A container
+restart/recreation no longer loses the store, its models, or its tuples —
+`tests/faults/test_openfga_persistence.py` proves this directly (real
+restart, IDENTICAL store id and latest model id before/after, an existing
+approval check still 200s, a real V1 corpus decision still replays PASS).
+`services/decision_service/bootstrap_openfga.py::_write_model` also became
+content-aware idempotent (normalizes OpenFGA's fully-expanded echoed model
+form against the CLI transform's sparse one, and checks every recent
+model the store has — not just the single latest, since this store
+alternates between v1/v2 content across `bootstrap_openfga.py`'s and
+`migrate_authz.py`'s own re-runs) so repeated `make up` invocations stop
+churning `contracts/manifests/openfga_model_ids.json` for unchanged
+content. F23's outage-test finally block now also re-runs `migrate_authz.py`
+and asserts REAL convergence (a live `Check` resolving `ALLOWED`, not just
+an HTTP 200 health response); F24 (opa) gained the equivalent real-policy-
+evaluation convergence check. See
+`docs/adr/0004-openfga-historical-model-and-tuple-snapshot.md`'s updated
+"Consequence" section for the full incident.
+
+Applying this to the ALREADY-RUNNING stack (rather than a data-losing
+`make reset`) required recreating the shared `postgres` container itself
+(to pick up the new `OPENFGA_DB_*` env vars) — verified all 5,000+
+decisions and the full RDF4J graph survived via the named volume — and
+then a plain `docker compose restart` of every OTHER service holding a
+Postgres connection pool (`wms erp mes decision_service action_worker
+projection_builder ingestion reconciliation`), a direct and expected
+consequence of recreating a shared Postgres container (every existing
+pooled connection is force-closed with `AdminShutdown`), not a bug.
+
+**Historical corpus decisions from BEFORE this fix** (the whole 232-live +
+3,048-bulk corpus) still have their `openfga_authorization_model_id`
+pointing at the pre-fix, now-defunct in-memory store — their authorization
+replay correctly and permanently uses the documented `"recorded_only"`
+fallback (never `"live"`), exactly as ADR 0004 describes; `make test-replay`
+still reports 100% PASS regardless, since `evidence_hash_match`/
+`action_input_match`/the POLICY gate replay (the majority of what "PASS"
+certifies) are entirely unaffected by this.
+
+### Final acceptance run (this session, after the fix above)
+
+```
+make test (run 1): tests/model 21 passed, tests/contracts 67 passed
+  (+ compat_check OK), tests/component 19 passed, tests/integration 71 passed
+make test (run 2, identical): 21 + 67 + 19 + 71 passed, compat_check OK
+make test-contracts (standalone): 67 passed, compat_check OK
+make test-replay: 8 passed
+make test-faults: 25 passed in 269.10s (0:04:29) — includes the new
+  tests/faults/test_openfga_persistence.py
+```
