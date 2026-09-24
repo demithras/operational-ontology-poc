@@ -1,5 +1,5 @@
 .PHONY: up down reset seed test test-unit test-contracts test-component test-integration \
-        test-stateful test-destructive test-determinism test-faults test-replay bench \
+        test-stateful test-destructive test-determinism test-faults test-replay test-agent bench \
         bench-phase5 bench-phase6 experiment report replay ensure-env wait-healthy wait-converged \
         wait-connectors rebuild-projections deploy-v2 deploy-v3 deploy-v3-gates reevaluate historical-corpus \
         ab
@@ -249,6 +249,17 @@ historical-corpus: ensure-env
 # test-destructive (docs/experiment/briefs/phase4fix.md item 3).
 test-faults: ensure-env
 	$(VENV_PY) -m pytest tests/faults -q
+
+## Phase 9 (docs/experiment/spec/06's "MCP layer" + spec 09's F04/F30-F34
+# adversarial scenarios, H9): a deterministic scripted "compromised
+# planner" drives the REAL services/mcp server (in-process, same
+# build_server() a container runs) and, for the one scenario with no MCP
+# tool at all (F33 approval), decision_service's raw HTTP API directly.
+# Every scenario asserts zero forbidden external WMS effects, read through
+# the real WMS API — never the decision record's own self-report. Requires
+# the full stack (`make up`), including decision_service/openfga.
+test-agent: ensure-env
+	$(VENV_PY) -m pytest tests/agent -q
 
 ## docs/experiment/spec/07_versioning_and_replay.md "replay(all V1
 # decisions); replay(all V2 decisions)" -- 100% PASS required, run under
