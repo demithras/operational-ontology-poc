@@ -7,6 +7,7 @@ scraping logs.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import httpx
@@ -62,9 +63,15 @@ def test_all_five_forensic_queries_answer_for_a_real_decision(
     q4 = _run_query(rdf4j_client, "q4_which_policy_and_authz_versions.rq", decision_id)
     assert len(q4) == 1
     # Content-addressed format (spec 05 "Policy references": "records a
-    # content-addressed ... version: inventory-policy@sha256:...").
-    assert q4[0]["policyBundleVersion"].startswith("v1@sha256:")
-    assert q4[0]["authorizationModelVersion"].startswith("v1@sha256:")
+    # content-addressed ... version: inventory-policy@sha256:..."). Phase 7:
+    # deliberately NOT hardcoded to "v1@sha256:" — this test runs against
+    # whatever contracts/manifests/deployed_version.json currently has live
+    # (v1 through Phase 6b; v2/v3 once migrations/v1_to_v2 and v2_to_v3 have
+    # been applied, which this repo's own `make test` run may now be
+    # exercising), so it asserts the FORM (a real "<version>@sha256:<64 hex
+    # chars>" tag), not a specific frozen version string.
+    assert re.match(r"^v\d+@sha256:[0-9a-f]{64}$", q4[0]["policyBundleVersion"]), q4[0]["policyBundleVersion"]
+    assert re.match(r"^v\d+@sha256:[0-9a-f]{64}$", q4[0]["authorizationModelVersion"]), q4[0]["authorizationModelVersion"]
     assert q4[0]["checkRelation"] == "can_transfer_inventory"
 
     q5 = _run_query(rdf4j_client, "q5_who_proposed_approved_executed.rq", decision_id)

@@ -1,4 +1,14 @@
-# contracts/projections/v1/work_order_risk.yaml
+# contracts/projections/v2/work_order_risk.yaml
+#
+# Phase 7 (docs/experiment/spec/07_versioning_and_replay.md): the
+# `inventory_available` query below ALSO required the retired
+# fac:availableQuantity triple as a hard (non-OPTIONAL) part of its graph
+# pattern — found empirically via migrations/v1_to_v2/deploy.py's own
+# rebuild-hash check going from MATCH (current_inventory) to MISMATCH here
+# once fac:availableQuantity triples were deleted (work_order_risk rows
+# silently lost their `available` figure -> shortage/at_risk recomputed
+# wrong -> different hash). Same OPTIONAL + COALESCE(onHand-reserved) fix
+# as contracts/projections/v2/current_inventory.yaml, applied here too.
 #
 # docs/experiment/spec/03_domain_scenario.md "Derived operational fact" /
 # docs/experiment/spec/01_hypotheses.md H6. Per open work order: shortage,
@@ -26,7 +36,7 @@
 # test in tests/integration/test_projection_differential.py is a genuine
 # two-implementation comparison, not the same function compared to itself.
 name: work_order_risk
-version: "1"
+version: "2"
 description: >
   shortage = max(0, sum(required - available_at_wo_warehouse -
   incoming_before_planned_start)) per part in the work order's
@@ -70,7 +80,10 @@ queries:
         ?lot a fac:InventoryLot ;
              fac:part ?partUri ;
              fac:warehouse ?whUri ;
-             fac:availableQuantity ?available .
+             fac:onHand ?onHand ;
+             fac:reserved ?reserved .
+        OPTIONAL { ?lot fac:availableQuantity ?rawAvailable . }
+        BIND(COALESCE(?rawAvailable, (?onHand - ?reserved)) AS ?available)
       }
     }
   incoming_purchase_lines: |

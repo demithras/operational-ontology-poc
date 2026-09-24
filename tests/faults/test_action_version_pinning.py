@@ -35,7 +35,15 @@ from tests.faults.helpers import approve_if_needed, propose_transfer, start_exec
 from tests.integration.decision_helpers import set_inventory_and_wait
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-ACTION_YAML = REPO_ROOT / "contracts" / "actions" / "v1" / "transfer_inventory.yaml"
+# Phase 7: NOT hardcoded to v1 — this stack's deployed_version.json may
+# have moved on to v2/v3 by the time this runs (migrations/v1_to_v2/,
+# migrations/v2_to_v3/); a fresh decision proposed here pins whatever
+# contracts/actions/<current>/transfer_inventory.yaml is CURRENTLY live,
+# and this test must mutate that SAME file to stay a valid F34 repro.
+from services.common.contract_versions import deployed_version  # noqa: E402
+
+ACTION_VERSION_DIR = deployed_version()["actions"]
+ACTION_YAML = REPO_ROOT / "contracts" / "actions" / ACTION_VERSION_DIR / "transfer_inventory.yaml"
 
 
 def test_f34_action_definition_changed_post_approval_invalidates_never_executes(
@@ -45,6 +53,11 @@ def test_f34_action_definition_changed_post_approval_invalidates_never_executes(
     decision = propose_transfer(decision_client, "planner-1", "WH-B", "WH-A", part, 20)
     decision = approve_if_needed(decision_client, decision)
     assert decision["status"] == "APPROVED", decision
+    assert decision["action_version_dir"] == ACTION_VERSION_DIR, (
+        "this test computed its expected pin from a DIFFERENT actions/ directory "
+        "than decision_service actually pinned — deployed_version.json moved between "
+        "module import and this request"
+    )
 
     pinned_sha256 = hashlib.sha256(ACTION_YAML.read_bytes()).hexdigest()
     assert decision["action_pinned_sha256"] == pinned_sha256, (

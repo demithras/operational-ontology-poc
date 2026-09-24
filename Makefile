@@ -1,7 +1,7 @@
 .PHONY: up down reset seed test test-unit test-contracts test-component test-integration \
         test-stateful test-destructive test-determinism test-faults test-replay bench \
         bench-phase5 bench-phase6 experiment report replay ensure-env wait-healthy wait-converged \
-        wait-connectors rebuild-projections
+        wait-connectors rebuild-projections deploy-v2 deploy-v3 reevaluate historical-corpus
 
 SHELL := /usr/bin/env bash
 VENV_PY := .venv/bin/python
@@ -155,8 +155,15 @@ test: test-unit test-contracts
 # test_openfga_model.py / test_opa_policies.py shell out to `docker run`,
 # same pattern as the rest of this file — needs DOCKER_CONFIG, see
 # docs/experiment/briefs/common.md).
+## docs/experiment/spec/07_versioning_and_replay.md "Compatibility CI" item
+# 6: a breaking contract change without migration coverage fails this
+# target (F28) — run directly (not just via the pytest wrapper in
+# tests/contracts/test_compat_check.py) so `make test-contracts` fails loud
+# and immediately on the real repo tree, matching this phase's brief
+# ("scripts/compat_check.py, run by make test-contracts").
 test-contracts:
 	$(VENV_PY) -m pytest tests/contracts -q
+	$(VENV_PY) scripts/compat_check.py
 
 ## docs/experiment/spec/08_test_strategy.md "Level 2 — Component tests".
 # Currently: services/identity_resolver (exact/quarantine/metamorphic
@@ -173,6 +180,35 @@ test-component:
 # services/projection_builder/rebuild.py).
 rebuild-projections: ensure-env
 	$(VENV_PY) -m services.projection_builder.rebuild
+
+## docs/experiment/spec/07_versioning_and_replay.md — deploy the V1 -> V2
+# contract evolution against the LIVE running stack: migrate RDF, flip
+# contracts/manifests/deployed_version.json, force a projection rebuild.
+# Requires `make up` (+ ideally `make seed`) already done. Run ONCE, after
+# whatever V1 historical corpus you want preserved has already been
+# generated (seed/generators/historical_corpus.py) — it is not
+# idempotent-safe to re-run against a stack already at v2+.
+deploy-v2: ensure-env
+	$(VENV_PY) migrations/v1_to_v2/deploy.py
+
+## Same shape, V2 -> V3 (authorization model evolution — see
+# migrations/v2_to_v3/deploy.py).
+deploy-v3: ensure-env
+	$(VENV_PY) migrations/v2_to_v3/deploy.py
+
+## docs/experiment/spec/07_versioning_and_replay.md "Counterfactual replay":
+# `make reevaluate DECISION_ID=<id>` — what would TODAY's deployed rules
+# decide given the historical evidence? Never overwrites history.
+reevaluate: ensure-env
+	$(VENV_PY) scripts/reevaluate_cli.py $(DECISION_ID)
+
+## seed/generators/historical_corpus.py — the Phase 7 historical corpus
+# generator (>=100 V1 + >=100 V2 decisions through the REAL decision
+# service, with real executions). Run manually in stages around the two
+# `make deploy-vN` calls above — see docs/experiment/implementation-notes.md
+# Phase 7 section for the exact sequence this experiment ran.
+historical-corpus: ensure-env
+	$(VENV_PY) seed/generators/historical_corpus.py $(ARGS)
 
 # ---------------------------------------------------------------------------
 # Not implemented yet — never fake success. Each prints which phase

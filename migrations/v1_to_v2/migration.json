@@ -1,0 +1,27 @@
+{
+  "_comment": "Read by scripts/compat_check.py (F28, docs/experiment/spec/09_failure_and_adversarial_matrix.md) to prove a breaking contract change shipped WITH a migration + replay coverage, per docs/experiment/spec/07_versioning_and_replay.md 'Compatibility CI' item 6-7 ('migration fixture tests; replay corpus'). This file is the migration fixture.",
+  "from_version": "v1",
+  "to_version": "v2",
+  "kinds_changed": ["ontology", "shapes", "actions", "policies", "projections"],
+  "breaking_changes": [
+    {
+      "kind": "ontology",
+      "description": "fac:availableQuantity retired from fac:InventoryLot; onHand/reserved become the operative evidence facts.",
+      "removed_properties": ["fac:availableQuantity"]
+    },
+    {
+      "kind": "policies",
+      "description": "changed safety-stock policy (safety_stock_v2 values) + new reservation_ok hard-deny rule; new OPA package factory.inventory.transfer_v2.",
+      "removed_properties": []
+    },
+    {
+      "kind": "actions",
+      "description": "transfer_inventory version 2: new required evidence field reservation_ok; lower approval_threshold_units (80).",
+      "removed_properties": []
+    }
+  ],
+  "migration_script": "migrations/v1_to_v2/migrate_rdf.py",
+  "deploy_script": "migrations/v1_to_v2/deploy.py",
+  "replay_verified": true,
+  "replay_verification_note": "make test-replay (tests/replay/test_replay_corpus.py) replays every V1 decision created before this migration under the V3-deployed state and requires 100% PASS -- see docs/experiment/implementation-notes.md Phase 7 section for the run's pytest summary line."
+}

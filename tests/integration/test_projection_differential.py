@@ -26,6 +26,7 @@ import httpx
 
 from reference_model.derive import derive
 from reference_model.state import InventoryLot, PurchaseOrder, QUALITY_OK, WorkOrder, empty_state
+from services.common.contract_versions import deployed_version
 from services.projection_builder.reader import (
     get_action_eligibility_summary,
     get_transfer_candidates,
@@ -100,10 +101,15 @@ def test_work_order_risk_matches_reference_model_after_supplier_delay(
         assert oracle.at_risk is True
 
     # Traceability columns required by docs/experiment/briefs/phase4.md item 1.
+    # Phase 7: NOT hardcoded to "1"/"v1" — this stack's deployed_version.json
+    # may have moved on to v2/v3 by the time this runs (see
+    # migrations/v1_to_v2/, migrations/v2_to_v3/); this asserts the row
+    # matches WHATEVER is currently live, not a frozen Phase-4 constant.
+    live = deployed_version()
     assert row["projection_definition_name"] == "work_order_risk"
-    assert row["projection_definition_version"] == "1"
+    assert row["projection_definition_version"] == live["projections"].removeprefix("v")
     assert len(row["projection_definition_sha256"]) == 64  # hex sha256
-    assert row["ontology_contract_version"] == "v1"
+    assert row["ontology_contract_version"] == live["ontology"]
     assert row["computed_at"] is not None
     assert row["as_of"] is not None
     assert row["source_positions"], "expected non-empty source event positions for a real, ingested work order"
