@@ -1,0 +1,79 @@
+{
+  "decision_id": "B-c95075212d73493d9563",
+  "finding": "Baseline's write-time guard (Postgres NOT NULL on `decisions.evidence_snapshot`) DID reject the corrupting write before the mutation was applied \u2014 structurally the same role SHACL_CARDINALITY's target field plays for the ontology variant (reject a write missing required evidence), coarser-grained (whole column, not one nested field). After the mutation removed that guard, the write succeeded, and the baseline's OWN replay mechanism DID independently catch the corruption via hash mismatch (services/baseline/replay.py's evidence_hash_match check, which treats a missing content_hash as an automatic mismatch). The revert was clean.",
+  "generated_at": "2026-09-24T20:37:38Z",
+  "rejected_before_mutation": true,
+  "replay_caught_it_after_mutation": true,
+  "revert_clean": true,
+  "steps": [
+    {
+      "result": {
+        "replay": {
+          "action_input_match": true,
+          "authz_replay_mode": "not_applicable",
+          "authz_replayed_outcome": null,
+          "evidence_hash_match": true,
+          "gate_result_match": true,
+          "gate_was_unavailable": false,
+          "policy_replayed_outcome": null,
+          "reconstructed": true,
+          "zero_effects_linked": null
+        },
+        "status": "PASS"
+      },
+      "step": "control_replay_before_any_mutation"
+    },
+    {
+      "detail": "null value in column \"evidence_snapshot\" of relation \"decisions\" violates not-null constraint\nDETAIL:  Failing row contains (B-c95075212d73493d9563, transfer_inventory, user, planner-1, null, transfer_inventory, 3, v3, d68e4bfee711a077b22cbcacaf58f02796201e5a22422581d3f8d3c2db4945e1, {\"part\": \"PX-978395\", \"quantity\": 10, \"source_warehouse\": \"WH-B\"..., {\"origin\": \"h11-structural-mutation-probe\"}, INSUFFICIENT_EVIDENCE, v2@sha256:fd72eac4c7f978950dcbe96d909368bbecc8a17610d622d599296e..., v2@sha256:2ab489b538b7465559f3e4a3299daf86b268f45bcdbf27c5ad8025..., v1@sha256:ca848e87b0b3c28483a6b3b3a52938fbdbb9f774818aff60994ee5..., 01M3AEXJ1APK76YHSXFX5DETSN, ES-658cb908e8304b0ea8f7, null, null, null, null, null, null, null, 2026-09-24 20:37:38.366055+00, 2026-09-24 20:37:38.366654+00).",
+      "rejected_by_db": true,
+      "step": "attempt_null_write_before_mutation"
+    },
+    {
+      "detail": "ALTER TABLE decisions ALTER COLUMN evidence_snapshot DROP NOT NULL",
+      "step": "mutation_applied"
+    },
+    {
+      "step": "attempt_null_write_after_mutation",
+      "write_succeeded": true
+    },
+    {
+      "result": {
+        "replay": {
+          "action_input_match": true,
+          "authz_replay_mode": "not_applicable",
+          "authz_replayed_outcome": null,
+          "evidence_hash_match": false,
+          "gate_result_match": true,
+          "gate_was_unavailable": false,
+          "policy_replayed_outcome": null,
+          "reconstructed": true,
+          "zero_effects_linked": null
+        },
+        "status": "FAIL"
+      },
+      "step": "replay_after_corruption"
+    },
+    {
+      "detail": "evidence_snapshot restored, NOT NULL constraint re-added",
+      "step": "reverted"
+    },
+    {
+      "result": {
+        "replay": {
+          "action_input_match": true,
+          "authz_replay_mode": "not_applicable",
+          "authz_replayed_outcome": null,
+          "evidence_hash_match": true,
+          "gate_result_match": true,
+          "gate_was_unavailable": false,
+          "policy_replayed_outcome": null,
+          "reconstructed": true,
+          "zero_effects_linked": null
+        },
+        "status": "PASS"
+      },
+      "step": "control_replay_after_revert"
+    }
+  ],
+  "write_succeeded_after_mutation": true
+}

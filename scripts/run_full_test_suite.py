@@ -33,7 +33,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 VENV_PY = str(REPO_ROOT / ".venv" / "bin" / "python")
 
 SUITE_DIRS = [
-    "tests/model", "tests/contracts", "tests/component", "tests/integration",
+    "tests/model", "tests/experiment", "tests/contracts", "tests/component", "tests/integration",
     "tests/faults", "tests/replay", "tests/agent", "tests/stateful",
 ]
 IGNORE = ["tests/integration/test_seed_determinism.py"]

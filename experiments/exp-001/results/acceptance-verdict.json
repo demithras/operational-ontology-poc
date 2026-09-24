@@ -1,0 +1,35 @@
+{
+  "can_decide_now": "PASS",
+  "can_decide_now_items": {
+    "10_no_premature_observed_success": true,
+    "11_component_failure_explicit_state": true,
+    "12_deterministic_planner_no_llm": true,
+    "1_canonical_incident": true,
+    "2_hot_read_p95": true,
+    "3_gate_p95": true,
+    "4_proposal_p95": true,
+    "5_unauthorized_zero_effects": true,
+    "6_policy_denied_zero_effects": true,
+    "7_shacl_invalid_no_commit": true,
+    "8_concurrency_invariants": true,
+    "9_duplicate_retry_one_effect": true
+  },
+  "can_prove_why_later": "PASS",
+  "can_prove_why_later_items": {
+    "10_forensic_query_answers_all": true,
+    "11_deleted_archive_fails_loudly": true,
+    "1_all_successful_link_to_decision": true,
+    "2_decision_pins_contract_versions": true,
+    "3_evidence_snapshot_immutable_reconstructable": true,
+    "4_actor_delegation_reconstructable": true,
+    "5_authz_policy_versioned_with_hash": true,
+    "6_action_version_params_reconstructable": true,
+    "7_observed_outcome_linked_to_evidence": true,
+    "8_v1_replays_after_v3": true,
+    "9_historical_replay_uses_historical_rules": true
+  },
+  "data_quality_fail": true,
+  "exit_code": 11,
+  "replay_fault_fail": false,
+  "safety_fail": false
+}

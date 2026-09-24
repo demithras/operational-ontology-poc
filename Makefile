@@ -112,8 +112,13 @@ wait-connectors: ensure-env
 	$(VENV_PY) services/ingestion/wait_converged.py --no-data
 
 ## Run the Phase 1 pure reference-model test suite (tests/model/).
+## tests/experiment (Phase 10b item 6, orchestrator correction): known-
+# positive/known-negative fixture tests for every hypothesis/acceptance/
+# exit-code derivation rule in scripts/gen_hypothesis_results.py and
+# scripts/gen_acceptance_verdict.py — pure Python, synthetic JSON fixtures,
+# no docker/stack needed, so it runs alongside tests/model here.
 test-unit:
-	$(VENV_PY) -m pytest tests/model -q
+	$(VENV_PY) -m pytest tests/model tests/experiment -q
 
 ## docs/experiment/spec/13_repository_contract.md "make test-integration".
 # Requires the stack to be up (`make up`) and seeded (`make seed`).

@@ -1,0 +1,384 @@
+{
+  "generated_at": "2026-09-24T19:46:29Z",
+  "h13_forensic_query_latency": {
+    "baseline": {
+      "queries": {
+        "q1_baseline_equiv": {
+          "count": 30,
+          "max_ms": 7.925,
+          "mean_ms": 2.517,
+          "p50_ms": 2.284,
+          "p95_ms": 3.755,
+          "p99_ms": 7.925
+        },
+        "q2_baseline_equiv": {
+          "count": 30,
+          "max_ms": 5.515,
+          "mean_ms": 2.351,
+          "p50_ms": 2.14,
+          "p95_ms": 4.642,
+          "p99_ms": 5.515
+        },
+        "q3_baseline_equiv": {
+          "count": 30,
+          "max_ms": 3.978,
+          "mean_ms": 2.17,
+          "p50_ms": 2.111,
+          "p95_ms": 2.701,
+          "p99_ms": 3.978
+        },
+        "q4_baseline_equiv": {
+          "count": 30,
+          "max_ms": 3.925,
+          "mean_ms": 2.169,
+          "p50_ms": 2.099,
+          "p95_ms": 2.54,
+          "p99_ms": 3.925
+        },
+        "q5_baseline_equiv": {
+          "count": 30,
+          "max_ms": 4.421,
+          "mean_ms": 2.238,
+          "p50_ms": 2.128,
+          "p95_ms": 3.217,
+          "p99_ms": 4.421
+        },
+        "q6_baseline_equiv": {
+          "count": 30,
+          "max_ms": 3.519,
+          "mean_ms": 1.707,
+          "p50_ms": 1.559,
+          "p95_ms": 3.42,
+          "p99_ms": 3.519
+        },
+        "q7_baseline_equiv": {
+          "count": 0
+        },
+        "q8_baseline_equiv": {
+          "count": 30,
+          "max_ms": 7.137,
+          "mean_ms": 2.141,
+          "p50_ms": 1.884,
+          "p95_ms": 2.738,
+          "p99_ms": 7.137
+        },
+        "q9_baseline_equiv": {
+          "count": 30,
+          "max_ms": 5.302,
+          "mean_ms": 2.218,
+          "p50_ms": 2.025,
+          "p95_ms": 2.915,
+          "p99_ms": 5.302
+        }
+      },
+      "sample_count": 30
+    },
+    "note": "Ontology: each of contracts/queries/v1/q1-q9*.rq run as a real SPARQL round trip against RDF4J. Baseline: no separate query files exist (no RDF core) \u2014 the relational equivalent is a full GET /decisions/{id} round trip PER QUESTION (q1-q5/q9), GET /executions + GET /outcomes (q6/q7), and one indexed SQL query for 'later decisions' (q8). services/baseline/store.py already nests gate_results/evidence into ONE row (Phase 8's W5 finding: a single GET could answer 6 of 9 questions) \u2014 this measurement times a per-question ROUND TRIP on both sides for an apples-to-apples call-count comparison, not the cheaper 'fetch once, answer locally' path either variant's real application code would actually take.",
+    "ontology": {
+      "queries": {
+        "q1_why_was_decision_made.rq": {
+          "count": 30,
+          "max_ms": 6.149,
+          "mean_ms": 3.804,
+          "p50_ms": 3.674,
+          "p95_ms": 5.984,
+          "p99_ms": 6.149
+        },
+        "q2_which_evidence_was_used.rq": {
+          "count": 30,
+          "max_ms": 4.396,
+          "mean_ms": 2.084,
+          "p50_ms": 1.871,
+          "p95_ms": 2.939,
+          "p99_ms": 4.396
+        },
+        "q3_which_evidence_was_excluded.rq": {
+          "count": 30,
+          "max_ms": 4.159,
+          "mean_ms": 1.802,
+          "p50_ms": 1.611,
+          "p95_ms": 3.6,
+          "p99_ms": 4.159
+        },
+        "q4_which_policy_and_authz_versions.rq": {
+          "count": 30,
+          "max_ms": 3.096,
+          "mean_ms": 1.946,
+          "p50_ms": 1.96,
+          "p95_ms": 3.048,
+          "p99_ms": 3.096
+        },
+        "q5_who_proposed_approved_executed.rq": {
+          "count": 30,
+          "max_ms": 7.802,
+          "mean_ms": 2.784,
+          "p50_ms": 2.651,
+          "p95_ms": 3.674,
+          "p99_ms": 7.802
+        },
+        "q6_which_external_objects_changed.rq": {
+          "count": 30,
+          "max_ms": 3.405,
+          "mean_ms": 2.184,
+          "p50_ms": 2.143,
+          "p95_ms": 3.064,
+          "p99_ms": 3.405
+        },
+        "q7_what_outcome_was_observed.rq": {
+          "count": 30,
+          "max_ms": 3.358,
+          "mean_ms": 1.917,
+          "p50_ms": 1.847,
+          "p95_ms": 2.858,
+          "p99_ms": 3.358
+        },
+        "q8_which_later_decisions_depended_on_outcome.rq": {
+          "count": 30,
+          "max_ms": 4.721,
+          "mean_ms": 3.053,
+          "p50_ms": 2.977,
+          "p95_ms": 4.349,
+          "p99_ms": 4.721
+        },
+        "q9_replay_authz_fields.rq": {
+          "count": 30,
+          "max_ms": 5.266,
+          "mean_ms": 3.702,
+          "p50_ms": 3.696,
+          "p95_ms": 5.215,
+          "p99_ms": 5.266
+        }
+      },
+      "sample_count": 30
+    }
+  },
+  "host_load": {
+    "end": {
+      "contended": false,
+      "cpu_count": 14,
+      "docker_cpu_percent": {
+        "oo-poc-action_worker-1": 5.37,
+        "oo-poc-baseline_action_worker-1": 4.08,
+        "oo-poc-baseline_ingestion-1": 4.54,
+        "oo-poc-baseline_service-1": 4.81,
+        "oo-poc-connect-1": 1.84,
+        "oo-poc-decision_service-1": 4.96,
+        "oo-poc-erp-1": 4.62,
+        "oo-poc-ingestion-1": 0.18,
+        "oo-poc-kafka-1": 2.74,
+        "oo-poc-mcp-1": 4.15,
+        "oo-poc-mes-1": 4.67,
+        "oo-poc-opa-1": 0.0,
+        "oo-poc-openfga-1": 0.15,
+        "oo-poc-otel-collector-1": 0.02,
+        "oo-poc-postgres-1": 2.99,
+        "oo-poc-projection_builder-1": 4.33,
+        "oo-poc-rdf4j-1": 6.95,
+        "oo-poc-reconciliation-1": 11.55,
+        "oo-poc-temporal-1": 1.7,
+        "oo-poc-temporal-postgres-1": 2.83,
+        "oo-poc-temporal-ui-1": 0.0,
+        "oo-poc-wms-1": 4.58
+      },
+      "load_avg_15m": 5.47607421875,
+      "load_avg_1m": 5.74267578125,
+      "load_avg_5m": 5.4072265625
+    },
+    "note": "uncontended: 1m load 5.7->5.7 vs 14 cores.",
+    "start": {
+      "contended": false,
+      "cpu_count": 14,
+      "docker_cpu_percent": {
+        "oo-poc-action_worker-1": 0.01,
+        "oo-poc-baseline_action_worker-1": 5.11,
+        "oo-poc-baseline_ingestion-1": 0.44,
+        "oo-poc-baseline_service-1": 0.1,
+        "oo-poc-connect-1": 2.87,
+        "oo-poc-decision_service-1": 0.16,
+        "oo-poc-erp-1": 4.48,
+        "oo-poc-ingestion-1": 0.23,
+        "oo-poc-kafka-1": 2.72,
+        "oo-poc-mcp-1": 5.3,
+        "oo-poc-mes-1": 4.2,
+        "oo-poc-opa-1": 0.0,
+        "oo-poc-openfga-1": 0.01,
+        "oo-poc-otel-collector-1": 0.05,
+        "oo-poc-postgres-1": 0.44,
+        "oo-poc-projection_builder-1": 0.01,
+        "oo-poc-rdf4j-1": 0.2,
+        "oo-poc-reconciliation-1": 5.15,
+        "oo-poc-temporal-1": 1.59,
+        "oo-poc-temporal-postgres-1": 0.36,
+        "oo-poc-temporal-ui-1": 0.0,
+        "oo-poc-wms-1": 4.51
+      },
+      "load_avg_15m": 5.47607421875,
+      "load_avg_1m": 5.74267578125,
+      "load_avg_5m": 5.4072265625
+    }
+  },
+  "stage_benchmarks": {
+    "bench_phase4": {
+      "counter_test": {
+        "query": "\nPREFIX fac: <https://example.local/factory/>\nSELECT ?req ?partUri ?qty ?available WHERE {\n  GRAPH <https://example.local/oo/graph/observed> {\n    ?req a fac:BomRequirement ; fac:workOrder <https://example.local/factory/instance/WorkOrder/WO-42> .\n    ?req fac:requiresPart ?partUri ; fac:quantity ?qty .\n    OPTIONAL {\n      ?lot a fac:InventoryLot ; fac:part ?partUri ; fac:warehouse ?whUri ; fac:availableQuantity ?available .\n    }\n  }\n}\n",
+        "target": "equivalent requirement+inventory facts via SPARQL directly against RDF4J",
+        "warm": {
+          "condition": "semantic_core_direct_sparql",
+          "count": 50,
+          "max_ms": 1.732,
+          "p50_ms": 1.052,
+          "p95_ms": 1.317,
+          "p99_ms": 1.732
+        }
+      },
+      "environment": {
+        "container_resource_limits": "not explicitly configured (docker-compose.yml has no deploy.resources.limits)",
+        "cpu": "arm",
+        "cpu_count": 14,
+        "docker_version": "29.4.2",
+        "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+        "python": "3.14.6",
+        "ram_bytes": 38654705664
+      },
+      "hot_read": {
+        "cold": {
+          "condition": "cold",
+          "count": 30,
+          "max_ms": 10.69,
+          "p50_ms": 6.16,
+          "p95_ms": 9.436,
+          "p99_ms": 10.69
+        },
+        "definitions": {
+          "cold": "a fresh psycopg connection opened and closed per sample",
+          "warm": "one psycopg connection reused across all samples (first sample discarded as warmup)"
+        },
+        "target": "work_order_risk point read (Postgres, ontology_hot)",
+        "warm": {
+          "condition": "warm",
+          "count": 200,
+          "max_ms": 0.49,
+          "p50_ms": 0.236,
+          "p95_ms": 0.303,
+          "p99_ms": 0.362
+        }
+      },
+      "measured_at": "2026-09-24T19:46:04Z",
+      "phase": 4,
+      "slo": {
+        "measured_warm_p95_ms": 0.303,
+        "name": "hot_read_p95_ms",
+        "pass": true,
+        "threshold_ms": 200
+      }
+    },
+    "bench_phase5": {
+      "end_to_end_proposal": {
+        "condition": "warm",
+        "count": 30,
+        "max_ms": 61.217,
+        "p50_ms": 44.082,
+        "p95_ms": 52.11,
+        "p99_ms": 61.217
+      },
+      "environment": {
+        "cpu": "arm",
+        "cpu_count": 14,
+        "docker_version": "29.4.2",
+        "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+        "python": "3.14.6",
+        "ram_bytes": 38654705664
+      },
+      "measured_at": "2026-09-24T19:46:10Z",
+      "phase": 5,
+      "slo": {
+        "decision_proposal_p95_ms": {
+          "measured_p95_ms": 52.11,
+          "note": "excludes human approval wait and external write duration, per H6",
+          "pass": true,
+          "threshold_ms": 500
+        },
+        "gate_evaluation_p95_ms": {
+          "measured_worst_stage_p95_ms": 19.945,
+          "pass": true,
+          "threshold_ms": 300
+        }
+      },
+      "stages": {
+        "authorization_check": {
+          "condition": "warm",
+          "count": 50,
+          "max_ms": 26.693,
+          "p50_ms": 10.904,
+          "p95_ms": 19.945,
+          "p99_ms": 26.693
+        },
+        "policy_evaluation": {
+          "condition": "warm",
+          "count": 50,
+          "max_ms": 14.111,
+          "p50_ms": 4.768,
+          "p95_ms": 5.551,
+          "p99_ms": 14.111
+        },
+        "postgres_index_persistence": {
+          "condition": "warm",
+          "count": 50,
+          "max_ms": 2.051,
+          "p50_ms": 0.586,
+          "p95_ms": 1.879,
+          "p99_ms": 2.051
+        },
+        "shacl_rdf4j_persistence": {
+          "condition": "warm",
+          "count": 50,
+          "max_ms": 21.365,
+          "p50_ms": 6.184,
+          "p95_ms": 11.283,
+          "p99_ms": 21.365
+        }
+      }
+    },
+    "bench_phase6": {
+      "environment": {
+        "cpu_count": 14,
+        "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+        "python": "3.14.6"
+      },
+      "measured_at": "2026-09-24T19:46:23Z",
+      "n_requested": 10,
+      "note": "No SLO gate locked for these three Phase 6 stages in experiments/exp-000/manifest.yaml (only cdc_observation_timeout_s=30s, the ceiling services/action_worker's own poll uses) \u2014 measurement reporting only, per docs/experiment/briefs/phase6.md item 7. CAVEAT (honest, not hidden): external_action_duration_ms and cdc_observation_lag_ms are measured via GET /executions/{id}'s commandStatus field, which services/action_worker/activities.py only ever writes ONCE, in observe_and_finalize (see services/common/action_rdf.py's 'exactly two writes' design) \u2014 the SAME write that also records the CDC-correlated outcome. These two observation points therefore do not cleanly isolate 'WMS command round trip' from 'CDC poll wait' the way spec 08 asks; end_to_end_execution_ms (execute() call to terminal decision status) is the one cleanly-measured figure here. A precise per-activity breakdown would need Temporal's own workflow-history timestamps (ActivityTaskScheduled/Completed events per activity) rather than RDF-write observation points \u2014 left as a follow-up, not attempted this session.",
+      "phase": 6,
+      "stages": {
+        "cdc_observation_lag_ms": {
+          "count": 10,
+          "max_ms": 6.4,
+          "p50_ms": 2.0,
+          "p95_ms": 6.4,
+          "p99_ms": 6.4
+        },
+        "end_to_end_execution_ms": {
+          "count": 10,
+          "max_ms": 1269.4,
+          "p50_ms": 1247.7,
+          "p95_ms": 1269.4,
+          "p99_ms": 1269.4
+        },
+        "external_action_duration_ms": {
+          "count": 10,
+          "max_ms": 1265.0,
+          "p50_ms": 1245.1,
+          "p95_ms": 1265.0,
+          "p99_ms": 1265.0
+        },
+        "proposal_path_ms": {
+          "count": 10,
+          "max_ms": 72.6,
+          "p50_ms": 52.5,
+          "p95_ms": 72.6,
+          "p99_ms": 72.6
+        }
+      }
+    }
+  }
+}

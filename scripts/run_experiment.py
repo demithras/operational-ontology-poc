@@ -41,6 +41,7 @@ RAW_ARTIFACTS_TO_COPY = [
     "bench-phase4.json", "bench-phase5.json", "bench-phase6.json",
     "mutation-results.json", "historical-corpus.json", "historical-corpus-baseline.json",
     "baseline-replay-sweep.json", "evolution-comparison.json",
+    "baseline-structural-mutation-probe.json",
     "ab-tradeoffs.md", "traces-reference.txt", "agent-llm-probe.json",
 ]
 
@@ -102,26 +103,31 @@ def main() -> int:
     _run([VENV_PY, "scripts/baseline_replay_sweep.py"], allow_fail=True, timeout=1800)
     _run([VENV_PY, "scripts/gen_ab_tradeoffs.py"], timeout=300)
 
-    _step(7, "fault matrix (derived from step 4's own live test outcomes)")
+    _step(7, "H11 like-for-like structural-validation probe: a real mutation applied to the baseline's own "
+             "equivalent guard (decisions.evidence_snapshot NOT NULL) — never credit the ontology's SHACL "
+             "advantage without testing whether the baseline's own guard catches the same corruption")
+    _run([VENV_PY, "scripts/probe_baseline_structural_mutation.py"], allow_fail=True, timeout=180)
+
+    _step(8, "fault matrix (derived from step 4's own live test outcomes)")
     from scripts import gen_fault_results
     gen_fault_results.generate(results_dir)
 
-    _step(8, "latency benchmarks: make bench + H13 forensic query timing on the full corpus (items 3/8)")
+    _step(9, "latency benchmarks: make bench + H13 forensic query timing on the full corpus (items 3/8)")
     _run([VENV_PY, "tests/performance/bench_phase4.py"], allow_fail=True, timeout=300)
     _run([VENV_PY, "tests/performance/bench_phase5.py"], allow_fail=True, timeout=300)
     _run([VENV_PY, "tests/performance/bench_phase6.py"], allow_fail=True, timeout=300)
     from scripts import gen_latency_report
     gen_latency_report.generate(results_dir, h13_sample_n=30)
 
-    _step(9, "environment.json + contract-manifest.json")
+    _step(10, "environment.json + contract-manifest.json")
     from scripts import gen_experiment_metadata
     gen_experiment_metadata.gen_environment(results_dir)
     gen_experiment_metadata.gen_contract_manifest(results_dir)
 
-    _step(10, "traces-reference.txt (F40 evidence)")
+    _step(11, "traces-reference.txt (F40 evidence)")
     _run([VENV_PY, "scripts/gen_traces_reference.py"], allow_fail=True, timeout=120)
 
-    _step(11, "copy raw supporting artifacts into the immutable exp results/ snapshot")
+    _step(12, "copy raw supporting artifacts into the immutable exp results/ snapshot")
     for name in RAW_ARTIFACTS_TO_COPY:
         src = EXP000_RESULTS / name
         if src.exists():
@@ -132,11 +138,11 @@ def main() -> int:
     if ab_src.exists():
         shutil.copy2(ab_src, results_dir / "ab-results.json")
 
-    _step(12, "derive hypothesis-results.json from this run's own evidence")
+    _step(13, "derive hypothesis-results.json from this run's own evidence")
     from scripts import gen_hypothesis_results
     gen_hypothesis_results.derive(results_dir, exp_version)
 
-    _step(13, "final-report.md + acceptance verdict + exit code")
+    _step(14, "final-report.md + acceptance verdict + exit code")
     from scripts import gen_final_report
     gen_final_report.generate(results_dir, exp_version)
     verdict = json.loads((results_dir / "acceptance-verdict.json").read_text())

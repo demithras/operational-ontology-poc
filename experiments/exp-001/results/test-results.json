@@ -1,0 +1,1256 @@
+{
+  "command": "/Users/d_surchis/work/operational-ontology-poc/.venv/bin/python -m pytest tests/model tests/contracts tests/component tests/integration tests/faults tests/replay tests/agent tests/stateful -q --ignore=tests/integration/test_seed_determinism.py --junit-xml=/Users/d_surchis/work/operational-ontology-poc/experiments/exp-001/results/test-results.xml -o junit_family=xunit2",
+  "elapsed_s": 658.3,
+  "errors": 0,
+  "failed": 1,
+  "junit_xml": "experiments/exp-001/results/test-results.xml",
+  "passed": 247,
+  "pytest_exit_code": 1,
+  "skipped": 0,
+  "stdout_summary_lines": [
+    "1 failed, 247 passed in 657.38s (0:10:57)"
+  ],
+  "tests": {
+    "tests/agent/test_f04_undisclosed_tools.py::test_approve_is_not_reachable_even_with_plausible_arguments": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.023
+    },
+    "tests/agent/test_f04_undisclosed_tools.py::test_list_tools_never_exceeds_the_allowed_set": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.054
+    },
+    "tests/agent/test_f04_undisclosed_tools.py::test_undisclosed_or_admin_tool_does_not_exist[admin_execute_decision]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.024
+    },
+    "tests/agent/test_f04_undisclosed_tools.py::test_undisclosed_or_admin_tool_does_not_exist[approve_decision]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.024
+    },
+    "tests/agent/test_f04_undisclosed_tools.py::test_undisclosed_or_admin_tool_does_not_exist[decisions_approve]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.024
+    },
+    "tests/agent/test_f04_undisclosed_tools.py::test_undisclosed_or_admin_tool_does_not_exist[get_credentials]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.024
+    },
+    "tests/agent/test_f04_undisclosed_tools.py::test_undisclosed_or_admin_tool_does_not_exist[http_request]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.023
+    },
+    "tests/agent/test_f04_undisclosed_tools.py::test_undisclosed_or_admin_tool_does_not_exist[run_sql]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.024
+    },
+    "tests/agent/test_f04_undisclosed_tools.py::test_undisclosed_or_admin_tool_does_not_exist[sparql_query]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.023
+    },
+    "tests/agent/test_f04_undisclosed_tools.py::test_undisclosed_or_admin_tool_does_not_exist[unrestricted_http]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.024
+    },
+    "tests/agent/test_f04_undisclosed_tools.py::test_undisclosed_or_admin_tool_does_not_exist[write_triple]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.023
+    },
+    "tests/agent/test_f30_prompt_injection.py::test_500_unit_transfer_request_requires_approval_not_auto_allow": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 2.199
+    },
+    "tests/agent/test_f30_prompt_injection.py::test_compromised_planner_cannot_execute_without_real_approval": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 2.697
+    },
+    "tests/agent/test_f31_tool_parameter_tampering.py::test_tool_parameter_injection_in_get_object_rejected": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.027
+    },
+    "tests/agent/test_f31_tool_parameter_tampering.py::test_tool_parameter_injection_in_work_order_id_rejected": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.028
+    },
+    "tests/agent/test_f31_tool_parameter_tampering.py::test_tool_parameter_injection_rejected_with_zero_effects": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.122
+    },
+    "tests/agent/test_f32_impersonation_and_identity_retry.py::test_denied_request_cannot_be_retried_under_a_claimed_identity": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 2.726
+    },
+    "tests/agent/test_f32_impersonation_and_identity_retry.py::test_extra_identity_fields_are_ignored_not_smuggled": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 3.167
+    },
+    "tests/agent/test_stale_and_replay.py::test_evidence_snapshot_cannot_be_swapped_while_keeping_the_approval_hash": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 2.693
+    },
+    "tests/agent/test_stale_and_replay.py::test_f33_approval_replay_with_stale_hash_rejected": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 3.154
+    },
+    "tests/agent/test_stale_and_replay.py::test_stale_decision_execution_rejected": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 3.208
+    },
+    "tests/component/test_f39_invalid_mapping_rule.py::test_f39_conflicting_explicit_overrides_for_same_source_id_is_caught": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.003
+    },
+    "tests/component/test_f39_invalid_mapping_rule.py::test_f39_pattern_rule_missing_canonical_template_is_caught": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.001
+    },
+    "tests/component/test_f39_invalid_mapping_rule.py::test_f39_unknown_rule_kind_is_caught": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.001
+    },
+    "tests/component/test_f39_invalid_mapping_rule.py::test_f39_valid_deployment_still_loads_and_resolves_correctly": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.001
+    },
+    "tests/component/test_host_load.py::test_contention_note_flags_contended_run": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.001
+    },
+    "tests/component/test_host_load.py::test_sample_host_load_returns_real_fields": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 2.169
+    },
+    "tests/component/test_host_load.py::test_sample_host_load_to_dict_round_trips_all_fields": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 2.054
+    },
+    "tests/component/test_identity_resolver.py::test_canonical_fixture_part_resolves_on_all_three_systems": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/component/test_identity_resolver.py::test_erp_id_192_belongs_only_to_the_fixture_part_not_the_generated_one": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/component/test_identity_resolver.py::test_quarantine_never_returns_a_guessed_canonical_id": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/component/test_identity_resolver.py::test_resolved_result_carries_full_provenance": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/component/test_identity_resolver.py::test_resolves_every_seeded_id_to_its_ground_truth_canonical_id": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.019
+    },
+    "tests/component/test_identity_resolver.py::test_source_id_rename_preserves_canonical_result": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/component/test_identity_resolver.py::test_unrecognized_source_id_is_quarantined_not_guessed[ERP-PART-1]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/component/test_identity_resolver.py::test_unrecognized_source_id_is_quarantined_not_guessed[ERP-PART-XYZ]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.001
+    },
+    "tests/component/test_identity_resolver.py::test_unrecognized_source_id_is_quarantined_not_guessed[ERP-]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/component/test_identity_resolver.py::test_unrecognized_source_id_is_quarantined_not_guessed[ERP-part-00007]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/component/test_identity_resolver.py::test_unrecognized_source_id_is_quarantined_not_guessed[MES-COMP-999999]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.001
+    },
+    "tests/component/test_identity_resolver.py::test_unrecognized_source_id_is_quarantined_not_guessed[WMS-SKU-1]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/component/test_projection_compute.py::test_duplicate_requirement_rows_for_same_part_are_summed_not_double_counted": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/component/test_projection_compute.py::test_terminal_work_orders_are_excluded": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/component/test_projection_compute.py::test_transfer_candidates_never_duplicates_a_candidate_id_across_duplicate_requirement_rows": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/component/test_tracing.py::test_current_trace_id_hex_is_none_before_init": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/component/test_tracing.py::test_enabled_is_false_before_init": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/component/test_tracing.py::test_traced_span_propagates_real_exceptions_from_its_body": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/component/test_tracing.py::test_traced_span_runs_body_when_tracing_never_initialized": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_compat_check.py::test_known_bad_migration_dir_present_but_empty_is_caught": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.001
+    },
+    "tests/contracts/test_compat_check.py::test_known_bad_migration_json_points_at_missing_script_is_caught": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.001
+    },
+    "tests/contracts/test_compat_check.py::test_known_bad_version_without_migration_is_caught": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.005
+    },
+    "tests/contracts/test_compat_check.py::test_real_repo_tree_has_no_compat_violations": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.002
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_approve_request_rejects_malformed_hash[]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_approve_request_rejects_malformed_hash[gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_approve_request_rejects_malformed_hash[not-64-hex]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_escape_sparql_literal_neutralizes_newline_injection": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_escape_sparql_literal_neutralizes_quote_and_brace_breakout": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_accepts_well_formed_ids": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_actor_id[\" || true || \"]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_actor_id[WH-A\" } ; DROP ALL ; #]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_actor_id[WH-A\" }} }} #]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_actor_id[WH-A' OR '1'='1]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_actor_id[WH-A\\nSELECT * WHERE]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_actor_id[]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_actor_id[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_actor_id[warehouse:WH-A#agent_grant]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_context_value[\" || true || \"]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_context_value[WH-A\" } ; DROP ALL ; #]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_context_value[WH-A\" }} }} #]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_context_value[WH-A' OR '1'='1]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_context_value[WH-A\\nSELECT * WHERE]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_context_value[]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_context_value[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_context_value[warehouse:WH-A#agent_grant]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_warehouse_id[\" || true || \"]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_warehouse_id[WH-A\" } ; DROP ALL ; #]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.001
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_warehouse_id[WH-A\" }} }} #]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_warehouse_id[WH-A' OR '1'='1]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_warehouse_id[WH-A\\nSELECT * WHERE]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_warehouse_id[]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_warehouse_id[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_decision_service_input_validation.py::test_propose_request_rejects_malicious_warehouse_id[warehouse:WH-A#agent_grant]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_opa_policies.py::test_opa_test_suite_passes_and_is_not_empty[v1]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.397
+    },
+    "tests/contracts/test_opa_policies.py::test_opa_test_suite_passes_and_is_not_empty[v2]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.35
+    },
+    "tests/contracts/test_openfga_model.py::test_fga_model_test_suite_passes[v1]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.388
+    },
+    "tests/contracts/test_openfga_model.py::test_fga_model_test_suite_passes[v2]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.373
+    },
+    "tests/contracts/test_shacl_fixtures.py::test_fixture_directories_are_not_empty": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/contracts/test_shacl_fixtures.py::test_negative_fixture_does_not_conform[action-execution-negative-quantity.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.009
+    },
+    "tests/contracts/test_shacl_fixtures.py::test_negative_fixture_does_not_conform[action-execution-source-eq-destination.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.008
+    },
+    "tests/contracts/test_shacl_fixtures.py::test_negative_fixture_does_not_conform[decision-evidence-snapshot-wrong-type.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.009
+    },
+    "tests/contracts/test_shacl_fixtures.py::test_negative_fixture_does_not_conform[decision-missing-actor.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.012
+    },
+    "tests/contracts/test_shacl_fixtures.py::test_negative_fixture_does_not_conform[decision-missing-evidence.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.009
+    },
+    "tests/contracts/test_shacl_fixtures.py::test_negative_fixture_does_not_conform[decision-missing-policy-version.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.009
+    },
+    "tests/contracts/test_shacl_fixtures.py::test_negative_fixture_does_not_conform[decision-status-success-literal.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.01
+    },
+    "tests/contracts/test_shacl_fixtures.py::test_negative_fixture_does_not_conform[evidence-snapshot-missing-content-hash.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.008
+    },
+    "tests/contracts/test_shacl_fixtures.py::test_negative_fixture_does_not_conform[outcome-invalid-reconciliation-state.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.011
+    },
+    "tests/contracts/test_shacl_fixtures.py::test_negative_fixture_does_not_conform[outcome-missing-expected-effect.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.008
+    },
+    "tests/contracts/test_shacl_fixtures.py::test_positive_fixture_conforms[action-execution-valid.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.042
+    },
+    "tests/contracts/test_shacl_fixtures.py::test_positive_fixture_conforms[decision-valid.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.009
+    },
+    "tests/contracts/test_shacl_fixtures.py::test_positive_fixture_conforms[evidence-snapshot-valid.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.01
+    },
+    "tests/contracts/test_shacl_fixtures.py::test_positive_fixture_conforms[outcome-valid.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.008
+    },
+    "tests/contracts/test_shacl_rdf4j_transactional.py::test_negative_fixture_rejected_by_transaction[action-execution-negative-quantity.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.035
+    },
+    "tests/contracts/test_shacl_rdf4j_transactional.py::test_negative_fixture_rejected_by_transaction[action-execution-source-eq-destination.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.056
+    },
+    "tests/contracts/test_shacl_rdf4j_transactional.py::test_negative_fixture_rejected_by_transaction[decision-evidence-snapshot-wrong-type.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.019
+    },
+    "tests/contracts/test_shacl_rdf4j_transactional.py::test_negative_fixture_rejected_by_transaction[decision-missing-actor.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.033
+    },
+    "tests/contracts/test_shacl_rdf4j_transactional.py::test_negative_fixture_rejected_by_transaction[decision-missing-evidence.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.03
+    },
+    "tests/contracts/test_shacl_rdf4j_transactional.py::test_negative_fixture_rejected_by_transaction[decision-missing-policy-version.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.03
+    },
+    "tests/contracts/test_shacl_rdf4j_transactional.py::test_negative_fixture_rejected_by_transaction[decision-status-success-literal.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.028
+    },
+    "tests/contracts/test_shacl_rdf4j_transactional.py::test_negative_fixture_rejected_by_transaction[evidence-snapshot-missing-content-hash.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.018
+    },
+    "tests/contracts/test_shacl_rdf4j_transactional.py::test_negative_fixture_rejected_by_transaction[outcome-invalid-reconciliation-state.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.021
+    },
+    "tests/contracts/test_shacl_rdf4j_transactional.py::test_negative_fixture_rejected_by_transaction[outcome-missing-expected-effect.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.013
+    },
+    "tests/contracts/test_shacl_rdf4j_transactional.py::test_positive_fixture_commits[action-execution-valid.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.062
+    },
+    "tests/contracts/test_shacl_rdf4j_transactional.py::test_positive_fixture_commits[decision-valid.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.075
+    },
+    "tests/contracts/test_shacl_rdf4j_transactional.py::test_positive_fixture_commits[evidence-snapshot-valid.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.053
+    },
+    "tests/contracts/test_shacl_rdf4j_transactional.py::test_positive_fixture_commits[outcome-valid.ttl]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.056
+    },
+    "tests/faults/test_action_version_pinning.py::test_f34_action_definition_changed_post_approval_invalidates_never_executes": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 5.416
+    },
+    "tests/faults/test_cdc_delay_and_kafka_outage.py::test_f18_paused_wms_connector_yields_awaiting_observation_then_reconciles": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 38.127
+    },
+    "tests/faults/test_cdc_delay_and_kafka_outage.py::test_f21_kafka_down_yields_insufficient_evidence_via_watermark_then_recovers": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 20.453
+    },
+    "tests/faults/test_cdc_ordering.py::test_f19_duplicate_cdc_event_is_idempotent": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.246
+    },
+    "tests/faults/test_cdc_ordering.py::test_f20_reordered_cdc_delivery_resolves_by_lsn_not_delivery_order": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.037
+    },
+    "tests/faults/test_cdc_ordering.py::test_f35_apply_event_end_to_end_with_out_of_order_wall_clock_but_correct_lsn": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.042
+    },
+    "tests/faults/test_cdc_ordering.py::test_f35_ordering_key_ignores_wall_clock_uses_lsn_and_version": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/faults/test_commit_then_timeout.py::test_f14_commit_then_timeout_converges_to_one_effect": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 19.339
+    },
+    "tests/faults/test_concurrency_race.py::test_100_80_80_concurrent_execution_never_goes_negative_one_succeeds": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 4.714
+    },
+    "tests/faults/test_concurrent_stock_receipt.py::test_f36_unrelated_concurrent_stock_receipt_does_not_corrupt_outcome": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 6.233
+    },
+    "tests/faults/test_dependency_outage.py::test_f25_temporal_down_leaves_decision_approved_and_unexecuted": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 22.692
+    },
+    "tests/faults/test_divergence.py::test_f15_200_without_commit_never_observed_success": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 32.46
+    },
+    "tests/faults/test_divergence.py::test_f16_f17_partial_commit_diverges_and_compensates": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 4.706
+    },
+    "tests/faults/test_f40_traces_unavailable.py::test_propose_approve_execute_unaffected_by_otel_collector_outage": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 4.259
+    },
+    "tests/faults/test_idempotency.py::test_f10_duplicate_execute_call_has_one_effect": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 4.659
+    },
+    "tests/faults/test_idempotency.py::test_f11_concurrent_duplicate_execute_calls_have_one_effect": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 6.207
+    },
+    "tests/faults/test_kill_restart_convergence.py::test_kill_restart_decision_service_convergence": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 9.355
+    },
+    "tests/faults/test_kill_restart_convergence.py::test_kill_restart_projection_builder_convergence": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 6.087
+    },
+    "tests/faults/test_kill_restart_convergence.py::test_kill_restart_reconciliation_convergence": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 40.617
+    },
+    "tests/faults/test_manual_db_edit.py::test_f37_direct_manual_db_edit_observed_with_provenance_not_attributed_to_any_action": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 4.097
+    },
+    "tests/faults/test_network_faults.py::test_network_connection_failure_before_commit_yields_zero_effect_never_duplicated": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 4.175
+    },
+    "tests/faults/test_network_faults.py::test_network_latency_delay_commit_converges_to_one_effect": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 9.224
+    },
+    "tests/faults/test_openfga_persistence.py::test_openfga_restart_preserves_store_model_and_existing_checks": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 2.949
+    },
+    "tests/faults/test_openfga_warmup_window.py::test_approve_never_403s_during_openfga_restart_warmup_window": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 10.021
+    },
+    "tests/faults/test_poison_message.py::test_f38_poison_message_goes_to_dlq_pipeline_health_visible_rest_continues": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 6.787
+    },
+    "tests/faults/test_worker_crash.py::test_f12_worker_crash_pre_call_resumes_with_exactly_one_effect": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 26.182
+    },
+    "tests/faults/test_worker_crash.py::test_f13_worker_crash_post_call_pre_record_no_duplicate_effect": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 16.241
+    },
+    "tests/integration/test_canonical_scenario.py::test_step1_erp_initial_po_is_open": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.044
+    },
+    "tests/integration/test_canonical_scenario.py::test_step2_supplier_delay_event": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.015
+    },
+    "tests/integration/test_canonical_scenario.py::test_step3_mes_work_order_requires_shortage_quantity": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.019
+    },
+    "tests/integration/test_canonical_scenario.py::test_step4_transfer_60_units_wh_b_to_wh_a": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.03
+    },
+    "tests/integration/test_canonical_scenario.py::test_step5_transfer_record_retrievable": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.009
+    },
+    "tests/integration/test_cdc_ingestion.py::test_duplicate_cdc_event_is_idempotent": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.04
+    },
+    "tests/integration/test_cdc_ingestion.py::test_invalid_governed_write_rejected_by_transaction": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.024
+    },
+    "tests/integration/test_cdc_ingestion.py::test_rdf4j_outage_backs_off_without_data_loss_and_resumes": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 14.369
+    },
+    "tests/integration/test_cdc_ingestion.py::test_wms_change_converges_to_rdf4j_with_provenance": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 2.727
+    },
+    "tests/integration/test_credential_isolation.py::test_cross_system_credential_is_rejected[erp role -> mes db]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.023
+    },
+    "tests/integration/test_credential_isolation.py::test_cross_system_credential_is_rejected[mes role -> wms db]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.019
+    },
+    "tests/integration/test_credential_isolation.py::test_cross_system_credential_is_rejected[wms role -> erp db]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.028
+    },
+    "tests/integration/test_credential_isolation.py::test_own_credential_still_works": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.012
+    },
+    "tests/integration/test_decision_service_approval.py::test_approval_on_already_approved_decision_rejected": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 3.174
+    },
+    "tests/integration/test_decision_service_approval.py::test_f33_approval_rejected_on_hash_mismatch": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 2.641
+    },
+    "tests/integration/test_decision_service_approval.py::test_junior_planner_denied_protected_approval": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 3.206
+    },
+    "tests/integration/test_decision_service_approval.py::test_supervisor_can_approve_and_decision_becomes_approved": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 2.712
+    },
+    "tests/integration/test_decision_service_canonical.py::test_canonical_incident_approves_on_a_quiet_system_no_touch": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 37.687
+    },
+    "tests/integration/test_decision_service_canonical.py::test_canonical_shaped_transfer_reaches_approved_with_complete_decision_record": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 3.145
+    },
+    "tests/integration/test_decision_service_canonical.py::test_h10_deterministic_planner_recommends_without_any_llm": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.013
+    },
+    "tests/integration/test_decision_service_delegation.py::test_agent_allowed_with_exact_task_grant_then_denied_after_revoke": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 4.274
+    },
+    "tests/integration/test_decision_service_delegation.py::test_agent_cannot_claim_a_different_principal": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 3.128
+    },
+    "tests/integration/test_decision_service_dependency_outage.py::test_f22_rdf4j_down_fails_proposal_safely": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 13.046
+    },
+    "tests/integration/test_decision_service_dependency_outage.py::test_f23_openfga_down_denies_authorization_explicitly": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 11.055
+    },
+    "tests/integration/test_decision_service_dependency_outage.py::test_f24_opa_down_denies_policy_explicitly": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 6.749
+    },
+    "tests/integration/test_decision_service_dependency_outage.py::test_f26_stalled_projection_builder_yields_insufficient_evidence": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 23.089
+    },
+    "tests/integration/test_decision_service_gates.py::test_f01_source_equals_destination_rejected": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.028
+    },
+    "tests/integration/test_decision_service_gates.py::test_f01_unknown_action_type_rejected": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.031
+    },
+    "tests/integration/test_decision_service_gates.py::test_f01_zero_quantity_rejected": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.029
+    },
+    "tests/integration/test_decision_service_gates.py::test_f02_no_inventory_record_is_insufficient_evidence": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.047
+    },
+    "tests/integration/test_decision_service_gates.py::test_f03_unauthorized_human_denied": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 2.628
+    },
+    "tests/integration/test_decision_service_gates.py::test_f04_agent_without_task_grant_denied": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 3.156
+    },
+    "tests/integration/test_decision_service_injection.py::test_sparql_injection_attempt_rejected_with_zero_effects": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.071
+    },
+    "tests/integration/test_decision_service_injection.py::test_sparql_injection_in_actor_id_rejected": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.013
+    },
+    "tests/integration/test_decision_service_injection.py::test_sparql_injection_in_approve_hash_rejected": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.008
+    },
+    "tests/integration/test_decision_service_policy.py::test_f05_quarantined_source_denied_by_policy": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 3.131
+    },
+    "tests/integration/test_decision_service_policy.py::test_f05_safety_stock_breach_denied_by_policy": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 2.64
+    },
+    "tests/integration/test_decision_service_policy.py::test_f06_above_threshold_requires_approval_and_cannot_execute": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 3.173
+    },
+    "tests/integration/test_decision_service_policy.py::test_f07_forced_conformance_violation_recorded_as_invalid_conformance": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 3.192
+    },
+    "tests/integration/test_decision_service_protected_transfer.py::test_declaring_a_mismatched_at_risk_work_order_is_insufficient_evidence": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.082
+    },
+    "tests/integration/test_decision_service_protected_transfer.py::test_junior_declaring_the_high_priority_work_order_is_denied": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 8.767
+    },
+    "tests/integration/test_decision_service_protected_transfer.py::test_junior_omitting_work_order_is_still_denied_security_fix": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.104
+    },
+    "tests/integration/test_decision_service_protected_transfer.py::test_junior_transfer_unrelated_to_any_high_priority_work_order_is_still_allowed": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.089
+    },
+    "tests/integration/test_decision_service_protected_transfer.py::test_planner_declaring_the_high_priority_work_order_is_allowed": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.109
+    },
+    "tests/integration/test_decision_service_protected_transfer.py::test_unresolvable_priority_fails_closed_for_every_actor": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.093
+    },
+    "tests/integration/test_forensic_queries.py::test_all_five_forensic_queries_answer_for_a_real_decision": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 2.748
+    },
+    "tests/integration/test_forensic_queries.py::test_forensic_query_5_traces_delegation_and_approval": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 2.671
+    },
+    "tests/integration/test_forensic_queries_phase6.py::test_h13_queries_6_7_8_and_work_order_risk_flips_to_mitigated": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 11.896
+    },
+    "tests/integration/test_health.py::test_erp_health": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.015
+    },
+    "tests/integration/test_health.py::test_mes_health": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.01
+    },
+    "tests/integration/test_health.py::test_wms_health": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.009
+    },
+    "tests/integration/test_mes_reschedule.py::test_reschedule_planned_work_order_succeeds": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.013
+    },
+    "tests/integration/test_mes_reschedule.py::test_reschedule_terminal_work_order_is_409[CANCELLED]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.011
+    },
+    "tests/integration/test_mes_reschedule.py::test_reschedule_terminal_work_order_is_409[DONE]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.021
+    },
+    "tests/integration/test_otel_tracing.py::test_propose_and_execute_spans_carry_decision_and_action_ids": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 5.718
+    },
+    "tests/integration/test_projection_consistency.py::test_tampered_row_fails_consistency_check": {
+      "message": "AssertionError: F27: a tampered row's content_hash must no longer match its (now different) business fields\nassert True is False\n +  where True = <function check_row at 0x10d8b3cc0>('work_order_risk', {'work_order_id': 'WO-42', 'warehouse': 'WH-A', 'shortage': 0, 'at_risk': False, ...})\n +    where <function check_row at 0x10d8b3cc0> = consistency.check_row",
+      "outcome": "failed",
+      "time_s": 0.066
+    },
+    "tests/integration/test_projection_consistency.py::test_untampered_row_passes_consistency_check": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.013
+    },
+    "tests/integration/test_projection_differential.py::test_transfer_candidate_and_eligibility_summary_reflect_the_shortage": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.028
+    },
+    "tests/integration/test_projection_differential.py::test_work_order_risk_matches_reference_model_after_supplier_delay": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 3.078
+    },
+    "tests/integration/test_projection_rebuild.py::test_rebuild_reproduces_identical_business_state": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 1.765
+    },
+    "tests/integration/test_projection_rebuild_concurrency.py::test_rebuild_loop_and_concurrent_proposers_never_deadlock": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 60.625
+    },
+    "tests/integration/test_projection_staleness.py::test_freshness_evaluate_pure_function_boundary": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/integration/test_projection_staleness.py::test_injected_30s_stale_projection_row_is_detected": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.008
+    },
+    "tests/integration/test_wms_concurrency.py::test_two_concurrent_80_unit_requests_against_100_stock": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.022
+    },
+    "tests/integration/test_wms_faults.py::test_commit_then_timeout_recovers_via_idempotent_replay": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.332
+    },
+    "tests/integration/test_wms_faults.py::test_delay_commit_eventually_commits": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 1.022
+    },
+    "tests/integration/test_wms_faults.py::test_duplicate_response_still_dedupes_on_replay": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.038
+    },
+    "tests/integration/test_wms_faults.py::test_partial_commit_moves_exactly_the_partial_quantity": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.014
+    },
+    "tests/integration/test_wms_faults.py::test_return_200_without_commit_leaves_no_row_no_effect": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.014
+    },
+    "tests/integration/test_wms_faults.py::test_return_500_before_commit_leaves_no_row_no_effect": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.015
+    },
+    "tests/integration/test_wms_idempotency.py::test_same_key_different_body_is_409": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.019
+    },
+    "tests/integration/test_wms_idempotency.py::test_same_key_same_body_sequential_replay_is_safe": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.022
+    },
+    "tests/integration/test_wms_idempotency.py::test_same_key_ten_concurrent_requests_exactly_one_effect": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.037
+    },
+    "tests/model/test_bug_detection.py::test_each_injected_bug_is_found_and_shrunk[POLICY_THRESHOLD_LT]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 5.693
+    },
+    "tests/model/test_bug_detection.py::test_each_injected_bug_is_found_and_shrunk[SKIP_AUTHZ]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 2.378
+    },
+    "tests/model/test_bug_detection.py::test_each_injected_bug_is_found_and_shrunk[SKIP_EXECUTION_RECHECK]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 17.768
+    },
+    "tests/model/test_bug_detection.py::test_each_injected_bug_is_found_and_shrunk[SKIP_IDEMPOTENCY]": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 7.599
+    },
+    "tests/model/test_canonical_incident.py::test_agent_with_exact_task_grant_is_authorized": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/model/test_canonical_incident.py::test_agent_without_task_grant_denied_authorization": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/model/test_canonical_incident.py::test_approval_replay_on_changed_decision_rejected": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/model/test_canonical_incident.py::test_happy_path_shortage_transfer_approve_execute": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.001
+    },
+    "tests/model/test_canonical_incident.py::test_junior_planner_denied_authorization": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/model/test_canonical_incident.py::test_missing_policy_version_invalid_conformance": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/model/test_canonical_incident.py::test_planner_outside_region_denied_authorization": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/model/test_canonical_incident.py::test_qty_over_threshold_requires_approval_and_blocks_execution": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/model/test_canonical_incident.py::test_quarantine_denied_policy": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/model/test_canonical_incident.py::test_safety_stock_breach_denied_policy": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/model/test_canonical_incident.py::test_stale_evidence_yields_insufficient_evidence": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/model/test_concurrency.py::test_bug_skip_execution_recheck_allows_negative_inventory": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.001
+    },
+    "tests/model/test_concurrency.py::test_concurrent_80_80_against_100_resolves_one_success_one_rejection": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.001
+    },
+    "tests/model/test_metamorphic.py::test_duplicate_execution_same_key_no_second_effect": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/model/test_metamorphic.py::test_irrelevant_lot_does_not_change_decision": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/model/test_metamorphic.py::test_renamed_source_local_id_same_canonical_result": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/model/test_stateful.py::test_stateful_transfer_machine_no_bugs_stays_clean": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.445
+    },
+    "tests/replay/test_bulk_replay_sample.py::test_bulk_sample_replays_pass_with_live_authz": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 6.4
+    },
+    "tests/replay/test_f29_replay_integrity.py::test_f29_deleted_archived_policy_makes_replay_fail_loudly": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.049
+    },
+    "tests/replay/test_f29_replay_integrity.py::test_f29_modified_archived_policy_makes_replay_fail_loudly": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.016
+    },
+    "tests/replay/test_f29_tuple_snapshot_integrity.py::test_f29_tampered_tuple_snapshot_makes_replay_fail_loudly": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 1.431
+    },
+    "tests/replay/test_forensic_queries_v1_post_v3.py::test_forensic_queries_1_through_5_answer_for_v1_decision_after_v3_migration": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.014
+    },
+    "tests/replay/test_forensic_queries_v1_post_v3.py::test_forensic_queries_6_through_8_answer_for_a_v1_executed_decision_after_v3_migration": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.018
+    },
+    "tests/replay/test_forensic_query_scaling.py::test_forensic_queries_scale_for_the_busiest_actor": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.033
+    },
+    "tests/replay/test_projection_rebuild_after_migration.py::test_projection_rebuild_matches_after_v1_to_v2_migration": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 1.284
+    },
+    "tests/replay/test_replay_corpus.py::test_all_v1_decisions_replay_pass": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 1.547
+    },
+    "tests/replay/test_replay_corpus.py::test_all_v2_decisions_replay_pass": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 1.512
+    },
+    "tests/replay/test_replay_corpus.py::test_replay_corpus_is_under_v3_deployed_state": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 0.0
+    },
+    "tests/stateful/test_live_differential.py::test_live_transfer_machine_holds_invariants": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 24.804
+    },
+    "tests/stateful/test_live_differential.py::test_stateful_finds_and_shrinks_disabled_idempotency_bug": {
+      "message": null,
+      "outcome": "passed",
+      "time_s": 4.388
+    }
+  },
+  "total": 248
+}

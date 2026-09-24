@@ -1,0 +1,173 @@
+{
+  "cpu_count": 14,
+  "docker_compose_services": [
+    {
+      "health": "healthy",
+      "name": "oo-poc-action_worker-1",
+      "service": "action_worker",
+      "state": "running"
+    },
+    {
+      "health": "healthy",
+      "name": "oo-poc-baseline_action_worker-1",
+      "service": "baseline_action_worker",
+      "state": "running"
+    },
+    {
+      "health": "healthy",
+      "name": "oo-poc-baseline_ingestion-1",
+      "service": "baseline_ingestion",
+      "state": "running"
+    },
+    {
+      "health": "healthy",
+      "name": "oo-poc-baseline_service-1",
+      "service": "baseline_service",
+      "state": "running"
+    },
+    {
+      "health": "healthy",
+      "name": "oo-poc-connect-1",
+      "service": "connect",
+      "state": "running"
+    },
+    {
+      "health": "healthy",
+      "name": "oo-poc-decision_service-1",
+      "service": "decision_service",
+      "state": "running"
+    },
+    {
+      "health": "healthy",
+      "name": "oo-poc-erp-1",
+      "service": "erp",
+      "state": "running"
+    },
+    {
+      "health": "healthy",
+      "name": "oo-poc-ingestion-1",
+      "service": "ingestion",
+      "state": "running"
+    },
+    {
+      "health": "healthy",
+      "name": "oo-poc-kafka-1",
+      "service": "kafka",
+      "state": "running"
+    },
+    {
+      "health": "healthy",
+      "name": "oo-poc-mcp-1",
+      "service": "mcp",
+      "state": "running"
+    },
+    {
+      "health": "healthy",
+      "name": "oo-poc-mes-1",
+      "service": "mes",
+      "state": "running"
+    },
+    {
+      "health": "",
+      "name": "oo-poc-opa-1",
+      "service": "opa",
+      "state": "running"
+    },
+    {
+      "health": "",
+      "name": "oo-poc-openfga-1",
+      "service": "openfga",
+      "state": "running"
+    },
+    {
+      "health": "",
+      "name": "oo-poc-otel-collector-1",
+      "service": "otel-collector",
+      "state": "running"
+    },
+    {
+      "health": "healthy",
+      "name": "oo-poc-postgres-1",
+      "service": "postgres",
+      "state": "running"
+    },
+    {
+      "health": "healthy",
+      "name": "oo-poc-projection_builder-1",
+      "service": "projection_builder",
+      "state": "running"
+    },
+    {
+      "health": "healthy",
+      "name": "oo-poc-rdf4j-1",
+      "service": "rdf4j",
+      "state": "running"
+    },
+    {
+      "health": "healthy",
+      "name": "oo-poc-reconciliation-1",
+      "service": "reconciliation",
+      "state": "running"
+    },
+    {
+      "health": "healthy",
+      "name": "oo-poc-temporal-1",
+      "service": "temporal",
+      "state": "running"
+    },
+    {
+      "health": "healthy",
+      "name": "oo-poc-temporal-postgres-1",
+      "service": "temporal-postgres",
+      "state": "running"
+    },
+    {
+      "health": "",
+      "name": "oo-poc-temporal-ui-1",
+      "service": "temporal-ui",
+      "state": "running"
+    },
+    {
+      "health": "healthy",
+      "name": "oo-poc-wms-1",
+      "service": "wms",
+      "state": "running"
+    }
+  ],
+  "generated_at": "2026-09-24T19:46:31Z",
+  "git_commit": "b899fc9329658c2f37177b9080ad56bfcecd05b2",
+  "git_working_tree_dirty": true,
+  "host_load_sample": {
+    "contended": false,
+    "cpu_count": 14,
+    "docker_cpu_percent": {
+      "oo-poc-action_worker-1": 0.01,
+      "oo-poc-baseline_action_worker-1": 0.01,
+      "oo-poc-baseline_ingestion-1": 0.19,
+      "oo-poc-baseline_service-1": 0.1,
+      "oo-poc-connect-1": 2.46,
+      "oo-poc-decision_service-1": 0.09,
+      "oo-poc-erp-1": 5.45,
+      "oo-poc-ingestion-1": 0.13,
+      "oo-poc-kafka-1": 7.06,
+      "oo-poc-mcp-1": 0.1,
+      "oo-poc-mes-1": 5.48,
+      "oo-poc-opa-1": 0.0,
+      "oo-poc-openfga-1": 0.02,
+      "oo-poc-otel-collector-1": 0.02,
+      "oo-poc-postgres-1": 14.9,
+      "oo-poc-projection_builder-1": 15.9,
+      "oo-poc-rdf4j-1": 11.76,
+      "oo-poc-reconciliation-1": 6.68,
+      "oo-poc-temporal-1": 1.32,
+      "oo-poc-temporal-postgres-1": 2.6,
+      "oo-poc-temporal-ui-1": 0.0,
+      "oo-poc-wms-1": 5.46
+    },
+    "load_avg_15m": 5.46728515625,
+    "load_avg_1m": 5.60302734375,
+    "load_avg_5m": 5.3837890625
+  },
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.6"
+}
