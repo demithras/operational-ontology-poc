@@ -85,12 +85,26 @@ def maybe_pause(
     """Called from inside a Temporal activity. `conn_factory` is
     services.common.db.get_conn (a contextmanager). No-op (near-zero
     overhead) unless THIS action_execution_id is armed for THIS exact
-    checkpoint — every other test's execute() path never even queries this
-    table conditionally beyond the one cheap SELECT below."""
+    checkpoint AND has not already been reached once — every other test's
+    execute() path never even queries this table conditionally beyond the
+    one cheap SELECT below.
+
+    Consumed on first reach (`reached_at IS NULL` in the WHERE clause,
+    never re-checked afterwards): a killed activity attempt is retried by
+    Temporal as a brand-new invocation of the SAME activity function, which
+    would otherwise hit this SAME pause again — and if `pause_seconds`
+    exceeds the activity's own `start_to_close_timeout` (as it legitimately
+    can, to give a real `docker kill` time to land), every retry would then
+    time out at the SAME checkpoint forever, never reaching the real call.
+    One pause per armed (action_execution_id, checkpoint) is exactly what a
+    "kill it once, then let it recover" fault test needs — same
+    consume-on-first-use semantics as services/common/faults.py's WMS
+    FaultRegistry (`scope="action_execution_id"`)."""
     with conn_factory() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT pause_seconds FROM test_action_worker_hooks WHERE action_execution_id = %s AND checkpoint = %s",
+                "SELECT pause_seconds FROM test_action_worker_hooks "
+                "WHERE action_execution_id = %s AND checkpoint = %s AND reached_at IS NULL",
                 (action_execution_id, checkpoint),
             )
             row = cur.fetchone()
