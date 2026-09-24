@@ -11,7 +11,7 @@ path into the semantic core that would need its own credentials/gates.
 
 from __future__ import annotations
 
-from services.mcp.decision_client import DecisionServiceClient, DecisionServiceError
+from services.mcp.decision_client import DecisionServiceClient
 
 
 def explain_decision(client: DecisionServiceClient, decision_id: str) -> dict:
@@ -48,12 +48,3 @@ def explain_decision(client: DecisionServiceClient, decision_id: str) -> dict:
             explanation["outcome"] = client.get_outcome(outcome_id)
 
     return explanation
-
-
-def try_explain_decision(client: DecisionServiceClient, decision_id: str) -> dict:
-    try:
-        return explain_decision(client, decision_id)
-    except DecisionServiceError as exc:
-        if exc.status_code == 404:
-            return {"decision_id": decision_id, "error": "decision not found"}
-        raise
