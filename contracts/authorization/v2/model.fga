@@ -1,0 +1,62 @@
+# contracts/authorization/v2/model.fga
+#
+# Phase 7 (docs/experiment/spec/07_versioning_and_replay.md) V2->V3
+# SECOND incompatible evolution: authorization model change, deliberately
+# chosen to be a DIFFERENT kind of breaking change than V1->V2's
+# ontology/policy/action evolution — spec 07 item 1's own worked example
+# ("OpenFGA uses the historical model id... plus the historical tuple
+# snapshot stored with the decision, write an ADR for R4") points directly
+# at this. See docs/adr/0004-openfga-historical-model-and-tuple-snapshot.md.
+#
+# The change: `can_approve_large_transfer` (unioned from plain `supervisor`)
+# is joined by a NEW, STRICTER relation `can_approve_large_transfer_v2`,
+# gated on a NEW `senior_approver` relation — deliberately NOT unioned with
+# `supervisor` by default. A principal who was a valid v1 approver (a bare
+# `supervisor` tuple) does NOT automatically gain v2 approval authority —
+# migrations/v2_to_v3/migrate_authz.py must EXPLICITLY write a
+# `senior_approver` tuple for every existing supervisor for that authority
+# to carry forward. This is genuinely breaking (a real authorization
+# regression if the tuple migration were skipped) and exercises the exact
+# "historical tuple snapshot" concern R4 raises: OpenFGA models are
+# immutable by id (this is a NEW model, written alongside — never on top
+# of — the v1 model, in the SAME store), so a V1/V2 decision's own
+# recorded oo:openfgaAuthorizationModelId always resolves its ORIGINAL
+# check against the ORIGINAL model, forever, regardless of this evolution.
+#
+# contracts/actions/v3/transfer_inventory.yaml is what actually starts
+# pinning `can_approve_large_transfer_v2` (approval_relation) and
+# `can_mitigate_high_priority` (protected_relation) — see that file.
+# Everything else here is IDENTICAL to contracts/authorization/v1/model.fga
+# (diff them for the exact delta): same actor/region/warehouse/agent
+# structure, same can_transfer_inventory/can_mitigate_high_priority
+# relations, unchanged.
+model
+  schema 1.1
+
+type user
+
+type agent
+  relations
+    define principal: [user]
+
+type region
+  relations
+    define planner: [user]
+    define supervisor: [user]
+    # New in V2: same region-level-grant-inherited-by-warehouse pattern as
+    # planner/supervisor above, for the new stricter approval relation.
+    define senior_approver: [user]
+
+type warehouse
+  relations
+    define in_region: [region]
+    define planner: [user] or planner from in_region
+    define junior_planner: [user]
+    define supervisor: [user] or supervisor from in_region
+    define agent_grant: [agent]
+    define can_transfer_inventory: planner or junior_planner or agent_grant
+    define can_approve_large_transfer: supervisor
+    # New in V2 (this file) — deliberately NOT unioned with `supervisor`.
+    define senior_approver: [user] or senior_approver from in_region
+    define can_approve_large_transfer_v2: senior_approver
+    define can_mitigate_high_priority: planner or supervisor

@@ -1,0 +1,95 @@
+# contracts/actions/v3/transfer_inventory.yaml
+#
+# Phase 7 (docs/experiment/spec/07_versioning_and_replay.md) V2 -> V3: the
+# SECOND incompatible evolution is an AUTHORIZATION model change (see
+# contracts/authorization/v2/model.fga's header) — this file is the one
+# action-contract delta it requires: `approval_relation` moves from V1/V2's
+# `can_approve_large_transfer` to V2 authorization's stricter, NOT-unioned
+# `can_approve_large_transfer_v2` (a bare `supervisor` tuple no longer
+# grants approval; the new `senior_approver` relation does —
+# migrations/v2_to_v3/migrate_authz.py migrates the canonical fixture's
+# supervisor-1 forward). Everything else is byte-identical to
+# contracts/actions/v2/transfer_inventory.yaml (evidence/policy/closure
+# unchanged — V3 does not touch ontology or policy at all, a deliberately
+# different kind of breaking change than V1->V2's).
+name: transfer_inventory
+version: 3
+
+parameters:
+  source_warehouse:
+    type: Warehouse
+  destination_warehouse:
+    type: Warehouse
+  part:
+    type: Part
+  quantity:
+    type: integer
+    min: 1
+  work_order:
+    type: WorkOrder
+    required: false
+
+context:
+  work_order_id:
+    type: WorkOrder
+    required_for_evidence: [linked_work_order_risk]
+
+reads:
+  - InventoryLot
+  - Warehouse
+  - WorkOrder
+
+authorization:
+  relation: can_transfer_inventory
+  object_binding: source_warehouse
+  # Changed in V3 (this file) — see header comment.
+  approval_relation: can_approve_large_transfer_v2
+  protected_relation: can_mitigate_high_priority
+
+policy:
+  package: factory.inventory.transfer_v2
+  approval_threshold_units: 80
+
+evidence_requirements:
+  - current_source_inventory
+  - current_destination_compatibility
+  - linked_work_order_risk
+  - safety_stock
+  - reservation_ok
+
+closure:
+  required:
+    - source_available
+    - source_quality_status
+    - safety_stock
+    - destination_exists
+    - reservation_ok
+  if_missing: insufficient_evidence
+  max_evidence_freshness_s: 5
+
+preconditions:
+  - source != destination
+  - source_available >= quantity
+
+expected_effects:
+  - source.available decreases by quantity
+  - destination.available increases by quantity
+
+external_operation:
+  system: WMS
+  operation: create_transfer
+
+idempotency:
+  key: action_execution_id
+
+observation:
+  source: WMS_CDC
+  timeout: PT30S
+
+compensation:
+  mode: compensatable
+  operation: reverse_transfer
+
+audit:
+  decision_required: true
+  approval_if_policy_requires: true

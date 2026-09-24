@@ -1,0 +1,26 @@
+{
+  "_comment": "Read by scripts/compat_check.py (F28). Covers TWO kinds reaching two DIFFERENT version numbers in the same deploy: actions reaching v3 (its third version) and authorization reaching v2 (its own second version) -- per-kind independent numbering, see docs/experiment/implementation-notes.md Phase 7 section.",
+  "from_version": "v2",
+  "to_version": "v3",
+  "kinds_changed": ["actions", "authorization"],
+  "kind_versions": {
+    "actions": "v3",
+    "authorization": "v2"
+  },
+  "breaking_changes": [
+    {
+      "kind": "authorization",
+      "description": "New senior_approver relation + can_approve_large_transfer_v2, NOT unioned with plain supervisor -- an existing supervisor tuple alone no longer grants v2 approval authority without an explicit migrated senior_approver tuple.",
+      "removed_properties": []
+    },
+    {
+      "kind": "actions",
+      "description": "transfer_inventory version 3: approval_relation moves to can_approve_large_transfer_v2.",
+      "removed_properties": []
+    }
+  ],
+  "migration_script": "migrations/v2_to_v3/migrate_authz.py",
+  "deploy_script": "migrations/v2_to_v3/deploy.py",
+  "replay_verified": true,
+  "replay_verification_note": "make test-replay (tests/replay/test_replay_corpus.py) replays every V1 and V2 decision under this V3-deployed state and requires 100% PASS -- see docs/experiment/implementation-notes.md Phase 7 section for the run's pytest summary line."
+}

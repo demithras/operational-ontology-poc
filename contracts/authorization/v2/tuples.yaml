@@ -1,0 +1,39 @@
+# contracts/authorization/v2/tuples.yaml
+#
+# Same canonical tuples as contracts/authorization/v1/tuples.yaml PLUS the
+# one tuple migrations/v2_to_v3/migrate_authz.py writes into the LIVE
+# store for real: supervisor-1's region-1 supervisor authority carried
+# forward into the new senior_approver relation. Documents the TARGET state
+# for `fga model test`'s own offline run (contracts/authorization/v2/tests.yaml) —
+# the live migration script is the actual mechanism that applies this to
+# the running store; this file is the archived, immutable record of what
+# that migration was supposed to produce.
+- user: user:planner-1
+  relation: planner
+  object: region:region-1
+- user: user:supervisor-1
+  relation: supervisor
+  object: region:region-1
+- user: user:junior-1
+  relation: junior_planner
+  object: warehouse:WH-A
+- user: user:junior-1
+  relation: junior_planner
+  object: warehouse:WH-B
+- user: region:region-1
+  relation: in_region
+  object: warehouse:WH-A
+- user: region:region-1
+  relation: in_region
+  object: warehouse:WH-B
+- user: region:region-2
+  relation: in_region
+  object: warehouse:WH-OUT-OF-SCOPE
+- user: user:planner-1
+  relation: principal
+  object: agent:agent-1
+# Migrated (migrations/v2_to_v3/migrate_authz.py) -- carries supervisor-1's
+# approval authority forward into V2's stricter senior_approver relation.
+- user: user:supervisor-1
+  relation: senior_approver
+  object: region:region-1

@@ -99,10 +99,16 @@ def _write_tuples(client: httpx.Client, base_url: str, store_id: str, tuples: li
     return written
 
 
-def bootstrap(base_url: str) -> dict:
+def bootstrap(base_url: str, auth_dir: Path = AUTH_DIR) -> dict:
+    """Phase 7: `auth_dir` lets migrations/v2_to_v3/migrate_authz.py reuse
+    this SAME transform-and-write logic to publish a NEW authorization
+    model (contracts/authorization/v2/model.fga) into the SAME store
+    (OpenFGA models are immutable-by-id and additive — writing a new model
+    version never touches/replaces v1's, which stays resolvable by its own
+    id forever). Defaults to v1 exactly like every Phase 5/6 caller."""
     _wait_for_openfga(base_url)
-    model_json = _transform_model_to_json(AUTH_DIR / "model.fga")
-    tuples = yaml.safe_load((AUTH_DIR / "tuples.yaml").read_text())
+    model_json = _transform_model_to_json(auth_dir / "model.fga")
+    tuples = yaml.safe_load((auth_dir / "tuples.yaml").read_text())
 
     with httpx.Client(timeout=10.0) as client:
         store_id = _find_or_create_store(client, base_url, STORE_NAME)
@@ -110,6 +116,33 @@ def bootstrap(base_url: str) -> dict:
         written = _write_tuples(client, base_url, store_id, tuples)
 
     return {"store_id": store_id, "authorization_model_id": model_id, "tuples_written": written}
+
+
+MODEL_IDS_PATH = REPO_ROOT / "contracts" / "manifests" / "openfga_model_ids.json"
+
+
+def _record_model_id(version: str, model_id: str) -> None:
+    """Phase 7: contracts/manifests/openfga_model_ids.json's "v1" entry —
+    services/decision_service/manifest.py reads this to attach the REAL
+    (immutable-by-id) OpenFGA authorization_model_id onto every Decision.
+    Every `make up` re-bootstrap writes a NEW v1 model version (OpenFGA
+    keeps every one; see this module's own docstring) — this always
+    records the LATEST one, matching what `resolve_latest_authorization_model_id`
+    would resolve live anyway, so decisions proposed right after any given
+    `make up` stay consistent with what this file says "v1" currently
+    means. A decision's OWN already-recorded id is never affected by a
+    later overwrite here — see services/decision_service/models.py's
+    openfga_authorization_model_id field, captured once per decision at
+    propose() time."""
+    model_ids = {}
+    if MODEL_IDS_PATH.exists():
+        try:
+            model_ids = json.loads(MODEL_IDS_PATH.read_text())
+        except json.JSONDecodeError:
+            model_ids = {}
+    model_ids[version] = model_id
+    MODEL_IDS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    MODEL_IDS_PATH.write_text(json.dumps(model_ids, indent=2, sort_keys=True) + "\n")
 
 
 def main() -> int:
@@ -124,6 +157,7 @@ def main() -> int:
         base_url = db_env.openfga_api_url()
 
     result = bootstrap(base_url)
+    _record_model_id("v1", result["authorization_model_id"])
     print(f"[bootstrap_openfga] store={result['store_id']} "
           f"model={result['authorization_model_id']} "
           f"tuples_written_this_run={result['tuples_written']}")

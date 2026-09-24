@@ -1,0 +1,133 @@
+# contracts/authorization/v2/tests.yaml
+#
+# `fga model test --tests contracts/authorization/v2/tests.yaml`. Every
+# case from contracts/authorization/v1/tests.yaml still applies unchanged
+# (nothing about v1's relations moved), PLUS two new cases proving V2's
+# actual breaking change: can_approve_large_transfer_v2 requires the NEW
+# senior_approver relation, not plain supervisor.
+name: authorization-v2-tests
+model_file: model.fga
+tuple_file: tuples.yaml
+
+tests:
+  - name: planner-allowed-in-scope
+    check:
+      - user: user:planner-1
+        object: warehouse:WH-A
+        assertions:
+          can_transfer_inventory: true
+
+  - name: planner-denied-out-of-scope
+    check:
+      - user: user:planner-1
+        object: warehouse:WH-OUT-OF-SCOPE
+        assertions:
+          can_transfer_inventory: false
+
+  - name: junior-can-transfer-but-not-approve
+    check:
+      - user: user:junior-1
+        object: warehouse:WH-A
+        assertions:
+          can_transfer_inventory: true
+          can_approve_large_transfer: false
+          can_approve_large_transfer_v2: false
+
+  - name: unauthorized-human-denied
+    check:
+      - user: user:unregistered-1
+        object: warehouse:WH-A
+        assertions:
+          can_transfer_inventory: false
+          can_approve_large_transfer: false
+
+  - name: agent-denied-without-task-grant
+    check:
+      - user: agent:agent-1
+        object: warehouse:WH-A
+        assertions:
+          can_transfer_inventory: false
+
+  - name: agent-allowed-with-exact-task-grant
+    tuples:
+      - user: agent:agent-1
+        relation: agent_grant
+        object: warehouse:WH-A
+    check:
+      - user: agent:agent-1
+        object: warehouse:WH-A
+        assertions:
+          can_transfer_inventory: true
+      - user: agent:agent-1
+        object: warehouse:WH-B
+        assertions:
+          can_transfer_inventory: false
+
+  - name: revoked-grant-denies-immediately
+    check:
+      - user: agent:agent-1
+        object: warehouse:WH-A
+        assertions:
+          can_transfer_inventory: false
+
+  - name: junior-denied-protected-high-priority-mitigation
+    check:
+      - user: user:junior-1
+        object: warehouse:WH-A
+        assertions:
+          can_transfer_inventory: true
+          can_mitigate_high_priority: false
+
+  - name: planner-and-supervisor-allowed-protected-high-priority-mitigation
+    check:
+      - user: user:planner-1
+        object: warehouse:WH-A
+        assertions:
+          can_mitigate_high_priority: true
+      - user: user:supervisor-1
+        object: warehouse:WH-A
+        assertions:
+          can_mitigate_high_priority: true
+
+  - name: agent-on-behalf-of-user-delegation
+    check:
+      - user: user:planner-1
+        object: agent:agent-1
+        assertions:
+          principal: true
+      - user: user:supervisor-1
+        object: agent:agent-1
+        assertions:
+          principal: false
+
+  # --- New in V2: the actual breaking change ---------------------------
+
+  - name: migrated-supervisor-allowed-v2-approval
+    description: >-
+      supervisor-1 was migrated (migrations/v2_to_v3/migrate_authz.py) to
+      also hold senior_approver on region-1 -- can_approve_large_transfer_v2
+      is allowed, exactly like the OLD can_approve_large_transfer still is.
+    check:
+      - user: user:supervisor-1
+        object: warehouse:WH-A
+        assertions:
+          can_approve_large_transfer: true
+          can_approve_large_transfer_v2: true
+
+  - name: non_migrated_supervisor_denied_v2_approval
+    description: >-
+      A supervisor tuple WITHOUT the accompanying senior_approver migration
+      keeps its OLD can_approve_large_transfer authority but is DENIED the
+      new v2 relation -- proves the two are genuinely independent, i.e. this
+      really is a breaking change a skipped migration would have silently
+      regressed.
+    tuples:
+      - user: user:supervisor-2
+        relation: supervisor
+        object: region:region-1
+    check:
+      - user: user:supervisor-2
+        object: warehouse:WH-A
+        assertions:
+          can_approve_large_transfer: true
+          can_approve_large_transfer_v2: false
