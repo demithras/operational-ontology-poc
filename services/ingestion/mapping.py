@@ -10,10 +10,12 @@ Only columns literally named `part` / `part_id` require identity
 resolution (services/identity_resolver) — every other id in this domain is
 already canonical (docs/experiment/implementation-notes.md Phase 2).
 
-`transfers` (WMS) is deliberately NOT mapped — see
-docs/adr/0002-cdc-now-not-deferred.md's sibling note in
-implementation-notes.md: it is an action-execution artifact Phase 6 gives
-meaning to, not an organic observed fact yet.
+`transfers` (WMS) IS mapped, starting Phase 6 (docs/experiment/implementation-notes.md
+Phase 5 section's own handoff note: "wms.transfers CDC topic is still
+unmapped into RDF ... Phase 6 is where that mapping needs to land") — to
+fac:WmsTransferRecord (contracts/ontology/v1/fac-core.ttl), the CDC-observed
+counterpart services/action_worker/services/reconciliation correlate an
+oo:ActionExecution's expected effect against.
 """
 
 from __future__ import annotations
@@ -214,6 +216,27 @@ _register(
             FieldSpec("on_hand", FAC.onHand, "integer"),
             FieldSpec("reserved", FAC.reserved, "integer"),
             FieldSpec("quality_status", FAC.qualityStatus, "string"),
+        ),
+    )
+)
+
+
+_register(
+    TableSpec(
+        system="wms",
+        table="transfers",
+        pk_column="action_execution_id",
+        class_name="WmsTransferRecord",
+        fields=(
+            FieldSpec("action_execution_id", FAC.actionExecutionId, "string"),
+            FieldSpec("source_warehouse", FAC.sourceWarehouse, "ref", ref_class="Warehouse"),
+            FieldSpec("destination_warehouse", FAC.destinationWarehouse, "ref", ref_class="Warehouse"),
+            FieldSpec("part", FAC.part, "part_ref"),
+            FieldSpec("requested_quantity", FAC.requestedQuantity, "integer"),
+            FieldSpec("actual_quantity", FAC.actualQuantity, "integer"),
+            FieldSpec("status", FAC.transferStatus, "string"),
+            FieldSpec("fault_mode_applied", FAC.faultModeApplied, "string"),
+            FieldSpec("reverses_action_execution_id", FAC.reversesActionExecutionId, "string"),
         ),
     )
 )

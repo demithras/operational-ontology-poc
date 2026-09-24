@@ -1,6 +1,6 @@
 .PHONY: up down reset seed test test-unit test-contracts test-component test-integration \
         test-stateful test-destructive test-determinism test-faults test-replay bench \
-        bench-phase5 experiment report replay ensure-env wait-healthy wait-converged \
+        bench-phase5 bench-phase6 experiment report replay ensure-env wait-healthy wait-converged \
         wait-connectors rebuild-projections
 
 SHELL := /usr/bin/env bash
@@ -31,6 +31,7 @@ up: ensure-env
 	$(VENV_PY) services/ingestion/register_connectors.py
 	$(VENV_PY) services/ingestion/bootstrap_rdf4j.py
 	$(VENV_PY) services/decision_service/bootstrap_openfga.py
+	$(VENV_PY) services/action_worker/bootstrap_temporal.py
 
 ## Delegates to services/common/wait_healthy.py (see its docstring for why
 ## this stopped being a plain bash/grep loop in Phase 5: openfga/opa have no
@@ -179,9 +180,16 @@ rebuild-projections: ensure-env
 # 2, per experiments/exp-000/manifest.yaml `exit_codes`.
 # ---------------------------------------------------------------------------
 
-test-faults:
-	@echo "not implemented yet — Phase 6 (see docs/experiment/spec/12_implementation_plan.md)"
-	@exit 2
+## docs/experiment/spec/09_failure_and_adversarial_matrix.md — end-to-end
+# through the REAL decision_service -> Temporal -> WMS -> CDC path (never a
+# direct WMS call — tests/integration/test_wms_faults.py already covers the
+# WMS layer alone). Requires the full stack including Phase 6's
+# temporal/action_worker/reconciliation services (`make up`).
+# NEVER part of `make test` — several of these tests real
+# `docker compose stop/start temporal`, same "run alone" rule as
+# test-destructive (docs/experiment/briefs/phase4fix.md item 3).
+test-faults: ensure-env
+	$(VENV_PY) -m pytest tests/faults -q
 
 test-replay:
 	@echo "not implemented yet — Phase 7 (see docs/experiment/spec/12_implementation_plan.md)"
@@ -196,6 +204,7 @@ test-replay:
 bench: ensure-env
 	$(VENV_PY) tests/performance/bench_phase4.py
 	$(MAKE) bench-phase5
+	$(MAKE) bench-phase6
 
 ## docs/experiment/briefs/phase5.md item 9: gate evaluation p95 (authz/
 ## policy/SHACL/persistence stages) and end-to-end proposal-path p95,
@@ -204,6 +213,15 @@ bench: ensure-env
 ## (postgres/rdf4j/openfga/opa/wms/decision_service) reachable.
 bench-phase5: ensure-env
 	$(VENV_PY) tests/performance/bench_phase5.py
+
+## docs/experiment/briefs/phase6.md item 7: external-action duration /
+## CDC-observation lag / end-to-end execution time, through the real
+## decision_service -> Temporal -> WMS -> CDC path. Writes
+## experiments/exp-000/results/bench-phase6.json. No SLO gate locked for
+## these three (measurement reporting only). Requires the full stack
+## including temporal/action_worker reachable.
+bench-phase6: ensure-env
+	$(VENV_PY) tests/performance/bench_phase6.py
 
 experiment:
 	@echo "not implemented yet — Phase 10 (see docs/experiment/spec/12_implementation_plan.md)"

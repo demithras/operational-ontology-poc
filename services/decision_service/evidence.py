@@ -378,7 +378,11 @@ def _resolve_route_protection(
       PROTECTED — resolved fresh and at least one matching work order is
         HIGH priority and at_risk; `protecting_work_order_ids` names them.
     """
-    candidates = reader.get_transfer_candidates_for_route(conn, part, source_warehouse, destination_warehouse)
+    # ONE JOINed query (not two separate round trips) — see
+    # get_transfer_candidates_with_risk_for_route's own docstring: found
+    # empirically necessary to close a real AB-BA deadlock window against
+    # services/projection_builder's TRUNCATE order.
+    candidates = reader.get_transfer_candidates_with_risk_for_route(conn, part, source_warehouse, destination_warehouse)
     if not candidates:
         return "NOT_APPLICABLE", []
 
@@ -390,13 +394,12 @@ def _resolve_route_protection(
         if wo_id in seen_work_orders:
             continue
         seen_work_orders.add(wo_id)
-        wo_row = reader.get_work_order_risk(conn, wo_id)
-        if wo_row is None or wo_row["priority"] is None:
+        if candidate["priority"] is None:
             return "UNRESOLVED", []
-        verified_through = min(mes_watermark, wo_row["computed_at"]) if mes_watermark is not None else None
+        verified_through = min(mes_watermark, candidate["risk_computed_at"]) if mes_watermark is not None else None
         if verified_through is None or freshness.evaluate(verified_through, max_age_s=max_age_s) == freshness.STALE:
             return "UNRESOLVED", []
-        if wo_row["priority"] == "HIGH" and wo_row["at_risk"]:
+        if candidate["priority"] == "HIGH" and candidate["at_risk"]:
             protecting.append(wo_id)
     return ("PROTECTED", protecting) if protecting else ("UNPROTECTED", [])
 

@@ -107,3 +107,25 @@ def opa_base_url() -> str:
 def decision_service_url() -> str:
     host = os.environ.get("OO_SERVICE_HOST", "localhost")
     return f"http://{host}:{os.environ['DECISION_SERVICE_HTTP_PORT']}"
+
+
+# --- Phase 6 (docs/experiment/briefs/phase6.md) --------------------------
+
+
+def temporal_frontend_address() -> str:
+    """Host-reachable Temporal frontend gRPC address (host:port form, what
+    temporalio.client.Client.connect expects) — services/action_worker and
+    services/decision_service (running inside docker-compose) instead use
+    TEMPORAL_ADDRESS=temporal:7233 directly, set in docker-compose.yml."""
+    host = os.environ.get("OO_SERVICE_HOST", "localhost")
+    return f"{host}:{os.environ['TEMPORAL_FRONTEND_HOST_PORT']}"
+
+
+def action_worker_health_url() -> str:
+    host = os.environ.get("OO_SERVICE_HOST", "localhost")
+    return f"http://{host}:{os.environ['ACTION_WORKER_HEALTH_PORT']}"
+
+
+def reconciliation_health_url() -> str:
+    host = os.environ.get("OO_SERVICE_HOST", "localhost")
+    return f"http://{host}:{os.environ['RECONCILIATION_HEALTH_PORT']}"

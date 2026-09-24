@@ -78,4 +78,8 @@ class DecisionRecord:
     def concerns_work_order(self) -> str | None:
         if self.action_type == "reschedule_work_order":
             return self.parameters.get("work_order_id")
-        return self.context.get("work_order_id")
+        # Phase 6 step 0: parameters.work_order is the canonical,
+        # hash-covered path (contracts/actions/v1/transfer_inventory.yaml) —
+        # context.work_order_id is still accepted for backward
+        # compatibility (see services/decision_service/evidence.py).
+        return self.parameters.get("work_order") or self.context.get("work_order_id")

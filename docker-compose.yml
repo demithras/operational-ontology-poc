@@ -308,6 +308,7 @@ services:
       ERP_BASE_URL: http://erp:8000
       MES_BASE_URL: http://mes:8000
       INGESTION_HEALTH_URL: http://ingestion:8090
+      TEMPORAL_ADDRESS: temporal:7233
       OO_TEST_MODE: ${OO_TEST_MODE}
     ports:
       - "${DECISION_SERVICE_HTTP_PORT}:8000"
@@ -326,8 +327,150 @@ services:
         condition: service_healthy
       mes:
         condition: service_healthy
+      temporal:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+
+  # --- Phase 6: durable action runtime (docs/experiment/briefs/phase6.md) ---
+  # Temporal's OWN dedicated Postgres (never the shared oo-poc instance —
+  # db/init/00_init.sh only runs on first volume init, so a new database on
+  # the shared server would need a data-losing reset; a separate container
+  # needs no such migration).
+  temporal-postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${TEMPORAL_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${TEMPORAL_POSTGRES_PASSWORD}
+    volumes:
+      - oo-poc-temporal-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${TEMPORAL_POSTGRES_USER}"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  temporal:
+    image: temporalio/auto-setup:latest
+    environment:
+      DB: postgres12
+      DB_PORT: "5432"
+      POSTGRES_SEEDS: temporal-postgres
+      POSTGRES_USER: ${TEMPORAL_POSTGRES_USER}
+      POSTGRES_PWD: ${TEMPORAL_POSTGRES_PASSWORD}
+      DBNAME: temporal
+      VISIBILITY_DBNAME: temporal_visibility
+    ports:
+      - "${TEMPORAL_FRONTEND_HOST_PORT}:7233"
+    depends_on:
+      temporal-postgres:
+        condition: service_healthy
+    # verified empirically: the auto-setup image has `nc` (auto-setup.sh's
+    # own wait_for_postgres uses it) — a raw TCP check on the frontend gRPC
+    # port, same "no app-level curl available" pattern as rdf4j's /dev/tcp
+    # healthcheck. `nc -z localhost 7233` FAILS (exit 1) even once the
+    # server is fully up — temporal-server binds the frontend port on the
+    # container's OWN bridge-network IP (`172.x.x.x:7233`, visible via
+    # `netstat -tlnp` inside the container), never on `127.0.0.1`, so a
+    # loopback check can never succeed; `nc -z temporal 7233` (the
+    # container's own compose service hostname, resolvable to that same IP
+    # via Docker's embedded DNS from inside the container itself) does.
+    # Real namespace readiness is proven separately by
+    # services/action_worker/bootstrap_temporal.py (mirrors
+    # services/decision_service/bootstrap_openfga.py) before anything
+    # starts a workflow.
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z temporal 7233"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+
+  # Optional (brief item 1: "optional temporal-ui") — nothing in this repo's
+  # tests depends on this being reachable; human-debugging convenience only.
+  temporal-ui:
+    image: temporalio/ui:latest
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: "http://localhost:${TEMPORAL_UI_HOST_PORT}"
+    ports:
+      - "${TEMPORAL_UI_HOST_PORT}:8080"
+    depends_on:
+      temporal:
+        condition: service_healthy
+
+  action_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["python3", "-m", "services.action_worker.worker"]
+    environment:
+      SERVICE_DB_HOST: postgres
+      SERVICE_DB_PORT: "5432"
+      SERVICE_DB_NAME: ${ONTOLOGY_HOT_DB_NAME}
+      SERVICE_DB_USER: ${ONTOLOGY_HOT_DB_USER}
+      SERVICE_DB_PASSWORD: ${ONTOLOGY_HOT_DB_PASSWORD}
+      RDF4J_BASE_URL: http://rdf4j:8080/rdf4j-server
+      RDF4J_REPOSITORY: oo
+      TEMPORAL_ADDRESS: temporal:7233
+      WMS_BASE_URL: http://wms:8000
+      ERP_BASE_URL: http://erp:8000
+      MES_BASE_URL: http://mes:8000
+      INGESTION_HEALTH_URL: http://ingestion:8090
+      OO_ACTION_WORKER_HEALTH_PORT: "8092"
+      OO_TEST_MODE: ${OO_TEST_MODE}
+    ports:
+      - "${ACTION_WORKER_HEALTH_PORT}:8092"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rdf4j:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+      wms:
+        condition: service_healthy
+      erp:
+        condition: service_healthy
+      mes:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8092/health', timeout=2)"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+
+  reconciliation:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["python3", "-m", "services.reconciliation.main"]
+    environment:
+      SERVICE_DB_HOST: postgres
+      SERVICE_DB_PORT: "5432"
+      SERVICE_DB_NAME: ${ONTOLOGY_HOT_DB_NAME}
+      SERVICE_DB_USER: ${ONTOLOGY_HOT_DB_USER}
+      SERVICE_DB_PASSWORD: ${ONTOLOGY_HOT_DB_PASSWORD}
+      RDF4J_BASE_URL: http://rdf4j:8080/rdf4j-server
+      RDF4J_REPOSITORY: oo
+      WMS_BASE_URL: http://wms:8000
+      ERP_BASE_URL: http://erp:8000
+      MES_BASE_URL: http://mes:8000
+      OO_RECONCILIATION_POLL_INTERVAL_S: "2"
+      OO_RECONCILIATION_HEALTH_PORT: "8093"
+    ports:
+      - "${RECONCILIATION_HEALTH_PORT}:8093"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rdf4j:
+        condition: service_healthy
+      ingestion:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8093/health', timeout=2)"]
       interval: 3s
       timeout: 5s
       retries: 60
@@ -335,3 +478,4 @@ services:
 volumes:
   oo-poc-pgdata:
   oo-poc-rdf4j-data:
+  oo-poc-temporal-pgdata:

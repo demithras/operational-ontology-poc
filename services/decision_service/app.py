@@ -6,6 +6,7 @@ callable/testable without an HTTP layer).
 
 from __future__ import annotations
 
+import asyncio
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -15,10 +16,12 @@ import psycopg
 from fastapi import FastAPI, HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
+from temporalio.client import Client as TemporalClient
+from temporalio.service import RPCError
 
 from services.common.db import close_pool, get_conn, open_pool
 from services.common.rdf4j_client import RDF4JClient
-from services.decision_service import authz, manifest as manifest_mod, planner, rdf_writer, store
+from services.decision_service import authz, execution, execution_reader, manifest as manifest_mod, planner, rdf_writer, store
 from services.decision_service.action_types import get_action_type
 from services.decision_service.config import from_env
 from services.decision_service.models import APPROVED, REQUIRES_APPROVAL
@@ -46,11 +49,28 @@ async def lifespan(app: FastAPI):
         # Debezium heartbeats) — see evidence.py::_resolve_source_inventory_with_freshness.
         "ingestion": httpx.Client(base_url=config.ingestion_health_url, timeout=5.0),
     }
+    # Phase 6: connect lazily-tolerant — F25 ("Temporal unavailable ->
+    # execution -> approved decision remains unexecuted, auditable") must
+    # not make decision_service itself fail to START just because Temporal
+    # isn't up yet; `execute()` below checks `_state["temporal_client"]`
+    # itself and returns 503 rather than crashing. `Client.connect` does
+    # perform a real handshake, so this is retried a few times before
+    # giving up for this process's lifetime (a subsequent `make up` restart
+    # re-attempts).
+    temporal_client = None
+    for _attempt in range(10):
+        try:
+            temporal_client = await TemporalClient.connect(config.temporal_address, namespace="default")
+            break
+        except Exception:  # noqa: BLE001
+            await asyncio.sleep(2.0)
+
     _state.update(
         config=config,
         rdf4j_client=rdf4j_client,
         http_clients=http_clients,
         manifest=manifest_mod.write_manifest(),
+        temporal_client=temporal_client,
     )
     yield
     rdf4j_client.close()
@@ -103,29 +123,53 @@ def _decision_response(row: dict) -> dict:
     return jsonable_encoder(row, exclude_none=False)
 
 
+_EVIDENCE_DEADLOCK_RETRIES = 3
+
+
 @app.post("/decisions/propose")
 def decisions_propose(body: ProposeRequest):
     force_invalid = TEST_MODE and str(body.context.get("force_invalid_conformance", "")).lower() == "true"
-    with get_conn() as conn:
-        try:
-            record = propose(
-                _deps(conn), body.actor.type, body.actor.id, body.action_type,
-                body.parameters, body.context, force_invalid_conformance=force_invalid,
-            )
-        except MalformedProposal as exc:
-            store.record_proposal_attempt_failure(conn, body.action_type, body.actor.type, body.actor.id, "malformed_proposal", str(exc))
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
-        except (httpx.HTTPError, ConnectionError, psycopg.Error) as exc:
-            # F22: RDF4J/dependency unreachable before a Decision could even
-            # be attempted -> explicit failure, never a fabricated status.
-            # rollback() first: a psycopg.Error leaves the connection's own
-            # transaction aborted, and the INSERT below would itself fail
-            # ("current transaction is aborted") without this.
-            conn.rollback()
-            store.record_proposal_attempt_failure(conn, body.action_type, body.actor.type, body.actor.id, "dependency_unavailable", str(exc))
-            raise HTTPException(status_code=503, detail=f"decision service dependency unavailable: {exc}") from exc
-        row = store.get_decision(conn, record.decision_id)
-    return JSONResponse(status_code=200, content=_decision_response(row))
+    for attempt in range(_EVIDENCE_DEADLOCK_RETRIES):
+        with get_conn() as conn:
+            try:
+                record = propose(
+                    _deps(conn), body.actor.type, body.actor.id, body.action_type,
+                    body.parameters, body.context, force_invalid_conformance=force_invalid,
+                )
+            except MalformedProposal as exc:
+                store.record_proposal_attempt_failure(conn, body.action_type, body.actor.type, body.actor.id, "malformed_proposal", str(exc))
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
+            except psycopg.errors.DeadlockDetected as exc:
+                # Phase 6: evidence-gathering now reads BOTH work_order_risk
+                # AND transfer_candidates in the SAME transaction
+                # (services/decision_service/evidence.py::_resolve_route_protection)
+                # — a real, reproducible AB-BA lock-order collision against
+                # services/projection_builder's own TRUNCATE order
+                # (work_order_risk -> transfer_candidates, one poll-interval
+                # transaction) whenever the two overlap AND a route actually
+                # matches a candidate. This is Postgres's OWN self-defense
+                # (one of the two transactions is always aborted to break
+                # the cycle) — a read-only evidence-gathering retry with a
+                # FRESH connection is always safe (no write has happened
+                # yet; conn is already aborted, so the retry re-enters
+                # `get_conn()` rather than reusing it).
+                conn.rollback()
+                if attempt < _EVIDENCE_DEADLOCK_RETRIES - 1:
+                    continue
+                store.record_proposal_attempt_failure(conn, body.action_type, body.actor.type, body.actor.id, "dependency_unavailable", str(exc))
+                raise HTTPException(status_code=503, detail=f"decision service dependency unavailable (deadlock retries exhausted): {exc}") from exc
+            except (httpx.HTTPError, ConnectionError, psycopg.Error) as exc:
+                # F22: RDF4J/dependency unreachable before a Decision could even
+                # be attempted -> explicit failure, never a fabricated status.
+                # rollback() first: a psycopg.Error leaves the connection's own
+                # transaction aborted, and the INSERT below would itself fail
+                # ("current transaction is aborted") without this.
+                conn.rollback()
+                store.record_proposal_attempt_failure(conn, body.action_type, body.actor.type, body.actor.id, "dependency_unavailable", str(exc))
+                raise HTTPException(status_code=503, detail=f"decision service dependency unavailable: {exc}") from exc
+            row = store.get_decision(conn, record.decision_id)
+        return JSONResponse(status_code=200, content=_decision_response(row))
+    raise AssertionError("unreachable")  # loop always returns or raises
 
 
 @app.get("/decisions/{decision_id}")
@@ -181,22 +225,38 @@ def decisions_approve(decision_id: str, body: ApproveRequest):
 
 
 @app.post("/decisions/{decision_id}/execute")
-def decisions_execute(decision_id: str):
+async def decisions_execute(decision_id: str):
     with get_conn() as conn:
         row = store.get_decision(conn, decision_id)
     if row is None:
         raise HTTPException(status_code=404, detail="decision not found")
-    if row["status"] not in (APPROVED,):
-        raise HTTPException(status_code=409, detail=f"decision is not APPROVED (status={row['status']})")
-    # Verify the exact immutable approved tuple, per spec 06 execute():
-    # "verify immutable content hash" — real Temporal-driven execution is
-    # Phase 6; this endpoint proves the verification step is real without
-    # yet performing the external call.
+    # A decision already past APPROVED (EXECUTING or any terminal execution
+    # status) is not an error — execute() is idempotent per decision
+    # (F10/F25): re-resolve the SAME workflow rather than 409ing, so a
+    # caller retrying a slow/uncertain first call gets the real status back.
+    if row["status"] not in (APPROVED, "EXECUTING", "OBSERVED_SUCCESS", "DIVERGED", "OUTCOME_UNKNOWN", "EXECUTION_FAILED"):
+        raise HTTPException(status_code=409, detail=f"decision is not APPROVED and never executed (status={row['status']})")
+
+    temporal_client = _state.get("temporal_client")
+    if temporal_client is None:
+        # F25: "Temporal unavailable -> approved decision remains
+        # unexecuted, auditable" — a clear, explicit 503, never a decision
+        # silently left in a fabricated-looking state.
+        raise HTTPException(status_code=503, detail="Temporal is unavailable — decision remains APPROVED and unexecuted (F25)")
+
+    action_execution_id = execution.action_execution_id_for(decision_id)
+    try:
+        handle, started_now = await execution.start_or_get_execution(temporal_client, decision_id)
+    except RPCError as exc:
+        raise HTTPException(status_code=503, detail=f"Temporal unavailable — decision remains APPROVED and unexecuted (F25): {exc}") from exc
+
     return JSONResponse(
-        status_code=501,
+        status_code=202,
         content={
-            "detail": "not implemented yet — Phase 6 (Temporal action runtime)",
             "decision_id": decision_id,
+            "action_execution_id": action_execution_id,
+            "temporal_workflow_id": handle.id,
+            "started_now": started_now,
             "verified_immutable_tuple": True,
             "decision_content_hash": row["decision_content_hash"],
         },
@@ -205,12 +265,18 @@ def decisions_execute(decision_id: str):
 
 @app.get("/executions/{execution_id}")
 def executions_get(execution_id: str):
-    raise HTTPException(status_code=501, detail="not implemented yet — Phase 6 (Temporal action runtime)")
+    row = execution_reader.get_execution(_state["rdf4j_client"], execution_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="execution not found")
+    return row
 
 
 @app.get("/outcomes/{outcome_id}")
 def outcomes_get(outcome_id: str):
-    raise HTTPException(status_code=501, detail="not implemented yet — Phase 6 (Temporal action runtime)")
+    row = execution_reader.get_outcome(_state["rdf4j_client"], outcome_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="outcome not found")
+    return row
 
 
 @app.post("/replay/{decision_id}")

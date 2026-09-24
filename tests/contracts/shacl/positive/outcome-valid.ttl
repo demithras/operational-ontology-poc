@@ -1,0 +1,11 @@
+# Positive fixture: valid oo:Outcome. Must conform under
+# contracts/shapes/v1/action-execution-shape.ttl's oo:OutcomeShape.
+@prefix oo:    <https://example.local/oo/> .
+@prefix oo-fx: <https://example.local/oo/fixture/> .
+
+oo-fx:out-1
+  a oo:Outcome ;
+  oo:outcomeId "out-1" ;
+  oo:reconciliationState "CONVERGED" ;
+  oo:expectedEffectJson "{}" ;
+  oo:observedEffectJson "{}" .

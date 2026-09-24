@@ -1,0 +1,11 @@
+# Negative fixture: oo:Outcome with a reconciliationState outside spec 06's
+# named enumeration. Must NOT conform.
+@prefix oo:    <https://example.local/oo/> .
+@prefix oo-fx: <https://example.local/oo/fixture/> .
+
+oo-fx:out-bad-state
+  a oo:Outcome ;
+  oo:outcomeId "out-bad-state" ;
+  oo:reconciliationState "MADE_UP_STATE" ;
+  oo:expectedEffectJson "{}" ;
+  oo:observedEffectJson "{}" .

@@ -2,10 +2,10 @@
   "end_to_end_proposal": {
     "condition": "warm",
     "count": 30,
-    "max_ms": 31.514,
-    "p50_ms": 24.913,
-    "p95_ms": 27.587,
-    "p99_ms": 31.514
+    "max_ms": 29.971,
+    "p50_ms": 26.816,
+    "p95_ms": 29.638,
+    "p99_ms": 29.971
   },
   "environment": {
     "cpu": "arm",
@@ -15,17 +15,17 @@
     "python": "3.14.6",
     "ram_bytes": 38654705664
   },
-  "measured_at": "2026-09-24T04:19:50Z",
+  "measured_at": "2026-09-24T05:21:32Z",
   "phase": 5,
   "slo": {
     "decision_proposal_p95_ms": {
-      "measured_p95_ms": 27.587,
+      "measured_p95_ms": 29.638,
       "note": "excludes human approval wait and external write duration, per H6",
       "pass": true,
       "threshold_ms": 500
     },
     "gate_evaluation_p95_ms": {
-      "measured_worst_stage_p95_ms": 11.597,
+      "measured_worst_stage_p95_ms": 8.41,
       "pass": true,
       "threshold_ms": 300
     }
@@ -34,34 +34,34 @@
     "authorization_check": {
       "condition": "warm",
       "count": 50,
-      "max_ms": 9.797,
-      "p50_ms": 5.263,
-      "p95_ms": 7.695,
-      "p99_ms": 9.797
+      "max_ms": 11.894,
+      "p50_ms": 5.651,
+      "p95_ms": 7.249,
+      "p99_ms": 11.894
     },
     "policy_evaluation": {
       "condition": "warm",
       "count": 50,
-      "max_ms": 13.502,
-      "p50_ms": 4.839,
-      "p95_ms": 6.064,
-      "p99_ms": 13.502
+      "max_ms": 13.764,
+      "p50_ms": 4.233,
+      "p95_ms": 7.049,
+      "p99_ms": 13.764
     },
     "postgres_index_persistence": {
       "condition": "warm",
       "count": 50,
-      "max_ms": 7.179,
-      "p50_ms": 0.644,
-      "p95_ms": 1.044,
-      "p99_ms": 7.179
+      "max_ms": 2.163,
+      "p50_ms": 0.389,
+      "p95_ms": 0.858,
+      "p99_ms": 2.163
     },
     "shacl_rdf4j_persistence": {
       "condition": "warm",
       "count": 50,
-      "max_ms": 13.602,
-      "p50_ms": 6.793,
-      "p95_ms": 11.597,
-      "p99_ms": 13.602
+      "max_ms": 12.988,
+      "p50_ms": 5.851,
+      "p95_ms": 8.41,
+      "p99_ms": 12.988
     }
   }
 }

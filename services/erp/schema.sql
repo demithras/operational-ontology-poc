@@ -42,3 +42,17 @@ CREATE TABLE IF NOT EXISTS purchase_order_lines (
 
 CREATE INDEX IF NOT EXISTS idx_po_lines_po_id ON purchase_order_lines (po_id);
 CREATE INDEX IF NOT EXISTS idx_po_supplier ON purchase_orders (supplier_id);
+
+-- Phase 6 (docs/experiment/briefs/phase6.md item 2: "the ERP/MES APIs need
+-- idempotency keys too"). Same one-row-per-action_execution_id + body_hash
+-- pattern as services/wms/schema.sql's `transfers` table (WMS was the only
+-- system with idempotency through Phase 5) — a replayed action_execution_id
+-- with an IDENTICAL body is a no-op replay; a DIFFERENT body is a 409.
+CREATE TABLE IF NOT EXISTS purchase_order_actions (
+    action_execution_id  TEXT PRIMARY KEY,
+    po_id                TEXT NOT NULL REFERENCES purchase_orders (po_id),
+    action                TEXT NOT NULL CHECK (action IN ('EXPEDITE')),
+    body_hash             TEXT NOT NULL,
+    result                JSONB NOT NULL,
+    created_at            TIMESTAMPTZ NOT NULL DEFAULT now()
+);

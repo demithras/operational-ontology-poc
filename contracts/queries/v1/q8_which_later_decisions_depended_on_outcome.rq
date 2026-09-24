@@ -1,0 +1,26 @@
+# H13 query 8 — "Which later decisions depended on that outcome?"
+#
+# Interpretation (docs/adr referenced from docs/experiment/implementation-notes.md
+# Phase 6 section): a decision D's OBSERVED_SUCCESS outcome changes the real
+# world state of whatever domain object D concerned (e.g. a work order's
+# shortage/at_risk flips critical -> mitigated). A "later decision that
+# depended on that outcome" is one that concerns the SAME domain object
+# (oo:concernsWorkOrder is the traversable link — spec 05's "typed fac:
+# object references") and was created AFTER D. This is the same-work-order
+# causal-adjacency interpretation, not a claim of provenance/evidence-level
+# dependency (which would need each LATER decision to have cited D's
+# specific evidence snapshot — not modeled at that granularity in v1).
+PREFIX oo: <https://example.local/oo/>
+SELECT DISTINCT ?laterDecisionId ?laterCreatedAt ?laterStatus ?laterActor WHERE {
+  ?decision oo:decisionId "%%DECISION_ID%%" ;
+            oo:createdAt ?createdAt ;
+            oo:concernsWorkOrder ?workOrder .
+  ?laterDecision oo:concernsWorkOrder ?workOrder ;
+                 oo:decisionId ?laterDecisionId ;
+                 oo:createdAt ?laterCreatedAt ;
+                 oo:status ?laterStatusConcept .
+  BIND(STRAFTER(STR(?laterStatusConcept), "https://example.local/oo/") AS ?laterStatus)
+  OPTIONAL { ?laterDecision oo:actor ?actorNode . ?actorNode oo:actorId ?laterActor . }
+  FILTER(?laterCreatedAt > ?createdAt)
+}
+ORDER BY ?laterCreatedAt

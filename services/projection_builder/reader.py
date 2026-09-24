@@ -56,6 +56,35 @@ def get_transfer_candidates_for_route(
     return rows
 
 
+def get_transfer_candidates_with_risk_for_route(
+    conn: psycopg.Connection, part: str, source_warehouse: str, destination_warehouse: str
+) -> list[dict]:
+    """Same route match as get_transfer_candidates_for_route, JOINED with
+    each candidate's work_order_risk row in ONE statement — found necessary
+    empirically (Phase 6): two SEPARATE round trips (transfer_candidates
+    then, per candidate, work_order_risk) reproducibly deadlocked against
+    services/projection_builder's own TRUNCATE order (work_order_risk then
+    transfer_candidates, one poll-interval transaction) whenever a route
+    actually matched a candidate. A single JOIN lets Postgres's own planner
+    acquire both tables' locks as part of ONE atomic statement instead of
+    across a Python-level gap between two, closing the AB-BA window
+    (services/decision_service/app.py's deadlock retry is kept as
+    defense-in-depth, not the primary fix)."""
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            SELECT tc.candidate_id, tc.work_order_id, tc.as_of AS candidate_as_of,
+                   wor.priority, wor.at_risk, wor.computed_at AS risk_computed_at
+            FROM transfer_candidates tc
+            JOIN work_order_risk wor ON wor.work_order_id = tc.work_order_id
+            WHERE tc.part = %s AND tc.source_warehouse = %s AND tc.destination_warehouse = %s
+            ORDER BY tc.candidate_id
+            """,
+            (part, source_warehouse, destination_warehouse),
+        )
+        return cur.fetchall()
+
+
 def get_transfer_candidates(conn: psycopg.Connection, work_order_id: str) -> list[dict]:
     with conn.cursor(row_factory=dict_row) as cur:
         cur.execute(

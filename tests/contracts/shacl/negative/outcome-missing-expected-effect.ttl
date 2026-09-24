@@ -1,0 +1,12 @@
+# Negative fixture: oo:Outcome missing oo:expectedEffectJson. Must NOT
+# conform (spec 06 "evaluate outcome predicate" requires the expected effect
+# to be recorded, not just the observed one — otherwise a divergence is
+# unprovable after the fact).
+@prefix oo:    <https://example.local/oo/> .
+@prefix oo-fx: <https://example.local/oo/fixture/> .
+
+oo-fx:out-missing-expected
+  a oo:Outcome ;
+  oo:outcomeId "out-missing-expected" ;
+  oo:reconciliationState "CONVERGED" ;
+  oo:observedEffectJson "{}" .

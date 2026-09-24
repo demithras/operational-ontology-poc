@@ -5,11 +5,12 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
 from services.common.db import close_pool, get_conn, open_pool
 from services.erp import db_ops
-from services.erp.schemas import DelayPurchaseOrderRequest
+from services.erp.schemas import DelayPurchaseOrderRequest, ExpeditePurchaseOrderRequest
 
 
 @asynccontextmanager
@@ -87,3 +88,25 @@ def delay_purchase_order(po_id: str, body: DelayPurchaseOrderRequest):
             content={"error": "purchase order is in a terminal state", "status": row["status"]},
         )
     return row
+
+
+@app.post("/purchase_orders/{po_id}/expedite")
+def expedite_purchase_order(po_id: str, body: ExpeditePurchaseOrderRequest):
+    """Phase 6 (contracts/actions/v1/expedite_purchase_order.yaml
+    external_operation) — action_execution_id is the idempotency key, same
+    contract as services/wms/app.py's POST /transfers."""
+    with get_conn() as conn:
+        outcome, result = db_ops.expedite_purchase_order(conn, po_id, body.action_execution_id, body.expedite_fee)
+    if outcome == "NOT_FOUND":
+        raise HTTPException(status_code=404, detail="purchase order not found")
+    if outcome == "TERMINAL":
+        return JSONResponse(
+            status_code=409,
+            content={"error": "purchase order is in a terminal state", "status": result["status"]},
+        )
+    if outcome == "CONFLICT":
+        return JSONResponse(
+            status_code=409,
+            content={"error": "action_execution_id already used with a different request body", "action_execution_id": body.action_execution_id},
+        )
+    return JSONResponse(status_code=200, content=jsonable_encoder({**result, "replayed": outcome == "REPLAYED"}))

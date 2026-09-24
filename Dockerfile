@@ -25,7 +25,8 @@ RUN pip install --no-cache-dir \
     "httpx>=0.27" \
     "rdflib>=7.0" \
     "pyyaml>=6.0" \
-    "confluent-kafka>=2.5"
+    "confluent-kafka>=2.5" \
+    "temporalio>=1.33"
 
 # services.* / reference_model.* are implicit namespace packages (no
 # __init__.py at their top level, matching the rest of the repo) — make sure

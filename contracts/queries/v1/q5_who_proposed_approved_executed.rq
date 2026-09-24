@@ -1,12 +1,14 @@
 # H13 query 5 — "Who/what actor proposed, approved, and executed it?"
-# `executedBy` is intentionally never bound before Phase 6 (the Temporal
-# action runtime) — an honest gap, not a silently-guessed value.
+# `executedBy` is populated starting Phase 6 (services/common/action_rdf.py::
+# write_execution_finalized) — absent (unbound) for any decision that was
+# never executed, which is itself an honest, queryable fact (not a guess).
 PREFIX oo: <https://example.local/oo/>
-SELECT DISTINCT ?proposerId ?principalOf ?approvedById
+SELECT DISTINCT ?proposerId ?principalOf ?approvedById ?executedById
 WHERE {
   ?decision oo:decisionId "%%DECISION_ID%%" ;
             oo:actor ?proposer .
   ?proposer oo:actorId ?proposerId .
   OPTIONAL { ?proposer oo:actsOnBehalfOf ?principal . ?principal oo:actorId ?principalOf . }
   OPTIONAL { ?decision oo:approvedBy ?approver . ?approver oo:actorId ?approvedById . }
+  OPTIONAL { ?decision oo:executedBy ?executor . ?executor oo:actorId ?executedById . }
 }

@@ -5,6 +5,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
 from services.common.db import close_pool, get_conn, open_pool
@@ -62,7 +63,13 @@ def get_work_order(work_order_id: str):
 @app.post("/work_orders/{work_order_id}/reschedule")
 def reschedule_work_order(work_order_id: str, body: RescheduleWorkOrderRequest):
     with get_conn() as conn:
-        outcome, row = db_ops.reschedule_work_order(conn, work_order_id, body.new_planned_start)
+        if body.action_execution_id is None:
+            # Pre-Phase-6 path, unchanged — no idempotency key, always applies.
+            outcome, row = db_ops.reschedule_work_order(conn, work_order_id, body.new_planned_start)
+        else:
+            outcome, row = db_ops.reschedule_work_order_with_idempotency(
+                conn, work_order_id, body.action_execution_id, body.new_planned_start
+            )
     if outcome == "NOT_FOUND":
         raise HTTPException(status_code=404, detail="work order not found")
     if outcome == "TERMINAL":
@@ -70,4 +77,11 @@ def reschedule_work_order(work_order_id: str, body: RescheduleWorkOrderRequest):
             status_code=409,
             content={"error": "cannot reschedule a DONE/CANCELLED work order", "status": row["status"]},
         )
+    if outcome == "CONFLICT":
+        return JSONResponse(
+            status_code=409,
+            content={"error": "action_execution_id already used with a different request body", "action_execution_id": body.action_execution_id},
+        )
+    if outcome == "REPLAYED":
+        return JSONResponse(status_code=200, content=jsonable_encoder({**row, "replayed": True}))
     return row

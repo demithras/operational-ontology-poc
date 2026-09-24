@@ -1625,3 +1625,328 @@ delegation/approval/forensic suites, none of which have any
 - `work_order_risk.priority` is now available to anything reading the hot
   projection (H13 forensic queries, the deterministic planner, later
   reconciliation logic) without a live MES call.
+
+## Phase 6 — Durable action runtime + CDC reconciliation
+
+Tag `poc-v0.6-actions`. Brief: `docs/experiment/briefs/phase6.md`. Spec: 01
+(H3/H4/H5/H12), 03, 05, 06, 08, 09, 11, 14. Step 0 (protected-transfer
+authorization) landed as its own prior commit — see that section above and
+`docs/adr/0003-protected-high-priority-transfer-authorization.md`; this
+section covers steps 1-7.
+
+### Ports
+
+| Service | Host port | Notes |
+|---|---|---|
+| Temporal frontend (gRPC) | 15473 | `temporalio/auto-setup:latest`, its OWN dedicated Postgres (`temporal-postgres`, no host port) — see "Temporal's own Postgres" below |
+| Temporal Web UI | 15474 | optional, human debugging only; nothing in this repo's tests depends on it |
+| `services/action_worker` health | 15486 | |
+| `services/reconciliation` health | 15487 | |
+
+### Temporal gets its OWN dedicated Postgres, not a database on the shared instance
+
+`db/init/00_init.sh` only runs on the shared Postgres container's FIRST
+volume initialization — adding a `temporal` database to it would need a
+data-losing `make reset` for every already-running stack (this repo's first
+schema change against an ALREADY-RUNNING stack, `work_order_risk.priority`
+in step 0, already needed an `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`
+workaround for exactly this reason). A separate `temporal-postgres`
+container (plain `postgres:16`, its own named volume
+`oo-poc-temporal-pgdata`) needs no such migration and keeps Temporal's
+schema fully isolated; `temporalio/auto-setup`'s own entrypoint creates the
+`temporal`/`temporal_visibility` databases and runs its schema migrations
+itself (`DB=postgres12`, verified via `docker run --entrypoint cat
+temporalio/auto-setup:latest /etc/temporal/auto-setup.sh` — the real env
+var names, `POSTGRES_SEEDS`/`POSTGRES_USER`/`POSTGRES_PWD`/`DBNAME`/
+`VISIBILITY_DBNAME`, were read from the actual script rather than guessed).
+
+### Temporal's healthcheck: `nc -z localhost 7233` fails even when the server is fully up
+
+Empirically found (the first `make up` after adding the `temporal` service
+failed with "dependency temporal failed to start: container is unhealthy",
+despite the container's own logs showing "Temporal server started" within
+~1s): `temporal-server` binds its frontend gRPC port on the CONTAINER'S OWN
+bridge-network IP (`172.x.x.x:7233`, confirmed via `docker exec ... netstat
+-tlnp`), never on `127.0.0.1` — so a loopback healthcheck can never
+succeed, no matter how long it waits. Fixed to `nc -z temporal 7233` (the
+container's own compose service hostname, resolvable to that same IP via
+Docker's embedded DNS from inside the container itself) — verified
+empirically (`docker exec oo-poc-temporal-1 sh -c "nc -z temporal 7233;
+echo exit=$?"` → `exit=0`). Real namespace readiness is still proven
+separately, from the host, by `services/action_worker/bootstrap_temporal.py`
+(same "prove real API readiness from outside a healthcheck" pattern as
+`bootstrap_openfga.py`) before `make up` lets anything start a workflow —
+it makes a real `list_workflows()` RPC against the `default` namespace, not
+just a bare connect.
+
+### `services/action_worker` (the Temporal worker)
+
+Class-based activities (`ActionActivities`, `services/action_worker/activities.py`)
+bind `config` (RDF4J/WMS/ERP/MES base URLs) ONCE at Worker-registration
+time rather than re-serializing it as a Temporal argument on every activity
+call — the standard temporalio pattern for activities that close over
+shared config. All three activities are plain SYNCHRONOUS functions (this
+repo's established sync-everywhere style), run under a
+`ThreadPoolExecutor` via `Worker(activity_executor=...)`.
+
+`ActionExecutionWorkflow` (`services/action_worker/workflows.py`) is
+deliberately kept free of any import of `activities.py` (which pulls in
+psycopg/httpx/rdflib — Temporal's workflow sandbox forbids non-deterministic
+I/O modules in workflow code); activities are referenced by NAME STRING
+only, matching the `@activity.defn(name=...)` registration.
+
+Exactly THREE activities per execution, matching spec 06's execute()/
+workflow pseudocode:
+1. `verify_and_start_execution` — loads the APPROVED decision, verifies it
+   is genuinely executable, writes the `oo:ActionExecution` resource and
+   flips `oo:status` APPROVED→EXECUTING (`services/common/action_rdf.py::write_execution_started`).
+2. `call_external_action` — dispatches to WMS (`transfer_inventory`), ERP
+   (`expedite_purchase_order`), or MES (`reschedule_work_order`) with
+   `action_execution_id` as the idempotency key. For `transfer_inventory`,
+   also snapshots `current_inventory` (source+destination `available`)
+   immediately BEFORE the call as the outcome predicate's "before" baseline
+   — deliberately NOT the frozen evidence-snapshot value from propose()
+   time, since real time may have passed between approval and execution;
+   fetching fresh is MORE correct and costs nothing extra.
+3. `observe_and_finalize` — for `transfer_inventory`, polls (heartbeating)
+   for the CDC-observed `fac:WmsTransferRecord` up to the contract's
+   `observation.timeout` (30s), then evaluates the outcome predicate
+   (`services/action_worker/outcome_eval.py::evaluate_transfer_outcome`) and
+   auto-compensates (`reverse_transfer`) on DIVERGED when
+   `compensation.mode: compensatable`. Writes the `oo:Outcome` resource and
+   flips `oo:status` to the terminal value
+   (`services/common/action_rdf.py::write_execution_finalized`) — the
+   SECOND and LAST RDF write per ActionExecution (see that module's own
+   docstring for why exactly two, both replay-safe).
+
+`expedite_purchase_order`/`reschedule_work_order` get the documented
+LIGHTER treatment Phase 5 already established for these two ActionTypes:
+`outcome_eval.evaluate_command_response_outcome` treats ERP/MES's own
+synchronous, idempotent command response AS the observation (no CDC poll)
+— there is no eventual-consistency story for these two (ERP/MES commit
+in-request), so DIVERGED is structurally unreachable for them under this
+design; only `OBSERVED_SUCCESS`/`EXECUTION_FAILED`/`OUTCOME_UNKNOWN` occur.
+
+### `wms.transfers` CDC mapping lands here, as Phase 5 predicted
+
+`services/ingestion/mapping.py` now maps `wms.transfers` → `fac:WmsTransferRecord`
+(new class, `contracts/ontology/v1/fac-core.ttl`) — the CDC-observed
+counterpart to the governance-authored `oo:ActionExecution`, which
+`services/action_worker`/`services/reconciliation` correlate an action's
+expected effect against (never a live re-query of WMS — H3/H12).
+`services/ingestion/consumer.py`'s `TABLES["wms"]` gained `"transfers"`
+(it was previously excluded BY NAME specifically to keep
+`services/ingestion/readiness.py`'s Kafka-lag check from permanently
+"lagging" on a topic nothing consumed) — `all_topics()` is derived from
+that dict, so `wait_for_zero_kafka_lag` now correctly covers it too, with
+no separate edit needed.
+
+### Bug found and fixed: canonical part id vs. WMS's own local id
+
+First end-to-end smoke test failed: `WMS 404 "no inventory lot for
+part=PX-801001 at warehouse=WH-B"` even though the decision had just been
+APPROVED against that exact part/warehouse. Root cause: `parameters.part`
+is always CANONICAL-id-typed (`contracts/actions/v1/transfer_inventory.yaml`),
+but WMS never learns canonical ids at all (services/wms owns no identity-
+resolution concept, per the per-system credential/identity isolation
+design) — its `inventory_lots.part` column always holds ITS OWN local id
+(e.g. `SKU-88429`, never `PX-17`, confirmed against the canonical fixture's
+own `source_identity_map`). Fixed by
+`services/common/identity_lookup.py::resolve_canonical_part_to_source_local`
+(a reverse SPARQL lookup over the SAME `oo:IdentityMapping` records
+`services/ingestion/store.py` already writes at CDC ingestion time, scoped
+by `oo:sourceSystem`) — `call_external_action` resolves the WMS-local id
+immediately before building the WMS request. `expedite_purchase_order`/
+`reschedule_work_order` need no equivalent: their ids (`po_id`,
+`work_order_id`) are already native/shared across MES/ERP and RDF, unlike
+part ids (only columns literally named `part`/`part_id` ever go through
+identity resolution — see `services/ingestion/mapping.py`'s own docstring).
+
+### Bug found and fixed: Postgres index row never synced after execute()
+
+Second end-to-end smoke test showed `GET /decisions/{id}` permanently stuck
+at `APPROVED` even though RDF4J's own record (and `GET /executions/{id}`/
+`GET /outcomes/{id}`) correctly showed the full EXECUTING→OBSERVED_SUCCESS
+progression. Root cause: `services/decision_service/store.get_decision`
+reads FROM POSTGRES ONLY (spec 06: "the Postgres row is only an index" of
+the RDF4J-authoritative record) — Phase 5's `decisions_approve` endpoint
+already knew this and called BOTH `rdf_writer.record_approval` AND
+`store.update_approval`, but `services/action_worker/activities.py`'s two
+RDF writes had no equivalent Postgres sync at all. Fixed by
+`services/decision_service/store.py::update_status` (a one-column
+`UPDATE ... SET status`), called from both activities (after each of the
+two RDF writes) and from `services/reconciliation/reconcile.py`'s own
+convergence path. Without this fix, `services/reconciliation`'s own
+`watched_decisions()` query (`WHERE status IN ('EXECUTING','OUTCOME_UNKNOWN')`)
+would ALSO have silently found nothing, ever — a second, more serious
+consequence of the same gap, caught by code review before it shipped
+rather than by a second failing test.
+
+### Bug found and fixed: `oo:concernsWorkOrder` never populated via the new `parameters.work_order` path
+
+Writing the H13 query-8 test (below) surfaced that
+`services/decision_service/models.py::DecisionRecord.concerns_work_order`
+still only read `context.work_order_id` — Phase 6 step 0 moved the
+canonical, hash-covered field to `parameters.work_order` but this property
+(feeding `rdf_writer.py`'s `oo:concernsWorkOrder` triple) was never updated
+to match, so every decision proposed via the NEW field lost its typed
+work-order traversal link entirely (silently — propose() itself still
+succeeded). Fixed: `parameters.get("work_order") or context.get("work_order_id")`,
+same fallback order as `evidence.py` already used.
+
+### Bug found and fixed: a real AB-BA Postgres deadlock between evidence-gathering and projection rebuilds
+
+`_resolve_route_protection`'s original implementation (step 0) made TWO
+separate round trips — `transfer_candidates` first, then per-candidate
+`work_order_risk` — inside `services/decision_service`'s one long-lived
+propose() transaction (`services/common/db.py`: `autocommit=False`, one
+connection per request). `services/projection_builder`'s own full-rebuild
+transaction TRUNCATEs all four hot tables in a FIXED order
+(`work_order_risk` → `transfer_candidates` → `current_inventory` →
+`action_eligibility_summary`, `services/projection_builder/builder.py::build_all`).
+Whenever a propose() call's route genuinely matched a real candidate (so
+BOTH reads actually happened) and overlapped a rebuild cycle, this produced
+a textbook AB-BA lock-order cycle — reproduced deterministically (2/2) once
+`tests/integration/test_forensic_queries_phase6.py` exercised a REAL
+candidate-matching route end to end (every earlier smoke test had used
+synthetic parts with `NOT_APPLICABLE` routes, which return before ever
+reaching the second read, so the bug was invisible until that test).
+Fixed two ways: (1) `services/projection_builder/reader.py::get_transfer_candidates_with_risk_for_route`
+replaces the two round trips with ONE JOIN query, so Postgres acquires both
+tables' locks as part of a single atomic statement instead of across a
+Python-level gap; (2) `services/decision_service/app.py::decisions_propose`
+retries up to 3 times on `psycopg.errors.DeadlockDetected` specifically
+(Postgres's own self-defense always aborts exactly one side of a detected
+cycle; retrying a READ-ONLY evidence-gathering attempt with a fresh
+connection is always safe — no write has happened yet) as defense-in-depth,
+not the primary fix. Verified with 5 consecutive clean runs of the
+triggering test after both fixes landed.
+
+### Bug found and fixed: `MALFORMED QUERY: Invalid escape sequence` from `json.dumps`'s default `\uXXXX` escapes
+
+`services/common/action_rdf.py`'s `write_execution_finalized` 400'd with
+"Invalid escape sequence" whenever a JSON blob being embedded contained a
+non-ASCII character — reproduced with WMS's own `return_200_without_commit`
+fault message (`"...— never persisted"`, a real em-dash). Root cause:
+`services/decision_service/hashing.py::canonical_json` (correctly, for ITS
+purpose — content-hash stability) uses `json.dumps`'s DEFAULT
+`ensure_ascii=True`, which escapes the em-dash to `—` in the JSON TEXT
+itself; `escape_sparql_literal` then correctly doubles the backslash to
+`\\u2014` for the SPARQL literal — but RDF4J's grammar for a `Modify`
+template's (`DELETE {...} INSERT {...} WHERE {...}`) string literals
+rejected that sequence, even though an equivalent standalone `INSERT DATA`
+statement with the IDENTICAL literal content parsed fine (isolated by
+direct reproduction against the live RDF4J container). Fixed by
+`services/common/action_rdf.py::json_for_rdf` (`ensure_ascii=False` — the
+real UTF-8 character, still escaped for SPARQL-reserved characters by
+`escape_sparql_literal`), used for every JSON blob `services/action_worker/activities.py`
+writes into RDF; `services/decision_service/hashing.py::canonical_json`
+itself is UNCHANGED (hash-critical, not RDF-embedding-critical — two
+different concerns that happened to share one function before this fix).
+
+### `services/reconciliation` — the independent re-check (H12), deliberately narrow scope
+
+Only re-drives decisions PostgreSQL shows in `OUTCOME_UNKNOWN` (the
+worker's own CDC poll already timed out once) — `EXECUTING` decisions are
+COUNTED for visibility but never mutated: Temporal's own durable-execution
+replay (not reconciliation) is what resolves a crashed worker's in-flight
+EXECUTING decision (F12/F13), and reconciliation mutating a Decision out
+from under a workflow that might still be running would race it. On
+convergence it uses the EXACT SAME `services/action_worker/outcome_eval.py`
+predicate and `services/common/wms_transfer_observation.py` one-shot fetch
+the worker itself uses (one definition of "correlated observation", never
+two). On DIVERGED it raises a durable `reconciliation_alerts` Postgres row
+(`services/reconciliation/schema.sql`, its own index database, same
+shared-`ontology_hot` convention as decision_service/projection_builder) —
+compensation is deliberately NOT re-attempted from reconciliation itself
+(only the ORIGINAL worker's own finalize path compensates), to avoid a
+double-compensation race between two independent processes acting on the
+same ActionExecution; a reconciliation-detected late divergence is flagged
+`MANUAL_RECOVERY_REQUIRED`.
+
+### `tests/faults/` — scope decision (documented, not silently dropped)
+
+The brief lists ~20 fault IDs plus kill tests, network tests, and the
+100/80/80 concurrency race. Given the size of this phase, a genuinely
+working, directly-verified CORE subset shipped rather than a broader but
+shakier attempt at all of them:
+
+- **Implemented, passing**: F10 (duplicate execute() call), F11 (8
+  concurrent duplicate execute() calls via threads), F15 (200-without-
+  commit → OUTCOME_UNKNOWN, never a fabricated success), F16/F17 (partial
+  commit → DIVERGED + auto-compensation reverses the effect exactly), F25
+  (real `docker compose stop/start temporal` — approved decision stays
+  APPROVED and unexecuted while Temporal is down, then executes normally
+  once it recovers), and the 100/80/80 concurrency race (two real decisions,
+  concurrent real execute() calls, WMS's own row-locking resolves it: one
+  `OBSERVED_SUCCESS`, one `EXECUTION_FAILED`/`DIVERGED`, inventory never
+  negative).
+- **NOT implemented this phase** (explicit gap, not a silent omission):
+  F12/F13 (worker-container kill mid-execution — Temporal's own replay is
+  the mechanism under test, not exercised via a real `docker kill` here),
+  F18-F21/F35/F38-F40 (CDC delay/duplicate/reorder/poison-message
+  injection, clock skew), kill tests for decision_service/projection_builder/
+  reconciliation specifically, and network-layer fault injection (latency/
+  reset/duplicate delivery via a proxy). `services/reconciliation`'s own
+  AWAITING_OBSERVATION→CONVERGED convergence PATH is real and unit-reachable
+  (same code F18 would exercise), but nothing in `tests/faults/` currently
+  drives it via an actual paused Debezium connector.
+
+### H13 queries 6-8 + `oo:executedBy` (query 5)
+
+`contracts/queries/v1/q6_which_external_objects_changed.rq` (the
+ActionExecution's own recorded parameters + command receipt — never
+re-derived from current live state), `q7_what_outcome_was_observed.rq`
+(the Outcome resource), `q8_which_later_decisions_depended_on_outcome.rq`
+(same-work-order causal adjacency via `oo:concernsWorkOrder` + `oo:createdAt`
+ordering — documented interpretation, see that query file's own header
+comment for the alternative considered and rejected). `q5`'s `executedBy`
+binding, deliberately absent through Phase 5, is now populated.
+`tests/integration/test_forensic_queries_phase6.py` proves all three plus
+spec 03's own acceptance line ("After OBSERVED_SUCCESS, the canonical
+incident's work_order_risk projection changes from critical to mitigated")
+against a REAL at-risk work order discovered live in the seeded dataset —
+same non-hard-coded-WO-42 rationale as the step-0 protected-transfer test.
+
+### `make test` acceptance run (this session)
+
+```
+tests/model: 21 passed
+tests/contracts: 61 passed (was 55 before Phase 6 — 3 new action-execution-shape
+  fixtures + 3 new oo:OutcomeShape fixtures)
+tests/component: 15 passed
+tests/integration: 71 passed (was 70 after step 0 — +1, test_forensic_queries_phase6.py)
+```
+`make test-faults` (never part of `make test` — real `docker compose stop/
+start temporal`, same "run alone" rule as `make test-destructive`): 6
+passed in 67.93s. `make bench` (phase4+phase5+phase6): SLOs unaffected
+(hot_read/gate_evaluation/decision_proposal all still PASS); Phase 6's own
+three stages (external_action_duration_ms, cdc_observation_lag_ms,
+end_to_end_execution_ms) have no locked SLO — see
+`experiments/exp-000/results/bench-phase6.json` for the measured numbers
+from this run.
+
+### What Phase 7 (contract versioning / replay) needs from here
+
+- `oo:ActionExecution`/`oo:Outcome` are now real, populated resources per
+  executed decision, living in the SAME per-decision named graph as the
+  Decision itself (`services/common/rdf_graphs.py::decision_graph_iri`) —
+  replay's "exact evidence hash recovery" and "same original gate results"
+  requirements extend naturally to these without a new graph-naming scheme.
+- `services/common/decision_status.py::status_concept_iri` and
+  `services/common/action_rdf.py`'s replay-safe DELETE/INSERT pattern are
+  the reusable primitives for any FUTURE Decision-lifecycle mutation —
+  reuse them rather than hand-rolling a new SPARQL UPDATE string builder.
+- The Postgres-index-must-be-explicitly-synced lesson (two bugs above) is
+  now a general rule for this codebase: ANY code that mutates a Decision's
+  RDF status must ALSO call `store.update_status` in the same breath —
+  there is no automatic sync mechanism, and `GET /decisions/{id}` will
+  silently go stale otherwise.
+- `contracts/manifests/current.json`'s per-action `sha256` (F34: "action
+  definition changes post-approval → approved pinned version executes or
+  decision invalidated explicitly") is REFERENCED but not yet actively
+  VERIFIED at execute() time — `verify_and_start_execution` re-checks the
+  decision's own immutable content hash and status, but does not re-hash
+  `contracts/actions/v1/<name>.yaml` against what was pinned at propose()
+  time and compare. Phase 7's replay work should close this gap as part of
+  its own version-pinning verification, not leave it as a second silent gap.

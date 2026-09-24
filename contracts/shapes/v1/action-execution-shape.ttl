@@ -4,9 +4,17 @@
 # examples ("quantity must be positive", "transfer source and destination
 # must differ") + phase3.md item 3 ("quantity >= 1, source != destination
 # (sh:disjoint or SPARQL constraint)"). Targets oo:ActionExecution, which
-# is declared in contracts/ontology/v1/oo-core.ttl now and populated
-# starting Phase 6 (Temporal action runtime) — the shape is testable today
-# via the standalone fixtures below, independent of that runtime existing.
+# is declared in contracts/ontology/v1/oo-core.ttl and populated starting
+# Phase 6 (Temporal action runtime, services/action_worker).
+#
+# Phase 6 generalization: oo:quantity/oo:sourceWarehouse/oo:destinationWarehouse
+# are OPTIONAL (sh:minCount 0) — they only apply to `transfer_inventory`
+# ActionExecutions; `expedite_purchase_order`/`reschedule_work_order` carry
+# neither. The VALUE constraints (>= 1, source != destination) still apply
+# WHENEVER the properties ARE present, for every ActionType — SHACL's
+# minCount/maxCount and other constraints on the same sh:property are
+# independent, so relaxing cardinality to optional does not weaken the
+# transfer-specific checks phase3.md item 3 asked for.
 #
 # Fixtures: tests/contracts/shacl/positive/action-execution-valid.ttl,
 # tests/contracts/shacl/negative/action-execution-negative-quantity.ttl,
@@ -20,27 +28,61 @@ oo:ActionExecutionShape
   sh:targetClass oo:ActionExecution ;
 
   sh:property [
+    sh:path oo:actionExecutionId ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+    sh:message "oo:ActionExecution requires exactly one oo:actionExecutionId." ;
+  ] ;
+
+  sh:property [
     sh:path oo:quantity ;
-    sh:minCount 1 ; sh:maxCount 1 ;
+    sh:minCount 0 ; sh:maxCount 1 ;
     sh:datatype xsd:integer ;
     sh:minInclusive 1 ;
-    sh:message "oo:ActionExecution's oo:quantity must be present and >= 1." ;
+    sh:message "oo:ActionExecution's oo:quantity, when present, must be >= 1." ;
   ] ;
 
   sh:property [
-    sh:path oo:sourceWarehouse ; sh:minCount 1 ; sh:maxCount 1 ;
-    sh:message "oo:ActionExecution requires exactly one oo:sourceWarehouse." ;
+    sh:path oo:sourceWarehouse ; sh:minCount 0 ; sh:maxCount 1 ;
+    sh:message "oo:ActionExecution allows at most one oo:sourceWarehouse." ;
   ] ;
 
   sh:property [
-    sh:path oo:destinationWarehouse ; sh:minCount 1 ; sh:maxCount 1 ;
-    sh:message "oo:ActionExecution requires exactly one oo:destinationWarehouse." ;
+    sh:path oo:destinationWarehouse ; sh:minCount 0 ; sh:maxCount 1 ;
+    sh:message "oo:ActionExecution allows at most one oo:destinationWarehouse." ;
   ] ;
 
-  # source != destination: the value sets of oo:sourceWarehouse and
-  # oo:destinationWarehouse for the same focus node must not overlap.
+  # source != destination, whenever BOTH are present: the value sets of
+  # oo:sourceWarehouse and oo:destinationWarehouse for the same focus node
+  # must not overlap.
   sh:property [
     sh:path oo:sourceWarehouse ;
     sh:disjoint oo:destinationWarehouse ;
     sh:message "oo:ActionExecution's oo:sourceWarehouse and oo:destinationWarehouse must differ." ;
+  ] .
+
+oo:OutcomeShape
+  a sh:NodeShape ;
+  sh:targetClass oo:Outcome ;
+
+  sh:property [
+    sh:path oo:outcomeId ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+    sh:message "oo:Outcome requires exactly one oo:outcomeId." ;
+  ] ;
+
+  sh:property [
+    # Structural transition check, mirroring decision-shape.ttl's sh:in
+    # pattern: reconciliationState must be one of spec 06's named states.
+    sh:path oo:reconciliationState ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:in ( "NOT_STARTED" "COMMAND_SENT" "COMMAND_ACCEPTED" "AWAITING_OBSERVATION"
+            "CONVERGED" "DIVERGED" "OUTCOME_UNKNOWN" "COMPENSATING" "COMPENSATED" "FAILED" ) ;
+    sh:message "oo:Outcome's oo:reconciliationState must be one of spec 06's named reconciliation states." ;
+  ] ;
+
+  sh:property [
+    sh:path oo:expectedEffectJson ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+    sh:message "oo:Outcome requires exactly one oo:expectedEffectJson." ;
+  ] ;
+
+  sh:property [
+    sh:path oo:observedEffectJson ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+    sh:message "oo:Outcome requires exactly one oo:observedEffectJson." ;
   ] .

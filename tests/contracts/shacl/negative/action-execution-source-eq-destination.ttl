@@ -7,6 +7,7 @@
 
 oo-fx:ax-same-wh
   a oo:ActionExecution ;
+  oo:actionExecutionId "ax-same-wh" ;
   oo:quantity 10 ;
   oo:sourceWarehouse oo-fx:wh-same ;
   oo:destinationWarehouse oo-fx:wh-same .

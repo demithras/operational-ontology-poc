@@ -128,6 +128,21 @@ def update_approval(
     conn.commit()
 
 
+def update_status(conn: psycopg.Connection, decision_id: str, new_status: str) -> None:
+    """Phase 6: services/action_worker/activities.py and
+    services/reconciliation both transition a Decision's status
+    (APPROVED -> EXECUTING -> a terminal execution/outcome status) via an
+    RDF4J SPARQL UPDATE (services/common/action_rdf.py) — this keeps the
+    Postgres INDEX row (docs/experiment/spec/06: 'the Postgres row is only
+    an index') in sync, exactly like update_approval() above already does
+    for the REQUIRES_APPROVAL -> APPROVED transition. Without this,
+    `GET /decisions/{id}` (which reads Postgres, never RDF4J directly)
+    would show a permanently stale APPROVED status forever after execute()."""
+    with conn.cursor() as cur:
+        cur.execute("UPDATE decisions SET status = %s, updated_at = now() WHERE decision_id = %s", (new_status, decision_id))
+    conn.commit()
+
+
 def record_proposal_attempt_failure(
     conn: psycopg.Connection, action_type: str, actor_type: str, actor_id: str, reason: str, detail: str | None
 ) -> None:

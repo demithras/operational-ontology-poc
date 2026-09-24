@@ -1,0 +1,18 @@
+# H13 query 6 — "Which external objects changed?" (Phase 6)
+# The ActionExecution's own recorded parameters (source/destination
+# warehouse, part) plus what was ACTUALLY committed, per the command
+# receipt — never re-derived from current live state.
+PREFIX oo: <https://example.local/oo/>
+SELECT DISTINCT ?actionExecutionId ?externalSystem ?externalOperation ?sourceWarehouse ?destinationWarehouse ?quantity ?commandStatus ?commandReceiptJson
+WHERE {
+  ?decision oo:decisionId "%%DECISION_ID%%" ;
+            oo:actionExecution ?ae .
+  ?ae oo:actionExecutionId ?actionExecutionId ;
+      oo:externalSystem ?externalSystem ;
+      oo:externalOperation ?externalOperation .
+  OPTIONAL { ?ae oo:sourceWarehouse ?sourceWarehouse }
+  OPTIONAL { ?ae oo:destinationWarehouse ?destinationWarehouse }
+  OPTIONAL { ?ae oo:quantity ?quantity }
+  OPTIONAL { ?ae oo:commandStatus ?commandStatus }
+  OPTIONAL { ?ae oo:commandReceiptJson ?commandReceiptJson }
+}

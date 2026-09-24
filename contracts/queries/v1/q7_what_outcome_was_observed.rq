@@ -1,0 +1,14 @@
+# H13 query 7 — "What outcome was actually observed?" (Phase 6)
+PREFIX oo: <https://example.local/oo/>
+SELECT DISTINCT ?outcomeId ?reconciliationState ?expectedEffectJson ?observedEffectJson ?observedAtOutcome ?compensationStatus
+WHERE {
+  ?decision oo:decisionId "%%DECISION_ID%%" ;
+            oo:actionExecution ?ae .
+  ?ae oo:outcome ?outcome .
+  ?outcome oo:outcomeId ?outcomeId ;
+           oo:reconciliationState ?reconciliationState ;
+           oo:expectedEffectJson ?expectedEffectJson ;
+           oo:observedEffectJson ?observedEffectJson ;
+           oo:observedAtOutcome ?observedAtOutcome ;
+           oo:compensationStatus ?compensationStatus .
+}

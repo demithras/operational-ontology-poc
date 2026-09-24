@@ -38,7 +38,18 @@ TOPIC_PREFIX = {"erp": "oo.erp", "mes": "oo.mes", "wms": "oo.wms"}
 TABLES = {
     "erp": ["suppliers", "parts", "purchase_orders", "purchase_order_lines"],
     "mes": ["production_lines", "work_orders", "bom_requirements"],
-    "wms": ["warehouses", "inventory_lots"],
+    # Phase 6 (docs/experiment/implementation-notes.md Phase 5 section's own
+    # handoff note): `transfers` is now mapped (services/ingestion/mapping.py
+    # -> fac:WmsTransferRecord) — the wms-connector's table.include.list
+    # already captured it since Phase 2/3 (contracts/cdc/v1/wms-connector.json),
+    # this consumer just never subscribed to/consumed it before. Adding it
+    # here is also what makes services/ingestion/readiness.py's
+    # wait_for_zero_kafka_lag cover it correctly (previously excluded by
+    # name specifically to avoid a permanent phantom lag on an unconsumed
+    # topic — see that module's own comment, now stale in spirit but
+    # harmless: all_topics() is derived from THIS dict, not hand-maintained
+    # twice).
+    "wms": ["warehouses", "inventory_lots", "transfers"],
 }
 DLQ_TOPIC = "oo.ingestion.dlq"
 

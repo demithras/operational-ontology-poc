@@ -184,3 +184,43 @@ oo:requiredFactsJson    a owl:DatatypeProperty ; rdfs:domain oo:EvidenceSnapshot
 oo:excludedFactsJson    a owl:DatatypeProperty ; rdfs:domain oo:EvidenceSnapshot ; rdfs:range xsd:string ; rdfs:comment "Candidate evidence gathered from the same hot-projection rows/RDF entities but NOT part of evidence_requirements for this ActionType — H13 query 3 'which evidence was available but excluded'." .
 oo:projectionRowHashesJson a owl:DatatypeProperty ; rdfs:domain oo:EvidenceSnapshot ; rdfs:range xsd:string ; rdfs:comment "content_hash of every contributing ontology_hot row (services/projection_builder/hashing.py), per R5's 'projection row hashes'." .
 
+#############################################
+## Phase 6 additions: ActionExecution (Temporal-driven), Outcome
+## (CDC-reconciled), and the PROV chain linking evidence -> decision ->
+## execution -> observed outcome (docs/experiment/spec/03_domain_scenario.md
+## "Decision provenance links evidence -> decision -> action -> observed
+## outcome"; H13 queries 5-8; H1's "execution identifier"/"observed outcome
+## identifier" fields, absent by design before this phase).
+#############################################
+
+oo:executedBy a owl:ObjectProperty ; rdfs:domain oo:Decision ; rdfs:range prov:Agent ;
+  rdfs:comment "The actor/agent Temporal executed the approved action AS — normally identical to oo:actor, but kept distinct so a future delegated/service-identity execution path does not have to overload oo:actor. H13 query 5's 'executedBy', absent through Phase 5 by design." .
+
+oo:actionExecution a owl:ObjectProperty ; rdfs:domain oo:Decision ; rdfs:range oo:ActionExecution ;
+  rdfs:comment "H1 'execution identifier'. One per Decision (execute() is only ever called on an APPROVED decision; a retried/replayed execute() reuses the SAME ActionExecution/idempotency key, never creates a second one)." .
+
+oo:actionExecutionId a owl:DatatypeProperty ; rdfs:domain oo:ActionExecution ; rdfs:range xsd:string ;
+  rdfs:comment "The SAME value sent to the external system as its idempotency key (spec 06 'idempotency: key: action_execution_id') — e.g. WMS's transfers.action_execution_id unique constraint." .
+oo:externalSystem     a owl:DatatypeProperty ; rdfs:domain oo:ActionExecution ; rdfs:range xsd:string ; rdfs:comment "WMS | ERP | MES." .
+oo:externalOperation  a owl:DatatypeProperty ; rdfs:domain oo:ActionExecution ; rdfs:range xsd:string .
+oo:commandStatus      a owl:DatatypeProperty ; rdfs:domain oo:ActionExecution ; rdfs:range xsd:string ; rdfs:comment "The RAW external command response status, e.g. HTTP 200/404/409/500 — distinct from oo:status's governed decision lifecycle (spec 06: 'persist command receipt/status')." .
+oo:commandReceiptJson a owl:DatatypeProperty ; rdfs:domain oo:ActionExecution ; rdfs:range xsd:string ; rdfs:comment "The full external response body, verbatim (e.g. WMS's transfer row) — never re-derived after the fact." .
+oo:startedAt          a owl:DatatypeProperty ; rdfs:domain oo:ActionExecution ; rdfs:range xsd:dateTime .
+oo:completedAt        a owl:DatatypeProperty ; rdfs:domain oo:ActionExecution ; rdfs:range xsd:dateTime .
+oo:temporalWorkflowId a owl:DatatypeProperty ; rdfs:domain oo:ActionExecution ; rdfs:range xsd:string ; rdfs:comment "Temporal's own workflow id (= oo:actionExecutionId, one workflow per logical action — the durable-execution-history side of spec 06's exactly-once language)." .
+
+## --- Outcome (spec 06 'evaluate outcome predicate'; spec 03 'Outcome' /
+## 'World divergence'; reconciliation) ---
+oo:outcome a owl:ObjectProperty ; rdfs:domain oo:ActionExecution ; rdfs:range oo:Outcome ;
+  rdfs:comment "H1 'observed outcome identifier'. prov:wasGeneratedBy is ALSO asserted (Outcome -> ActionExecution) so the PROV chain is traversable both directions without relying on a domain-specific property alone." .
+
+oo:outcomeId              a owl:DatatypeProperty ; rdfs:domain oo:Outcome ; rdfs:range xsd:string .
+oo:reconciliationState    a owl:DatatypeProperty ; rdfs:domain oo:Outcome ; rdfs:range xsd:string ;
+  rdfs:comment "One of spec 06's 'Reconciliation states': NOT_STARTED | COMMAND_SENT | COMMAND_ACCEPTED | AWAITING_OBSERVATION | CONVERGED | DIVERGED | OUTCOME_UNKNOWN | COMPENSATING | COMPENSATED | FAILED. Finer-grained than oo:Decision's own oo:status (which only ever shows the decision-level EXECUTING/AWAITING_OBSERVATION/DIVERGED/OUTCOME_UNKNOWN/OBSERVED_SUCCESS/EXECUTION_FAILED)." .
+oo:expectedEffectJson     a owl:DatatypeProperty ; rdfs:domain oo:Outcome ; rdfs:range xsd:string ; rdfs:comment "The ActionType's outcome predicate, evaluated with this action's own proposed parameters (e.g. transfer_inventory: {source_available_before, source_available_after_expected, ...})." .
+oo:observedEffectJson     a owl:DatatypeProperty ; rdfs:domain oo:Outcome ; rdfs:range xsd:string ; rdfs:comment "What CDC/reconciliation actually observed for the SAME correlated external record (e.g. the WMS transfer row's actual_quantity) — never naive absolute arithmetic (spec 06: 'must use correlated transaction/transfer facts')." .
+oo:observedAtOutcome      a owl:DatatypeProperty ; rdfs:domain oo:Outcome ; rdfs:range xsd:dateTime .
+oo:compensationStatus     a owl:DatatypeProperty ; rdfs:domain oo:Outcome ; rdfs:range xsd:string ; rdfs:comment "NONE | NOT_APPLICABLE | COMPENSATING | COMPENSATED | COMPENSATION_FAILED — H12/F16. Only ever non-NONE for an ActionType whose contract declares compensation.mode: compensatable." .
+oo:compensatingActionExecutionId a owl:DatatypeProperty ; rdfs:domain oo:Outcome ; rdfs:range xsd:string ; rdfs:comment "The reversal/compensating action's OWN idempotency key, when one was issued." .
+oo:sourceEvidenceLsn      a owl:DatatypeProperty ; rdfs:domain oo:Outcome ; rdfs:range xsd:string ; rdfs:comment "The Debezium source LSN (oo:SourcePosition.oo:lastLsn) of the CDC observation reconciliation correlated this outcome to — H13 acceptance criterion 10's 'what actual outcome ... what changed next' traces to a real source position, not a timestamp guess." .
+

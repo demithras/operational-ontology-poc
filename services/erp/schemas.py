@@ -8,3 +8,8 @@ from pydantic import BaseModel
 class DelayPurchaseOrderRequest(BaseModel):
     expected_at: int
     reason: str
+
+
+class ExpeditePurchaseOrderRequest(BaseModel):
+    action_execution_id: str
+    expedite_fee: int = 0

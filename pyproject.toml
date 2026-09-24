@@ -21,6 +21,9 @@ dev = [
     "rdflib>=7.0",
     "pyshacl>=0.29",
     "confluent-kafka>=2.5",
+    # Phase 6 — durable action runtime (services/action_worker,
+    # services/decision_service execute()).
+    "temporalio>=1.33",
 ]
 
 [tool.pytest.ini_options]

@@ -66,15 +66,13 @@ INGESTION_GROUP_ID = "oo-ingestion"
 CONNECTOR_NAMES = ["oo-poc-erp-connector", "oo-poc-mes-connector", "oo-poc-wms-connector"]
 # The exact topic list the ingestion consumer itself subscribes to
 # (services/ingestion/consumer.py::all_topics()) — NOT every topic the
-# Debezium connectors happen to produce. `wms.transfers` is captured by the
-# wms-connector's table.include.list but deliberately excluded from
-# consumer.py's own TABLES dict (mapping.py: "transfers ... deliberately
-# NOT mapped"), so the ingestion consumer group never subscribes to it and
-# never commits an offset for it. Hard-coding a topic list derived from the
-# connector configs instead of this function was tried first and produced a
-# permanent phantom lag of 9 on `oo.wms.public.transfers` that could never
-# drain (nothing ever consumes it) — caught empirically while validating
-# this module against the live stack.
+# Debezium connectors happen to produce (a hand-maintained topic list
+# derived from the connector configs instead of this function was tried
+# first and produced a permanent phantom lag on an unconsumed topic —
+# caught empirically while validating this module against the live stack).
+# `wms.transfers` (Phase 6: consumer.py's TABLES now includes it, mapped to
+# fac:WmsTransferRecord) is therefore correctly covered here too, since this
+# is derived, never hand-duplicated.
 CDC_TOPICS = _ingestion_all_topics()
 OBSERVED_GRAPH = "https://example.local/oo/graph/observed"
 CANONICAL_WORK_ORDER_SUBJECT = "https://example.local/factory/instance/WorkOrder/WO-42"

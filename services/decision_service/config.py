@@ -25,6 +25,7 @@ class DecisionServiceConfig:
     erp_base_url: str
     mes_base_url: str
     ingestion_health_url: str
+    temporal_address: str
 
 
 def from_env() -> DecisionServiceConfig:
@@ -40,4 +41,8 @@ def from_env() -> DecisionServiceConfig:
         # reads services/ingestion's per-source watermark from its health
         # endpoint rather than re-deriving pipeline lag itself.
         ingestion_health_url=os.environ["INGESTION_HEALTH_URL"],
+        # Phase 6: only used to START the ActionExecutionWorkflow
+        # (services/decision_service/execution.py) — decision_service never
+        # itself calls WMS/ERP/MES or waits on the workflow's result.
+        temporal_address=os.environ.get("TEMPORAL_ADDRESS", "localhost:7233"),
     )

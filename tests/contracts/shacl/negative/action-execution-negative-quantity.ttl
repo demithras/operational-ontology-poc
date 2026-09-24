@@ -7,6 +7,7 @@
 
 oo-fx:ax-neg-qty
   a oo:ActionExecution ;
+  oo:actionExecutionId "ax-neg-qty" ;
   oo:quantity 0 ;
   oo:sourceWarehouse oo-fx:wh-b2 ;
   oo:destinationWarehouse oo-fx:wh-a2 .

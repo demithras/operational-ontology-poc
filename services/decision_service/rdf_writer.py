@@ -21,6 +21,7 @@ import rdflib
 from rdflib import RDF, Literal, Namespace, URIRef
 from rdflib.namespace import XSD
 
+from services.common.decision_status import status_concept_iri
 from services.common.rdf_graphs import decision_graph_iri, fac_instance_iri, oo_instance_iri
 from services.common.sparql_escape import escape_sparql_literal
 from services.decision_service.hashing import canonical_json
@@ -28,17 +29,6 @@ from services.decision_service.models import DecisionRecord
 
 OO = Namespace("https://example.local/oo/")
 FAC = Namespace("https://example.local/factory/")
-
-_STATUS_CONCEPT = {
-    "DRAFT": OO.Draft,
-    "PROPOSED": OO.Proposed,
-    "INSUFFICIENT_EVIDENCE": OO.InsufficientEvidence,
-    "DENIED_AUTHORIZATION": OO.DeniedAuthorization,
-    "DENIED_POLICY": OO.DeniedPolicy,
-    "INVALID_CONFORMANCE": OO.InvalidConformance,
-    "REQUIRES_APPROVAL": OO.RequiresApproval,
-    "APPROVED": OO.Approved,
-}
 
 
 PROV = Namespace("http://www.w3.org/ns/prov#")
@@ -85,7 +75,7 @@ def build_decision_graph(record: DecisionRecord) -> rdflib.Graph:
     # through the real HTTP API — that must reach RDF4J as an out-of-enum URI
     # (rejected by decision-shape.ttl's sh:in) rather than crash Python with a
     # KeyError before ever reaching the SHACL gate it is trying to exercise.
-    g.add((decision, OO.status, _STATUS_CONCEPT.get(record.status, OO[record.status or "UnknownStatus"])))
+    g.add((decision, OO.status, URIRef(status_concept_iri(record.status))))
     g.add((decision, OO.parametersJson, Literal(canonical_json(record.parameters))))
     if record.decision_content_hash:
         g.add((decision, OO.decisionContentHash, Literal(record.decision_content_hash)))
