@@ -17,13 +17,23 @@ parameters:
   quantity:
     type: integer
     min: 1
+  # Phase 6 step 0 (docs/adr/0003-protected-high-priority-transfer-authorization.md):
+  # OPTIONAL, but a FORMAL parameter (not context) precisely because it is
+  # now authorization-relevant — parameters are covered by
+  # decision_content_hash (services/decision_service/hashing.py), context is
+  # not, and F33 (approval invalidated by any input mutation) must apply to
+  # whichever work order this transfer claims to mitigate. Evidence gathered
+  # from it feeds `linked_work_order_risk` (unchanged fact name) plus the
+  # work order's `priority` (fetched live from MES, since the work_order_risk
+  # hot projection does not carry it — see evidence.py).
+  work_order:
+    type: WorkOrder
+    required: false
 
-# Not a formal ActionType parameter (transfer_inventory's own preconditions
-# never depend on it) but accepted in the propose request's `context` object
-# to select which work order this mitigation addresses, purely so
-# evidence.py can attach `linked_work_order_risk` — see
-# docs/experiment/implementation-notes.md Phase 5 section "why context.work_order_id
-# is not a parameter".
+# Deprecated but still accepted for backward compatibility with pre-Phase-6
+# callers: the informational-only form of the same link. `parameters.work_order`
+# is the canonical, hash-covered path going forward; evidence.py falls back
+# to this only when `parameters.work_order` is absent.
 context:
   work_order_id:
     type: WorkOrder
@@ -38,6 +48,12 @@ authorization:
   relation: can_transfer_inventory
   object_binding: source_warehouse
   approval_relation: can_approve_large_transfer
+  # Phase 6 step 0: checked ADDITIONALLY (same object as `relation` above,
+  # see services/decision_service/authz.py::resolve_object), ONLY when
+  # evidence resolves the linked work order's priority to HIGH. Absent for
+  # the other two ActionTypes on purpose — this protection is specific to
+  # transfer_inventory's role as the canonical HIGH-priority mitigation.
+  protected_relation: can_mitigate_high_priority
 
 policy:
   package: factory.inventory.transfer

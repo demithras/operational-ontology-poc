@@ -1528,3 +1528,100 @@ commit, so the tag always reflects the phase's true final, working state.
   `test_cdc_ingestion.py`'s outage test and this phase's F22/F26 now do.
   Skipping this is precisely what caused the 11-19s stale windows this
   fix's own acceptance run found and closed.
+
+## Phase 6 step 0 — protected-transfer authorization
+
+Tag: none yet (part of the upcoming `poc-v0.6-actions` tag). Brief:
+`docs/experiment/briefs/phase6.md` item 0 (an orchestrator finding from the
+Phase 5 review). Full design + a security-review amendment:
+`docs/adr/0003-protected-high-priority-transfer-authorization.md` — read
+that first; this section is the shorter operational summary.
+
+### What changed
+
+- `contracts/authorization/v1/model.fga`: new `warehouse` relation
+  `can_mitigate_high_priority: planner or supervisor` (junior_planner
+  excluded, same split as `can_approve_large_transfer`). No new FGA type —
+  bound to the SAME object (`source_warehouse`) `can_transfer_inventory`
+  already resolves to.
+- `contracts/actions/v1/transfer_inventory.yaml`: new optional, formal
+  parameter `work_order` (hash-covered via `decision_content_hash`, unlike
+  the pre-existing informational `context.work_order_id`, which is still
+  accepted for backward compatibility) plus
+  `authorization.protected_relation: can_mitigate_high_priority`.
+- `contracts/projections/v1/work_order_risk.yaml` / `services/projection_builder/`
+  (compute.py, writer.py, schema.sql, hashing.py): the hot projection now
+  carries `fac:priority` (LOW|MEDIUM|HIGH) through unchanged, per-row, with
+  its own freshness/provenance — a **security-review-driven addition**, not
+  part of the original step-0 design (see below).
+- `services/decision_service/evidence.py::_resolve_route_protection`: the
+  server-side, non-bypassable determination of whether the PROPOSED
+  `(part, source_warehouse, destination_warehouse)` route is itself a real
+  `transfer_candidates` row for a fresh, HIGH-priority, at-risk work order —
+  entirely independent of whatever `work_order` the caller declared (or
+  omitted). `services/projection_builder/reader.py::get_transfer_candidates_for_route`
+  is the new query backing it.
+- `services/decision_service/authz.py::check_high_priority_protection` +
+  `services/decision_service/propose_flow.py`: a second OpenFGA check, run
+  only when `evidence.route_protected`, immediately after the base
+  `can_transfer_inventory` check ALLOWS. A deny here overwrites
+  `record.authz_result` (one authorization verdict per decision, matching
+  every other ActionType) and terminates `DENIED_AUTHORIZATION`.
+- `services/decision_service/planner.py` (H10): now submits
+  `parameters.work_order` for its own canonical recommendation.
+
+### Security review: two gaps fixed before this shipped
+
+An independent review caught the ORIGINAL design (MES-live-call, gated only
+on caller-declared `work_order`) failing OPEN on MES-unreachable and being
+trivially bypassable by omitting `work_order`. Full root-cause and fix
+narrative: ADR 0003's "Security review amendment" section. Summary: priority
+now comes from the hot projection (freshness-governed like every other gate
+input, never a live decision-service-initiated MES call), and whether
+protection applies is derived from the proposed ROUTE server-side, never
+from any caller-supplied field. An unresolvable route match is
+`INSUFFICIENT_EVIDENCE` for every actor (fail closed), and a caller
+declaring a real at-risk work order that the proposed route does not
+actually match is also rejected `INSUFFICIENT_EVIDENCE`
+(`work_order_route_mismatch`) as an honesty check, not a security gate.
+
+### `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` — first migration-style change in this repo
+
+Every prior phase's schema change happened before any stack existed yet, so
+`CREATE TABLE IF NOT EXISTS` alone always sufficed. This is the first schema
+change against an ALREADY-RUNNING stack (`work_order_risk.priority`) —
+`services/projection_builder/schema.sql` now also runs an idempotent
+`ALTER TABLE work_order_risk ADD COLUMN IF NOT EXISTS priority TEXT CHECK (...)`
+on every startup, nullable so it is safe against existing rows before the
+next poll cycle's TRUNCATE+re-INSERT overwrites them (at most one
+`OO_PROJECTION_POLL_INTERVAL_S` window). Verified empirically: `make up`
+against the ALREADY-RUNNING Phase 5 stack rebuilt `projection_builder`/
+`decision_service` images and the column appeared with zero data loss.
+
+### Test verification (this session, live stack)
+
+```
+tests/contracts/test_openfga_model.py: 1 passed (fga model test: 9/9 tests, all checks passing)
+tests/integration/test_decision_service_protected_transfer.py: 6 passed
+tests/integration/test_projection_differential.py + test_projection_consistency.py
+  + test_projection_rebuild.py + test_projection_staleness.py: 7 passed
+```
+
+Ordinary (non-protected) transfers pay zero extra cost: `_resolve_route_protection`
+returns `NOT_APPLICABLE` immediately (no MES-watermark lookup at all) for
+every synthetic-SKU test in the existing F01-F09/gates/policy/canonical/
+delegation/approval/forensic suites, none of which have any
+`transfer_candidates` row — confirmed by the full `make test` run below.
+
+### What Phase 6's remaining steps need from here
+
+- `evidence.EvidenceResult.route_protection_status` /
+  `.route_protecting_work_orders` / `.route_protected` are the reusable
+  shape for any FUTURE protected-ActionType check that needs "does this
+  proposal's route correspond to some other at-risk/critical entity" —
+  reuse the pattern (server-derived from the proposal's OWN parameters,
+  never from caller-declared context, fail closed on unresolved) rather
+  than re-deriving it.
+- `work_order_risk.priority` is now available to anything reading the hot
+  projection (H13 forensic queries, the deterministic planner, later
+  reconciliation logic) without a live MES call.

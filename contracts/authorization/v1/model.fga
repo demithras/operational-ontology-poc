@@ -46,6 +46,18 @@
 # (services/decision_service/bootstrap_openfga.py) via
 # `fga model transform --file model.fga --output-format json`, whose output
 # was inspected by hand before being wired into the bootstrap script.
+#
+# Phase 6 step 0 (docs/adr/0003-protected-high-priority-transfer-authorization.md):
+# `can_mitigate_high_priority` is a SECOND, stricter relation on the same
+# `warehouse` type junior_planner is deliberately excluded from — the exact
+# same shape as `can_approve_large_transfer` (planner/supervisor authority
+# split), reused here for a DIFFERENT trigger (the transfer targets a
+# HIGH-priority work order, not "quantity above threshold"). No new FGA
+# type/contextual-tuple/condition was introduced: services/decision_service
+# already resolves the checked object to the transfer's `source_warehouse`
+# for `can_transfer_inventory`, and this relation is checked against that
+# SAME object, only when evidence shows the linked work order is HIGH
+# priority (services/decision_service/authz.py::check_high_priority_protection).
 model
   schema 1.1
 
@@ -78,3 +90,7 @@ type warehouse
     define agent_grant: [agent]
     define can_transfer_inventory: planner or junior_planner or agent_grant
     define can_approve_large_transfer: supervisor
+    # Phase 6 step 0: a transfer proposed to mitigate a HIGH-priority work
+    # order is PROTECTED — junior_planner is the one relation deliberately
+    # excluded (mirrors can_approve_large_transfer's split, not unioned).
+    define can_mitigate_high_priority: planner or supervisor

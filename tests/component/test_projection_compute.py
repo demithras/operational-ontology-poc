@@ -27,8 +27,12 @@ WH_A = "https://example.local/factory/instance/Warehouse/WH-A"
 WH_B = "https://example.local/factory/instance/Warehouse/WH-B"
 
 
-def _work_order(status="PLANNED", planned_start="18", warehouse=WH_A):
-    return {"wo": WO, "status": status, "plannedStart": planned_start, "whUri": warehouse}
+def _work_order(status="PLANNED", planned_start="18", warehouse=WH_A, priority="HIGH"):
+    # priority (Phase 6 step 0, docs/adr/0003-protected-high-priority-transfer-authorization.md):
+    # a real SPARQL row always carries fac:priority now
+    # (contracts/projections/v1/work_order_risk.yaml) — these hand-built raw
+    # rows must too.
+    return {"wo": WO, "status": status, "plannedStart": planned_start, "whUri": warehouse, "priority": priority}
 
 
 def test_duplicate_requirement_rows_for_same_part_are_summed_not_double_counted():

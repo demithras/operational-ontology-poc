@@ -21,7 +21,7 @@ import hashlib
 import json
 
 BUSINESS_COLUMNS: dict[str, tuple[str, ...]] = {
-    "work_order_risk": ("work_order_id", "warehouse", "shortage", "at_risk", "severity"),
+    "work_order_risk": ("work_order_id", "warehouse", "shortage", "at_risk", "severity", "priority"),
     "transfer_candidates": (
         "candidate_id",
         "work_order_id",

@@ -71,7 +71,7 @@ def validate_and_load_action(action_type_name: str, parameters: dict) -> ActionT
     action = get_action_type(action_type_name)
     if action is None:
         raise MalformedProposal(f"unknown action_type {action_type_name!r}")
-    missing = [k for k in action.parameters if k not in parameters]
+    missing = [k for k in action.required_parameters if k not in parameters]
     if missing:
         raise MalformedProposal(f"missing required parameters: {missing}")
     if action.name == "transfer_inventory":
@@ -134,6 +134,18 @@ def propose(
             deps.openfga_api_url, deps.openfga_store_id, action.authorization_relation, object_ref, actor_type, actor_id,
         )
     if not record.authz_result.allowed:
+        record.status = DENIED_AUTHORIZATION
+        return _finalize(deps, record, force_invalid_conformance)
+
+    # --- Protected-transfer authorization (Phase 6 step 0) ---
+    # Only reachable once the base check above already ALLOWED — see
+    # authz.check_high_priority_protection's docstring and
+    # docs/adr/0003-protected-high-priority-transfer-authorization.md.
+    protected_deny = authz.check_high_priority_protection(
+        action, parameters, ev, deps.openfga_api_url, deps.openfga_store_id, actor_type, actor_id,
+    )
+    if protected_deny is not None:
+        record.authz_result = protected_deny
         record.status = DENIED_AUTHORIZATION
         return _finalize(deps, record, force_invalid_conformance)
 

@@ -85,6 +85,50 @@ def check(
         return AuthzResult(outcome=UNAVAILABLE, relation=relation, object=object_ref, detail=str(exc))
 
 
+def check_high_priority_protection(
+    action: ActionType,
+    parameters: dict,
+    evidence: EvidenceResult,
+    openfga_api_url: str,
+    store_id: str,
+    actor_type: str,
+    actor_id: str,
+) -> AuthzResult | None:
+    """Phase 6 step 0 (docs/adr/0003-protected-high-priority-transfer-authorization.md):
+    the SECOND, stricter authorization check for a transfer that mitigates a
+    HIGH-priority work order. Returns None when the base authorization
+    result already stands (no protection applies, or protection applies and
+    ALLOWS it) — callers only need to act when this returns a non-None
+    (necessarily DENIED/UNAVAILABLE) result to adopt as the decision's
+    final `authz_result`.
+
+    Called only AFTER the base `authorization_relation` check already
+    ALLOWED (propose_flow.py) — a base DENY already short-circuits the
+    proposal, so this never runs for an actor who couldn't even propose.
+
+    Security review fix: whether protection applies is decided by
+    `evidence.route_protected` (a SERVER-SIDE, non-bypassable determination
+    of whether the proposed route actually IS a transfer_candidates row for
+    a fresh HIGH-priority at-risk work order — see
+    `evidence.py::_resolve_route_protection`), never by any caller-declared
+    `work_order` parameter. A caller cannot avoid this check by omitting or
+    misdeclaring `work_order`; `evidence.py` also fails the whole proposal
+    CLOSED (INSUFFICIENT_EVIDENCE, before authorization even runs) whenever
+    the route matches a candidate but its priority/at-risk state cannot be
+    verified fresh — so this function is only ever reached with a
+    confidently-resolved `route_protected` value.
+    """
+    if not action.protected_relation:
+        return None
+    if not evidence.route_protected:
+        return None
+    object_ref = resolve_object(action, parameters, evidence)
+    result = check(openfga_api_url, store_id, action.protected_relation, object_ref, actor_type, actor_id)
+    if result.allowed:
+        return None
+    return result
+
+
 def resolve_principal(openfga_api_url: str, store_id: str, agent_id: str) -> str | None:
     """H1 'actor delegation context if an agent acts for a human' /
     F32 ('agent impersonates human ... impossible without explicit

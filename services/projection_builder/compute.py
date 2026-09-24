@@ -40,6 +40,7 @@ class WorkOrderRiskRow:
     shortage: int
     at_risk: bool
     severity: str  # CRITICAL | MITIGATED
+    priority: str  # LOW | MEDIUM | HIGH — fac:priority passed through unchanged (Phase 6 step 0)
     part_shortfalls: tuple[tuple[str, int], ...]  # (part_local_id, shortfall) — internal, feeds transfer_candidates
     contributing_entities: tuple[EntityRef, ...]
 
@@ -155,6 +156,7 @@ def compute_work_order_risk(
             shortage=shortage,
             at_risk=at_risk,
             severity="CRITICAL" if at_risk else "MITIGATED",
+            priority=wo_row["priority"],
             part_shortfalls=tuple(part_shortfalls),
             contributing_entities=tuple(contributing),
         )

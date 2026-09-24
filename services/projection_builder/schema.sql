@@ -26,6 +26,16 @@ CREATE TABLE IF NOT EXISTS work_order_risk (
     shortage                       INT NOT NULL,
     at_risk                        BOOLEAN NOT NULL,
     severity                       TEXT NOT NULL CHECK (severity IN ('CRITICAL', 'MITIGATED')),
+    -- Phase 6 step 0 security fix (docs/adr/0003-protected-high-priority-transfer-authorization.md):
+    -- fac:priority passed through unchanged, so decision_service can
+    -- resolve "does this transfer mitigate a HIGH-priority at-risk work
+    -- order" from the SAME freshness-governed evidence path as every other
+    -- gate input, never from a live fail-open MES call. Nullable (not
+    -- NOT NULL) purely so `ALTER TABLE ... ADD COLUMN` below is safe against
+    -- an already-running Phase 4/5 stack's existing rows before the next
+    -- rebuild cycle overwrites them (every build_all() TRUNCATEs+re-INSERTs
+    -- the whole table, so the null window is at most one poll interval).
+    priority                       TEXT CHECK (priority IN ('LOW', 'MEDIUM', 'HIGH')),
     content_hash                   TEXT NOT NULL,
     source_positions               JSONB NOT NULL DEFAULT '[]'::jsonb,
     projection_definition_name     TEXT NOT NULL,
@@ -35,6 +45,11 @@ CREATE TABLE IF NOT EXISTS work_order_risk (
     computed_at                    TIMESTAMPTZ NOT NULL,
     as_of                          TIMESTAMPTZ NOT NULL
 );
+
+-- Idempotent migration for an already-running stack created before this
+-- column existed (CREATE TABLE IF NOT EXISTS above is a no-op against an
+-- existing table) — see the column comment above for why nullable is safe.
+ALTER TABLE work_order_risk ADD COLUMN IF NOT EXISTS priority TEXT CHECK (priority IN ('LOW', 'MEDIUM', 'HIGH'));
 
 CREATE TABLE IF NOT EXISTS transfer_candidates (
     candidate_id                   TEXT PRIMARY KEY,

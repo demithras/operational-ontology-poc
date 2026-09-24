@@ -10,7 +10,9 @@
 #
 # Verified during implementation: `docker run --rm -v <this dir>:/app
 # openfga/cli:latest model test --tests /app/tests.yaml` -> "Tests 7/7
-# passing, Checks 7/7 passing".
+# passing, Checks 7/7 passing" (Phase 5); Phase 6 step 0 added the two
+# `*-protected-high-priority-mitigation` cases below -> 9/9 tests, 5 new
+# checks.
 name: authorization-v1-tests
 model_file: model.fga
 tuple_file: tuples.yaml
@@ -96,6 +98,40 @@ tests:
         object: warehouse:WH-A
         assertions:
           can_transfer_inventory: false
+
+  - name: junior-denied-protected-high-priority-mitigation
+    description: >-
+      Phase 6 step 0 (docs/adr/0003-protected-high-priority-transfer-authorization.md):
+      junior-1 can_transfer_inventory (proposing is fine) but lacks
+      can_mitigate_high_priority everywhere — the new relation a transfer
+      targeting a HIGH-priority work order is gated on.
+    check:
+      - user: user:junior-1
+        object: warehouse:WH-A
+        assertions:
+          can_transfer_inventory: true
+          can_mitigate_high_priority: false
+      - user: user:junior-1
+        object: warehouse:WH-B
+        assertions:
+          can_mitigate_high_priority: false
+
+  - name: planner-and-supervisor-allowed-protected-high-priority-mitigation
+    description: >-
+      planner-1/supervisor-1 both hold can_mitigate_high_priority via their
+      region-1 grant (inherited the same way can_transfer_inventory/
+      can_approve_large_transfer already are) — the exact split
+      docs/experiment/briefs/phase6.md item 0 draws ("planner-1 for WO-42 ->
+      allowed").
+    check:
+      - user: user:planner-1
+        object: warehouse:WH-A
+        assertions:
+          can_mitigate_high_priority: true
+      - user: user:supervisor-1
+        object: warehouse:WH-A
+        assertions:
+          can_mitigate_high_priority: true
 
   - name: agent-on-behalf-of-user-delegation
     description: >-

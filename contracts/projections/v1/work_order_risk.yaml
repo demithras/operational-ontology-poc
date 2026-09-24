@@ -32,15 +32,23 @@ description: >
   incoming_before_planned_start)) per part in the work order's
   requirements; at_risk = shortage > 0; severity = CRITICAL if at_risk else
   MITIGATED. Open work orders only (status not in DONE/CANCELLED).
+  Phase 6 step 0 security fix (docs/adr/0003-protected-high-priority-transfer-authorization.md):
+  `priority` (fac:priority, LOW|MEDIUM|HIGH, an MES-sourced fact passed
+  through unchanged — never computed) is carried into this projection so
+  `services/decision_service` can determine whether a proposed transfer
+  mitigates a HIGH-priority at-risk work order from the SAME
+  freshness-governed evidence path as everything else (never a live,
+  fail-open call to MES).
 queries:
   work_orders: |
     PREFIX fac: <https://example.local/factory/>
-    SELECT ?wo ?status ?plannedStart ?whUri WHERE {
+    SELECT ?wo ?status ?plannedStart ?whUri ?priority WHERE {
       GRAPH <https://example.local/oo/graph/observed> {
         ?wo a fac:WorkOrder ;
             fac:status ?status ;
             fac:plannedStart ?plannedStart ;
-            fac:warehouse ?whUri .
+            fac:warehouse ?whUri ;
+            fac:priority ?priority .
       }
     }
   # ?req -> fac:workOrder -> ?wo (forward from the CHILD row, not

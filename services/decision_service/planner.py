@@ -38,6 +38,11 @@ def recommend_transfer_for_work_order(conn: psycopg.Connection, work_order_id: s
             "destination_warehouse": best["destination_warehouse"],
             "part": best["part"],
             "quantity": quantity,
+            # Phase 6 step 0: the canonical mitigation names its own target
+            # work order as a formal (hash-covered, authorization-relevant)
+            # parameter — see contracts/actions/v1/transfer_inventory.yaml
+            # and docs/adr/0003-protected-high-priority-transfer-authorization.md.
+            "work_order": work_order_id,
         },
-        "context": {"work_order_id": work_order_id},
+        "context": {},
     }

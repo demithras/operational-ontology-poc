@@ -70,6 +70,25 @@ class EvidenceResult:
     def sufficient(self) -> bool:
         return not self.missing
 
+    @property
+    def route_protection_status(self) -> str:
+        """Phase 6 step 0 security fix (docs/adr/0003-protected-high-priority-transfer-authorization.md):
+        one of NOT_APPLICABLE (this route is not a transfer_candidates row
+        for any work order) | UNPROTECTED (it is, but not a fresh HIGH+
+        at-risk one) | PROTECTED (it is a fresh HIGH-priority, at-risk
+        candidate) | UNRESOLVED (matched a candidate but freshness/priority
+        could not be confidently determined — closure.py FAILS CLOSED on
+        this, see gather_transfer_inventory_evidence)."""
+        return (self.facts_used.get("route_protection") or {}).get("status", "NOT_APPLICABLE")
+
+    @property
+    def route_protecting_work_orders(self) -> list[str]:
+        return (self.facts_used.get("route_protection") or {}).get("work_order_ids", [])
+
+    @property
+    def route_protected(self) -> bool:
+        return self.route_protection_status == "PROTECTED"
+
 
 def _load_safety_stock(part: str, warehouse: str) -> int:
     data = json.loads(POLICY_DATA_PATH.read_text())
@@ -193,7 +212,12 @@ def gather_transfer_inventory_evidence(
     part = parameters["part"]
     source_warehouse = parameters["source_warehouse"]
     destination_warehouse = parameters["destination_warehouse"]
-    work_order_id = context.get("work_order_id")
+    # Phase 6 step 0: `parameters.work_order` is the canonical, hash-covered
+    # path (see contracts/actions/v1/transfer_inventory.yaml); the older
+    # `context.work_order_id` is still accepted for backward compatibility
+    # but is informational-only (never hash-covered, never authorization-
+    # relevant — see docs/adr/0003-protected-high-priority-transfer-authorization.md).
+    work_order_id = parameters.get("work_order") or context.get("work_order_id")
 
     observed_ats: list[datetime] = []
 
@@ -252,18 +276,27 @@ def gather_transfer_inventory_evidence(
     if "safety_stock" in action.closure_required:
         result.facts_used["safety_stock"] = _load_safety_stock(part, source_warehouse)
 
+    declared_wo_row = None
     if work_order_id:
-        wo_row = reader.get_work_order_risk(conn, work_order_id)
-        if wo_row is not None:
+        declared_wo_row = reader.get_work_order_risk(conn, work_order_id)
+        # Phase 6 step 0 security fix: `priority` (LOW|MEDIUM|HIGH) now comes
+        # straight from the work_order_risk HOT PROJECTION (see
+        # contracts/projections/v1/work_order_risk.yaml — fac:priority passed
+        # through unchanged), not a live MES call. This fact is purely
+        # INFORMATIONAL/explanatory (H13 "which evidence was used") — it is
+        # NEVER what gates the protected-transfer authorization check below;
+        # see `route_protection` for the actual (non-bypassable) signal.
+        if declared_wo_row is not None:
             result.facts_used["linked_work_order_risk"] = {
-                "warehouse": wo_row["warehouse"],
-                "shortage": wo_row["shortage"],
-                "at_risk": wo_row["at_risk"],
-                "severity": wo_row["severity"],
+                "warehouse": declared_wo_row["warehouse"],
+                "shortage": declared_wo_row["shortage"],
+                "at_risk": declared_wo_row["at_risk"],
+                "severity": declared_wo_row["severity"],
+                "priority": declared_wo_row["priority"],
             }
-            result.source_positions.extend(wo_row["source_positions"])
-            result.projection_row_hashes.append(wo_row["content_hash"])
-            observed_ats.append(wo_row["as_of"])
+            result.source_positions.extend(declared_wo_row["source_positions"])
+            result.projection_row_hashes.append(declared_wo_row["content_hash"])
+            observed_ats.append(declared_wo_row["as_of"])
         # A work_order_id that resolves to nothing (terminal/unknown work
         # order) is recorded as an EXCLUDED candidate, not a closure
         # failure — linked_work_order_risk is informational context, not a
@@ -287,8 +320,85 @@ def gather_transfer_inventory_evidence(
                 if c["source_warehouse"] != source_warehouse
             ]
 
+    # --- Phase 6 step 0 security fix: server-side, non-bypassable
+    # high-priority-mitigation detection (docs/adr/0003-protected-high-priority-transfer-authorization.md).
+    # Computed from what the proposed (part, source_warehouse,
+    # destination_warehouse) route ACTUALLY IS a transfer_candidates row
+    # for — a caller CANNOT avoid the protected-authorization check merely
+    # by omitting (or misdeclaring) `work_order`/`context.work_order_id`.
+    route_status, route_work_order_ids = _resolve_route_protection(
+        conn, http_clients, part, source_warehouse, destination_warehouse,
+        max_age_s=float(action.max_evidence_freshness_s),
+    )
+    result.facts_used["route_protection"] = {"status": route_status, "work_order_ids": route_work_order_ids}
+    if route_status == "UNRESOLVED":
+        # Fails CLOSED for EVERY actor, not just when a work_order was
+        # declared: the route demonstrably matches an at-risk work order's
+        # transfer_candidates row, but we cannot currently prove (fresh
+        # MES-derived priority + at-risk state) whether that work order is
+        # HIGH priority — a caller cannot be authorized against a check we
+        # cannot evaluate. INSUFFICIENT_EVIDENCE, never a silent allow.
+        result.missing.append("route_protection_fresh")
+    if declared_wo_row is not None and declared_wo_row["at_risk"] and work_order_id not in route_work_order_ids:
+        # Honesty check (security review): the caller explicitly claimed a
+        # real, currently at-risk work order as this transfer's mitigation
+        # target, but the route it actually proposed (this exact part/
+        # source/destination triple) is not a real transfer_candidates row
+        # for THAT work order (whether or not it happens to match a
+        # DIFFERENT one) — the declaration and the proposal disagree.
+        result.missing.append("work_order_route_mismatch")
+
     result.observed_at = max(observed_ats) if observed_ats else datetime.now(timezone.utc)
     return result
+
+
+def _resolve_route_protection(
+    conn: psycopg.Connection,
+    http_clients: dict[str, httpx.Client],
+    part: str,
+    source_warehouse: str,
+    destination_warehouse: str,
+    max_age_s: float,
+) -> tuple[str, list[str]]:
+    """Returns (status, protecting_work_order_ids).
+
+    status is one of:
+      NOT_APPLICABLE — this (part, source_warehouse, destination_warehouse)
+        is not a transfer_candidates row for any work order at all (the
+        overwhelming majority of ordinary, unprotected transfers).
+      UNRESOLVED — it IS a candidate for at least one work order, but that
+        work order's priority/at-risk state could not be verified FRESH
+        (min(MES ingestion watermark, the work_order_risk row's own
+        `computed_at`) — same watermark pattern as
+        `_resolve_source_inventory_with_freshness` above, scoped to the one
+        source system `fac:priority` is authoritative for). Callers MUST
+        treat this as fail-closed.
+      UNPROTECTED — resolved fresh, but none of the matching work orders are
+        both HIGH priority and currently at_risk.
+      PROTECTED — resolved fresh and at least one matching work order is
+        HIGH priority and at_risk; `protecting_work_order_ids` names them.
+    """
+    candidates = reader.get_transfer_candidates_for_route(conn, part, source_warehouse, destination_warehouse)
+    if not candidates:
+        return "NOT_APPLICABLE", []
+
+    mes_watermark = _fetch_ingestion_watermark(http_clients, "mes")
+    protecting: list[str] = []
+    seen_work_orders: set[str] = set()
+    for candidate in candidates:
+        wo_id = candidate["work_order_id"]
+        if wo_id in seen_work_orders:
+            continue
+        seen_work_orders.add(wo_id)
+        wo_row = reader.get_work_order_risk(conn, wo_id)
+        if wo_row is None or wo_row["priority"] is None:
+            return "UNRESOLVED", []
+        verified_through = min(mes_watermark, wo_row["computed_at"]) if mes_watermark is not None else None
+        if verified_through is None or freshness.evaluate(verified_through, max_age_s=max_age_s) == freshness.STALE:
+            return "UNRESOLVED", []
+        if wo_row["priority"] == "HIGH" and wo_row["at_risk"]:
+            protecting.append(wo_id)
+    return ("PROTECTED", protecting) if protecting else ("UNPROTECTED", [])
 
 
 def gather_expedite_purchase_order_evidence(

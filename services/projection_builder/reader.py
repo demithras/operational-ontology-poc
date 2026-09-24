@@ -35,6 +35,27 @@ def get_current_inventory(conn: psycopg.Connection, part: str, warehouse: str) -
     return row
 
 
+def get_transfer_candidates_for_route(
+    conn: psycopg.Connection, part: str, source_warehouse: str, destination_warehouse: str
+) -> list[dict]:
+    """Phase 6 step 0 security fix (docs/adr/0003-protected-high-priority-transfer-authorization.md):
+    the SERVER-SIDE route lookup `services/decision_service/evidence.py`
+    uses to determine whether a PROPOSED (part, source_warehouse,
+    destination_warehouse) triple actually IS a real transfer_candidates
+    row for some at-risk work order — independent of, and never trusting,
+    whatever `work_order` parameter the caller declared (or omitted)."""
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            "SELECT * FROM transfer_candidates WHERE part = %s AND source_warehouse = %s AND destination_warehouse = %s "
+            "ORDER BY candidate_id",
+            (part, source_warehouse, destination_warehouse),
+        )
+        rows = cur.fetchall()
+    for row in rows:
+        row["freshness_status"] = evaluate_freshness(row["as_of"])
+    return rows
+
+
 def get_transfer_candidates(conn: psycopg.Connection, work_order_id: str) -> list[dict]:
     with conn.cursor(row_factory=dict_row) as cur:
         cur.execute(

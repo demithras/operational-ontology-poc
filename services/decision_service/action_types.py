@@ -25,6 +25,15 @@ class ActionType:
         return self.raw.get("parameters", {})
 
     @property
+    def required_parameters(self) -> list[str]:
+        """Parameter names that must be present in the propose request.
+        Phase 6 step 0: a parameter spec may set `required: false` (e.g.
+        transfer_inventory's `work_order`) — defaults to required=True for
+        every parameter that doesn't say otherwise, preserving Phase 5
+        behavior exactly."""
+        return [name for name, spec in self.parameters.items() if spec.get("required", True)]
+
+    @property
     def authorization_relation(self) -> str:
         return self.raw["authorization"]["relation"]
 
@@ -35,6 +44,16 @@ class ActionType:
     @property
     def approval_relation(self) -> str:
         return self.raw["authorization"]["approval_relation"]
+
+    @property
+    def protected_relation(self) -> str | None:
+        """Phase 6 step 0 (docs/adr/0003-protected-high-priority-transfer-authorization.md):
+        an OpenFGA relation checked, in ADDITION to `authorization_relation`,
+        against the same resolved object, only when evidence marks the
+        proposal's linked work order HIGH priority. None for ActionTypes
+        that declare no such extra protection (expedite_purchase_order,
+        reschedule_work_order)."""
+        return self.raw["authorization"].get("protected_relation")
 
     @property
     def policy_package(self) -> str:

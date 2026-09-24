@@ -2,10 +2,10 @@
   "end_to_end_proposal": {
     "condition": "warm",
     "count": 30,
-    "max_ms": 37.034,
-    "p50_ms": 24.072,
-    "p95_ms": 28.665,
-    "p99_ms": 37.034
+    "max_ms": 31.514,
+    "p50_ms": 24.913,
+    "p95_ms": 27.587,
+    "p99_ms": 31.514
   },
   "environment": {
     "cpu": "arm",
@@ -15,17 +15,17 @@
     "python": "3.14.6",
     "ram_bytes": 38654705664
   },
-  "measured_at": "2026-09-24T03:35:43Z",
+  "measured_at": "2026-09-24T04:19:50Z",
   "phase": 5,
   "slo": {
     "decision_proposal_p95_ms": {
-      "measured_p95_ms": 28.665,
+      "measured_p95_ms": 27.587,
       "note": "excludes human approval wait and external write duration, per H6",
       "pass": true,
       "threshold_ms": 500
     },
     "gate_evaluation_p95_ms": {
-      "measured_worst_stage_p95_ms": 9.867,
+      "measured_worst_stage_p95_ms": 11.597,
       "pass": true,
       "threshold_ms": 300
     }
@@ -34,34 +34,34 @@
     "authorization_check": {
       "condition": "warm",
       "count": 50,
-      "max_ms": 9.041,
-      "p50_ms": 4.833,
-      "p95_ms": 5.442,
-      "p99_ms": 9.041
+      "max_ms": 9.797,
+      "p50_ms": 5.263,
+      "p95_ms": 7.695,
+      "p99_ms": 9.797
     },
     "policy_evaluation": {
       "condition": "warm",
       "count": 50,
-      "max_ms": 15.832,
-      "p50_ms": 5.39,
-      "p95_ms": 6.945,
-      "p99_ms": 15.832
+      "max_ms": 13.502,
+      "p50_ms": 4.839,
+      "p95_ms": 6.064,
+      "p99_ms": 13.502
     },
     "postgres_index_persistence": {
       "condition": "warm",
       "count": 50,
-      "max_ms": 1.217,
-      "p50_ms": 0.389,
-      "p95_ms": 0.622,
-      "p99_ms": 1.217
+      "max_ms": 7.179,
+      "p50_ms": 0.644,
+      "p95_ms": 1.044,
+      "p99_ms": 7.179
     },
     "shacl_rdf4j_persistence": {
       "condition": "warm",
       "count": 50,
-      "max_ms": 11.285,
-      "p50_ms": 5.55,
-      "p95_ms": 9.867,
-      "p99_ms": 11.285
+      "max_ms": 13.602,
+      "p50_ms": 6.793,
+      "p95_ms": 11.597,
+      "p99_ms": 13.602
     }
   }
 }

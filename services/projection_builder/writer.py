@@ -66,6 +66,7 @@ def write_work_order_risk(
                 "shortage": r.shortage,
                 "at_risk": r.at_risk,
                 "severity": r.severity,
+                "priority": r.priority,
             },
             r.contributing_entities,
             position_index,
@@ -80,11 +81,11 @@ def write_work_order_risk(
             cur.execute(
                 """
                 INSERT INTO work_order_risk
-                    (work_order_id, warehouse, shortage, at_risk, severity, content_hash,
+                    (work_order_id, warehouse, shortage, at_risk, severity, priority, content_hash,
                      source_positions, projection_definition_name, projection_definition_version,
                      projection_definition_sha256, ontology_contract_version, computed_at, as_of)
                 VALUES (%(work_order_id)s, %(warehouse)s, %(shortage)s, %(at_risk)s, %(severity)s,
-                        %(content_hash)s, %(source_positions)s, %(projection_definition_name)s,
+                        %(priority)s, %(content_hash)s, %(source_positions)s, %(projection_definition_name)s,
                         %(projection_definition_version)s, %(projection_definition_sha256)s,
                         %(ontology_contract_version)s, %(computed_at)s, %(as_of)s)
                 """,
