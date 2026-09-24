@@ -108,14 +108,23 @@ def _current_store_id() -> str | None:
 
 def _deps(conn) -> ProposeDeps:
     config = _state["config"]
+    store_id = _current_store_id()
+    model_id = authz.resolve_latest_authorization_model_id(config.openfga_api_url, store_id) if store_id else None
     return ProposeDeps(
         conn=conn,
         rdf4j_client=_state["rdf4j_client"],
         http_clients=_state["http_clients"],
         openfga_api_url=config.openfga_api_url,
-        openfga_store_id=_current_store_id(),
+        openfga_store_id=store_id,
         opa_base_url=config.opa_base_url,
-        manifest=_state["manifest"],
+        # Phase 7: manifest re-read fresh per request (never the stale
+        # startup-time _state["manifest"]) so a contract redeploy (an edit
+        # to contracts/manifests/deployed_version.json) takes effect on the
+        # very next propose() with no decision_service restart — the same
+        # "read live state, don't trust a process-lifetime cache" policy
+        # _current_store_id() already established for OpenFGA.
+        manifest=manifest_mod.build_manifest(),
+        openfga_authorization_model_id=model_id,
     )
 
 

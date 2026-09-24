@@ -41,6 +41,12 @@ class AuthzResult:
     object: str
     checked_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     detail: str | None = None
+    # Phase 7: the REAL OpenFGA authorization_model_id this specific check
+    # was evaluated against (None only when the check itself couldn't run —
+    # UNAVAILABLE). Recorded alongside the outcome so replay can re-issue
+    # the IDENTICAL Check request (same model id, same tuple_key) later —
+    # see services/decision_service/replay.py.
+    model_id: str | None = None
 
     @property
     def allowed(self) -> bool:
@@ -71,18 +77,56 @@ def check(
     object_ref: str,
     actor_type: str,
     actor_id: str,
+    authorization_model_id: str | None = None,
 ) -> AuthzResult:
+    """Phase 7: `authorization_model_id`, when given, pins the Check to that
+    EXACT model version (OpenFGA's real, documented Check API field) —
+    models are immutable by id, so replaying a historical decision's
+    authorization gate means re-issuing this SAME call with its OWN
+    recorded model_id, never the store's current default (which would
+    silently re-evaluate under whatever the LATEST model happens to be —
+    exactly the "silently apply today's policy to yesterday's decision"
+    07_versioning_and_replay.md forbids). Live proposals omit it and get
+    OpenFGA's own "latest model in this store" default, matching Phase 5/6
+    behavior exactly."""
     tuple_key = {"user": _actor_fga_id(actor_type, actor_id), "relation": relation, "object": object_ref}
+    body: dict = {"tuple_key": tuple_key}
+    if authorization_model_id:
+        body["authorization_model_id"] = authorization_model_id
     try:
         with httpx.Client(timeout=5.0) as client:
-            r = client.post(f"{openfga_api_url}/stores/{store_id}/check", json={"tuple_key": tuple_key})
+            r = client.post(f"{openfga_api_url}/stores/{store_id}/check", json=body)
         if r.status_code != 200:
-            return AuthzResult(outcome=UNAVAILABLE, relation=relation, object=object_ref, detail=f"HTTP {r.status_code}: {r.text[:300]}")
-        body = r.json()
-        outcome = ALLOWED if body.get("allowed") else DENIED
-        return AuthzResult(outcome=outcome, relation=relation, object=object_ref)
+            return AuthzResult(
+                outcome=UNAVAILABLE, relation=relation, object=object_ref,
+                detail=f"HTTP {r.status_code}: {r.text[:300]}", model_id=authorization_model_id,
+            )
+        resp_body = r.json()
+        outcome = ALLOWED if resp_body.get("allowed") else DENIED
+        return AuthzResult(outcome=outcome, relation=relation, object=object_ref, model_id=authorization_model_id)
     except httpx.HTTPError as exc:
-        return AuthzResult(outcome=UNAVAILABLE, relation=relation, object=object_ref, detail=str(exc))
+        return AuthzResult(outcome=UNAVAILABLE, relation=relation, object=object_ref, detail=str(exc), model_id=authorization_model_id)
+
+
+def resolve_latest_authorization_model_id(openfga_api_url: str, store_id: str) -> str | None:
+    """The store's newest authorization-model id (OpenFGA's
+    `GET /stores/{id}/authorization-models` lists models newest-first —
+    verified against the running openfga/openfga:latest image during
+    implementation). Re-resolved fresh on every call (never cached), same
+    self-healing rationale as resolve_store_id above: a migration
+    (migrations/v2_to_v3/deploy.py) can write a brand-new model into this
+    SAME store at any time, and the next propose() must start pinning it
+    immediately, with no decision_service restart required."""
+    try:
+        with httpx.Client(timeout=5.0) as client:
+            r = client.get(f"{openfga_api_url}/stores/{store_id}/authorization-models", params={"page_size": 1})
+        r.raise_for_status()
+        models = r.json().get("authorization_models", [])
+        if not models:
+            return None
+        return models[0]["id"]
+    except httpx.HTTPError:
+        return None
 
 
 def check_high_priority_protection(
@@ -93,6 +137,7 @@ def check_high_priority_protection(
     store_id: str,
     actor_type: str,
     actor_id: str,
+    authorization_model_id: str | None = None,
 ) -> AuthzResult | None:
     """Phase 6 step 0 (docs/adr/0003-protected-high-priority-transfer-authorization.md):
     the SECOND, stricter authorization check for a transfer that mitigates a
@@ -123,7 +168,9 @@ def check_high_priority_protection(
     if not evidence.route_protected:
         return None
     object_ref = resolve_object(action, parameters, evidence)
-    result = check(openfga_api_url, store_id, action.protected_relation, object_ref, actor_type, actor_id)
+    result = check(
+        openfga_api_url, store_id, action.protected_relation, object_ref, actor_type, actor_id, authorization_model_id,
+    )
     if result.allowed:
         return None
     return result

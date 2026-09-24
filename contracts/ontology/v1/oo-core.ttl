@@ -59,6 +59,24 @@ oo:policyBundleVersion        a owl:DatatypeProperty ; rdfs:range xsd:string .
 oo:actionType                 a owl:DatatypeProperty ; rdfs:range xsd:string .
 oo:actionVersion              a owl:DatatypeProperty ; rdfs:range xsd:integer .
 oo:createdAt                  a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:dateTime .
+
+## Phase 7 (docs/experiment/spec/07_versioning_and_replay.md item 1): "every
+## decision already pins these" for identity mapping rules, projection
+## definitions, and reconciliation predicates, exactly like ontology/shapes/
+## authorization/policy already did from Phase 5 — see
+## services/decision_service/manifest.py's Phase 7 docstring for why these
+## are added here (within "v1") rather than as a new ontology version: this
+## is the governance (oo:) vocabulary growing additively, the same way
+## oo:actionPinnedSha256 was added in Phase 6b — not the fac: DOMAIN
+## ontology under active V1->V2->V3 experimentation (fac-core.ttl is never
+## touched by this addition). oo:openfgaAuthorizationModelId is the REAL
+## OpenFGA-assigned authorization_model_id (distinct from
+## oo:authorizationModelVersion's content-hash form) — OpenFGA models are
+## immutable-by-id, so this is what replay actually re-Checks against.
+oo:identityMappingVersion          a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string .
+oo:projectionDefinitionVersion     a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string .
+oo:reconciliationPredicateVersion  a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string .
+oo:openfgaAuthorizationModelId     a owl:DatatypeProperty ; rdfs:domain oo:Decision ; rdfs:range xsd:string .
 oo:status                     a owl:ObjectProperty   ; rdfs:comment "Range: a skos:Concept in oo:DecisionStatusScheme (Decision) or oo:FactKindScheme (facts) depending on domain; see shapes for the per-target sh:in enumeration." .
 
 #############################################
@@ -153,6 +171,8 @@ oo:checkRelation   a owl:DatatypeProperty ; rdfs:domain oo:AuthorizationCheck ; 
 oo:checkObject     a owl:DatatypeProperty ; rdfs:domain oo:AuthorizationCheck ; rdfs:range xsd:string .
 oo:checkOutcome    a owl:DatatypeProperty ; rdfs:range xsd:string ; rdfs:comment "ALLOWED | DENIED | UNAVAILABLE (F23: OpenFGA down -> UNAVAILABLE, fails closed as DENIED_AUTHORIZATION at the Decision level)." .
 oo:checkedAt       a owl:DatatypeProperty ; rdfs:range xsd:dateTime .
+oo:checkAuthorizationModelId a owl:DatatypeProperty ; rdfs:domain oo:AuthorizationCheck ; rdfs:range xsd:string ;
+  rdfs:comment "Phase 7: the REAL OpenFGA authorization_model_id this specific Check was evaluated against (models are immutable-by-id) — what replay re-issues the Check with, per docs/experiment/spec/14_risks_and_open_questions.md R4." .
 
 oo:PolicyEvaluation a owl:Class ; rdfs:subClassOf prov:Entity .
 oo:policyOutcome         a owl:DatatypeProperty ; rdfs:domain oo:PolicyEvaluation ; rdfs:range xsd:string ; rdfs:comment "allow | deny | require_approval | UNAVAILABLE (F24)." .

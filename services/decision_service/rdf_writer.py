@@ -66,6 +66,14 @@ def build_decision_graph(record: DecisionRecord) -> rdflib.Graph:
     g.add((decision, OO.shapeSetVersion, Literal(record.shape_set_version)))
     g.add((decision, OO.authorizationModelVersion, Literal(record.authorization_model_version)))
     g.add((decision, OO.policyBundleVersion, Literal(record.policy_bundle_version)))
+    if record.identity_mapping_version:
+        g.add((decision, OO.identityMappingVersion, Literal(record.identity_mapping_version)))
+    if record.projection_definition_version:
+        g.add((decision, OO.projectionDefinitionVersion, Literal(record.projection_definition_version)))
+    if record.reconciliation_predicate_version:
+        g.add((decision, OO.reconciliationPredicateVersion, Literal(record.reconciliation_predicate_version)))
+    if record.openfga_authorization_model_id:
+        g.add((decision, OO.openfgaAuthorizationModelId, Literal(record.openfga_authorization_model_id)))
     g.add((decision, OO.actionType, Literal(record.action_type)))
     g.add((decision, OO.actionVersion, Literal(record.action_version, datatype=XSD.integer)))
     g.add((decision, OO.createdAt, Literal(record.created_at.isoformat(), datatype=XSD.dateTime)))
@@ -116,6 +124,8 @@ def build_decision_graph(record: DecisionRecord) -> rdflib.Graph:
         g.add((ac, OO.checkObject, Literal(record.authz_result.object)))
         g.add((ac, OO.checkOutcome, Literal(record.authz_result.outcome)))
         g.add((ac, OO.checkedAt, Literal(record.authz_result.checked_at.isoformat(), datatype=XSD.dateTime)))
+        if record.authz_result.model_id:
+            g.add((ac, OO.checkAuthorizationModelId, Literal(record.authz_result.model_id)))
         g.add((decision, OO.authorizationCheck, ac))
 
     if record.policy_result is not None:

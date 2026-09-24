@@ -1,0 +1,54 @@
+# contracts/reconciliation/v1/predicates.yaml
+#
+# Phase 7 (docs/experiment/spec/07_versioning_and_replay.md item 1):
+# "reconciliation predicates" is one of the versioned artifact kinds every
+# decision must be able to trace. The REAL predicate logic already lives in
+# services/action_worker/outcome_eval.py (pure, no I/O, shared by
+# services/action_worker/activities.py and services/reconciliation's own
+# independent poll loop, H12) — this file is the CONTENT-ADDRESSED,
+# versioned DESCRIPTION of that logic, so it can be hashed/pinned into
+# contracts/manifests/current.json and a Decision's own
+# oo:reconciliationPredicateVersion like every other contract kind.
+#
+# Honest scope note (documented deviation, common.md "never fake success"):
+# this file DESCRIBES the predicate outcome_eval.py implements; it is not
+# yet dynamically LOADED and interpreted by that module (unlike, say,
+# contracts/policies/v1/*.rego, which OPA genuinely evaluates at runtime).
+# Changing the reconciliation predicate today still requires a code change
+# to outcome_eval.py, versioned the same way any other decision-service
+# code change is (via the "code_git_commit" manifest field) — this file
+# exists so the CONTRACT is at least declared, versioned, and hashed, per
+# the spec's manifest requirement, without pretending a data-driven rule
+# engine exists that this repo has not built.
+version: "1"
+
+transfer_inventory:
+  observation_source: fac:WmsTransferRecord (CDC-correlated by action_execution_id)
+  observation_timeout: PT30S
+  rules:
+    - id: no_record_observed
+      when: "no correlated WmsTransferRecord within the observation timeout"
+      outcome: OUTCOME_UNKNOWN
+    - id: failed_zero_effect
+      when: "WmsTransferRecord.status == FAILED"
+      outcome: EXECUTION_FAILED
+    - id: partial_or_wrong_quantity
+      when: "WmsTransferRecord.status in (COMMITTED, PARTIAL, REVERSED) AND actual_quantity != requested_quantity"
+      outcome: DIVERGED
+    - id: exact_success
+      when: "WmsTransferRecord.status == COMMITTED AND actual_quantity == requested_quantity"
+      outcome: OBSERVED_SUCCESS
+    - id: unrecognized_status
+      when: "any other WmsTransferRecord.status value"
+      outcome: OUTCOME_UNKNOWN
+
+expedite_purchase_order:
+  reschedule_work_order:
+    observation_source: synchronous command response (ERP/MES commit synchronously; no CDC correlation)
+    rules:
+      - id: http_200
+        outcome: OBSERVED_SUCCESS
+      - id: http_409
+        outcome: EXECUTION_FAILED
+      - id: other
+        outcome: OUTCOME_UNKNOWN

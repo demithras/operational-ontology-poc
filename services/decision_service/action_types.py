@@ -1,5 +1,15 @@
-"""Loads and validates contracts/actions/v1/*.yaml (the ActionType contract,
-docs/experiment/spec/05_ontology_and_contracts.md).
+"""Loads and validates contracts/actions/<version>/*.yaml (the ActionType
+contract, docs/experiment/spec/05_ontology_and_contracts.md).
+
+Phase 7 (docs/experiment/spec/07_versioning_and_replay.md): action schemas
+are versioned directories (v1, v2, ...), never rewritten in place once
+published — contracts/actions/v1/transfer_inventory.yaml stays exactly what
+every V1 decision pinned forever; contracts/actions/v2/transfer_inventory.yaml
+is a SEPARATE, immutable file. `get_action_type(name, version)` loads from a
+SPECIFIC version directory (registry cache keyed by version, so an already-
+loaded v1 ActionType is never invalidated by a later v2 load); callers that
+don't care about versioning (nothing in this codebase before Phase 7)
+default to "v1", preserving every Phase 1-6 call site's behavior exactly.
 """
 
 from __future__ import annotations
@@ -11,7 +21,17 @@ from typing import Any
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-ACTIONS_DIR = REPO_ROOT / "contracts" / "actions" / "v1"
+ACTIONS_ROOT = REPO_ROOT / "contracts" / "actions"
+
+# Backward-compatible constant — every pre-Phase-7 caller (services/action_worker/
+# activities.py's F34 re-hash, tests) imports this name directly and always
+# meant "the v1 directory". Phase 7 callers that need a SPECIFIC version use
+# `actions_dir(version)` instead.
+ACTIONS_DIR = ACTIONS_ROOT / "v1"
+
+
+def actions_dir(version: str = "v1") -> Path:
+    return ACTIONS_ROOT / version
 
 
 @dataclass(frozen=True)
@@ -19,6 +39,12 @@ class ActionType:
     name: str
     version: int
     raw: dict[str, Any]
+    # Phase 7: the CONTRACT version directory ("v1"/"v2"/...) this
+    # ActionType was loaded from — distinct from `version` (an integer the
+    # YAML itself declares, e.g. `version: 2`, and part of the hash-covered
+    # decision_content_hash payload). replay uses this to find the exact
+    # archived file back on disk.
+    version_dir: str = "v1"
 
     @property
     def parameters(self) -> dict[str, Any]:
@@ -80,25 +106,25 @@ class ActionType:
         return self.raw.get("compensation", {}).get("mode", "manual_recovery_required")
 
 
-_REGISTRY: dict[str, ActionType] = {}
+_REGISTRY: dict[str, dict[str, ActionType]] = {}
 
 
-def _load_all() -> dict[str, ActionType]:
+def _load_all(version: str = "v1") -> dict[str, ActionType]:
     global _REGISTRY
-    if _REGISTRY:
-        return _REGISTRY
+    if version in _REGISTRY:
+        return _REGISTRY[version]
     registry: dict[str, ActionType] = {}
-    for path in sorted(ACTIONS_DIR.glob("*.yaml")):
+    for path in sorted(actions_dir(version).glob("*.yaml")):
         raw = yaml.safe_load(path.read_text())
         name = raw["name"]
-        registry[name] = ActionType(name=name, version=int(raw["version"]), raw=raw)
-    _REGISTRY = registry
+        registry[name] = ActionType(name=name, version=int(raw["version"]), raw=raw, version_dir=version)
+    _REGISTRY[version] = registry
     return registry
 
 
-def get_action_type(name: str) -> ActionType | None:
-    return _load_all().get(name)
+def get_action_type(name: str, version: str = "v1") -> ActionType | None:
+    return _load_all(version).get(name)
 
 
-def action_type_paths() -> dict[str, Path]:
-    return {p.stem: p for p in sorted(ACTIONS_DIR.glob("*.yaml"))}
+def action_type_paths(version: str = "v1") -> dict[str, Path]:
+    return {p.stem: p for p in sorted(actions_dir(version).glob("*.yaml"))}

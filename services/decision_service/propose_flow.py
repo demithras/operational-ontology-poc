@@ -65,10 +65,17 @@ class ProposeDeps:
     openfga_store_id: str | None
     opa_base_url: str
     manifest: dict
+    # Phase 7: the REAL OpenFGA authorization_model_id currently live for
+    # this store (resolved fresh per-request by app.py, same "never cache
+    # across requests" policy as openfga_store_id — see
+    # authz.py::resolve_latest_authorization_model_id). None if it could
+    # not be resolved; the existing openfga_store_id is None branch already
+    # handles the fail-closed path in that case.
+    openfga_authorization_model_id: str | None = None
 
 
-def validate_and_load_action(action_type_name: str, parameters: dict) -> ActionType:
-    action = get_action_type(action_type_name)
+def validate_and_load_action(action_type_name: str, parameters: dict, action_version_dir: str = "v1") -> ActionType:
+    action = get_action_type(action_type_name, action_version_dir)
     if action is None:
         raise MalformedProposal(f"unknown action_type {action_type_name!r}")
     missing = [k for k in action.required_parameters if k not in parameters]
@@ -93,7 +100,8 @@ def propose(
     context: dict,
     force_invalid_conformance: bool = False,
 ) -> DecisionRecord:
-    action = validate_and_load_action(action_type_name, parameters)
+    action_version_dir = deps.manifest.get("deployed_version", {}).get("actions", "v1")
+    action = validate_and_load_action(action_type_name, parameters, action_version_dir)
     manifest = deps.manifest
 
     record = DecisionRecord(
@@ -110,6 +118,11 @@ def propose(
         shape_set_version=content_addressed(manifest["shapes"]),
         authorization_model_version=content_addressed(manifest["openfga"]),
         policy_bundle_version=content_addressed(manifest["opa"]),
+        # Phase 7 (spec 07 item 1) — the remaining pinned-version fields.
+        identity_mapping_version=content_addressed(manifest["identity"]),
+        projection_definition_version=content_addressed(manifest["projections"]),
+        reconciliation_predicate_version=content_addressed(manifest["reconciliation"]),
+        openfga_authorization_model_id=deps.openfga_authorization_model_id,
         evidence_snapshot_id=f"ES-{uuid.uuid4().hex[:20]}",
     )
 
@@ -133,6 +146,7 @@ def propose(
         object_ref = authz.resolve_object(action, parameters, ev)
         record.authz_result = authz.check(
             deps.openfga_api_url, deps.openfga_store_id, action.authorization_relation, object_ref, actor_type, actor_id,
+            deps.openfga_authorization_model_id,
         )
     if not record.authz_result.allowed:
         record.status = DENIED_AUTHORIZATION
@@ -144,6 +158,7 @@ def propose(
     # docs/adr/0003-protected-high-priority-transfer-authorization.md.
     protected_deny = authz.check_high_priority_protection(
         action, parameters, ev, deps.openfga_api_url, deps.openfga_store_id, actor_type, actor_id,
+        deps.openfga_authorization_model_id,
     )
     if protected_deny is not None:
         record.authz_result = protected_deny

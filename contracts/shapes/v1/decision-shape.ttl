@@ -72,6 +72,28 @@ oo:DecisionShape
     sh:message "oo:Decision requires exactly one oo:createdAt." ;
   ] ;
   sh:property [
+    # Phase 7 additions (docs/experiment/spec/07_versioning_and_replay.md
+    # item 1) — deliberately OPTIONAL (no sh:minCount): a pre-Phase-7
+    # decision never had these properties at all, and this shape must keep
+    # validating that already-committed, immutable RDF exactly as it did
+    # before. Every NEW decision from this phase on still gets all four
+    # populated (see services/decision_service/propose_flow.py).
+    sh:path oo:identityMappingVersion ; sh:maxCount 1 ; sh:datatype xsd:string ;
+    sh:message "oo:Decision.identityMappingVersion, if present, must be a single string." ;
+  ] ;
+  sh:property [
+    sh:path oo:projectionDefinitionVersion ; sh:maxCount 1 ; sh:datatype xsd:string ;
+    sh:message "oo:Decision.projectionDefinitionVersion, if present, must be a single string." ;
+  ] ;
+  sh:property [
+    sh:path oo:reconciliationPredicateVersion ; sh:maxCount 1 ; sh:datatype xsd:string ;
+    sh:message "oo:Decision.reconciliationPredicateVersion, if present, must be a single string." ;
+  ] ;
+  sh:property [
+    sh:path oo:openfgaAuthorizationModelId ; sh:maxCount 1 ; sh:datatype xsd:string ;
+    sh:message "oo:Decision.openfgaAuthorizationModelId, if present, must be a single string." ;
+  ] ;
+  sh:property [
     # Structural transition check (phase3.md item 3, "status-transition
     # structural checks"): the status must be exactly one of the v1
     # lifecycle vocabulary's concepts. oo:DecisionStatusScheme

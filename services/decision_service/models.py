@@ -50,6 +50,16 @@ class DecisionRecord:
     shape_set_version: str = ""
     authorization_model_version: str = ""
     policy_bundle_version: str = ""
+    # Phase 7 (docs/experiment/spec/07_versioning_and_replay.md item 1):
+    # closes the "verify; fix Phase 5 if not" gap for the remaining
+    # versioned-artifact kinds the spec lists that Phase 5/6 never pinned.
+    identity_mapping_version: str = ""
+    projection_definition_version: str = ""
+    reconciliation_predicate_version: str = ""
+    # The REAL OpenFGA authorization_model_id (immutable-by-id) used for
+    # this decision's checks — distinct from authorization_model_version's
+    # content-hash form; see services/decision_service/authz.py.
+    openfga_authorization_model_id: str | None = None
 
     evidence: EvidenceResult | None = None
     evidence_snapshot_id: str = ""

@@ -240,6 +240,12 @@ services:
       OO_PROJECTION_HEALTH_PORT: "8091"
     ports:
       - "${PROJECTION_BUILDER_HEALTH_PORT}:8091"
+    # Phase 7: services/common/contract_versions.py reads
+    # contracts/manifests/deployed_version.json to label projection rows
+    # with whatever ontology contract version is currently deployed — same
+    # read-only mount pattern as decision_service/action_worker above.
+    volumes:
+      - ./contracts:/app/contracts:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -312,6 +318,16 @@ services:
       OO_TEST_MODE: ${OO_TEST_MODE}
     ports:
       - "${DECISION_SERVICE_HTTP_PORT}:8000"
+    # Phase 7 (docs/experiment/spec/07_versioning_and_replay.md): reads
+    # contracts/manifests/deployed_version.json + the versioned
+    # contracts/<kind>/vN/ directories fresh, per request (services/decision_service/app.py's
+    # _deps()) — same read-only bind mount services/action_worker already
+    # has for F34's post-approval re-hash, now also on the propose() path
+    # so "deploying" a new contract version is a data-only edit to that one
+    # file, no image rebuild and (per app.py's per-request re-read) not even
+    # a container restart.
+    volumes:
+      - ./contracts:/app/contracts:ro
     depends_on:
       postgres:
         condition: service_healthy
