@@ -1,0 +1,2333 @@
+{
+  "package_id": "manufacturing-ontology",
+  "domain_id": "manufacturing",
+  "version": "v3",
+  "imports": [],
+  "object_types": [
+    {
+      "id": "Supplier",
+      "primary_key": "supplierId",
+      "properties": [
+        {
+          "name": "supplierId",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "enum:ACTIVE|SUSPENDED"
+          ]
+        },
+        {
+          "name": "leadTimeDays",
+          "type": "integer",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "riskClass",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "enum:LOW|MEDIUM|HIGH"
+          ]
+        }
+      ],
+      "implements": [
+        "Statused"
+      ]
+    },
+    {
+      "id": "Part",
+      "primary_key": "partId",
+      "properties": [
+        {
+          "name": "partId",
+          "type": "string",
+          "required": true,
+          "immutable": true,
+          "description": "Canonical part id, e.g. PX-0017"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "unit",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "criticality",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "enum:LOW|MEDIUM|HIGH|CRITICAL"
+          ]
+        }
+      ],
+      "implements": []
+    },
+    {
+      "id": "PurchaseOrder",
+      "primary_key": "poId",
+      "properties": [
+        {
+          "name": "poId",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "enum:OPEN|DELAYED|RECEIVED|CANCELLED"
+          ]
+        },
+        {
+          "name": "promisedAt",
+          "type": "integer",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "expectedAt",
+          "type": "integer",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "delayReason",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "implements": [
+        "Statused"
+      ]
+    },
+    {
+      "id": "PurchaseOrderLine",
+      "primary_key": "iri",
+      "properties": [
+        {
+          "name": "iri",
+          "type": "string",
+          "required": true,
+          "immutable": true,
+          "description": "RDF IRI of the instance; added because the IR requires a primary_key and the source class declares no id property"
+        },
+        {
+          "name": "quantity",
+          "type": "integer",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "implements": [
+        "PartReferencing",
+        "Quantified"
+      ]
+    },
+    {
+      "id": "InventoryLot",
+      "primary_key": "lotId",
+      "properties": [
+        {
+          "name": "lotId",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "onHand",
+          "type": "integer",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "min_inclusive:0"
+          ]
+        },
+        {
+          "name": "reserved",
+          "type": "integer",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "min_inclusive:0"
+          ]
+        },
+        {
+          "name": "qualityStatus",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "enum:OK|QUARANTINE"
+          ]
+        }
+      ],
+      "implements": [
+        "PartReferencing"
+      ]
+    },
+    {
+      "id": "Warehouse",
+      "primary_key": "warehouseId",
+      "properties": [
+        {
+          "name": "warehouseId",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "capacityClass",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "enum:SMALL|MEDIUM|LARGE"
+          ]
+        },
+        {
+          "name": "region",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "implements": []
+    },
+    {
+      "id": "WorkOrder",
+      "primary_key": "workOrderId",
+      "properties": [
+        {
+          "name": "workOrderId",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "enum:PLANNED|RELEASED|RUNNING|DONE|CANCELLED"
+          ]
+        },
+        {
+          "name": "priority",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "enum:LOW|MEDIUM|HIGH"
+          ]
+        },
+        {
+          "name": "plannedStart",
+          "type": "integer",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "plannedFinish",
+          "type": "integer",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "implements": [
+        "Statused"
+      ]
+    },
+    {
+      "id": "BomRequirement",
+      "primary_key": "iri",
+      "properties": [
+        {
+          "name": "iri",
+          "type": "string",
+          "required": true,
+          "immutable": true,
+          "description": "RDF IRI of the instance; added because the IR requires a primary_key and the source class declares no id property"
+        },
+        {
+          "name": "quantity",
+          "type": "integer",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "implements": [
+        "Quantified"
+      ]
+    },
+    {
+      "id": "ProductionLine",
+      "primary_key": "lineId",
+      "properties": [
+        {
+          "name": "lineId",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "enum:ACTIVE|MAINTENANCE"
+          ]
+        },
+        {
+          "name": "capabilities",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "description": "MES JSONB capabilities array stored as its JSON-encoded string form in v1"
+        }
+      ],
+      "implements": [
+        "Statused"
+      ]
+    },
+    {
+      "id": "Shipment",
+      "primary_key": "iri",
+      "properties": [
+        {
+          "name": "iri",
+          "type": "string",
+          "required": true,
+          "immutable": true,
+          "description": "RDF IRI of the instance; added because the IR requires a primary_key and the source class declares no id property"
+        }
+      ],
+      "implements": []
+    },
+    {
+      "id": "WmsTransferRecord",
+      "primary_key": "actionExecutionId",
+      "properties": [
+        {
+          "name": "actionExecutionId",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "requestedQuantity",
+          "type": "integer",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "actualQuantity",
+          "type": "integer",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "transferStatus",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "enum:COMMITTED|PARTIAL|FAILED|REVERSED"
+          ]
+        },
+        {
+          "name": "faultModeApplied",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "description": "test-mode only (OO_TEST_MODE=1)"
+        },
+        {
+          "name": "reversesActionExecutionId",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "implements": []
+    },
+    {
+      "id": "Decision",
+      "primary_key": "decisionId",
+      "properties": [
+        {
+          "name": "decisionId",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "decisionType",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "ontologyVersion",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "shapeSetVersion",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "authorizationModelVersion",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "policyBundleVersion",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "actionType",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "actionVersion",
+          "type": "integer",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "createdAt",
+          "type": "datetime",
+          "required": true,
+          "immutable": false
+        },
+        {
+          "name": "identityMappingVersion",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "projectionDefinitionVersion",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "reconciliationPredicateVersion",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "openfgaAuthorizationModelId",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "unavailableGate",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "enum:authorization|policy"
+          ]
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "required": true,
+          "immutable": false,
+          "constraints": [
+            "enum:DRAFT|PROPOSED|INSUFFICIENT_EVIDENCE|DENIED_AUTHORIZATION|DENIED_POLICY|INVALID_CONFORMANCE|REQUIRES_APPROVAL|APPROVED|EXECUTING|EXECUTION_FAILED|OUTCOME_UNKNOWN|AWAITING_OBSERVATION|DIVERGED|OBSERVED_SUCCESS|ACTION_VERSION_INVALIDATED|GATE_UNAVAILABLE"
+          ]
+        },
+        {
+          "name": "parametersJson",
+          "type": "string",
+          "required": false,
+          "immutable": true
+        },
+        {
+          "name": "decisionContentHash",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "approvedAt",
+          "type": "datetime",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "approvalDecisionHash",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "approvalScope",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "actionPinnedSha256",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "actionSha256AtExecute",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "actionVersionInvalidatedAt",
+          "type": "datetime",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "implements": []
+    },
+    {
+      "id": "EvidenceSnapshot",
+      "primary_key": "iri",
+      "properties": [
+        {
+          "name": "iri",
+          "type": "string",
+          "required": true,
+          "immutable": true,
+          "description": "RDF IRI of the instance; added because the IR requires a primary_key and the source class declares no id property"
+        },
+        {
+          "name": "snapshotObservedAt",
+          "type": "datetime",
+          "required": true,
+          "immutable": false
+        },
+        {
+          "name": "snapshotContentHash",
+          "type": "string",
+          "required": true,
+          "immutable": false
+        },
+        {
+          "name": "sourcePositionsJson",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "requiredFactsJson",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "excludedFactsJson",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "projectionRowHashesJson",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "implements": [
+        "ProvEntity"
+      ]
+    },
+    {
+      "id": "DecisionActivity",
+      "primary_key": "iri",
+      "properties": [
+        {
+          "name": "iri",
+          "type": "string",
+          "required": true,
+          "immutable": true,
+          "description": "RDF IRI of the instance; added because the IR requires a primary_key and the source class declares no id property"
+        }
+      ],
+      "implements": [
+        "ProvActivity"
+      ]
+    },
+    {
+      "id": "ActionExecution",
+      "primary_key": "actionExecutionId",
+      "properties": [
+        {
+          "name": "actionExecutionId",
+          "type": "string",
+          "required": true,
+          "immutable": true,
+          "description": "same value is the idempotency key sent to the external system"
+        },
+        {
+          "name": "quantity",
+          "type": "integer",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "min_inclusive:1"
+          ]
+        },
+        {
+          "name": "externalSystem",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "enum:WMS|ERP|MES"
+          ]
+        },
+        {
+          "name": "externalOperation",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "commandStatus",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "commandReceiptJson",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "startedAt",
+          "type": "datetime",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "completedAt",
+          "type": "datetime",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "temporalWorkflowId",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "implements": [
+        "ProvActivity"
+      ]
+    },
+    {
+      "id": "Outcome",
+      "primary_key": "outcomeId",
+      "properties": [
+        {
+          "name": "outcomeId",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "reconciliationState",
+          "type": "string",
+          "required": true,
+          "immutable": false,
+          "constraints": [
+            "enum:NOT_STARTED|COMMAND_SENT|COMMAND_ACCEPTED|AWAITING_OBSERVATION|CONVERGED|DIVERGED|OUTCOME_UNKNOWN|COMPENSATING|COMPENSATED|FAILED"
+          ]
+        },
+        {
+          "name": "expectedEffectJson",
+          "type": "string",
+          "required": true,
+          "immutable": false
+        },
+        {
+          "name": "observedEffectJson",
+          "type": "string",
+          "required": true,
+          "immutable": false
+        },
+        {
+          "name": "observedAtOutcome",
+          "type": "datetime",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "compensationStatus",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "enum:NONE|NOT_APPLICABLE|COMPENSATING|COMPENSATED|COMPENSATION_FAILED"
+          ]
+        },
+        {
+          "name": "compensatingActionExecutionId",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "sourceEvidenceLsn",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "implements": [
+        "ProvEntity"
+      ]
+    },
+    {
+      "id": "HumanActor",
+      "primary_key": "actorId",
+      "properties": [
+        {
+          "name": "actorId",
+          "type": "string",
+          "required": true,
+          "immutable": true,
+          "description": "e.g. planner-1, agent-1"
+        },
+        {
+          "name": "actorRole",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "enum:planner|junior_planner|supervisor|agent"
+          ]
+        }
+      ],
+      "implements": [
+        "ProvAgent"
+      ]
+    },
+    {
+      "id": "SoftwareAgent",
+      "primary_key": "actorId",
+      "properties": [
+        {
+          "name": "actorId",
+          "type": "string",
+          "required": true,
+          "immutable": true,
+          "description": "e.g. planner-1, agent-1"
+        },
+        {
+          "name": "actorRole",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "enum:planner|junior_planner|supervisor|agent"
+          ]
+        }
+      ],
+      "implements": [
+        "ProvAgent"
+      ]
+    },
+    {
+      "id": "AuthorizationCheck",
+      "primary_key": "iri",
+      "properties": [
+        {
+          "name": "iri",
+          "type": "string",
+          "required": true,
+          "immutable": true,
+          "description": "RDF IRI of the instance; added because the IR requires a primary_key and the source class declares no id property"
+        },
+        {
+          "name": "checkRelation",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "checkObject",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "checkOutcome",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "enum:ALLOWED|DENIED|UNAVAILABLE"
+          ]
+        },
+        {
+          "name": "checkedAt",
+          "type": "datetime",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "checkAuthorizationModelId",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "implements": [
+        "ProvEntity"
+      ]
+    },
+    {
+      "id": "PolicyEvaluation",
+      "primary_key": "iri",
+      "properties": [
+        {
+          "name": "iri",
+          "type": "string",
+          "required": true,
+          "immutable": true,
+          "description": "RDF IRI of the instance; added because the IR requires a primary_key and the source class declares no id property"
+        },
+        {
+          "name": "policyOutcome",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "enum:allow|deny|require_approval|UNAVAILABLE"
+          ]
+        },
+        {
+          "name": "policyReasonsJson",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "policyObligationsJson",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "policyInputHash",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "policyInputJson",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "implements": [
+        "ProvEntity"
+      ]
+    },
+    {
+      "id": "ConformanceCheck",
+      "primary_key": "iri",
+      "properties": [
+        {
+          "name": "iri",
+          "type": "string",
+          "required": true,
+          "immutable": true,
+          "description": "RDF IRI of the instance; added because the IR requires a primary_key and the source class declares no id property"
+        },
+        {
+          "name": "conformanceOutcome",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "enum:CONFORMS|VIOLATED"
+          ]
+        },
+        {
+          "name": "conformanceViolationsJson",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "implements": [
+        "ProvEntity"
+      ]
+    },
+    {
+      "id": "Observation",
+      "primary_key": "iri",
+      "properties": [
+        {
+          "name": "iri",
+          "type": "string",
+          "required": true,
+          "immutable": true,
+          "description": "RDF IRI of the instance; added because the IR requires a primary_key and the source class declares no id property"
+        },
+        {
+          "name": "sourceSystem",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "enum:erp|mes|wms"
+          ]
+        },
+        {
+          "name": "sourceTable",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "sourcePk",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "sourceLsn",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "description": "Postgres WAL LSN; ordering authority, never wall clock"
+        },
+        {
+          "name": "sourceVersion",
+          "type": "integer",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "cdcOperation",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "enum:c|u|d|r"
+          ]
+        },
+        {
+          "name": "observedAt",
+          "type": "datetime",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "applied",
+          "type": "boolean",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "implements": [
+        "ProvActivity"
+      ]
+    },
+    {
+      "id": "SourcePosition",
+      "primary_key": "iri",
+      "properties": [
+        {
+          "name": "iri",
+          "type": "string",
+          "required": true,
+          "immutable": true,
+          "description": "RDF IRI of the instance; added because the IR requires a primary_key and the source class declares no id property"
+        },
+        {
+          "name": "lastLsn",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "lastVersion",
+          "type": "integer",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "lastObservedAt",
+          "type": "datetime",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "implements": []
+    },
+    {
+      "id": "IdentityResolutionActivity",
+      "primary_key": "iri",
+      "properties": [
+        {
+          "name": "iri",
+          "type": "string",
+          "required": true,
+          "immutable": true,
+          "description": "RDF IRI of the instance; added because the IR requires a primary_key and the source class declares no id property"
+        }
+      ],
+      "implements": [
+        "ProvActivity"
+      ]
+    },
+    {
+      "id": "IdentityMapping",
+      "primary_key": "iri",
+      "properties": [
+        {
+          "name": "iri",
+          "type": "string",
+          "required": true,
+          "immutable": true,
+          "description": "RDF IRI of the instance; added because the IR requires a primary_key and the source class declares no id property"
+        },
+        {
+          "name": "mappingRuleId",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "mappingRuleVersion",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "sourceLocalId",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "authority",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "confidence",
+          "type": "number",
+          "required": false,
+          "immutable": false,
+          "description": "xsd:decimal"
+        },
+        {
+          "name": "createdAtMapping",
+          "type": "datetime",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "implements": [
+        "ProvEntity"
+      ]
+    },
+    {
+      "id": "QuarantinedIdentity",
+      "primary_key": "iri",
+      "properties": [
+        {
+          "name": "iri",
+          "type": "string",
+          "required": true,
+          "immutable": true,
+          "description": "RDF IRI of the instance; added because the IR requires a primary_key and the source class declares no id property"
+        },
+        {
+          "name": "quarantineReason",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "implements": [
+        "ProvEntity"
+      ]
+    }
+  ],
+  "link_types": [
+    {
+      "id": "PurchaseOrder_suppliedBy",
+      "from": "PurchaseOrder",
+      "to": "Supplier",
+      "from_cardinality": {
+        "min": 1,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "PurchaseOrderLine_purchaseOrder",
+      "from": "PurchaseOrderLine",
+      "to": "PurchaseOrder",
+      "from_cardinality": {
+        "min": 1,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "PartReferencing_part",
+      "from": "PartReferencing",
+      "to": "Part",
+      "from_cardinality": {
+        "min": 0,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "PurchaseOrderLine_destinationWarehouse",
+      "from": "PurchaseOrderLine",
+      "to": "Warehouse",
+      "from_cardinality": {
+        "min": 1,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "InventoryLot_warehouse",
+      "from": "InventoryLot",
+      "to": "Warehouse",
+      "from_cardinality": {
+        "min": 0,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "WorkOrder_productionLine",
+      "from": "WorkOrder",
+      "to": "ProductionLine",
+      "from_cardinality": {
+        "min": 1,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "WorkOrder_warehouse",
+      "from": "WorkOrder",
+      "to": "Warehouse",
+      "from_cardinality": {
+        "min": 1,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "BomRequirement_workOrder",
+      "from": "BomRequirement",
+      "to": "WorkOrder",
+      "from_cardinality": {
+        "min": 1,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "BomRequirement_requiresPart",
+      "from": "BomRequirement",
+      "to": "Part",
+      "from_cardinality": {
+        "min": 1,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "WmsTransferRecord_sourceWarehouse",
+      "from": "WmsTransferRecord",
+      "to": "Warehouse",
+      "from_cardinality": {
+        "min": 1,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "Decision_actor",
+      "from": "Decision",
+      "to": "ProvAgent",
+      "from_cardinality": {
+        "min": 1,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "Decision_evidenceSnapshot",
+      "from": "Decision",
+      "to": "EvidenceSnapshot",
+      "from_cardinality": {
+        "min": 1,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "Decision_authorizationCheck",
+      "from": "Decision",
+      "to": "AuthorizationCheck",
+      "from_cardinality": {
+        "min": 0,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "Decision_policyEvaluation",
+      "from": "Decision",
+      "to": "PolicyEvaluation",
+      "from_cardinality": {
+        "min": 0,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "Decision_conformanceCheck",
+      "from": "Decision",
+      "to": "ConformanceCheck",
+      "from_cardinality": {
+        "min": 0,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "Decision_approvedBy",
+      "from": "Decision",
+      "to": "ProvAgent",
+      "from_cardinality": {
+        "min": 0,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "Decision_executedBy",
+      "from": "Decision",
+      "to": "ProvAgent",
+      "from_cardinality": {
+        "min": 0,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "Decision_actionExecution",
+      "from": "Decision",
+      "to": "ActionExecution",
+      "from_cardinality": {
+        "min": 0,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 1,
+        "max": 1
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "Decision_concernsWorkOrder",
+      "from": "Decision",
+      "to": "WorkOrder",
+      "from_cardinality": {
+        "min": 0,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "Decision_concernsPart",
+      "from": "Decision",
+      "to": "Part",
+      "from_cardinality": {
+        "min": 0,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "Decision_concernsSourceWarehouse",
+      "from": "Decision",
+      "to": "Warehouse",
+      "from_cardinality": {
+        "min": 0,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "Decision_concernsDestinationWarehouse",
+      "from": "Decision",
+      "to": "Warehouse",
+      "from_cardinality": {
+        "min": 0,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "ActionExecution_sourceWarehouse",
+      "from": "ActionExecution",
+      "to": "Warehouse",
+      "from_cardinality": {
+        "min": 0,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "ActionExecution_destinationWarehouse",
+      "from": "ActionExecution",
+      "to": "Warehouse",
+      "from_cardinality": {
+        "min": 0,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "ActionExecution_outcome",
+      "from": "ActionExecution",
+      "to": "Outcome",
+      "from_cardinality": {
+        "min": 0,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 1,
+        "max": 1
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "SoftwareAgent_actsOnBehalfOf",
+      "from": "SoftwareAgent",
+      "to": "HumanActor",
+      "from_cardinality": {
+        "min": 0,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "Observation_mappingRuleUsed",
+      "from": "Observation",
+      "to": "IdentityMapping",
+      "from_cardinality": {
+        "min": 0,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "IdentityMapping_canonicalId",
+      "from": "IdentityMapping",
+      "to": "Part",
+      "from_cardinality": {
+        "min": 0,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    }
+  ],
+  "interfaces": [
+    {
+      "id": "Statused",
+      "required_properties": [
+        {
+          "name": "status",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "required_links": [],
+      "capabilities": []
+    },
+    {
+      "id": "PartReferencing",
+      "required_properties": [],
+      "required_links": [
+        "PartReferencing_part"
+      ],
+      "capabilities": []
+    },
+    {
+      "id": "Quantified",
+      "required_properties": [
+        {
+          "name": "quantity",
+          "type": "integer",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "required_links": [],
+      "capabilities": []
+    },
+    {
+      "id": "ProvEntity",
+      "required_properties": [],
+      "required_links": [],
+      "capabilities": []
+    },
+    {
+      "id": "ProvActivity",
+      "required_properties": [],
+      "required_links": [],
+      "capabilities": []
+    },
+    {
+      "id": "ProvAgent",
+      "required_properties": [],
+      "required_links": [],
+      "capabilities": []
+    }
+  ],
+  "functions": [
+    {
+      "id": "available_quantity",
+      "inputs": [
+        {
+          "name": "lot",
+          "type": {
+            "ref": "InventoryLot"
+          },
+          "required": true
+        }
+      ],
+      "output": "integer",
+      "purity": "NO_COMMITTED_BUSINESS_SIDE_EFFECT",
+      "reads": [
+        "InventoryLot.onHand",
+        "InventoryLot.reserved"
+      ],
+      "implementation_ref": "reference_model.state:InventoryLot.available",
+      "determinism": "deterministic"
+    },
+    {
+      "id": "incoming_before",
+      "inputs": [
+        {
+          "name": "part",
+          "type": {
+            "ref": "Part"
+          },
+          "required": true
+        },
+        {
+          "name": "warehouse",
+          "type": {
+            "ref": "Warehouse"
+          },
+          "required": true
+        },
+        {
+          "name": "deadline",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "output": "integer",
+      "purity": "NO_COMMITTED_BUSINESS_SIDE_EFFECT",
+      "reads": [
+        "PurchaseOrder.status",
+        "PurchaseOrder.expectedAt",
+        "PurchaseOrderLine.quantity",
+        "PurchaseOrderLine_purchaseOrder",
+        "PartReferencing_part",
+        "PurchaseOrderLine_destinationWarehouse"
+      ],
+      "implementation_ref": "reference_model.derive:_incoming_before",
+      "determinism": "deterministic"
+    },
+    {
+      "id": "work_order_risk",
+      "inputs": [
+        {
+          "name": "work_order",
+          "type": {
+            "ref": "WorkOrder"
+          },
+          "required": true
+        }
+      ],
+      "output": "json",
+      "purity": "NO_COMMITTED_BUSINESS_SIDE_EFFECT",
+      "reads": [
+        "WorkOrder.status",
+        "WorkOrder.plannedStart",
+        "WorkOrder_warehouse",
+        "BomRequirement.quantity",
+        "BomRequirement_workOrder",
+        "BomRequirement_requiresPart",
+        "InventoryLot.onHand",
+        "InventoryLot.reserved",
+        "PurchaseOrder.status",
+        "PurchaseOrder.expectedAt"
+      ],
+      "implementation_ref": "reference_model.derive:work_order_risk",
+      "determinism": "deterministic"
+    },
+    {
+      "id": "recommend_transfer_for_work_order",
+      "inputs": [
+        {
+          "name": "work_order",
+          "type": {
+            "ref": "WorkOrder"
+          },
+          "required": true
+        }
+      ],
+      "output": {
+        "optional": "json"
+      },
+      "purity": "NO_COMMITTED_BUSINESS_SIDE_EFFECT",
+      "reads": [
+        "WorkOrder",
+        "InventoryLot",
+        "Warehouse",
+        "BomRequirement"
+      ],
+      "implementation_ref": "services.decision_service.planner:recommend_transfer_for_work_order",
+      "determinism": "deterministic"
+    },
+    {
+      "id": "decision_content_hash",
+      "inputs": [
+        {
+          "name": "decision",
+          "type": {
+            "ref": "Decision"
+          },
+          "required": true
+        }
+      ],
+      "output": "string",
+      "purity": "NO_COMMITTED_BUSINESS_SIDE_EFFECT",
+      "reads": [
+        "Decision.decisionType",
+        "Decision.ontologyVersion",
+        "Decision.shapeSetVersion",
+        "Decision.authorizationModelVersion",
+        "Decision.policyBundleVersion",
+        "Decision.actionType",
+        "Decision.actionVersion",
+        "Decision.parametersJson",
+        "Decision_actor",
+        "Decision_evidenceSnapshot"
+      ],
+      "implementation_ref": "services.decision_service.hashing:decision_content_hash",
+      "determinism": "deterministic"
+    },
+    {
+      "id": "resolve_canonical_id",
+      "inputs": [
+        {
+          "name": "source_local_id",
+          "type": "string",
+          "required": true
+        }
+      ],
+      "output": {
+        "optional": "string"
+      },
+      "purity": "NO_COMMITTED_BUSINESS_SIDE_EFFECT",
+      "reads": [
+        "IdentityMapping.sourceLocalId",
+        "IdentityMapping_canonicalId"
+      ],
+      "implementation_ref": "reference_model.transitions:resolve_id",
+      "determinism": "deterministic"
+    }
+  ],
+  "actions": [
+    {
+      "id": "transfer_inventory",
+      "inputs": [
+        {
+          "name": "source_warehouse",
+          "type": {
+            "ref": "Warehouse"
+          },
+          "required": true
+        },
+        {
+          "name": "destination_warehouse",
+          "type": {
+            "ref": "Warehouse"
+          },
+          "required": true
+        },
+        {
+          "name": "part",
+          "type": {
+            "ref": "Part"
+          },
+          "required": true
+        },
+        {
+          "name": "quantity",
+          "type": "integer",
+          "required": true
+        },
+        {
+          "name": "work_order",
+          "type": {
+            "ref": "WorkOrder"
+          },
+          "required": false
+        }
+      ],
+      "authority_refs": [
+        "auth:transfer-inventory-planner",
+        "auth:transfer-inventory-junior-planner",
+        "auth:transfer-inventory-agent-grant",
+        "auth:approve-large-transfer-senior-approver",
+        "auth:mitigate-high-priority-planner",
+        "auth:mitigate-high-priority-supervisor"
+      ],
+      "policy_refs": [
+        "policy:transfer_inventory_hard_deny",
+        "policy:transfer_inventory_needs_approval",
+        "policy:transfer_inventory_allow"
+      ],
+      "preconditions": [
+        "quantity >= 1",
+        "source != destination",
+        "source_available >= quantity"
+      ],
+      "effects": [
+        {
+          "target": "WMS",
+          "operation": "external_call",
+          "fields": [
+            "destination",
+            "part",
+            "quantity",
+            "source"
+          ]
+        }
+      ],
+      "idempotency": "required",
+      "outcome_predicate": "WMS_CDC observation within PT30S: the WmsTransferRecord correlated by action_execution_id has status COMMITTED and actual_quantity == requested_quantity (source.available decreases by quantity; destination.available increases by quantity)",
+      "compensation_action": null,
+      "version": "v3"
+    },
+    {
+      "id": "expedite_purchase_order",
+      "inputs": [
+        {
+          "name": "po_id",
+          "type": {
+            "ref": "PurchaseOrder"
+          },
+          "required": true
+        },
+        {
+          "name": "expedite_fee",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "authority_refs": [
+        "auth:transfer-inventory-planner",
+        "auth:transfer-inventory-junior-planner",
+        "auth:transfer-inventory-agent-grant",
+        "auth:approve-large-transfer-supervisor"
+      ],
+      "policy_refs": [
+        "policy:expedite_purchase_order_hard_deny",
+        "policy:expedite_purchase_order_needs_approval",
+        "policy:expedite_purchase_order_allow"
+      ],
+      "preconditions": [
+        "expedite_fee >= 0",
+        "po_status not in [RECEIVED, CANCELLED]"
+      ],
+      "effects": [
+        {
+          "target": "ERP",
+          "operation": "external_call",
+          "fields": [
+            "expedite_fee"
+          ]
+        }
+      ],
+      "idempotency": "required",
+      "outcome_predicate": "ERP_CDC observation within PT30S: purchase_order.expected_at decreases",
+      "compensation_action": null,
+      "version": "v1"
+    },
+    {
+      "id": "reschedule_work_order",
+      "inputs": [
+        {
+          "name": "work_order_id",
+          "type": {
+            "ref": "WorkOrder"
+          },
+          "required": true
+        },
+        {
+          "name": "new_planned_start",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "authority_refs": [
+        "auth:transfer-inventory-planner",
+        "auth:transfer-inventory-junior-planner",
+        "auth:transfer-inventory-agent-grant",
+        "auth:approve-large-transfer-supervisor"
+      ],
+      "policy_refs": [
+        "policy:reschedule_work_order_hard_deny",
+        "policy:reschedule_work_order_needs_approval",
+        "policy:reschedule_work_order_allow"
+      ],
+      "preconditions": [
+        "work_order_status not in [DONE, CANCELLED]"
+      ],
+      "effects": [
+        {
+          "target": "MES",
+          "operation": "external_call",
+          "fields": [
+            "new_planned_start"
+          ]
+        }
+      ],
+      "idempotency": "required",
+      "outcome_predicate": "MES_CDC observation within PT30S: work_order.planned_start changes to new_planned_start",
+      "compensation_action": "reschedule_work_order",
+      "version": "v1"
+    }
+  ],
+  "policies": [
+    {
+      "id": "transfer_inventory_hard_deny",
+      "decision": "deny",
+      "expression_ref": "rego:factory.inventory.transfer_v2#hard_deny",
+      "version": "v2"
+    },
+    {
+      "id": "transfer_inventory_needs_approval",
+      "decision": "require_approval",
+      "expression_ref": "rego:factory.inventory.transfer_v2#needs_approval",
+      "version": "v2"
+    },
+    {
+      "id": "transfer_inventory_allow",
+      "decision": "allow",
+      "expression_ref": "rego:factory.inventory.transfer_v2#allow",
+      "version": "v2"
+    },
+    {
+      "id": "expedite_purchase_order_hard_deny",
+      "decision": "deny",
+      "expression_ref": "rego:factory.purchase_order.expedite#hard_deny",
+      "version": "v1"
+    },
+    {
+      "id": "expedite_purchase_order_needs_approval",
+      "decision": "require_approval",
+      "expression_ref": "rego:factory.purchase_order.expedite#needs_approval",
+      "version": "v1"
+    },
+    {
+      "id": "expedite_purchase_order_allow",
+      "decision": "allow",
+      "expression_ref": "rego:factory.purchase_order.expedite#allow",
+      "version": "v1"
+    },
+    {
+      "id": "reschedule_work_order_hard_deny",
+      "decision": "deny",
+      "expression_ref": "rego:factory.work_order.reschedule#hard_deny",
+      "version": "v1"
+    },
+    {
+      "id": "reschedule_work_order_needs_approval",
+      "decision": "require_approval",
+      "expression_ref": "rego:factory.work_order.reschedule#needs_approval",
+      "version": "v1"
+    },
+    {
+      "id": "reschedule_work_order_allow",
+      "decision": "allow",
+      "expression_ref": "rego:factory.work_order.reschedule#allow",
+      "version": "v1"
+    }
+  ],
+  "authority_rules": [
+    {
+      "id": "transfer-inventory-planner",
+      "principal_selector": "warehouse#planner",
+      "capability": "action:transfer_inventory",
+      "resource_selector": "warehouse:*",
+      "effect": "allow",
+      "delegation_allowed": false
+    },
+    {
+      "id": "transfer-inventory-junior-planner",
+      "principal_selector": "warehouse#junior_planner",
+      "capability": "action:transfer_inventory",
+      "resource_selector": "warehouse:*",
+      "effect": "allow",
+      "delegation_allowed": false
+    },
+    {
+      "id": "transfer-inventory-agent-grant",
+      "principal_selector": "warehouse#agent_grant",
+      "capability": "action:transfer_inventory",
+      "resource_selector": "warehouse:*",
+      "effect": "allow",
+      "delegation_allowed": true
+    },
+    {
+      "id": "approve-large-transfer-senior-approver",
+      "principal_selector": "warehouse#senior_approver",
+      "capability": "approval:large_transfer",
+      "resource_selector": "warehouse:*",
+      "effect": "allow",
+      "delegation_allowed": false
+    },
+    {
+      "id": "approve-large-transfer-supervisor",
+      "principal_selector": "warehouse#supervisor",
+      "capability": "approval:large_transfer_v1",
+      "resource_selector": "warehouse:*",
+      "effect": "allow",
+      "delegation_allowed": false
+    },
+    {
+      "id": "mitigate-high-priority-planner",
+      "principal_selector": "warehouse#planner",
+      "capability": "action:mitigate_high_priority",
+      "resource_selector": "warehouse:*",
+      "effect": "allow",
+      "delegation_allowed": false
+    },
+    {
+      "id": "mitigate-high-priority-supervisor",
+      "principal_selector": "warehouse#supervisor",
+      "capability": "action:mitigate_high_priority",
+      "resource_selector": "warehouse:*",
+      "effect": "allow",
+      "delegation_allowed": false
+    }
+  ],
+  "observation_types": [
+    {
+      "id": "SupplierObserved",
+      "subject_type": "Supplier",
+      "properties": [
+        {
+          "name": "status",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "leadTimeDays",
+          "type": "integer",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "riskClass",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "source_binding": "ERP_CDC",
+      "truth_status": "observed"
+    },
+    {
+      "id": "PartObserved",
+      "subject_type": "Part",
+      "properties": [
+        {
+          "name": "description",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "unit",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "criticality",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "source_binding": "ERP_CDC",
+      "truth_status": "observed"
+    },
+    {
+      "id": "PurchaseOrderObserved",
+      "subject_type": "PurchaseOrder",
+      "properties": [
+        {
+          "name": "status",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "promisedAt",
+          "type": "integer",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "expectedAt",
+          "type": "integer",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "delayReason",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "source_binding": "ERP_CDC",
+      "truth_status": "observed"
+    },
+    {
+      "id": "InventoryLotObserved",
+      "subject_type": "InventoryLot",
+      "properties": [
+        {
+          "name": "onHand",
+          "type": "integer",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "reserved",
+          "type": "integer",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "qualityStatus",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "source_binding": "WMS_CDC",
+      "truth_status": "observed"
+    },
+    {
+      "id": "WorkOrderObserved",
+      "subject_type": "WorkOrder",
+      "properties": [
+        {
+          "name": "status",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "priority",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "plannedStart",
+          "type": "integer",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "plannedFinish",
+          "type": "integer",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "source_binding": "MES_CDC",
+      "truth_status": "observed"
+    },
+    {
+      "id": "ProductionLineObserved",
+      "subject_type": "ProductionLine",
+      "properties": [
+        {
+          "name": "status",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "capabilities",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "source_binding": "MES_CDC",
+      "truth_status": "observed"
+    },
+    {
+      "id": "WmsTransferRecordObserved",
+      "subject_type": "WmsTransferRecord",
+      "properties": [
+        {
+          "name": "transferStatus",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "requestedQuantity",
+          "type": "integer",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "actualQuantity",
+          "type": "integer",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "faultModeApplied",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "reversesActionExecutionId",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "source_binding": "WMS_CDC",
+      "truth_status": "observed"
+    }
+  ],
+  "constraints": [
+    {
+      "id": "inventory-on-hand-nonnegative",
+      "scope": "InventoryLot",
+      "expression_ref": "shacl:fac:InventoryLotShape#onHand minInclusive 0",
+      "severity": "hard"
+    },
+    {
+      "id": "inventory-reserved-nonnegative",
+      "scope": "InventoryLot",
+      "expression_ref": "shacl:fac:InventoryLotShape#reserved minInclusive 0",
+      "severity": "hard"
+    },
+    {
+      "id": "inventory-on-hand-covers-reserved",
+      "scope": "InventoryLot",
+      "expression_ref": "invariant: onHand >= reserved",
+      "severity": "hard"
+    },
+    {
+      "id": "inventory-available-nonnegative",
+      "scope": "InventoryLot",
+      "expression_ref": "invariant: onHand - reserved >= 0",
+      "severity": "hard"
+    },
+    {
+      "id": "quality-status-vocabulary",
+      "scope": "InventoryLot",
+      "expression_ref": "enum:OK|QUARANTINE on qualityStatus",
+      "severity": "hard"
+    },
+    {
+      "id": "work-order-status-vocabulary",
+      "scope": "WorkOrder",
+      "expression_ref": "enum:PLANNED|RELEASED|RUNNING|DONE|CANCELLED on status",
+      "severity": "hard"
+    },
+    {
+      "id": "decision-status-vocabulary",
+      "scope": "Decision",
+      "expression_ref": "shacl:oo:DecisionShape#status sh:in",
+      "severity": "hard"
+    },
+    {
+      "id": "reconciliation-state-vocabulary",
+      "scope": "Outcome",
+      "expression_ref": "shacl:oo:OutcomeShape#reconciliationState sh:in",
+      "severity": "hard"
+    },
+    {
+      "id": "action-execution-quantity-positive",
+      "scope": "ActionExecution",
+      "expression_ref": "shacl:oo:ActionExecutionShape#quantity minInclusive 1",
+      "severity": "hard"
+    },
+    {
+      "id": "transfer-endpoints-disjoint",
+      "scope": "ActionExecution",
+      "expression_ref": "shacl:oo:ActionExecutionShape#sourceWarehouse disjoint destinationWarehouse",
+      "severity": "hard"
+    },
+    {
+      "id": "idempotency-key-unique",
+      "scope": "ActionExecution",
+      "expression_ref": "invariant: actionExecutionId applied at most once",
+      "severity": "hard"
+    },
+    {
+      "id": "decision-content-immutable",
+      "scope": "Decision",
+      "expression_ref": "invariant: recomputed decision_content_hash equals the stored hash",
+      "severity": "hard"
+    },
+    {
+      "id": "no-effect-without-approval",
+      "scope": "Decision",
+      "expression_ref": "invariant: denial/pending statuses carry no execution or outcome",
+      "severity": "hard"
+    },
+    {
+      "id": "transfer-safety-stock",
+      "scope": "transfer_inventory",
+      "expression_ref": "rego:factory.inventory.transfer_v2#remaining >= safety_stock",
+      "severity": "hard"
+    },
+    {
+      "id": "transfer-quarantine-blocked",
+      "scope": "transfer_inventory",
+      "expression_ref": "rego:factory.inventory.transfer_v2#no QUARANTINE on source or destination",
+      "severity": "hard"
+    },
+    {
+      "id": "evidence-freshness",
+      "scope": "transfer_inventory",
+      "expression_ref": "closure.max_evidence_freshness_s <= 5",
+      "severity": "hard"
+    },
+    {
+      "id": "transfer-approval-threshold",
+      "scope": "transfer_inventory",
+      "expression_ref": "quantity <= approval_threshold_units (80) without approval",
+      "severity": "soft"
+    },
+    {
+      "id": "expedite-approval-threshold",
+      "scope": "expedite_purchase_order",
+      "expression_ref": "expedite_fee <= approval_threshold_cost (500) without approval",
+      "severity": "soft"
+    },
+    {
+      "id": "high-priority-reschedule-approval",
+      "scope": "reschedule_work_order",
+      "expression_ref": "priority != HIGH without approval",
+      "severity": "soft"
+    }
+  ],
+  "metadata": {
+    "derived_from": "contracts/ontology/v3, contracts/shapes/v3, contracts/actions/v3, contracts/policies/v2, contracts/authorization/v2, reference_model, services/decision_service"
+  }
+}
