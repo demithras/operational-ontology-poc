@@ -1,0 +1,240 @@
+{
+ "common": {
+  "protocol_valid": true,
+  "reject_hit": false,
+  "required_evidence_complete": true,
+  "sample_sufficient": true,
+  "support_hit": true
+ },
+ "evaluator_sha256": "2600801de27adaa5d901a764ece0a90bd9c75eca569d93778b8acea5046d7827",
+ "evidence_payload_hashes": {
+  "ambiguity-corpus.json": "5befed80ca23237b3903e5cd30561f6ae4a7a39cf04b0a7da5cf7eeeefdead35",
+  "compiler-diff-metrics.json": "b24a649438d867078907765d793f1f05ca5ff39f45fe39e662a7b755bd9f209d",
+  "generated-roundtrip.json": "693513bf86e02e859f2568dcab2a9a4768990bba0cbb46f118823b6b1c81d748",
+  "mutation-results.json": "dbdd2b27c1ac0f4dc0609b611625b0a17e6c80eca61ead363546afcefb1f84f8",
+  "real-domain-roundtrip.json": "b1f0047d6da2b704d4f3bf0f46cc559c80127536ba67b060b8db88f0589c3d0a",
+  "sidecar-audit.json": "fcdcddc7c93eea8f412626e3a3409670633765232150c4bd6bef08841396c35f"
+ },
+ "experiment_id": "exp-h15-001",
+ "hypothesis_id": "H15",
+ "interpretation_notes": [
+  "R4 maps falsifier 5 (silent invention of semantics) to reject; the contract's reject_if list names only R1-R3.",
+  "Mutation kill rate is judged on target classes for BOTH compilers; extra mutants are informational.",
+  "The DSL baseline numbers are reported but only OpenPona enters S1-S5."
+ ],
+ "numbers": {
+  "ambiguity_classes_covered": [
+   "ambiguous_binding",
+   "dangling_atom",
+   "missing_authority_effect",
+   "missing_cardinality",
+   "missing_policy_decision",
+   "missing_required_flag",
+   "missing_resource_kind",
+   "missing_type",
+   "missing_version",
+   "surface_parse_ambiguous",
+   "unknown_token_or_key",
+   "unresolved_binding"
+  ],
+  "ambiguity_classes_declared": [
+   "ambiguous_binding",
+   "dangling_atom",
+   "missing_authority_effect",
+   "missing_cardinality",
+   "missing_policy_decision",
+   "missing_required_flag",
+   "missing_resource_kind",
+   "missing_type",
+   "missing_version",
+   "surface_parse_ambiguous",
+   "unknown_token_or_key",
+   "unresolved_binding"
+  ],
+  "ambiguity_dsl_baseline": {
+   "declared_accepted": 0,
+   "declared_crashed": 0,
+   "declared_fail_closed": 39,
+   "declared_total": 39,
+   "deletion_accepted_exact": 247,
+   "deletion_raised": 653,
+   "deletion_total": 900,
+   "deletion_violations": 0
+  },
+  "ambiguity_openpona": {
+   "declared_accepted": 0,
+   "declared_crashed": 0,
+   "declared_fail_closed": 44,
+   "declared_total": 44,
+   "deletion_accepted_exact": 723,
+   "deletion_raised": 2557,
+   "deletion_total": 3280,
+   "deletion_violations": 0
+  },
+  "dsl_baseline_failed": 0,
+  "extra_mutation_survivors_info_only": [
+   "openpona:accept_parse_ambiguity"
+  ],
+  "gap_constructs": 0,
+  "generated_total_consistent": true,
+  "generated_unique_packages": 9789,
+  "generated_valid_cases": 10000,
+  "indispensable_sidecar_count": 0,
+  "mutation": {
+   "dsl": {
+    "kill_rate": 1.0,
+    "killed": 6,
+    "target_mutants": 6
+   },
+   "openpona": {
+    "kill_rate": 1.0,
+    "killed": 6,
+    "target_mutants": 6
+   }
+  },
+  "mutation_classes_present": {
+   "dsl": [
+    "accept_ambiguous_binding",
+    "default_missing_type",
+    "drop_authority_ref",
+    "drop_cardinality",
+    "drop_version",
+    "swap_function_action"
+   ],
+   "openpona": [
+    "accept_ambiguous_binding",
+    "default_missing_type",
+    "drop_authority_ref",
+    "drop_cardinality",
+    "drop_version",
+    "swap_function_action"
+   ]
+  },
+  "mutation_survivors": [],
+  "new_primitive_tokens_required": 0,
+  "openpona_failed": 0,
+  "openpona_harness_errors": 0,
+  "openpona_ok": 10000,
+  "openpona_unrepresentable": 0,
+  "real_domains_present": [
+   "manufacturing",
+   "project"
+  ],
+  "real_dsl_non_equivalent_baseline": [],
+  "real_openpona_non_equivalent": [],
+  "real_openpona_not_encoded_completely": [],
+  "reference_slots_total_domains": {
+   "manufacturing": 181,
+   "project": 204
+  },
+  "reference_slots_via_coreference_labels_domains": {
+   "manufacturing": 181,
+   "project": 204
+  },
+  "thresholds": {
+   "max_generated_semantic_failures": 0,
+   "max_indispensable_semantic_sidecars": 0,
+   "max_new_openpona_primitives": 0,
+   "max_real_domain_roundtrip_failures": 0,
+   "min_generated_valid_cases": 10000,
+   "required_mutation_kill_rate": 1.0
+  }
+ },
+ "predicates": {
+  "inconclusive_if": [
+   {
+    "clause": "Generated coverage is below 10,000 valid cases",
+    "id": "I1",
+    "value": false
+   },
+   {
+    "clause": "Either registered domain is not encoded completely",
+    "id": "I2",
+    "value": false
+   }
+  ],
+  "invalid_if": [
+   {
+    "clause": "Evidence records carry a protocol / Gate-0 / candidate hash different from the frozen files",
+    "id": "V1",
+    "value": false
+   },
+   {
+    "clause": "Evidence records disagree on commit / seed / corpus hash",
+    "id": "V2",
+    "value": false
+   },
+   {
+    "clause": "Harness self-check failed (mutation control not clean, oracle known-negative missed, patches leaked)",
+    "id": "V3",
+    "value": false
+   }
+  ],
+  "reject_if": [
+   {
+    "clause": "Any falsifier is observed in a frozen real-domain contract",
+    "id": "R1",
+    "value": false
+   },
+   {
+    "clause": "Any generated minimal counterexample demonstrates irreversible semantic loss in a required IR kind",
+    "id": "R2",
+    "value": false
+   },
+   {
+    "clause": "A new primitive token or indispensable semantic sidecar is required",
+    "id": "R3",
+    "value": false
+   },
+   {
+    "clause": "The compiler resolves an ambiguous input by silently inventing semantics (falsifier 5; mapped to reject)",
+    "id": "R4",
+    "value": false
+   }
+  ],
+  "support_if": [
+   {
+    "clause": "100% of frozen real-domain contracts are semantically equivalent after OpenPona round-trip",
+    "id": "S1",
+    "value": true
+   },
+   {
+    "clause": "0 semantic-equivalence failures across at least 10,000 generated valid cases",
+    "id": "S2",
+    "value": true
+   },
+   {
+    "clause": "0 required new primitive tokens",
+    "id": "S3",
+    "value": true
+   },
+   {
+    "clause": "0 indispensable semantic sidecar fields",
+    "id": "S4",
+    "value": true
+   },
+   {
+    "clause": "100% of predeclared ambiguity/missing-type cases fail closed or remain unresolved",
+    "id": "S5",
+    "value": true
+   },
+   {
+    "clause": "All target mutation classes are detected",
+    "id": "S6",
+    "value": true
+   }
+  ]
+ },
+ "problems": [],
+ "protocol": {
+  "candidate_combined_sha256": "ea573d8c2ba3b2fae0b335e0236d20f54b6af72070764e7843440ede63ca0171",
+  "freeze_sha256": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2",
+  "gate0_combined_sha256": "2b632c47bb56e285d74b52cb04c079e439117bed5bc879268cefc1658b125f19"
+ },
+ "protocol_mismatches": {
+  "disagreeing_provenance": false,
+  "harness_self_check": [],
+  "records_with_wrong_hashes": []
+ },
+ "verdict": "SUPPORTED"
+}

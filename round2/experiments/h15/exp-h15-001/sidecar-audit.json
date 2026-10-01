@@ -1,0 +1,174 @@
+{
+ "candidate_combined_sha256": "ea573d8c2ba3b2fae0b335e0236d20f54b6af72070764e7843440ede63ca0171",
+ "created_at": "2026-10-01T18:50:21+00:00",
+ "environment": {
+  "hypothesis": "6.168.3",
+  "jsonschema": "4.26.0",
+  "machine": "arm64",
+  "openpona-language-corpus": "0.2.0",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.6",
+  "pyyaml": "6.0.3"
+ },
+ "evidence_kind": "sidecar-audit",
+ "experiment_id": "exp-h15-001",
+ "gate0_combined_sha256": "2b632c47bb56e285d74b52cb04c079e439117bed5bc879268cefc1658b125f19",
+ "git_commit": "df10f424f563f698bc6ae13d504c09c4fad5a7b2",
+ "harness_dirty": true,
+ "harness_dirty_paths": [
+  "round2/scripts/evaluate_h15.py",
+  "round2/scripts/run_h15.py",
+  "round2/scripts/verify_h15_experiment.sh",
+  "round2/src/eoo_h15/",
+  "round2/tests/h15/evidence_fixture.py",
+  "round2/tests/h15/oracle_util.py",
+  "round2/tests/h15/test_evaluate_h15.py",
+  "round2/tests/h15/test_run_h15.py"
+ ],
+ "harness_sha256": {
+  "scripts/evaluate_h15.py": "3adfc810a7e778d48220f4d205a7c998089b3d136591daf6d9ad50f76476ad4b",
+  "scripts/run_h15.py": "ab9e78e88454a8a432b7117a7534b41bcc67b94d13b17cb59b94ee9cfadcb3b1",
+  "src/eoo_h15/__init__.py": "1cf0d035db467c476099cb4caf2a4d23ea769fed945bdcc8397d9b3cc8d55230",
+  "src/eoo_h15/ambiguity.py": "0cb90288e88acdc51bd7e98f62ba6fe53c6a90d5749283d30916467f59aed204",
+  "src/eoo_h15/corpus.py": "43582480e7eb6857e6962c6fa5b9eddfc75aebe13cf870229624c1083ff9a018",
+  "src/eoo_h15/domains.py": "1f7dea4dec00a83e2c114f1dd2d498008a9cef1bdfff00a1f3854de9c5a841ae",
+  "src/eoo_h15/evaluate.py": "2600801de27adaa5d901a764ece0a90bd9c75eca569d93778b8acea5046d7827",
+  "src/eoo_h15/evidence.py": "99808a2c9f533f6fa9d32cc8252362f08e3c39d03e631e0a1c9b178876b4bd17",
+  "src/eoo_h15/genloop.py": "519071ab79ba6b5904974cfa6c110a99978a626f5074b674b93b7af80971edda",
+  "src/eoo_h15/isolation.py": "2a0ed3170ec32e3cd42fb305ae57f99904f2d33d1ed332b25c25dd22d3f302bd",
+  "src/eoo_h15/metrics.py": "20e519dda85f05963c42c4755a6727950886f238f004c28628a1fa9990bd8eaf",
+  "src/eoo_h15/mutants.py": "d9db36cd0bf14e5fee86a44fc28ef784c46296ccb750eb5099ef717f6ecf8799",
+  "src/eoo_h15/opdoc.py": "8a4b81735a18b7d2cc04c4507f2c712547972fde4ab1a777e04b47c295f23543",
+  "src/eoo_h15/report.py": "b206b5fd01d8427848da1a86cd4a92b6d79f3ab84d509bf220062b52cb76ee7c",
+  "src/eoo_h15/roundtrip.py": "5a213a042d25f515cb80c910a845c0fcc2a9f6eb4161f8170606f758dd33f114",
+  "src/eoo_h15/run.py": "63e1594d0f78240c89caf4d4834b6cf4e06294f55785a9799431dba9c8ecee11",
+  "src/eoo_h15/sidecar.py": "31fb68a8e607f24f8b1898b08ceff9840ec1962c4a567eb191778a65b2a73ad5",
+  "src/eoo_h15/slots.py": "433f37215b81c8995f33dd3920db0581ac12d07852c977ecb198849b6420d170",
+  "src/eoo_h15/surfaces.py": "7d885137a2061801cb42e989889eb0a8118912f747a27869facd8ce11484e0f8",
+  "src/eoo_h15/util.py": "69507bd7a787db010b0fb1ef504af5931ae01f3406affd76b1ca4fdb457facfd"
+ },
+ "hypothesis_id": "H15",
+ "input_corpus_hash": "84733ec78b70e5f79a05e4bd00c595cb8154bd534af5a45c0e820400f8f7ec5b",
+ "openpona_pin": {
+  "commit": "97a9b9e",
+  "grammar_lark_sha256": "37228468d80e7f5a90fcd8bca6ef8208fe813728f4f5d358936177b1a6310d69",
+  "repository": "https://github.com/demithras/openpona-language-corpus",
+  "rule": "The token inventory and grammar are frozen at this commit. Any change to tokens, grammar or parser semantics needed to encode a frozen IR kind during the experiment is recorded as an adaptation event and counts toward the 'new primitive' falsifier.",
+  "tokens_csv_sha256": "eb91ae649ba8bc35b46e9a00047a063807eeb80aa4ef91c94f9ff7907a66e7d0",
+  "version": "0.2.0"
+ },
+ "oracle_version": "eoo_ir@gate0:2b632c47bb56e285d74b52cb04c079e439117bed5bc879268cefc1658b125f19",
+ "payload": {
+  "domains": {
+   "manufacturing": {
+    "alpha_error": null,
+    "alpha_rename_ok": true,
+    "line_only_shape_ok": true,
+    "record_vocabulary": {
+     "atom_rules_without_class": [],
+     "declared_slots": 531,
+     "keys": 531,
+     "keys_not_declared_by_a_line": [],
+     "non_atom_keys": [],
+     "non_string_values": [],
+     "ok": true,
+     "slots_by_class": {
+      "identifier": 286,
+      "literal": 100,
+      "opaque_string": 145
+     },
+     "slots_without_key": []
+    },
+    "reference_slots_by_role": {
+     "action": 1,
+     "authority": 14,
+     "endpoint": 56,
+     "iface": 21,
+     "link": 1,
+     "object": 7,
+     "policy": 9,
+     "prop": 26,
+     "readable": 34,
+     "typeref": 12
+    },
+    "reference_slots_total": 181,
+    "reference_slots_via_coreference_labels": 181,
+    "shape_error": null
+   },
+   "project": {
+    "alpha_error": null,
+    "alpha_rename_ok": true,
+    "line_only_shape_ok": true,
+    "record_vocabulary": {
+     "atom_rules_without_class": [],
+     "declared_slots": 360,
+     "keys": 360,
+     "keys_not_declared_by_a_line": [],
+     "non_atom_keys": [],
+     "non_string_values": [],
+     "ok": true,
+     "slots_by_class": {
+      "identifier": 171,
+      "literal": 63,
+      "opaque_string": 126
+     },
+     "slots_without_key": []
+    },
+    "reference_slots_by_role": {
+     "authority": 22,
+     "endpoint": 30,
+     "iface": 9,
+     "object": 2,
+     "object_or_link": 16,
+     "policy": 27,
+     "prop": 46,
+     "readable": 34,
+     "typeref": 18
+    },
+    "reference_slots_total": 204,
+    "reference_slots_via_coreference_labels": 204,
+    "shape_error": null
+   }
+  },
+  "findings": [],
+  "findings_total": 0,
+  "generated_sample": {
+   "alpha_failed": 0,
+   "failing": [],
+   "packages": 2000,
+   "record_slots_by_class": {
+    "identifier": 54548,
+    "literal": 15730,
+    "opaque_string": 43792
+   },
+   "reference_slots_total": 39544,
+   "reference_slots_via_coreference_labels": 39544,
+   "shape_failed": 0,
+   "vocabulary_failed": 0
+  },
+  "indispensable_semantic_sidecar_findings": 0,
+  "indispensable_sidecar_count": 0,
+  "procedure": "record schema; alpha-renaming (rho+hex, decode back must equal the IR); line-only shape (unique placeholder per slot, substitute back must equal the IR with numbers masked); structural items found only in the record are listed in 'findings'",
+  "record_vocabulary_violations": 0
+ },
+ "payload_hash": "fcdcddc7c93eea8f412626e3a3409670633765232150c4bd6bef08841396c35f",
+ "payload_path": null,
+ "protocol_freeze_hash": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2",
+ "seed": 15,
+ "variant_versions": {
+  "dsl": {
+   "gate0_combined_sha256": "2b632c47bb56e285d74b52cb04c079e439117bed5bc879268cefc1658b125f19"
+  },
+  "openpona": {
+   "candidate_combined_sha256": "ea573d8c2ba3b2fae0b335e0236d20f54b6af72070764e7843440ede63ca0171",
+   "installed": {
+    "commit": "97a9b9e8ca8800fda0a22f51ea59fccb6f60f35b",
+    "grammar_lark_sha256": "37228468d80e7f5a90fcd8bca6ef8208fe813728f4f5d358936177b1a6310d69",
+    "parser_py_sha256": "af0aa5c42a70ba4a16efe45fcc3d5a255a2a2729f7c6694ee75fd37773bc7719",
+    "tokens_csv_sha256": "eb91ae649ba8bc35b46e9a00047a063807eeb80aa4ef91c94f9ff7907a66e7d0",
+    "url": "https://github.com/demithras/openpona-language-corpus"
+   },
+   "pin": "97a9b9e"
+  }
+ }
+}

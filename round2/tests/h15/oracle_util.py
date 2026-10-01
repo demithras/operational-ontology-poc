@@ -5,6 +5,7 @@ from functools import lru_cache
 
 from hypothesis import HealthCheck, given, settings
 
+from eoo_h15.isolation import isolated_constants
 from eoo_ir.mutations import REGISTRY, apply_class
 from eoo_ir.strategies import valid_packages
 
@@ -19,7 +20,8 @@ def sample_packages(n: int = 150, seed_tag: int = 0) -> tuple:
     def collect(p):
         out.append(p)
 
-    collect()
+    with isolated_constants():  # the sample must not depend on which project modules are loaded (see isolation.py)
+        collect()
     return tuple(out)
 
 
