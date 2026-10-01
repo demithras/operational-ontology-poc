@@ -1,0 +1,60 @@
+{
+  "status": "READY_TO_FREEZE_NOT_YET_PREREGISTERED",
+  "H15": {
+    "min_generated_valid_cases": 10000,
+    "max_real_domain_roundtrip_failures": 0,
+    "max_generated_semantic_failures": 0,
+    "max_new_openpona_primitives": 0,
+    "max_indispensable_semantic_sidecars": 0,
+    "required_mutation_kill_rate": 1.0
+  },
+  "H16": {
+    "max_new_kernel_primitive_kinds": 0,
+    "max_domain_identity_core_branches": 0,
+    "min_generated_mixed_cases": 2000,
+    "required_mutation_kill_rate": 1.0
+  },
+  "H17": {
+    "max_function_committed_effects": 0,
+    "max_forbidden_action_effects": 0,
+    "min_state_machine_examples": 5000,
+    "required_mutation_kill_rate": 1.0
+  },
+  "H18": {
+    "max_illegal_lifecycle_transitions": 0,
+    "required_verdict_reproducibility": 1.0,
+    "max_canonical_changes_without_git": 0,
+    "min_bespoke_surface_reduction_in_one_task_class": 0.25,
+    "required_mutation_kill_rate": 1.0
+  },
+  "H19": {
+    "required_rebuild_hash_equality": 1.0,
+    "max_canonical_ontology_only_writes": 0,
+    "max_silent_lost_updates": 0,
+    "required_historical_binding_preservation": 1.0,
+    "required_mutation_kill_rate": 1.0
+  },
+  "H20": {
+    "max_domain_specific_core_branches": 0,
+    "max_governance_semantics_in_adapters": 0,
+    "required_generic_lifecycle_coverage": 1.0,
+    "required_mutation_kill_rate": 1.0
+  },
+  "H21": {
+    "min_generated_principal_cases": 10000,
+    "max_handwritten_endpoints_for_preregistered_ordinary_resources": 0,
+    "required_type_conformance": 1.0,
+    "required_capability_set_equality": 1.0,
+    "max_forbidden_effects": 0,
+    "min_interface_implementations": 2,
+    "required_mutation_kill_rate": 1.0
+  },
+  "H22": {
+    "min_real_domains_for_verdict": 3,
+    "min_blind_tasks": 30,
+    "support_max_median_adaptation_ratio": 0.75,
+    "support_max_slope_ratio": 0.75,
+    "reject_min_adaptation_ratio_all_classes": 0.90,
+    "min_independent_task_classes_with_support_gain": 2
+  }
+}

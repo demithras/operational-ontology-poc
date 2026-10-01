@@ -1,0 +1,67 @@
+{
+  "id": "H17",
+  "title": "Function and Action are a hard runtime capability boundary",
+  "claim": "The shared Engine can enforce that Functions compute/read but cannot commit governed business effects, while Actions alone can perform governed side effects through authority, policy, preconditions, execution and outcome reconciliation.",
+  "null_hypothesis": "Function/Action is only a documentation distinction; code paths or agents can obtain equivalent write capability through Functions or bypass Action governance.",
+  "rivals": [
+    "A single generic operation type with effect metadata is simpler and equally safe.",
+    "Write restrictions are actually enforced by ad-hoc service permissions rather than the ontology runtime."
+  ],
+  "mechanism": "Separate capability types let the runtime issue different credentials/execution contexts and make effectful transitions impossible from a Function invocation.",
+  "scope": "Both registered domains and all generated Function/Action invocation sequences under the frozen Engine capability model.",
+  "predictions": [
+    "No Function invocation can create a canonical/external business side effect.",
+    "Actions without required authority/policy/preconditions create zero effects.",
+    "Approved Actions remain idempotent/reconciled under retry/crash sequences where applicable.",
+    "Agents receive Function and Action capabilities according to the same runtime distinction."
+  ],
+  "falsifiers": [
+    "Any Function can produce a committed business/project side effect through the standard runtime.",
+    "An Action can bypass a required governance gate.",
+    "Function and Action compile to indistinguishable capabilities such that the runtime cannot enforce different effect boundaries."
+  ],
+  "experiment": {
+    "summary": "State-machine and mutation experiment over function calls, action proposals, approvals, retries, crashes and observed outcomes.",
+    "steps": [
+      "Build independent world-state oracle with explicit read vs write transitions.",
+      "Generate interleaved Function/Action sequences for both domains.",
+      "Assert external/canonical effect log remains unchanged after Function-only traces.",
+      "Attack denied/stale/unauthorized Actions.",
+      "Inject Function-write and gate-bypass mutations and require shrinkable counterexamples."
+    ],
+    "minimum_runs": 5000
+  },
+  "oracle": "Pure reference transition model whose Function transition cannot modify canonical world state and whose Action transition requires explicit gate tokens.",
+  "baseline": "Single-operation capability model with explicit effect metadata, tested under the same attacks.",
+  "required_evidence": [
+    "state-machine-results.json",
+    "effect-log-audit.json",
+    "negative-action-results.json",
+    "mutation-results.json"
+  ],
+  "evaluator": {
+    "support_if": [
+      "0 committed business/project effects in all Function-only traces.",
+      "0 forbidden effects from denied/invalid Actions.",
+      "100% target mutations detected."
+    ],
+    "reject_if": [
+      "Any standard Function path commits an effect or any governed Action effect occurs without required gates."
+    ],
+    "inconclusive_if": [
+      "State-machine corpus does not include both domains or retry/crash/authorization adversarial sequences."
+    ],
+    "invalid_if": [
+      "Effect log or oracle shares implementation code with the candidate Engine in a way that makes the test tautological."
+    ]
+  },
+  "python_hypothesis_role": {
+    "level": "PRIMARY",
+    "strategy": "RuleBasedStateMachine generates read/function/propose/approve/deny/retry/crash/execute/observe sequences and shrinks boundary violations.",
+    "mutation_proof": "Enable a write primitive in Function execution and separately bypass an Action gate; both mutations must be killed."
+  },
+  "upstream_dependencies": [],
+  "stop_conditions": [
+    "If Functions need committed effects for required use cases, reject the hard-boundary hypothesis and redesign the meta-model explicitly rather than silently granting writes."
+  ]
+}

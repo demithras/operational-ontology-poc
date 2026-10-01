@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EOO Experiment Evidence Record",
+  "type": "object",
+  "required": ["experiment_id", "hypothesis_id", "git_commit", "protocol_freeze_hash", "environment", "evidence_kind", "payload_hash"],
+  "properties": {
+    "experiment_id": {"type": "string"},
+    "hypothesis_id": {"type": "string", "pattern": "^H[0-9]+$"},
+    "git_commit": {"type": "string"},
+    "protocol_freeze_hash": {"type": "string"},
+    "environment": {"type": "object"},
+    "seed": {"type": ["integer", "string", "null"]},
+    "input_corpus_hash": {"type": ["string", "null"]},
+    "oracle_version": {"type": ["string", "null"]},
+    "variant_versions": {"type": "object"},
+    "evidence_kind": {"type": "string"},
+    "payload_hash": {"type": "string"},
+    "payload_path": {"type": ["string", "null"]},
+    "created_at": {"type": ["string", "null"]}
+  },
+  "additionalProperties": true
+}

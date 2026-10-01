@@ -1,0 +1,95 @@
+{
+  "package_id": "project-ontology",
+  "domain_id": "operational-ontology-poc",
+  "version": "v1",
+  "imports": [],
+  "object_types": [
+    {
+      "id": "Hypothesis",
+      "primary_key": "id",
+      "properties": [
+        {"name": "id", "type": "string", "required": true, "immutable": true},
+        {"name": "claim", "type": "string", "required": true, "immutable": false},
+        {"name": "phase", "type": "string", "required": true, "immutable": false}
+      ],
+      "implements": ["VersionedResearchObject"],
+      "description": "A falsifiable research claim"
+    },
+    {
+      "id": "Evidence",
+      "primary_key": "id",
+      "properties": [
+        {"name": "id", "type": "string", "required": true, "immutable": true},
+        {"name": "payload_hash", "type": "string", "required": true, "immutable": true},
+        {"name": "git_commit", "type": "string", "required": true, "immutable": true}
+      ],
+      "implements": ["VersionedResearchObject"],
+      "description": "Machine-readable evidence bound to a Git version"
+    }
+  ],
+  "link_types": [
+    {
+      "id": "HypothesisHasEvidence",
+      "from": "Hypothesis",
+      "to": "Evidence",
+      "from_cardinality": {"min": 0, "max": "*"},
+      "to_cardinality": {"min": 1, "max": 1},
+      "directed": true,
+      "properties": []
+    }
+  ],
+  "interfaces": [
+    {
+      "id": "VersionedResearchObject",
+      "required_properties": [
+        {"name": "id", "type": "string", "required": true, "immutable": true}
+      ],
+      "required_links": [],
+      "capabilities": ["read", "audit"]
+    }
+  ],
+  "functions": [
+    {
+      "id": "evidence_count",
+      "inputs": [{"name": "hypothesis", "type": {"ref": "Hypothesis"}, "required": true}],
+      "output": "integer",
+      "purity": "NO_COMMITTED_BUSINESS_SIDE_EFFECT",
+      "reads": ["HypothesisHasEvidence"],
+      "implementation_ref": "fn:evidence_count:v1",
+      "determinism": "deterministic"
+    }
+  ],
+  "actions": [
+    {
+      "id": "preregister_hypothesis",
+      "inputs": [{"name": "hypothesis", "type": {"ref": "Hypothesis"}, "required": true}],
+      "authority_refs": ["auth:researcher-preregister"],
+      "policy_refs": ["policy:preregistration-complete"],
+      "preconditions": ["phase == DRAFT", "freeze_hash exists"],
+      "effects": [{"target": "Hypothesis", "operation": "git_change", "fields": ["phase"]}],
+      "idempotency": "required",
+      "outcome_predicate": "Git contains preregistered contract at expected commit",
+      "compensation_action": null,
+      "version": "v1"
+    }
+  ],
+  "policies": [
+    {"id": "preregistration-complete", "decision": "allow", "expression_ref": "policy:preregistration-complete:v1", "version": "v1"}
+  ],
+  "authority_rules": [
+    {"id": "researcher-preregister", "principal_selector": "role:researcher", "capability": "action:preregister_hypothesis", "resource_selector": "Hypothesis:*", "effect": "allow", "delegation_allowed": false}
+  ],
+  "observation_types": [
+    {
+      "id": "GitCommitObserved",
+      "subject_type": "Evidence",
+      "properties": [{"name": "git_commit", "type": "string", "required": true, "immutable": true}],
+      "source_binding": "git",
+      "truth_status": "observed"
+    }
+  ],
+  "constraints": [
+    {"id": "supported-needs-evidence", "scope": "Hypothesis", "expression_ref": "constraint:supported-needs-evidence:v1", "severity": "hard"}
+  ],
+  "metadata": {"example": true}
+}

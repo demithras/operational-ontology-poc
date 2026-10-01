@@ -1,0 +1,72 @@
+{
+  "id": "H20",
+  "title": "One generic Engine executes both domains without domain-specific runtime branches",
+  "claim": "The EOO Engine can perform reads, Functions, governed Actions, authority/policy checks, durable execution, observations and provenance for Manufacturing and Project Ontology using generic resource/capability dispatch only.",
+  "null_hypothesis": "The shared Engine is superficial; each domain needs hidden special-case branches or bespoke orchestration to execute correctly.",
+  "rivals": [
+    "A plugin framework with per-domain handlers is the real architecture and should be acknowledged instead of calling the Engine generic.",
+    "Generic execution works only because the two domains are too similar."
+  ],
+  "mechanism": "If operational semantics live in typed resource definitions, contracts and adapters, the Engine should interpret capabilities generically while domain-specific external integrations remain behind declared adapters.",
+  "scope": "All registered read/function/action/governance paths in Manufacturing and Project Ontology.",
+  "predictions": [
+    "Core Engine contains zero branches keyed to domain id or named domain object/action types.",
+    "Both domains traverse the same action lifecycle states and provenance model.",
+    "Domain adapters implement external binding only, not generic governance semantics.",
+    "A generated synthetic object/action using existing resource kinds can execute without editing Engine core."
+  ],
+  "falsifiers": [
+    "A required domain behavior can only be implemented by editing Engine core with a domain-specific branch.",
+    "A domain adapter performs authority/policy/governance semantics that the Engine claims to own.",
+    "A new ordinary action type requires Engine code changes rather than configuration/adapter code."
+  ],
+  "experiment": {
+    "summary": "Instrument and audit Engine dispatch while executing full suites for both domains and generated synthetic resources.",
+    "steps": [
+      "Freeze allowed Engine extension points and forbidden domain-identity dependencies.",
+      "Run both domain suites with branch/handler tracing.",
+      "Static-scan Engine core for domain names and registered domain object/action identifiers.",
+      "Generate synthetic definitions using existing resource kinds and execute them.",
+      "Inject a domain-name branch and governance-in-adapter mutation."
+    ],
+    "minimum_runs": 3000
+  },
+  "oracle": "Frozen generic execution state machine and allowlist of adapter responsibilities.",
+  "baseline": "Explicit plugin architecture with per-domain handlers, measured honestly as a simpler rival.",
+  "required_evidence": [
+    "engine-static-audit.json",
+    "dispatch-traces.json",
+    "adapter-responsibility-audit.json",
+    "synthetic-resource-results.json",
+    "mutation-results.json"
+  ],
+  "evaluator": {
+    "support_if": [
+      "0 forbidden domain-specific core branches.",
+      "100% registered domain operations use generic lifecycle states.",
+      "0 governance semantics found in adapters beyond declared external binding responsibilities.",
+      "Generated synthetic resource/action executes without Engine edit.",
+      "All target mutations detected."
+    ],
+    "reject_if": [
+      "Any required domain-specific Engine branch or undeclared governance-in-adapter behavior is necessary."
+    ],
+    "inconclusive_if": [
+      "Either domain does not exercise at least read, Function, governed Action, security and provenance paths."
+    ],
+    "invalid_if": [
+      "Static audit excludes files that actually participate in Engine semantic dispatch."
+    ]
+  },
+  "python_hypothesis_role": {
+    "level": "SUPPORTING",
+    "strategy": "Generate valid generic resources/actions and operation sequences; use instrumentation to assert generic dispatch invariants.",
+    "mutation_proof": "Insert `if domain_id == ...` behavior and move a policy check into an adapter; audits/tests must fail."
+  },
+  "upstream_dependencies": [
+    "H17"
+  ],
+  "stop_conditions": [
+    "If domain-specific Engine branching is required, expose it as plugin architecture and reject the stronger generic-Engine claim."
+  ]
+}

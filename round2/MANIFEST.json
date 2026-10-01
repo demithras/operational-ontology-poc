@@ -1,0 +1,39 @@
+{
+  "name": "eoo-palantir-class-round2-hdd-pack",
+  "created_at": "2026-09-29",
+  "protocol_status": "READY_TO_FREEZE_NOT_YET_PREREGISTERED",
+  "hypotheses": [
+    "H15",
+    "H16",
+    "H17",
+    "H18",
+    "H19",
+    "H20",
+    "H21",
+    "H22"
+  ],
+  "target": "Language x Engine x Toolchain over Data x Logic x Action x Security",
+  "domains": [
+    "manufacturing",
+    "operational-ontology-poc project"
+  ],
+  "canonical_authority_for_project_domain": "Git",
+  "primary_scale_axis": "semantic variety",
+  "openpona_role": "candidate Ontology Language under H15, not assumed core",
+  "rdf_role": "optional backend, not definitional",
+  "round": "2-v2",
+  "replaces_unexecuted_round2": true,
+  "superseded_artifacts": [
+    {
+      "name": "operational-ontology-round2-spec(1).zip",
+      "status": "SUPERSEDED_BEFORE_EXECUTION",
+      "evidence": "NONE"
+    },
+    {
+      "name": "operational-ontology-round2-hdd-spec.zip",
+      "status": "SUPERSEDED_BEFORE_EXECUTION",
+      "evidence": "NONE"
+    }
+  ],
+  "hypothesis_id_policy": "H15-H22 are the next actual evidence ledger; abandoned draft IDs are namespaced R2-draft/H15..H22"
+}

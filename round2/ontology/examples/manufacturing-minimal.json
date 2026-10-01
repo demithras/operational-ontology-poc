@@ -1,0 +1,74 @@
+{
+  "package_id": "manufacturing-ontology",
+  "domain_id": "manufacturing",
+  "version": "v1",
+  "imports": [],
+  "object_types": [
+    {
+      "id": "InventoryLot",
+      "primary_key": "id",
+      "properties": [
+        {"name": "id", "type": "string", "required": true, "immutable": true},
+        {"name": "quantity", "type": "integer", "required": true, "immutable": false}
+      ],
+      "implements": ["Transferable"],
+      "description": "Inventory lot"
+    }
+  ],
+  "link_types": [],
+  "interfaces": [
+    {
+      "id": "Transferable",
+      "required_properties": [{"name": "id", "type": "string", "required": true, "immutable": true}],
+      "required_links": [],
+      "capabilities": ["read", "transfer"]
+    }
+  ],
+  "functions": [
+    {
+      "id": "available_quantity",
+      "inputs": [{"name": "lot", "type": {"ref": "InventoryLot"}, "required": true}],
+      "output": "integer",
+      "purity": "NO_COMMITTED_BUSINESS_SIDE_EFFECT",
+      "reads": ["InventoryLot.quantity"],
+      "implementation_ref": "fn:available_quantity:v1",
+      "determinism": "deterministic"
+    }
+  ],
+  "actions": [
+    {
+      "id": "transfer_inventory",
+      "inputs": [
+        {"name": "lot", "type": {"ref": "InventoryLot"}, "required": true},
+        {"name": "quantity", "type": "integer", "required": true}
+      ],
+      "authority_refs": ["auth:inventory-transfer"],
+      "policy_refs": ["policy:inventory-transfer"],
+      "preconditions": ["quantity > 0", "available_quantity(lot) >= quantity"],
+      "effects": [{"target": "WMS", "operation": "external_call", "fields": ["quantity"]}],
+      "idempotency": "required",
+      "outcome_predicate": "CDC-observed WMS state satisfies expected transfer effect",
+      "compensation_action": null,
+      "version": "v1"
+    }
+  ],
+  "policies": [
+    {"id": "inventory-transfer", "decision": "allow", "expression_ref": "policy:inventory-transfer:v1", "version": "v1"}
+  ],
+  "authority_rules": [
+    {"id": "inventory-transfer", "principal_selector": "role:planner", "capability": "action:transfer_inventory", "resource_selector": "InventoryLot:*", "effect": "allow", "delegation_allowed": true}
+  ],
+  "observation_types": [
+    {
+      "id": "InventoryObserved",
+      "subject_type": "InventoryLot",
+      "properties": [{"name": "quantity", "type": "integer", "required": true, "immutable": false}],
+      "source_binding": "wms-cdc",
+      "truth_status": "observed"
+    }
+  ],
+  "constraints": [
+    {"id": "nonnegative-inventory", "scope": "InventoryLot", "expression_ref": "constraint:quantity>=0", "severity": "hard"}
+  ],
+  "metadata": {"example": true}
+}
