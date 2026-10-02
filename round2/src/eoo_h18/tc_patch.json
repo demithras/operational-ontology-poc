@@ -1,0 +1,187 @@
+{
+ "link_types": [
+  {
+   "id": "DEPENDS_ON",
+   "from": "Hypothesis",
+   "to": "Hypothesis",
+   "from_cardinality": {
+    "min": 0,
+    "max": "*"
+   },
+   "to_cardinality": {
+    "min": 0,
+    "max": "*"
+   },
+   "directed": true,
+   "properties": []
+  },
+  {
+   "id": "REPLICATES",
+   "from": "Replication",
+   "to": "Experiment",
+   "from_cardinality": {
+    "min": 1,
+    "max": 1
+   },
+   "to_cardinality": {
+    "min": 0,
+    "max": "*"
+   },
+   "directed": true,
+   "properties": []
+  }
+ ],
+ "object_types": [
+  {
+   "id": "Replication",
+   "primary_key": "id",
+   "properties": [
+    {
+     "name": "id",
+     "type": "string",
+     "required": true,
+     "immutable": true
+    },
+    {
+     "name": "experiment_ref",
+     "type": {
+      "ref": "Experiment"
+     },
+     "required": true,
+     "immutable": true
+    },
+    {
+     "name": "outcome",
+     "type": "string",
+     "required": true,
+     "immutable": false
+    }
+   ],
+   "implements": [
+    "VersionedResearchObject"
+   ]
+  }
+ ],
+ "functions": [
+  {
+   "id": "evidence_of_verdict",
+   "inputs": [
+    {
+     "name": "hypothesis",
+     "type": {
+      "ref": "Hypothesis"
+     },
+     "required": true
+    }
+   ],
+   "output": "json",
+   "purity": "NO_COMMITTED_BUSINESS_SIDE_EFFECT",
+   "reads": [
+    "Verdict",
+    "EVALUATES",
+    "TESTED_BY",
+    "PRODUCES",
+    "Evidence"
+   ],
+   "implementation_ref": "fn:evidence_of_verdict:v1",
+   "determinism": "deterministic"
+  },
+  {
+   "id": "blocked_hypotheses",
+   "inputs": [],
+   "output": {
+    "list": {
+     "ref": "Hypothesis"
+    }
+   },
+   "purity": "NO_COMMITTED_BUSINESS_SIDE_EFFECT",
+   "reads": [
+    "DEPENDS_ON",
+    "Verdict",
+    "EVALUATES"
+   ],
+   "implementation_ref": "fn:blocked_hypotheses:v1",
+   "determinism": "deterministic"
+  },
+  {
+   "id": "count_replications",
+   "inputs": [
+    {
+     "name": "experiment",
+     "type": {
+      "ref": "Experiment"
+     },
+     "required": true
+    }
+   ],
+   "output": "integer",
+   "purity": "NO_COMMITTED_BUSINESS_SIDE_EFFECT",
+   "reads": [
+    "REPLICATES"
+   ],
+   "implementation_ref": "fn:count_replications:v1",
+   "determinism": "deterministic"
+  }
+ ],
+ "authority_rules": [
+  {
+   "id": "researcher-register-replication",
+   "principal_selector": "role:researcher",
+   "capability": "action:register_replication",
+   "resource_selector": "ProjectOntology:*",
+   "effect": "allow",
+   "delegation_allowed": false
+  }
+ ],
+ "actions": [
+  {
+   "id": "register_replication",
+   "inputs": [
+    {
+     "name": "id",
+     "type": "string",
+     "required": true
+    },
+    {
+     "name": "experiment_ref",
+     "type": {
+      "ref": "Experiment"
+     },
+     "required": true
+    },
+    {
+     "name": "outcome",
+     "type": "string",
+     "required": true
+    }
+   ],
+   "authority_refs": [
+    "auth:researcher-register-replication",
+    "auth:no-canonical-write-outside-git"
+   ],
+   "policy_refs": [],
+   "preconditions": [
+    "experiment is EVALUATED"
+   ],
+   "effects": [
+    {
+     "target": "Replication",
+     "operation": "git_change",
+     "fields": [
+      "id",
+      "experiment_ref",
+      "outcome"
+     ]
+    },
+    {
+     "target": "REPLICATES",
+     "operation": "git_change"
+    }
+   ],
+   "idempotency": "required",
+   "outcome_predicate": "Git contains the replication and its REPLICATES link to the experiment",
+   "compensation_action": null,
+   "version": "v1"
+  }
+ ]
+}

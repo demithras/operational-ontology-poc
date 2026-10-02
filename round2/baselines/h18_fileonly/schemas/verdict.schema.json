@@ -1,0 +1,33 @@
+{
+ "type": "object",
+ "required": [
+  "id",
+  "value",
+  "derivation_hash",
+  "git_commit"
+ ],
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "value": {
+   "enum": [
+    "SUPPORTED",
+    "REJECTED",
+    "INCONCLUSIVE",
+    "INVALID"
+   ]
+  },
+  "reason": {
+   "type": "string"
+  },
+  "derivation_hash": {
+   "type": "string",
+   "pattern": "\\S"
+  },
+  "git_commit": {
+   "type": "string"
+  }
+ },
+ "additionalProperties": false
+}

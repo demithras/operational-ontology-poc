@@ -1,0 +1,28 @@
+{
+ "type": "object",
+ "required": [
+  "id",
+  "payload_hash",
+  "git_commit",
+  "experiment_version",
+  "environment"
+ ],
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "payload_hash": {
+   "type": "string"
+  },
+  "git_commit": {
+   "type": "string"
+  },
+  "experiment_version": {
+   "type": "string"
+  },
+  "environment": {
+   "type": "string"
+  }
+ },
+ "additionalProperties": false
+}

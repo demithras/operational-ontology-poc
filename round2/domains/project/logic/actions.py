@@ -88,6 +88,8 @@ def _outcome(fn_name: str, deriver, reader, n_effects: int):
 def bindings(deriver, reader, ir: dict) -> dict:
     out = {}
     for act in ir["actions"]:
+        if act["id"] not in payloads.PAYLOAD_FNS:  # an extension action (H18 task TC3) binds its own logic
+            continue
         fn = payloads.PAYLOAD_FNS[act["id"]]
         for i in range(len(act["effects"])):
             out[f"{act['id']}#{i}"] = (lambda f, idx: lambda ctx: f(ctx, deriver, reader)[idx])(fn, i)

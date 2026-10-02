@@ -1,0 +1,19 @@
+{
+ "type": "object",
+ "required": [
+  "id",
+  "rationale"
+ ],
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "rationale": {
+   "type": "string"
+  },
+  "decided_at": {
+   "type": "string"
+  }
+ },
+ "additionalProperties": false
+}

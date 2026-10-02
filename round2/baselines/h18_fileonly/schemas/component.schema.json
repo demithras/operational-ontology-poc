@@ -1,0 +1,20 @@
+{
+ "type": "object",
+ "required": [
+  "id",
+  "path",
+  "orphan_flagged"
+ ],
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "path": {
+   "type": "string"
+  },
+  "orphan_flagged": {
+   "type": "boolean"
+  }
+ },
+ "additionalProperties": false
+}
