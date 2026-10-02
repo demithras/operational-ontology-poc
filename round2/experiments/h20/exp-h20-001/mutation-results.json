@@ -1,0 +1,428 @@
+{
+ "candidate": {
+  "engine_tag": "r2-engine-v1.1",
+  "engine_tag_commit": "6005ff1d5c73ee564d1e789284fc465692ca4222",
+  "engine_version": "1.1",
+  "head": "74255638c3b866a2e7d1c876376200e5583e171a",
+  "includes": [
+   "src/eoo_engine",
+   "src/eoo_engine_git (Git-backed store, Engine-participating by import closure)",
+   "src/eoo_ir (loaded by the Engine)",
+   "domains/manufacturing",
+   "domains/project (ir.v2.json, the default contract)"
+  ]
+ },
+ "created_at": "2026-10-02T18:25:37+00:00",
+ "engine_prereg_sha256": "03d2d56919b2f003766e54c89fdbfb47a7780577534f4d797ab2ecd9b6f3aefe",
+ "engine_version": "1.1",
+ "environment": {
+  "hypothesis": "6.168.3",
+  "jsonschema": "4.26.0",
+  "machine": "arm64",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "pytest": "9.1.1",
+  "python": "3.14.6"
+ },
+ "evidence_kind": "mutation-results",
+ "experiment_id": "exp-h20-001",
+ "git_commit": "74255638c3b866a2e7d1c876376200e5583e171a",
+ "harness_dirty": false,
+ "harness_dirty_paths": [],
+ "harness_sha256": {
+  "oracles/h20/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "oracles/h20/lifecycle.py": "972ad2a13dfa864fc3720b2be0fe60ab9a3aa99335781d4a6d385416fc9ee2a2",
+  "oracles/h20/synth_oracle.py": "cf85bcbe483da1b71c353fda8d5440270bd9c695380f7f01e4e307cc895961c7",
+  "scripts/evaluate_h20.py": "f2e0e63f0a91cd7f205bd263df5c96a01906a42553405d53f3764baacb12ebac",
+  "scripts/run_h20.py": "f8cf97a875a4b9c7859d0e497583e705963a15e0f8bf5daf1682652c1f6b0bf2",
+  "src/eoo_exp/__init__.py": "16754d2e26eb56fb0469b74cbb88351b20265ac3ae07ecc51ada09167199a90a",
+  "src/eoo_exp/outdir.py": "6997fdfe23a5bbd5fb3c80aa024f172940167d24c55770f3b83f163d9c86fd00",
+  "src/eoo_exp/provenance.py": "9076be346293debdd361cae3c24c781d3d463716d6be1c398ee4474b3201bb5e",
+  "src/eoo_exp/scaffold.py": "b7686662f08994431881ee411fb3b1f913ba63b6327cc6dce8e180e45496a765",
+  "src/eoo_exp/util.py": "64765edd82c60fa3e393878199331db360f14bbbe31c72f5bb8d4079ac6acd86",
+  "src/eoo_h20/__init__.py": "83cf257e1b225fb251ac97d4ddf3077f80d9eebd9f2b8d9a7850e3e74e06b724",
+  "src/eoo_h20/adapter_dynamic.py": "51bcf4b49feac2feca7e68f917d303dc9f93b99e58d4321a871b5b0fd47dc256",
+  "src/eoo_h20/adapter_static.py": "9f955427124a020343b9824b215c4c0e860432cb1f040940978c67845b2f45de",
+  "src/eoo_h20/alias.py": "656c6cb7ef44230b34beb20936c9ef53ef35198af3ccbdf998a7780c4dc85f7d",
+  "src/eoo_h20/closure.py": "3145a1c0d1201a7ce7530d13a5787d1c537e5ca1473f4c1097b49c7049615c49",
+  "src/eoo_h20/evaluate.py": "ff6952afa682a8d9d19ad3e9842a5dd13589da773d57f59a1ba104e392511a2f",
+  "src/eoo_h20/loc.py": "3c49d4208baa55c6edba81b8b19ff4ee67d5c373f195b72bc6f96fdc02c24f2d",
+  "src/eoo_h20/mutant_probe.py": "07c8628aba4633129adc97de1dd48440aed807fc75ccec1efd922efb8d8da638",
+  "src/eoo_h20/mutants.py": "1bac661f8e6657143b0b98665e4844d780e6e259911812bf7e4a3cdcd2cdbc3d",
+  "src/eoo_h20/payloads.py": "243fccb50e77c26fb31b6431e94286fbd71c1487d3bd977d3b920a8eff52dcc5",
+  "src/eoo_h20/run.py": "65266b5c05ca5c1e17108ee3aad566c7e58dafb84c1557cc5fb30f1b26e852f3",
+  "src/eoo_h20/static_audit.py": "57f6b4a0937874641db39f9a521a7898a4c0c740f70f412d2a2f32ce77156558",
+  "src/eoo_h20/synth.py": "4df1390c5eb29c2e6bdacf09807d72d3a657f7a82036b1744eb6aad9114eb8c9",
+  "src/eoo_h20/synth_run.py": "c08de353eea6350b4245107b88fe2ada42b29160034c71a0b08bc389846dcc97",
+  "src/eoo_h20/trace.py": "4a5bce42998f64e36f2aa35f21c80a241a0f2cfeec054e8635b7f975ceae4fb6",
+  "src/eoo_h20/workloads.py": "eed3e1c43233c3c81bbfa74195f1d718ba07ae9180baefe7f52a62b799b08d0b"
+ },
+ "hypothesis_id": "H20",
+ "input_corpus_hash": "e920e70a4ee805d2553253874f1e457d24f4562ddd8c8fc458f30298895f26ee",
+ "payload": {
+  "controls": {
+   "adapter_static_clean": true,
+   "clean": true,
+   "clean_copy": {
+    "alias_definitions": 150,
+    "alias_disagreements": 0,
+    "alias_example": null,
+    "dynamic_flagged": false,
+    "first_static_hit": null,
+    "identity_branch_hits": 0,
+    "static_flagged": false,
+    "token_hits": 0
+   },
+   "noop_edit": {
+    "alias_definitions": 150,
+    "alias_disagreements": 0,
+    "alias_example": null,
+    "dynamic_flagged": false,
+    "first_static_hit": null,
+    "identity_branch_hits": 0,
+    "static_flagged": false,
+    "token_hits": 0
+   },
+   "ok_mode_probe_clean": true
+  },
+  "mutants": [
+   {
+    "class": "domain_branch_in_engine",
+    "description": "if package_id == <real domain package id>: skip the policy gate",
+    "detected": true,
+    "detected_by": [
+     "static_token_or_identity_scan",
+     "alias_invariance_probe"
+    ],
+    "file": "src/eoo_engine/gates.py",
+    "id": "E1_package_id_literal_branch",
+    "signals": {
+     "alias_definitions": 150,
+     "alias_disagreements": 21,
+     "alias_example": {
+      "detail": {
+       "manufacturing": {
+        "history": [
+         "PROPOSED",
+         "APPROVED",
+         "EXECUTING",
+         "DENIED"
+        ],
+        "mismatches": [
+         "failed gate ['hard_constraints'] != policy"
+        ],
+        "state": "DENIED"
+       }
+      },
+      "modes_differing": [
+       "manufacturing"
+      ],
+      "sha": "1ee17aec2d6a5b305eebb6f51ce49a8146764e55cf9e9396b38e6fbb237497a5"
+     },
+     "dynamic_flagged": true,
+     "first_static_hit": {
+      "file": "src/eoo_engine/gates.py",
+      "line": 75,
+      "position": "compare",
+      "tokens": [
+       "manufacturing-ontology"
+      ],
+      "value": "manufacturing-ontology"
+     },
+     "identity_branch_hits": 1,
+     "static_flagged": true,
+     "token_hits": 2
+    },
+    "target": true
+   },
+   {
+    "class": "domain_branch_in_engine",
+    "description": "authority gate skipped for one named action",
+    "detected": true,
+    "detected_by": [
+     "static_token_or_identity_scan",
+     "alias_invariance_probe"
+    ],
+    "file": "src/eoo_engine/pipeline.py",
+    "id": "E2_action_id_branch",
+    "signals": {
+     "alias_definitions": 150,
+     "alias_disagreements": 50,
+     "alias_example": {
+      "detail": {
+       "manufacturing": {
+        "history": [
+         "PROPOSED",
+         "APPROVED",
+         "EXECUTING",
+         "EFFECTS_COMMITTED",
+         "RECONCILED_SUCCESS"
+        ],
+        "mismatches": [
+         "state RECONCILED_SUCCESS != DENIED",
+         "failed gate [] != authority",
+         "effect log 1 committed=True expected=False",
+         "store changed=True expected=False"
+        ],
+        "state": "RECONCILED_SUCCESS"
+       }
+      },
+      "modes_differing": [
+       "manufacturing"
+      ],
+      "sha": "cd3c679c012a996e1a4120b0be870507c42535fcc54468bec116803ccdf91768"
+     },
+     "dynamic_flagged": true,
+     "first_static_hit": {
+      "file": "src/eoo_engine/pipeline.py",
+      "line": 85,
+      "position": "compare",
+      "tokens": [
+       "transfer_inventory"
+      ],
+      "value": "transfer_inventory"
+     },
+     "identity_branch_hits": 0,
+     "static_flagged": true,
+     "token_hits": 2
+    },
+    "target": true
+   },
+   {
+    "class": "domain_branch_in_engine",
+    "description": "package_id.startswith(<fragment>): skip the policy gate (no domain token in the source)",
+    "detected": true,
+    "detected_by": [
+     "static_token_or_identity_scan",
+     "alias_invariance_probe"
+    ],
+    "file": "src/eoo_engine/gates.py",
+    "id": "E3_identity_prefix_branch",
+    "signals": {
+     "alias_definitions": 150,
+     "alias_disagreements": 21,
+     "alias_example": {
+      "detail": {
+       "manufacturing": {
+        "history": [
+         "PROPOSED",
+         "APPROVED",
+         "EXECUTING",
+         "DENIED"
+        ],
+        "mismatches": [
+         "failed gate ['hard_constraints'] != policy"
+        ],
+        "state": "DENIED"
+       }
+      },
+      "modes_differing": [
+       "manufacturing"
+      ],
+      "sha": "1ee17aec2d6a5b305eebb6f51ce49a8146764e55cf9e9396b38e6fbb237497a5"
+     },
+     "dynamic_flagged": true,
+     "first_static_hit": {
+      "file": "src/eoo_engine/gates.py",
+      "line": 75,
+      "name": "package_id"
+     },
+     "identity_branch_hits": 1,
+     "static_flagged": true,
+     "token_hits": 0
+    },
+    "target": true
+   },
+   {
+    "class": "domain_branch_in_engine",
+    "description": "hard constraints ignored for effects on one named object type",
+    "detected": true,
+    "detected_by": [
+     "static_token_or_identity_scan",
+     "alias_invariance_probe"
+    ],
+    "file": "src/eoo_engine/pipeline.py",
+    "id": "E4_object_type_branch",
+    "signals": {
+     "alias_definitions": 150,
+     "alias_disagreements": 2,
+     "alias_example": {
+      "detail": {
+       "project": {
+        "history": [
+         "PROPOSED",
+         "APPROVED",
+         "EXECUTING",
+         "EFFECTS_COMMITTED",
+         "RECONCILED_SUCCESS"
+        ],
+        "mismatches": [
+         "state RECONCILED_SUCCESS != DENIED",
+         "failed gate [] != hard_constraints",
+         "effect log 1 committed=True expected=False",
+         "store changed=True expected=False"
+        ],
+        "state": "RECONCILED_SUCCESS"
+       }
+      },
+      "modes_differing": [
+       "project"
+      ],
+      "sha": "765a68a0eccb4be43eb727e1192ae9aea49e0c64feaa0ce35dcc1772cbec5dfb"
+     },
+     "dynamic_flagged": true,
+     "first_static_hit": {
+      "file": "src/eoo_engine/pipeline.py",
+      "line": 192,
+      "position": "compare",
+      "tokens": [
+       "Hypothesis"
+      ],
+      "value": "Hypothesis"
+     },
+     "identity_branch_hits": 0,
+     "static_flagged": true,
+     "token_hits": 2
+    },
+    "target": true
+   },
+   {
+    "class": "governance_in_adapter",
+    "description": "WMS adapter evaluates a quantity policy before accepting an approved transfer",
+    "detected": true,
+    "detected_by": [
+     "adapter_static_audit",
+     "ok_mode_adapter_probe"
+    ],
+    "file": "domains/manufacturing/adapters/wms_fake.py",
+    "id": "A1_policy_in_wms_adapter",
+    "signals": {
+     "dynamic": {
+      "example": {
+       "adapter_errors": [
+        "WmsUnavailable: policy: quantity above the limit"
+       ],
+       "carried_out": false,
+       "domain": "manufacturing",
+       "scenario": "m_ok_planner",
+       "state": "OUTCOME_UNKNOWN"
+      },
+      "ok_mode_refusals": 1,
+      "ran": true
+     },
+     "dynamic_flagged": true,
+     "static_first": {
+      "concern": "policy",
+      "kind": "governance_definition",
+      "line": 75,
+      "name": "_policy_allows",
+      "qual": "WmsFake._policy_allows"
+     },
+     "static_flagged": true,
+     "static_violations": 2
+    },
+    "static_blind_spot": false,
+    "target": true
+   },
+   {
+    "class": "governance_in_adapter",
+    "description": "same behaviour as A1 under an innocuous name (the vocabulary audit cannot see it)",
+    "detected": true,
+    "detected_by": [
+     "ok_mode_adapter_probe"
+    ],
+    "file": "domains/manufacturing/adapters/wms_fake.py",
+    "id": "A1b_unnamed_policy_in_wms_adapter",
+    "signals": {
+     "dynamic": {
+      "example": {
+       "adapter_errors": [
+        "WmsUnavailable: limit reached"
+       ],
+       "carried_out": false,
+       "domain": "manufacturing",
+       "scenario": "m_ok_planner",
+       "state": "OUTCOME_UNKNOWN"
+      },
+      "ok_mode_refusals": 1,
+      "ran": true
+     },
+     "dynamic_flagged": true,
+     "static_first": null,
+     "static_flagged": false,
+     "static_violations": 0
+    },
+    "static_blind_spot": true,
+    "target": true
+   },
+   {
+    "class": "governance_in_adapter",
+    "description": "Git adapter refuses effects an authority rule would not allow",
+    "detected": true,
+    "detected_by": [
+     "adapter_static_audit",
+     "ok_mode_adapter_probe"
+    ],
+    "file": "domains/project/adapters/git_fake.py",
+    "id": "A2_authority_in_git_adapter",
+    "signals": {
+     "dynamic": {
+      "example": {
+       "adapter_errors": [
+        "GitUnavailable: not authorized"
+       ],
+       "carried_out": false,
+       "domain": "project",
+       "scenario": "p_ok_create",
+       "state": "OUTCOME_UNKNOWN"
+      },
+      "ok_mode_refusals": 4,
+      "ran": true
+     },
+     "dynamic_flagged": true,
+     "static_first": {
+      "concern": "authority",
+      "kind": "governance_definition",
+      "line": 64,
+      "name": "_authorized",
+      "qual": "GitFake._authorized"
+     },
+     "static_flagged": true,
+     "static_violations": 2
+    },
+    "static_blind_spot": false,
+    "target": true
+   },
+   {
+    "class": "governance_in_adapter",
+    "description": "Git-backed adapter checks a precondition of the action",
+    "detected": true,
+    "detected_by": [
+     "adapter_static_audit"
+    ],
+    "file": "src/eoo_engine_git/adapter.py",
+    "id": "A3_precondition_in_engine_git_adapter",
+    "signals": {
+     "dynamic": {
+      "ran": false
+     },
+     "dynamic_flagged": false,
+     "static_first": {
+      "concern": "precondition",
+      "kind": "governance_definition",
+      "line": 62,
+      "name": "_precondition_holds",
+      "qual": "GitAdapter._precondition_holds"
+     },
+     "static_flagged": true,
+     "static_violations": 2
+    },
+    "static_blind_spot": false,
+    "target": true
+   }
+  ]
+ },
+ "payload_hash": "4552e065ef9064a63eefa2a3df9e2b5bd2d34e2e1a4aa47a4daeaddfc4961b66",
+ "payload_path": null,
+ "protocol_freeze_hash": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2",
+ "seed": 20
+}
