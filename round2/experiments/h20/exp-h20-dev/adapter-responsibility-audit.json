@@ -1,0 +1,396 @@
+{
+ "candidate": {
+  "engine_tag": "r2-engine-v1.1",
+  "engine_tag_commit": "6005ff1d5c73ee564d1e789284fc465692ca4222",
+  "engine_version": "1.1",
+  "head": "675da43538c766cf580c53cc2672a4afb4b7f7f7",
+  "includes": [
+   "src/eoo_engine",
+   "src/eoo_engine_git (Git-backed store, Engine-participating by import closure)",
+   "src/eoo_ir (loaded by the Engine)",
+   "domains/manufacturing",
+   "domains/project (ir.v2.json, the default contract)"
+  ]
+ },
+ "created_at": "2026-10-02T18:02:55+00:00",
+ "engine_prereg_sha256": "03d2d56919b2f003766e54c89fdbfb47a7780577534f4d797ab2ecd9b6f3aefe",
+ "engine_version": "1.1",
+ "environment": {
+  "hypothesis": "6.168.3",
+  "jsonschema": "4.26.0",
+  "machine": "arm64",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "pytest": "9.1.1",
+  "python": "3.14.6"
+ },
+ "evidence_kind": "adapter-responsibility-audit",
+ "experiment_id": "exp-h20-dev",
+ "git_commit": "675da43538c766cf580c53cc2672a4afb4b7f7f7",
+ "harness_dirty": true,
+ "harness_dirty_paths": [
+  "round2/oracles/h20/",
+  "round2/scripts/evaluate_h20.py",
+  "round2/scripts/run_h20.py",
+  "round2/src/eoo_h20/",
+  "round2/tests/h16/test_kernel.py",
+  "round2/tests/h20/"
+ ],
+ "harness_sha256": {
+  "oracles/h20/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "oracles/h20/lifecycle.py": "972ad2a13dfa864fc3720b2be0fe60ab9a3aa99335781d4a6d385416fc9ee2a2",
+  "oracles/h20/synth_oracle.py": "cf85bcbe483da1b71c353fda8d5440270bd9c695380f7f01e4e307cc895961c7",
+  "scripts/evaluate_h20.py": "f2e0e63f0a91cd7f205bd263df5c96a01906a42553405d53f3764baacb12ebac",
+  "scripts/run_h20.py": "f8cf97a875a4b9c7859d0e497583e705963a15e0f8bf5daf1682652c1f6b0bf2",
+  "src/eoo_exp/__init__.py": "16754d2e26eb56fb0469b74cbb88351b20265ac3ae07ecc51ada09167199a90a",
+  "src/eoo_exp/outdir.py": "6997fdfe23a5bbd5fb3c80aa024f172940167d24c55770f3b83f163d9c86fd00",
+  "src/eoo_exp/provenance.py": "9076be346293debdd361cae3c24c781d3d463716d6be1c398ee4474b3201bb5e",
+  "src/eoo_exp/scaffold.py": "b7686662f08994431881ee411fb3b1f913ba63b6327cc6dce8e180e45496a765",
+  "src/eoo_exp/util.py": "64765edd82c60fa3e393878199331db360f14bbbe31c72f5bb8d4079ac6acd86",
+  "src/eoo_h20/__init__.py": "83cf257e1b225fb251ac97d4ddf3077f80d9eebd9f2b8d9a7850e3e74e06b724",
+  "src/eoo_h20/adapter_dynamic.py": "51bcf4b49feac2feca7e68f917d303dc9f93b99e58d4321a871b5b0fd47dc256",
+  "src/eoo_h20/adapter_static.py": "9f955427124a020343b9824b215c4c0e860432cb1f040940978c67845b2f45de",
+  "src/eoo_h20/alias.py": "656c6cb7ef44230b34beb20936c9ef53ef35198af3ccbdf998a7780c4dc85f7d",
+  "src/eoo_h20/closure.py": "3145a1c0d1201a7ce7530d13a5787d1c537e5ca1473f4c1097b49c7049615c49",
+  "src/eoo_h20/evaluate.py": "ff6952afa682a8d9d19ad3e9842a5dd13589da773d57f59a1ba104e392511a2f",
+  "src/eoo_h20/loc.py": "3c49d4208baa55c6edba81b8b19ff4ee67d5c373f195b72bc6f96fdc02c24f2d",
+  "src/eoo_h20/mutant_probe.py": "07c8628aba4633129adc97de1dd48440aed807fc75ccec1efd922efb8d8da638",
+  "src/eoo_h20/mutants.py": "1bac661f8e6657143b0b98665e4844d780e6e259911812bf7e4a3cdcd2cdbc3d",
+  "src/eoo_h20/payloads.py": "243fccb50e77c26fb31b6431e94286fbd71c1487d3bd977d3b920a8eff52dcc5",
+  "src/eoo_h20/run.py": "65266b5c05ca5c1e17108ee3aad566c7e58dafb84c1557cc5fb30f1b26e852f3",
+  "src/eoo_h20/static_audit.py": "57f6b4a0937874641db39f9a521a7898a4c0c740f70f412d2a2f32ce77156558",
+  "src/eoo_h20/synth.py": "4df1390c5eb29c2e6bdacf09807d72d3a657f7a82036b1744eb6aad9114eb8c9",
+  "src/eoo_h20/synth_run.py": "c08de353eea6350b4245107b88fe2ada42b29160034c71a0b08bc389846dcc97",
+  "src/eoo_h20/trace.py": "4a5bce42998f64e36f2aa35f21c80a241a0f2cfeec054e8635b7f975ceae4fb6",
+  "src/eoo_h20/workloads.py": "eed3e1c43233c3c81bbfa74195f1d718ba07ae9180baefe7f52a62b799b08d0b"
+ },
+ "hypothesis_id": "H20",
+ "input_corpus_hash": "e920e70a4ee805d2553253874f1e457d24f4562ddd8c8fc458f30298895f26ee",
+ "payload": {
+  "dynamic": {
+   "adapter_calls_observed": {
+    "ErpFake.apply": 1,
+    "ErpFake.observations": 1,
+    "GitAdapter.apply": 18,
+    "GitAdapter.observations": 6,
+    "GitFake.apply": 284,
+    "GitFake.observations": 189,
+    "MesFake.apply": 1,
+    "MesFake.observations": 1,
+    "RecordingAdapter.apply": 120,
+    "RecordingAdapter.observations": 78,
+    "WmsFake.apply": 98,
+    "WmsFake.observations": 68
+   },
+   "engine_owns_idempotency_probe": [
+    {
+     "adapter_calls_after_first": 1,
+     "adapter_calls_after_retry": 1,
+     "domain": "manufacturing",
+     "effects_after_first": 1,
+     "effects_after_retry": 1,
+     "engine_decided": true,
+     "same_execution_on_retry": true,
+     "scenario": "m_ok_planner",
+     "state": "RECONCILED_SUCCESS"
+    },
+    {
+     "adapter_calls_after_first": 1,
+     "adapter_calls_after_retry": 1,
+     "domain": "project",
+     "effects_after_first": 1,
+     "effects_after_retry": 1,
+     "engine_decided": true,
+     "same_execution_on_retry": true,
+     "scenario": "p_ok_create",
+     "state": "RECONCILED_SUCCESS"
+    }
+   ],
+   "governance_calls_inside_adapters": [],
+   "guarded_engine_functions": [
+    "authority.evaluate",
+    "gates.run_logic_gate",
+    "gates.evaluate_policies",
+    "gates.check_inputs",
+    "pipeline.propose",
+    "pipeline.run_gates",
+    "pipeline.decide_approval",
+    "pipeline.execute",
+    "Engine.record",
+    "Engine._write",
+    "Engine.new_execution",
+    "Engine.note_retry",
+    "Engine.note_attempt",
+    "Engine.register_principal",
+    "Engine.seed",
+    "Journal.append",
+    "AppendOnlyLog.append"
+   ],
+   "ok_mode_probe": [
+    {
+     "adapter_errors": [],
+     "carried_out": true,
+     "domain": "manufacturing",
+     "scenario": "m_ok_planner",
+     "state": "RECONCILED_SUCCESS"
+    },
+    {
+     "adapter_errors": [],
+     "carried_out": true,
+     "domain": "manufacturing",
+     "scenario": "m_ok_agent",
+     "state": "RECONCILED_SUCCESS"
+    },
+    {
+     "adapter_errors": [],
+     "carried_out": true,
+     "domain": "manufacturing",
+     "scenario": "m_ok_junior_small",
+     "state": "RECONCILED_SUCCESS"
+    },
+    {
+     "adapter_errors": [],
+     "carried_out": true,
+     "domain": "project",
+     "scenario": "p_ok_create",
+     "state": "RECONCILED_SUCCESS"
+    },
+    {
+     "adapter_errors": [],
+     "carried_out": true,
+     "domain": "project",
+     "scenario": "p_ok_start_run",
+     "state": "RECONCILED_SUCCESS"
+    },
+    {
+     "adapter_errors": [],
+     "carried_out": true,
+     "domain": "project",
+     "scenario": "p_ok_start_run_h17",
+     "state": "RECONCILED_SUCCESS"
+    },
+    {
+     "adapter_errors": [],
+     "carried_out": true,
+     "domain": "project",
+     "scenario": "p_ok_attach",
+     "state": "RECONCILED_SUCCESS"
+    }
+   ],
+   "taint_known_negative": {
+    "detected": true,
+    "violations": [
+     {
+      "adapter": "WmsFake.apply",
+      "called": "Journal.append"
+     }
+    ]
+   }
+  },
+  "judgement_calls": [
+   "store.py GitStore._msg: commit-message trailers are the Git-side copy of the request the adapter was handed; declared exception (see static.declared_exceptions), listed here so a reader can overrule it: strict count including it = static.violations + static.declared_hits.",
+   "WmsFake / GitFake / GitAdapter answer a repeated call for the same execution / effect id with the stored response (external-system dedupe, as real WMS / Git would). The Engine's own idempotency decision is shown independent of it by dynamic.engine_owns_idempotency_probe.",
+   "GitStore re-validates rows with the Engine's own would_be() (integrity of the external system, reusing Engine code, no re-implementation).",
+   "The static audit is a vocabulary audit: a check under an innocuous name is invisible to it (mutant A1b); the in-adapter taint and the ok-mode probe are the behavioural complements."
+  ],
+  "static": {
+   "allowed": [
+    "translate an approved effect into an external/system call",
+    "return the raw external response",
+    "emit observations from the external system"
+   ],
+   "declared_exceptions": [
+    {
+     "concern": "provenance",
+     "file": "src/eoo_engine_git/store.py",
+     "qual": "GitStore._msg",
+     "reason": "store option that switches the commit-message trailers on/off (H18 ablation); the trailers copy fields of the request the adapter was handed (execution, action, key, effects, targets); no gate, approval, principal or policy information is written and nothing is decided from it"
+    }
+   ],
+   "declared_hits": 1,
+   "disclosed": 12,
+   "files": [
+    {
+     "declared": [],
+     "disclosed": [],
+     "file": "domains/manufacturing/adapters/erp_mes_fake.py",
+     "sha256": "681a954b5e8bcb2ba52d98c734aac52dfdcca93555634cab6efc2a9536bed887",
+     "violations": []
+    },
+    {
+     "declared": [],
+     "disclosed": [],
+     "file": "domains/manufacturing/adapters/wms_fake.py",
+     "sha256": "814777ff67bf843b9e16c4b6fd74c27ba85544bf7ffca3e6d1bfaa619bf37fbc",
+     "violations": []
+    },
+    {
+     "declared": [],
+     "disclosed": [],
+     "file": "domains/project/adapters/git_fake.py",
+     "sha256": "279e6290e582c93d51e3ad6c5b8f80fbd44fbbc0b2a76b2a6e9979672a8eab1d",
+     "violations": []
+    },
+    {
+     "declared": [],
+     "disclosed": [],
+     "file": "src/eoo_engine_git/__init__.py",
+     "sha256": "687ffc6e09a23bbf10e05454f2b261c9af6013f951f7caf032b58ae489c63879",
+     "violations": []
+    },
+    {
+     "declared": [],
+     "disclosed": [
+      {
+       "from": "eoo_engine",
+       "kind": "engine_function_reused",
+       "line": 16,
+       "names": [
+        "LogicBindings"
+       ]
+      },
+      {
+       "from": "eoo_engine.canon",
+       "kind": "engine_function_reused",
+       "line": 17,
+       "names": [
+        "to_plain"
+       ]
+      },
+      {
+       "from": "eoo_engine.effects",
+       "kind": "engine_function_reused",
+       "line": 18,
+       "names": [
+        "build_payload"
+       ]
+      },
+      {
+       "from": "eoo_engine.registry",
+       "kind": "engine_function_reused",
+       "line": 19,
+       "names": [
+        "load_model"
+       ]
+      },
+      {
+       "concern": "idempotency",
+       "kind": "governance_term_as_data",
+       "line": 51,
+       "value": "idempotency_key"
+      },
+      {
+       "concern": "idempotency",
+       "kind": "governance_term_as_data",
+       "line": 51,
+       "value": "idempotency_key"
+      }
+     ],
+     "file": "src/eoo_engine_git/adapter.py",
+     "sha256": "4165c1d852eec6ab1ee2f0d60ec9ae28b67fb41910f1426ab944fdff73ce7e96",
+     "violations": []
+    },
+    {
+     "declared": [],
+     "disclosed": [],
+     "file": "src/eoo_engine_git/errors.py",
+     "sha256": "b197e61ecc2be75322c2ae1da0e5b0669ea04711ff2f11ea525a5d0dc3a0b794",
+     "violations": []
+    },
+    {
+     "declared": [],
+     "disclosed": [],
+     "file": "src/eoo_engine_git/layout.py",
+     "sha256": "afd2c584cd7903f6b0931b61c24733d8629da8817c16b096669210771be6a079",
+     "violations": []
+    },
+    {
+     "declared": [],
+     "disclosed": [],
+     "file": "src/eoo_engine_git/merge.py",
+     "sha256": "e82d795915aa8557e2377b548a20aa0551c665e9c37d16baba0d3ccca1400bbf",
+     "violations": []
+    },
+    {
+     "declared": [],
+     "disclosed": [],
+     "file": "src/eoo_engine_git/objects.py",
+     "sha256": "81e18de9e43fc26130649a840cf29aa0233de26ef2d50e7f370e5676f09e0a40",
+     "violations": []
+    },
+    {
+     "declared": [
+      {
+       "concern": "provenance",
+       "kind": "governance_term_in_decision",
+       "line": 134,
+       "qual": "GitStore._msg",
+       "term": "provenance"
+      }
+     ],
+     "disclosed": [
+      {
+       "from": "eoo_engine.canon",
+       "kind": "engine_function_reused",
+       "line": 15,
+       "names": [
+        "to_plain"
+       ]
+      },
+      {
+       "from": "eoo_engine.registry",
+       "kind": "engine_function_reused",
+       "line": 16,
+       "names": [
+        "load_model"
+       ]
+      },
+      {
+       "from": "eoo_engine.state",
+       "kind": "engine_function_reused",
+       "line": 17,
+       "names": [
+        "State"
+       ]
+      },
+      {
+       "from": "eoo_engine.store",
+       "kind": "engine_function_reused",
+       "line": 18,
+       "names": [
+        "would_be"
+       ]
+      },
+      {
+       "concern": "idempotency",
+       "kind": "governance_term_as_data",
+       "line": 199,
+       "value": "EOO-Idempotency-Key"
+      },
+      {
+       "concern": "idempotency",
+       "kind": "governance_term_as_data",
+       "line": 199,
+       "value": "idempotency_key"
+      }
+     ],
+     "file": "src/eoo_engine_git/store.py",
+     "sha256": "be90d64f4924a7c2e3f7e92a182556c727b3a3e131fca4fdee596b73eb076043",
+     "violations": []
+    }
+   ],
+   "forbidden": [
+    "authority checks",
+    "policy evaluation",
+    "precondition evaluation",
+    "idempotency decisions",
+    "provenance writing",
+    "action lifecycle state changes"
+   ],
+   "violations": 0
+  }
+ },
+ "payload_hash": "147aed7e94558abba70b7320557a935588087f741f5e63974e507b627f2b2acd",
+ "payload_path": null,
+ "protocol_freeze_hash": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2",
+ "seed": 20
+}

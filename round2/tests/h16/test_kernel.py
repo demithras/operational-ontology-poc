@@ -17,11 +17,26 @@ def snaps():
     return rev_snapshot("r2-engine-core"), rev_snapshot("HEAD")
 
 
-def test_before_and_after_kernels_are_identical(snaps):
-    b, a = snaps
+@pytest.fixture(scope="module")
+def h16_snaps():
+    """H16's own 'after' snapshot is the commit of its experiment (tag r2-h16-exp001), not a moving HEAD."""
+    return rev_snapshot("r2-engine-core"), rev_snapshot("r2-h16-exp001")
+
+
+def test_before_and_after_kernels_are_identical(h16_snaps):
+    b, a = h16_snaps
     d = kernel_diff(b, a)
     assert d["new_kernel_primitive_kind_count"] == 0 and changed_is_clean(d) and d["schema_unchanged"]
     assert b["engine_core_files"] == a["engine_core_files"]
+    assert d["dispatch_kinds_equal_schema_arrays"] and sorted(a["dispatch"]["handlers"]) == sorted(a["kernel_resource_kinds"])
+
+
+def test_kernel_kinds_dispatch_schema_at_head_equal_engine_core(snaps):
+    """Engine v1.1 legitimately changes engine file hashes; the kernel kinds / dispatch / schema must not move."""
+    b, a = snaps
+    d = kernel_diff(b, a)
+    assert d["new_kernel_primitive_kind_count"] == 0 and d["removed_kinds"] == [] and changed_is_clean(d)
+    assert d["schema_unchanged"] and not d["dispatch_order_changed"] and d["dispatch_handlers_changed"] == []
     assert d["dispatch_kinds_equal_schema_arrays"] and sorted(a["dispatch"]["handlers"]) == sorted(a["kernel_resource_kinds"])
 
 
