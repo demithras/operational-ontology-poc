@@ -1,0 +1,48 @@
+{
+ "created_at": "2026-10-02T20:13:13+00:00",
+ "engine_prereg_sha256": "03d2d56919b2f003766e54c89fdbfb47a7780577534f4d797ab2ecd9b6f3aefe",
+ "engine_version": "1.1",
+ "environment": {
+  "hypothesis": "6.168.3",
+  "jsonschema": "4.26.0",
+  "machine": "arm64",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "pytest": "9.1.1",
+  "python": "3.14.6"
+ },
+ "evidence_kind": "correctness-security",
+ "experiment_id": "exp-h22-001",
+ "git_commit": "ce7d64e88f3545957e7c95b93cd7d948ad124662",
+ "harness_dirty": false,
+ "harness_dirty_paths": [],
+ "harness_sha256": {
+  "oracles/h22/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "oracles/h22/gate_oracle.py": "71ad427e59aea843372fe6c0a646e2295057f9c2a835bf286f6e1502d31d7486",
+  "scripts/evaluate_h22.py": "eef17fe8f35944d53940ec3c85364008fb9044e1edff2987c9b4fef11e751a2d",
+  "scripts/run_h22.py": "152b669008cb9417641247b9dbcf51f75e9f3ef435b948254d89f517f5af100d",
+  "src/eoo_exp/__init__.py": "16754d2e26eb56fb0469b74cbb88351b20265ac3ae07ecc51ada09167199a90a",
+  "src/eoo_exp/outdir.py": "6997fdfe23a5bbd5fb3c80aa024f172940167d24c55770f3b83f163d9c86fd00",
+  "src/eoo_exp/provenance.py": "9076be346293debdd361cae3c24c781d3d463716d6be1c398ee4474b3201bb5e",
+  "src/eoo_exp/scaffold.py": "b7686662f08994431881ee411fb3b1f913ba63b6327cc6dce8e180e45496a765",
+  "src/eoo_exp/util.py": "64765edd82c60fa3e393878199331db360f14bbbe31c72f5bb8d4079ac6acd86",
+  "src/eoo_h22/__init__.py": "23dda27bdb93b7292a583dd55abf42e01d860f34107c40645893be92aee9440b",
+  "src/eoo_h22/evaluate.py": "17d4ef7d74f5b8ce924266ddef0dd580a2fa31bc9a92c568aa7189a609624638",
+  "src/eoo_h22/facts.py": "389c5614e8264fa3b44f275c2c9729f50cced155d2da5d51299281daa111721f",
+  "src/eoo_h22/fairness.py": "6a86df6d64493a19983f1102b0c7b1a32c22f162476d91cd968ee34973da6f07",
+  "src/eoo_h22/payloads.py": "4dd80ba724288a25652b0e0d1c4ca12ae469d63858cce9324beefaebb15d5d8c",
+  "src/eoo_h22/run.py": "bd16aabe3359f3531f045f765715479a6db747da991840a4e2ab3ffcf780701f"
+ },
+ "hypothesis_id": "H22",
+ "input_corpus_hash": "f7c11434822e6ca55d5154d287e0e17f073e2e2a92c7b4702bea09100060a1c3",
+ "payload": {
+  "note": "no per-task oracle was run; absence of regressions is NOT claimed",
+  "per_class": {},
+  "reason": "gate closed: 2 real domains < 3 (protocol/thresholds.json H22.min_real_domains_for_verdict) and 0 blind tasks < 30; no D3+ source is registered",
+  "regressions": 0,
+  "status": "not-run"
+ },
+ "payload_hash": "d9dc6b331a9e39b111d55bf016dcc74da288d06b2f1e8499fd23e79db9dc7bb0",
+ "payload_path": null,
+ "protocol_freeze_hash": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2",
+ "seed": 22
+}
