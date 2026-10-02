@@ -15,11 +15,14 @@ from .journal import AppendOnlyLog, Journal
 from .logic import LogicBindings
 from .pipeline import TRANSITIONS
 from .registry import DISPATCH_TABLE, load_model
+from .snapshot import ExecutionsView, snapshot
 from .store import Store
 
 _PROV_FIELDS = ("exec", "state", "package_id", "package_version", "action", "action_version", "policy_versions",
                 "principal", "inputs", "key", "gates", "approvals", "soft_flags", "effect_ids", "responses",
                 "observed", "updated_at")
+
+ENGINE_VERSION = "1.1"  # v1.1: snapshot returns + journaled gate-pass check (docs/engine_semantics.md)
 
 
 def utc_clock() -> str:
@@ -46,7 +49,7 @@ class Engine:
         self.store = Store(self.model, self.minter.verifier())
         self.journal = journal if isinstance(journal, Journal) else Journal(journal)
         self.effect_log, self.provenance = AppendOnlyLog(), AppendOnlyLog()
-        self.executions: dict[str, dict] = {}
+        self._executions: dict[str, dict] = {}  # internal; callers read snapshots via .executions
         self.idempotency: dict[str, str] = {}
         self.directory: dict[str, Principal] = {}
         self._clock = clock or utc_clock
@@ -87,7 +90,7 @@ class Engine:
         return tuple(ast.literal_eval(k))
 
     def fingerprint(self) -> str:
-        return digest({"store": self.store.current.snapshot(), "executions": self.executions,
+        return digest({"store": self.store.current.snapshot(), "executions": self._executions,
                        "effects": self.effect_log.entries(), "provenance": self.provenance.entries()})
 
     # ---- identity -----------------------------------------------------------------------
@@ -112,7 +115,7 @@ class Engine:
 
     # ---- seeding (before any execution) --------------------------------------------------
     def seed(self, ops: list) -> None:
-        if self.executions:
+        if self._executions:
             raise InvalidRequest("seeding is closed once an action has been proposed")
         sid = f"seed:{len(self.journal)}"
         grant = self.minter.mint(sid)
@@ -124,7 +127,7 @@ class Engine:
 
     # ---- journaling ----------------------------------------------------------------------
     def _write(self, rec: dict, applied: bool = False) -> dict:
-        r = self.journal.append(rec)
+        r = self.journal.append({**rec, "engine_version": ENGINE_VERSION})
         self._absorb(r, replay=False, applied=applied)
         return r
 
@@ -145,18 +148,19 @@ class Engine:
         if kind == "exec":
             snap = r["rec"]
             if replay:
-                self.executions[snap["exec"]] = to_plain(snap)
+                self._executions[snap["exec"]] = to_plain(snap)
                 if snap["key"] is not None and not snap["key_conflict"]:
                     self.idempotency[f"{snap['action']}\x1f{snap['key']}"] = snap["exec"]
             for e in (r.get("commit") or {}).get("entries", []):
                 self.effect_log.append(e)
-            self.provenance.append({**{k: snap.get(k) for k in _PROV_FIELDS}, "note": r.get("note")})
+            self.provenance.append({**{k: snap.get(k) for k in _PROV_FIELDS}, "note": r.get("note"),
+                                    "engine_version": r.get("engine_version")})
         elif kind in ("seed", "retry", "attempt"):
             self.provenance.append({k: v for k, v in r.items() if k != "ops"})
 
     def new_execution(self, spec, inputs: dict, pid: Any, key: Optional[str], intent: str,
                       expected_versions: Optional[dict] = None, presented: Any = None) -> dict:
-        xid = f"x{len(self.executions) + 1}"
+        xid = f"x{len(self._executions) + 1}"
         conflict = key is not None and f"{spec.rid}\x1f{key}" in self.idempotency
         policy_versions = {pid_: self.model.get("policies", pid_).version for _t, pid_ in spec.policy_refs if pid_}
         rec = {"exec": xid, "action": spec.rid, "action_version": spec.version, "package_id": self.model.package_id,
@@ -165,7 +169,7 @@ class Engine:
                "policy_versions": policy_versions, "approvals": [], "base_versions": {}, "soft_flags": [],
                "intents": [], "responses": {}, "adapter_errors": [], "observations": [], "rejected_observations": [],
                "effect_ids": [], "observed": None, "created_at": self.now(), "updated_at": None}
-        self.executions[xid] = rec
+        self._executions[xid] = rec
         if key is not None and not conflict:
             self.idempotency[f"{spec.rid}\x1f{key}"] = xid
         return self.record(rec, "PROPOSED")
@@ -198,14 +202,14 @@ class Engine:
     # ---- public API ----------------------------------------------------------------------
     def propose(self, action_id: str, inputs: dict, principal: Any, idempotency_key: Optional[str] = None,
                 expected_versions: Optional[dict] = None) -> dict:
-        return self.dispatch("actions", "propose", action_id, inputs=inputs, principal=principal,
-                             idempotency_key=idempotency_key, expected_versions=expected_versions)
+        return snapshot(self.dispatch("actions", "propose", action_id, inputs=inputs, principal=principal,
+                                      idempotency_key=idempotency_key, expected_versions=expected_versions))
 
     def _decide(self, op: str, execution: str, approver: Any) -> dict:
-        rec = self.executions.get(execution)
+        rec = self._executions.get(execution)
         if rec is None:
             raise InvalidRequest(f"unknown execution {execution!r}")
-        return self.dispatch("actions", op, rec["action"], execution=execution, approver=approver)
+        return snapshot(self.dispatch("actions", op, rec["action"], execution=execution, approver=approver))
 
     def approve(self, execution: str, approver: Any) -> dict:
         return self._decide("approve", execution, approver)
@@ -214,11 +218,17 @@ class Engine:
         return self._decide("reject", execution, approver)
 
     def reconcile(self, execution: str) -> dict:
-        rec = self.executions[execution]
-        return self.dispatch("actions", "reconcile", rec["action"], execution=execution)
+        rec = self._executions[execution]
+        return snapshot(self.dispatch("actions", "reconcile", rec["action"], execution=execution))
 
     def recover(self) -> list:
-        return outcome.recover(self)
+        return snapshot(outcome.recover(self))
+
+    @property
+    def executions(self) -> ExecutionsView:
+        """Read-only view: execution id -> immutable snapshot of that record (never the live record)."""
+        live = self._executions
+        return ExecutionsView(lambda xid: live[xid], lambda: list(live))
 
     def call_function(self, function_id: str, args: dict, principal: Any = None):
         if principal is not None and self.identify(principal)[0] is None:

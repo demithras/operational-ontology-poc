@@ -48,22 +48,26 @@ def test_tamper_controls_produce_no_unexpected_effect(domain):
         assert not r["violation"], r
 
 
-def test_tampered_returned_record_executes_an_effect_the_gates_denied():
-    """MEASUREMENT (a finding, not a pass): editing the live record returned by tool.propose_action defeats the gates."""
+def test_tampered_returned_record_cannot_execute_an_effect_the_gates_denied():
+    """MEASUREMENT. Engine v1 (exp-h17-001): every row below was a violation (editing the live record returned by
+    tool.propose_action defeated the gates). Engine v1.1 returns read-only snapshots: the edit itself is refused with
+    CapabilityError and nothing executes. Adapted for v1.1 (P5c); the v1 finding stays recorded in exp-h17-001."""
     out = {}
     for d in DOMAINS:
         plan = tamper.TAMPER_BOTH + (tamper.TAMPER_MFG if d == "manufacturing" else [])
         for n, f in plan:
             if not n.startswith("control"):
-                out[(d, n)] = run_attack(new_driver(d, "std"), n, "tamper", f)["violation"]
-    assert out and all(out.values()), out
+                r = run_attack(new_driver(d, "std"), n, "tamper", f)
+                out[(d, n)] = (r["violation"], r["world_changed"], r["exception"])
+    assert len(out) == 4 and set(out.values()) == {(False, False, "CapabilityError")}, out
 
 
 def test_tamper_attack_is_what_causes_the_effect_not_the_scenario():
     d = new_driver("project", "std")
     assert run_attack(d, "c", "tamper", tamper.t_state_flip_control)["world_changed"] is False
     d = new_driver("project", "std")
-    assert run_attack(d, "a", "tamper", tamper.t_state_flip_recover)["world_changed"] is True
+    # Engine v1 (exp-h17-001): True. Engine v1.1: the tamper is refused, so the world stays unchanged (P5c).
+    assert run_attack(d, "a", "tamper", tamper.t_state_flip_recover)["world_changed"] is False
 
 
 def test_baseline_single_operation_model_loses_to_the_metadata_attacks():

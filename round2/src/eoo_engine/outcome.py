@@ -73,7 +73,7 @@ def observe_and_reconcile(eng, spec, rec) -> dict:
 
 
 def reconcile(eng, spec, execution: str) -> dict:
-    rec = eng.executions.get(execution)
+    rec = eng._executions.get(execution)
     if rec is None or rec["action"] != spec.rid or rec["state"] not in ("EFFECTS_COMMITTED", "OUTCOME_UNKNOWN"):
         raise InvalidRequest(f"{execution!r} cannot be reconciled")
     return observe_and_reconcile(eng, spec, rec)
@@ -83,8 +83,8 @@ def recover(eng) -> list[dict]:
     """Deterministically finish what a crash interrupted (journal order). Never re-calls an adapter
     whose intent was journaled without a response: that effect is uncertain -> OUTCOME_UNKNOWN."""
     report = []
-    for xid in list(eng.executions):
-        rec = eng.executions[xid]
+    for xid in list(eng._executions):
+        rec = eng._executions[xid]
         before = rec["state"]
         if before not in ("PROPOSED", "APPROVED", "EXECUTING", "EFFECTS_COMMITTED"):
             continue
@@ -99,5 +99,5 @@ def recover(eng) -> list[dict]:
             eng.dispatch("actions", "execute", spec.rid, execution=xid)
         else:
             eng.dispatch("actions", "reconcile", spec.rid, execution=xid)
-        report.append({"exec": xid, "from": before, "to": eng.executions[xid]["state"]})
+        report.append({"exec": xid, "from": before, "to": eng._executions[xid]["state"]})
     return report

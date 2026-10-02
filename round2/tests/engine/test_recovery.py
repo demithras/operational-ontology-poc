@@ -30,7 +30,8 @@ def test_crash_after_executing_then_recover_exactly_once(tmp_path):
     report = eng.recover()
     assert report == [{"exec": "x1", "from": "EXECUTING", "to": "RECONCILED_SUCCESS"}]
     assert len(carrier.calls) == 1 and len(effects_of(eng, "x1")) == 1
-    assert eng.propose("ship_box", {"box": "b1"}, "filler", idempotency_key="k") is eng.executions["x1"]
+    again = eng.propose("ship_box", {"box": "b1"}, "filler", idempotency_key="k")
+    assert again == eng.executions["x1"] and again["exec"] == "x1"  # v1.1: snapshot equality, not identity
     assert len(carrier.calls) == 1
 
 

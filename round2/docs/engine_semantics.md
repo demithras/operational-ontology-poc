@@ -4,6 +4,11 @@ One in-process, generic Engine executes any IR package that passes `eoo_ir.valid
 (`ontology/ir.schema.json`). It has no domain knowledge: domain logic arrives as `LogicBindings`,
 external systems as adapters. Scope and disclosure rules: `protocol/ENGINE_PREREG.json`.
 
+Version: `eoo_engine.ENGINE_VERSION == "1.1"`. v1.1 (P5c) closes the exp-h17-001 gate bypass (Engine v1 returned
+its live execution record; editing it turned gate-denied requests into executed effects): see section 8.
+No gate order, policy/authority, idempotency or lifecycle-state semantics changed; the one new transition
+(APPROVED -> DENIED, gate `gate_pass`) is reachable only when the journal does not authorise the execution.
+
 ## 1. Registry and kind dispatch (`registry.py`)
 
 `DISPATCH_TABLE` maps each kernel resource kind to one handler. Loading a package = validate it, then
@@ -134,8 +139,9 @@ An action execution requests capability `action:<action id>`. Approval requests 
 | PROPOSED | PENDING_APPROVAL | policy result is require_approval |
 | PROPOSED | APPROVED | all gates pass |
 | PENDING_APPROVAL | APPROVED / DENIED | `approve` / `reject` by a second principal holding an approval capability |
-| APPROVED | EXECUTING | immediately |
-| EXECUTING | DENIED | stale base version; payload/field problem (gate `effects`); store integrity; a hard constraint fails on the would-be state |
+| APPROVED | EXECUTING | immediately, once the journal holds a matching gate-pass record (section 8) |
+| APPROVED | DENIED | v1.1: no journaled gate-pass record matches the execution (gate `gate_pass`); zero effects |
+| EXECUTING | DENIED | (recovery) gate-pass re-check fails; stale base version; payload/field problem (gate `effects`); store integrity; a hard constraint fails on the would-be state |
 | EXECUTING | OUTCOME_UNKNOWN | an adapter call raised (the external effect is uncertain) |
 | EXECUTING | EFFECTS_COMMITTED | canonical ops applied and all effects logged (one journal record) |
 | EFFECTS_COMMITTED / OUTCOME_UNKNOWN | RECONCILED_SUCCESS / RECONCILED_FAILED / OUTCOME_UNKNOWN | outcome predicate True / False / None or error |
@@ -174,7 +180,9 @@ effect: no EffectLog entry and an unchanged store.
   not shown to the predicate), and journaled before use.
 * Provenance (one entry per transition): package id + version, action id + version, policy versions,
   principal, inputs, idempotency key, gate results, approvals, soft flags, effect ids, responses,
-  outcome, time from the injectable clock.
+  outcome, time from the injectable clock, and `engine_version` (copied from the journal record that produced
+  the entry; every journal record written by v1.1 carries `"engine_version": "1.1"`, a replayed v1 journal
+  record shows `None`).
 
 ## 7. Crash recovery
 
@@ -195,3 +203,38 @@ reach the same fingerprint.
 Known limits: canonical store ops of an execution whose adapter call is uncertain are not committed,
 and reconciling it later only classifies the outcome. Min cardinality and interface
 `required_properties` are not enforced at commit.
+
+## 8. Returned values and the gate-pass record (Engine v1.1)
+
+**Returned values are immutable snapshots.** Every execution record leaving the Engine — from `propose`,
+`approve`, `reject`, `reconcile`, `recover` (its report), `tool(...).propose_action`, and `Engine.executions[x]`
+(now a read-only mapping view; the live records are internal) — is built by `snapshot.snapshot`: a canonical-JSON
+deep copy (it shares no object with the Engine's state) whose containers are `FrozenDict` / `FrozenList`.
+They behave as dict/list for reading, equality and JSON, and every mutating method (`__setitem__`, `update`,
+`pop`, `append`, `+=`, ...) raises `CapabilityError`, so a tamper attempt is an Engine refusal. Because a
+returned record is a copy, the same retry returns an equal record, not the same object. Query results
+(`get`, `interface_query`, `call_function`, the read view) and EffectLog / ProvenanceLog entries were already
+frozen (`MappingProxyType` / tuples, mutation raises `TypeError`); log entries are immutable objects and are
+returned as stored. Not changed (operator-level plumbing, not values returned to callers): `Engine.state()`
+(the store's current `State`), `Engine.store`, `Engine.journal`, `Engine.directory`; the agent tool surface
+reaches none of them. Interpreter-level escapes (`dict.__setitem__(snap, ...)` on a detached copy,
+`__closure__`, `gc`) remain the disclosed limit of section 4 and cannot reach the Engine's records.
+
+**approve / reject / recover read only the Engine's own state.** They take an execution id (`recover()` takes
+nothing) and look the record up in the Engine's internal table, which no caller holds a reference to.
+
+**Gate-pass record (defence in depth).** Before an execution's APPROVED state is journaled, the pipeline journals
+`{"kind": "gate_pass", "exec", "action", "principal", "inputs_hash", "via", "gates", "approved_by"}`:
+
+* `via: "gates"` — identity, inputs, authority, preconditions and policy passed with verdict APPROVED;
+* `via: "approval"` — written by `approve` after a second principal approved a PENDING_APPROVAL execution.
+
+`inputs_hash` is `sha256(canonical {"inputs": gated inputs})`. The executor (`pipeline.execute`, also the path
+recovery resumes through) refuses to enter or continue EXECUTING unless the JOURNAL holds, for that execution
+id, a gate-pass record (latest wins) whose action and principal match, whose `gates` include the five gates
+above, and whose `inputs_hash` equals the hash of the inputs about to execute. For `via: "approval"` it also
+requires an earlier journaled PENDING_APPROVAL record of that execution with the same inputs hash and those five
+gates passed, and an approver whose delegation chain is disjoint from the proposer's (both registered). Any
+failure appends gate `gate_pass` (passed: false, reason) and moves the execution to DENIED with zero effects.
+The check reads only the journal and the identity directory (`gatepass.py`), never a caller-supplied record.
+A v1 journal has no gate-pass records: an execution it left APPROVED/EXECUTING is DENIED on v1.1 recovery.

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from . import effects, gates, outcome
+from . import effects, gatepass, gates, outcome
 from .authority import Principal
 from .canon import digest, to_plain
 from .errors import CapabilityError, InvalidRequest
@@ -18,7 +18,7 @@ TRANSITIONS = {
     None: {"PROPOSED"},
     "PROPOSED": {"DENIED", "PENDING_APPROVAL", "APPROVED"},
     "PENDING_APPROVAL": {"APPROVED", "DENIED"},
-    "APPROVED": {"EXECUTING"},
+    "APPROVED": {"EXECUTING", "DENIED"},  # DENIED only when the journal holds no matching gate-pass (v1.1)
     "EXECUTING": {"EXECUTING", "EFFECTS_COMMITTED", "DENIED", "OUTCOME_UNKNOWN"},
     "EFFECTS_COMMITTED": {"EFFECTS_COMMITTED", "RECONCILED_SUCCESS", "RECONCILED_FAILED", "OUTCOME_UNKNOWN"},
     "OUTCOME_UNKNOWN": {"OUTCOME_UNKNOWN", "RECONCILED_SUCCESS", "RECONCILED_FAILED"},
@@ -46,7 +46,7 @@ def propose(eng, spec, inputs: Any, principal: Any, idempotency_key: Optional[st
     if idempotency_key is not None:
         prior = eng.idempotency.get(f"{spec.rid}\x1f{idempotency_key}")
         if prior is not None:
-            prev = eng.executions[prior]
+            prev = eng._executions[prior]
             if prev["digest"] == intent:
                 eng.note_retry(prev)
                 return prev
@@ -94,6 +94,8 @@ def run_gates(eng, spec, rec: dict, principal: Any) -> dict:
     rec["gates"].append(pol)
     if verdict == "DENIED":
         return eng.record(rec, "DENIED", note="denied at policy")
+    if verdict == "APPROVED":
+        gatepass.record_pass(eng, rec, "gates")
     eng.record(rec, verdict)
     return execute(eng, spec, execution=rec["exec"]) if verdict == "APPROVED" else rec
 
@@ -108,7 +110,7 @@ def approval_capabilities(eng, spec) -> list[str]:
 
 
 def decide_approval(eng, spec, execution: str, approver: Any, approve: bool) -> dict:
-    rec = eng.executions.get(execution)
+    rec = eng._executions.get(execution)
     if rec is None or rec["action"] != spec.rid or rec["state"] != "PENDING_APPROVAL":
         raise InvalidRequest(f"{execution!r} is not a pending execution of {spec.rid}")
     who, why = eng.identify(approver)
@@ -130,6 +132,7 @@ def decide_approval(eng, spec, execution: str, approver: Any, approve: bool) -> 
     if not approve:
         return _deny(eng, rec, gates.gate("approval", False, {"rejected_by": who.pid}))
     rec["gates"].append(gates.gate("approval", True, {"approved_by": who.pid}))
+    gatepass.record_pass(eng, rec, "approval", approved_by=who.pid)
     eng.record(rec, "APPROVED")
     return execute(eng, spec, execution=execution)
 
@@ -146,11 +149,14 @@ def _applicable_constraints(eng, spec) -> list:
 
 def execute(eng, spec, execution: str) -> dict:
     """APPROVED (or EXECUTING after a crash) -> effects. Each step is journaled before it is visible."""
-    rec = eng.executions[execution]
+    rec = eng._executions[execution]
+    if rec["state"] not in ("APPROVED", "EXECUTING"):
+        raise InvalidRequest(f"{execution!r} is {rec['state']}, not executable")
+    refused = gatepass.problem(eng, rec)  # journal-only check, before EXECUTING is entered (and again on recovery)
+    if refused is not None:
+        return _deny(eng, rec, gates.gate("gate_pass", False, refused))
     if rec["state"] == "APPROVED":
         eng.record(rec, "EXECUTING")
-    elif rec["state"] != "EXECUTING":
-        raise InvalidRequest(f"{execution!r} is {rec['state']}, not executable")
     st = eng.state()
     stale = [k for k, v in rec["base_versions"].items() if st.version(*eng.parse_ref(k)) != v]
     if stale:

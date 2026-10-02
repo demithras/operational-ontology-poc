@@ -32,7 +32,8 @@ def test_idempotent_retry_same_result_no_second_effect():
     eng, _, carrier = build()
     a = eng.propose("ship_box", {"box": "b1"}, "filler", idempotency_key="same")
     b = eng.propose("ship_box", {"box": "b1"}, "filler", idempotency_key="same")
-    assert a is b and a["state"] == "RECONCILED_SUCCESS"
+    # v1.1: returns are detached snapshots, so "same result" is equality of the snapshot, not object identity
+    assert a == b and a is not b and a["exec"] == b["exec"] and a["state"] == "RECONCILED_SUCCESS"
     assert len(carrier.calls) == 1 and len(effects_of(eng, a["exec"])) == 1 and len(eng.effect_log) == 1
     assert eng.provenance.where(kind="retry", exec=a["exec"])
 
@@ -84,6 +85,7 @@ def test_outcome_unknown_then_reconciled_later():
     assert rec["state"] == "OUTCOME_UNKNOWN" and len(effects_of(eng, rec["exec"])) == 1
     carrier.emit(rec["exec"], "DELIVERED", otype="NoSuchType")  # rejected: not an IR observation type
     assert eng.reconcile(rec["exec"])["state"] == "OUTCOME_UNKNOWN"
+    rec = eng.executions[rec["exec"]]  # v1.1: read the updated record through the API (returns are snapshots)
     assert rec["rejected_observations"][0]["problems"] == ["unknown observation type 'NoSuchType'"]
     carrier.emit(rec["exec"], "DELIVERED")
     assert eng.reconcile(rec["exec"])["state"] == "RECONCILED_SUCCESS" and len(carrier.calls) == 1
