@@ -1,0 +1,143 @@
+{
+ "created_at": "2026-10-02T12:15:09+00:00",
+ "engine_prereg_sha256": "03d2d56919b2f003766e54c89fdbfb47a7780577534f4d797ab2ecd9b6f3aefe",
+ "environment": {
+  "hypothesis": "6.168.3",
+  "jsonschema": "4.26.0",
+  "machine": "arm64",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "pytest": "9.1.1",
+  "python": "3.14.6"
+ },
+ "evidence_kind": "domain-branch-audit",
+ "experiment_id": "exp-h16-001",
+ "git_commit": "c9443a0dcf9ed328727269d0558ace003af58210",
+ "harness_dirty": true,
+ "harness_dirty_paths": [
+  "round2/oracles/",
+  "round2/scripts/evaluate_h16.py",
+  "round2/scripts/run_h16.py",
+  "round2/scripts/verify_h16.sh",
+  "round2/src/eoo_exp/",
+  "round2/src/eoo_h16/",
+  "round2/tests/h16/"
+ ],
+ "harness_sha256": {
+  "scripts/evaluate_h16.py": "d645ed20a50961b86abcdda9036f2fbe49df1b3685e8007eba4f8ba44271d137",
+  "scripts/run_h16.py": "052c567270911920ff6f0c0849c763495b21129d56aa8bf88199d1e5c416f88b",
+  "src/eoo_exp/__init__.py": "16754d2e26eb56fb0469b74cbb88351b20265ac3ae07ecc51ada09167199a90a",
+  "src/eoo_exp/outdir.py": "6997fdfe23a5bbd5fb3c80aa024f172940167d24c55770f3b83f163d9c86fd00",
+  "src/eoo_exp/provenance.py": "9076be346293debdd361cae3c24c781d3d463716d6be1c398ee4474b3201bb5e",
+  "src/eoo_exp/scaffold.py": "b7686662f08994431881ee411fb3b1f913ba63b6327cc6dce8e180e45496a765",
+  "src/eoo_exp/util.py": "64765edd82c60fa3e393878199331db360f14bbbe31c72f5bb8d4079ac6acd86",
+  "src/eoo_h16/__init__.py": "366faf62ed41b334d824f9c576815a6b8c4ffa27d7953b664cefc71a83f479fe",
+  "src/eoo_h16/audit.py": "1643857db3cd5f3d7cdffa785e25bec69a046fc29c19f23f66bf2026dce57460",
+  "src/eoo_h16/coverage.py": "2c951c0cbbf2b98e4f5de41a662aaa9790cf685a952fd585812677b79d7c8c53",
+  "src/eoo_h16/detectors.py": "ac7ad61868d9665f06514e78e2f70d7d8cb5d40dc32d5460d494beae7f715739",
+  "src/eoo_h16/evaluate.py": "66a678afbf473909e5f6147a7d30fc017bc6889db152fe1bec62c7da946989ba",
+  "src/eoo_h16/gen.py": "111f73a9295851c97945b9106a1b2634e29c03b0e390bd7a122ad95828b63828",
+  "src/eoo_h16/kernel.py": "1025c42ab705ca0ddd3c10678a0e22db05d17f14450dd77345096903e619dbb9",
+  "src/eoo_h16/loadcheck.py": "9074203e284b1a8275a3cc96a0413874680b85995c4a8a6523a14ba9a520468e",
+  "src/eoo_h16/mixed.py": "6ab49ae95d972e5bcea5075dafdf1e3039d026c850f430093b1c6d5af71914fb",
+  "src/eoo_h16/mutants.py": "e864f9dfdb35e67ce2b5588ddf61cc88cb4dd9307095dca54dbbc26f0db83969",
+  "src/eoo_h16/mutation_run.py": "8e6ab60dd1bbe025f9ee5fc91f56bb765d47537d3e6ceed59f2ea37f7dc11c1f",
+  "src/eoo_h16/requirements.py": "5d519d4c34435d6b8efc5dab2cdf80b0a735553ff46cae237eada7408a7a0efb",
+  "src/eoo_h16/run.py": "6011ce88341fe58fde23f7e7734a969ed0bd29026026ec249f10617d334f2092"
+ },
+ "hypothesis_id": "H16",
+ "input_corpus_hash": "8f7016f790a8a62cfe277a69c6c4fc1c3be4701e20bf303c11894323834c13d5",
+ "kernel_after_commit": "c9443a0dcf9ed328727269d0558ace003af58210",
+ "kernel_before_commit": "0aad1ff54e267cc51cc0057b85ef762072b6431e",
+ "payload": {
+  "domain_identity_branches": 0,
+  "domain_identity_literals": 0,
+  "exempt_words_present_in_tokens": [],
+  "rename_invariance_real_domains": {
+   "manufacturing": true,
+   "project-v1": true,
+   "project-v2": true
+  },
+  "scopes": {
+   "dsl_compiler": {
+    "branch_hits": 0,
+    "docstring_mentions": [],
+    "files_scanned": 6,
+    "hits": [],
+    "literal_hits": 0,
+    "string_constants_scanned": 380
+   },
+   "engine_core": {
+    "branch_hits": 0,
+    "docstring_mentions": [
+     {
+      "file": "src/eoo_engine/outcome.py",
+      "line": 1,
+      "tokens": [
+       "Outcome"
+      ],
+      "value": "Outcome observation, reconciliation and crash recovery.\n\nObservations come only "
+     }
+    ],
+    "files_scanned": 19,
+    "hits": [],
+    "literal_hits": 0,
+    "string_constants_scanned": 1100
+   },
+   "ir_core": {
+    "branch_hits": 0,
+    "docstring_mentions": [
+     {
+      "file": "src/eoo_ir/gen_atoms.py",
+      "line": 1,
+      "tokens": [
+       "Hypothesis"
+      ],
+      "value": "Hypothesis building blocks: adversarial atoms, metadata JSON, flags."
+     },
+     {
+      "file": "src/eoo_ir/strategies.py",
+      "line": 1,
+      "tokens": [
+       "Hypothesis"
+      ],
+      "value": "Hypothesis strategies for referentially consistent IR packages.\n\n``valid_package"
+     }
+    ],
+    "files_scanned": 14,
+    "hits": [],
+    "literal_hits": 0,
+    "string_constants_scanned": 1499
+   },
+   "openpona_compiler": {
+    "branch_hits": 0,
+    "docstring_mentions": [],
+    "files_scanned": 13,
+    "hits": [],
+    "literal_hits": 0,
+    "string_constants_scanned": 1712
+   }
+  },
+  "token_count": 207,
+  "token_origins_sample": {
+   "ActionExecution": [
+    "manufacturing:object_types"
+   ],
+   "ActionExecution_destinationWarehouse": [
+    "manufacturing:link_types"
+   ],
+   "ActionExecution_outcome": [
+    "manufacturing:link_types"
+   ],
+   "ActionExecution_sourceWarehouse": [
+    "manufacturing:link_types"
+   ],
+   "AuthorizationCheck": [
+    "manufacturing:object_types"
+   ]
+  }
+ },
+ "payload_hash": "f6768fc16cfdc4d1c06332ad0a14bacf4dfb098bb9b1eb68da3e84cc5347d5f8",
+ "payload_path": null,
+ "protocol_freeze_hash": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2",
+ "seed": 16
+}

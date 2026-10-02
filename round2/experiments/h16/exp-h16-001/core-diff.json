@@ -1,0 +1,1389 @@
+{
+ "created_at": "2026-10-02T12:15:09+00:00",
+ "engine_prereg_sha256": "03d2d56919b2f003766e54c89fdbfb47a7780577534f4d797ab2ecd9b6f3aefe",
+ "environment": {
+  "hypothesis": "6.168.3",
+  "jsonschema": "4.26.0",
+  "machine": "arm64",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "pytest": "9.1.1",
+  "python": "3.14.6"
+ },
+ "evidence_kind": "core-diff",
+ "experiment_id": "exp-h16-001",
+ "git_commit": "c9443a0dcf9ed328727269d0558ace003af58210",
+ "harness_dirty": true,
+ "harness_dirty_paths": [
+  "round2/oracles/",
+  "round2/scripts/evaluate_h16.py",
+  "round2/scripts/run_h16.py",
+  "round2/scripts/verify_h16.sh",
+  "round2/src/eoo_exp/",
+  "round2/src/eoo_h16/",
+  "round2/tests/h16/"
+ ],
+ "harness_sha256": {
+  "scripts/evaluate_h16.py": "d645ed20a50961b86abcdda9036f2fbe49df1b3685e8007eba4f8ba44271d137",
+  "scripts/run_h16.py": "052c567270911920ff6f0c0849c763495b21129d56aa8bf88199d1e5c416f88b",
+  "src/eoo_exp/__init__.py": "16754d2e26eb56fb0469b74cbb88351b20265ac3ae07ecc51ada09167199a90a",
+  "src/eoo_exp/outdir.py": "6997fdfe23a5bbd5fb3c80aa024f172940167d24c55770f3b83f163d9c86fd00",
+  "src/eoo_exp/provenance.py": "9076be346293debdd361cae3c24c781d3d463716d6be1c398ee4474b3201bb5e",
+  "src/eoo_exp/scaffold.py": "b7686662f08994431881ee411fb3b1f913ba63b6327cc6dce8e180e45496a765",
+  "src/eoo_exp/util.py": "64765edd82c60fa3e393878199331db360f14bbbe31c72f5bb8d4079ac6acd86",
+  "src/eoo_h16/__init__.py": "366faf62ed41b334d824f9c576815a6b8c4ffa27d7953b664cefc71a83f479fe",
+  "src/eoo_h16/audit.py": "1643857db3cd5f3d7cdffa785e25bec69a046fc29c19f23f66bf2026dce57460",
+  "src/eoo_h16/coverage.py": "2c951c0cbbf2b98e4f5de41a662aaa9790cf685a952fd585812677b79d7c8c53",
+  "src/eoo_h16/detectors.py": "ac7ad61868d9665f06514e78e2f70d7d8cb5d40dc32d5460d494beae7f715739",
+  "src/eoo_h16/evaluate.py": "66a678afbf473909e5f6147a7d30fc017bc6889db152fe1bec62c7da946989ba",
+  "src/eoo_h16/gen.py": "111f73a9295851c97945b9106a1b2634e29c03b0e390bd7a122ad95828b63828",
+  "src/eoo_h16/kernel.py": "1025c42ab705ca0ddd3c10678a0e22db05d17f14450dd77345096903e619dbb9",
+  "src/eoo_h16/loadcheck.py": "9074203e284b1a8275a3cc96a0413874680b85995c4a8a6523a14ba9a520468e",
+  "src/eoo_h16/mixed.py": "6ab49ae95d972e5bcea5075dafdf1e3039d026c850f430093b1c6d5af71914fb",
+  "src/eoo_h16/mutants.py": "e864f9dfdb35e67ce2b5588ddf61cc88cb4dd9307095dca54dbbc26f0db83969",
+  "src/eoo_h16/mutation_run.py": "8e6ab60dd1bbe025f9ee5fc91f56bb765d47537d3e6ceed59f2ea37f7dc11c1f",
+  "src/eoo_h16/requirements.py": "5d519d4c34435d6b8efc5dab2cdf80b0a735553ff46cae237eada7408a7a0efb",
+  "src/eoo_h16/run.py": "6011ce88341fe58fde23f7e7734a969ed0bd29026026ec249f10617d334f2092"
+ },
+ "hypothesis_id": "H16",
+ "input_corpus_hash": "8f7016f790a8a62cfe277a69c6c4fc1c3be4701e20bf303c11894323834c13d5",
+ "kernel_after_commit": "c9443a0dcf9ed328727269d0558ace003af58210",
+ "kernel_before_commit": "0aad1ff54e267cc51cc0057b85ef762072b6431e",
+ "payload": {
+  "baseline_contextual": {
+   "conventional_typed_schema_plus_plugin_registry_would_need": {
+    "assumptions": "one table per object type and per link type, one class per object type and interface, one plugin handler per function/action/policy/authority rule/constraint, one adapter per observation type",
+    "new_model_classes": 17,
+    "new_observation_adapters": 2,
+    "new_rule_or_action_handlers": 59,
+    "new_tables": 30
+   },
+   "ontology_path": {
+    "new_declared_resources": 93,
+    "new_engine_core_files": 0,
+    "new_kernel_kinds": 0,
+    "project_domain_python_loc_non_blank": 937
+   },
+   "reading": "Both approaches add Domain 2 declarations/logic; neither is shown to need a different kernel. The ontology path's bounded-kernel property is the 0 new kinds measured above; this table does not show that a conventional framework is worse.",
+   "status": "CONTEXTUAL ESTIMATE, not measured, not a support condition"
+  },
+  "dispatch_added": [],
+  "dispatch_handlers_changed": [],
+  "dispatch_kinds_equal_schema_arrays": true,
+  "dispatch_order_changed": false,
+  "dispatch_removed": [],
+  "domain2_requirement_coverage": {
+   "coverage_fraction": 1.0,
+   "failed": [],
+   "ok": 57,
+   "requirements": [
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "Hypothesis",
+       "kernel_kind": true,
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "type:Hypothesis",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required object types"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "Rival",
+       "kernel_kind": true,
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "type:Rival",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required object types"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "Prediction",
+       "kernel_kind": true,
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "type:Prediction",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required object types"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "Falsifier",
+       "kernel_kind": true,
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "type:Falsifier",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required object types"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "Experiment",
+       "kernel_kind": true,
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "type:Experiment",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required object types"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "Metric",
+       "kernel_kind": true,
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "type:Metric",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required object types"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "Threshold",
+       "kernel_kind": true,
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "type:Threshold",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required object types"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "Evidence",
+       "kernel_kind": true,
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "type:Evidence",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required object types"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "Verdict",
+       "kernel_kind": true,
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "type:Verdict",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required object types"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "Component",
+       "kernel_kind": true,
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "type:Component",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required object types"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "ContractVersion",
+       "kernel_kind": true,
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "type:ContractVersion",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required object types"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "Commit",
+       "kernel_kind": true,
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "type:Commit",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required object types"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "Test",
+       "kernel_kind": true,
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "type:Test",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required object types"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "Decision",
+       "kernel_kind": true,
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "type:Decision",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required object types"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "Failure",
+       "kernel_kind": true,
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "type:Failure",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required object types"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "HAS_RIVAL",
+       "kernel_kind": true,
+       "kind": "link_types",
+       "present": true
+      }
+     ],
+     "id": "link:HAS_RIVAL",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required links"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "PREDICTS",
+       "kernel_kind": true,
+       "kind": "link_types",
+       "present": true
+      }
+     ],
+     "id": "link:PREDICTS",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required links"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "FALSIFIED_BY",
+       "kernel_kind": true,
+       "kind": "link_types",
+       "present": true
+      }
+     ],
+     "id": "link:FALSIFIED_BY",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required links"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "TESTED_BY",
+       "kernel_kind": true,
+       "kind": "link_types",
+       "present": true
+      }
+     ],
+     "id": "link:TESTED_BY",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required links"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "MEASURES",
+       "kernel_kind": true,
+       "kind": "link_types",
+       "present": true
+      }
+     ],
+     "id": "link:MEASURES",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required links"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "GOVERNED_BY",
+       "kernel_kind": true,
+       "kind": "link_types",
+       "present": true
+      }
+     ],
+     "id": "link:GOVERNED_BY",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required links"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "PRODUCES",
+       "kernel_kind": true,
+       "kind": "link_types",
+       "present": true
+      }
+     ],
+     "id": "link:PRODUCES",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required links"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "SUPPORTS_OR_REFUTES",
+       "kernel_kind": true,
+       "kind": "link_types",
+       "present": true
+      }
+     ],
+     "id": "link:SUPPORTS_OR_REFUTES",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required links"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "EVALUATES",
+       "kernel_kind": true,
+       "kind": "link_types",
+       "present": true
+      }
+     ],
+     "id": "link:EVALUATES",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required links"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "CAPTURED_AT",
+       "kernel_kind": true,
+       "kind": "link_types",
+       "present": true
+      }
+     ],
+     "id": "link:CAPTURED_AT",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required links"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "EXISTS_FOR",
+       "kernel_kind": true,
+       "kind": "link_types",
+       "present": true
+      }
+     ],
+     "id": "link:EXISTS_FOR",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required links"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "VALIDATES",
+       "kernel_kind": true,
+       "kind": "link_types",
+       "present": true
+      }
+     ],
+     "id": "link:VALIDATES",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required links"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "DETECTED_BY",
+       "kernel_kind": true,
+       "kind": "link_types",
+       "present": true
+      }
+     ],
+     "id": "link:DETECTED_BY",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required links"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "CHANGES",
+       "kernel_kind": true,
+       "kind": "link_types",
+       "present": true
+      }
+     ],
+     "id": "link:CHANGES",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 required links"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "create_hypothesis",
+       "kernel_kind": true,
+       "kind": "actions",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "lifecycle-order",
+       "kernel_kind": true,
+       "kind": "constraints",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "legal_lifecycle_transition_allowed",
+       "kernel_kind": true,
+       "kind": "policies",
+       "present": true,
+       "referenced_by_an_action": true
+      },
+      {
+       "compiled": true,
+       "id": "is_legal_transition",
+       "kernel_kind": true,
+       "kind": "functions",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "Hypothesis",
+       "kernel_kind": true,
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "state:DRAFT",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 executable lifecycle"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "preregister_hypothesis",
+       "kernel_kind": true,
+       "kind": "actions",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "lifecycle-order",
+       "kernel_kind": true,
+       "kind": "constraints",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "legal_lifecycle_transition_allowed",
+       "kernel_kind": true,
+       "kind": "policies",
+       "present": true,
+       "referenced_by_an_action": true
+      },
+      {
+       "compiled": true,
+       "id": "is_legal_transition",
+       "kernel_kind": true,
+       "kind": "functions",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "Hypothesis",
+       "kernel_kind": true,
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "state:PREREGISTERED",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 executable lifecycle"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "start_run",
+       "kernel_kind": true,
+       "kind": "actions",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "lifecycle-order",
+       "kernel_kind": true,
+       "kind": "constraints",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "legal_lifecycle_transition_allowed",
+       "kernel_kind": true,
+       "kind": "policies",
+       "present": true,
+       "referenced_by_an_action": true
+      },
+      {
+       "compiled": true,
+       "id": "is_legal_transition",
+       "kernel_kind": true,
+       "kind": "functions",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "Hypothesis",
+       "kernel_kind": true,
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "state:RUNNING",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 executable lifecycle"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "evaluate_hypothesis",
+       "kernel_kind": true,
+       "kind": "actions",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "lifecycle-order",
+       "kernel_kind": true,
+       "kind": "constraints",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "legal_lifecycle_transition_allowed",
+       "kernel_kind": true,
+       "kind": "policies",
+       "present": true,
+       "referenced_by_an_action": true
+      },
+      {
+       "compiled": true,
+       "id": "is_legal_transition",
+       "kernel_kind": true,
+       "kind": "functions",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "Hypothesis",
+       "kernel_kind": true,
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "state:EVALUATED",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 executable lifecycle"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "supersede_hypothesis",
+       "kernel_kind": true,
+       "kind": "actions",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "lifecycle-order",
+       "kernel_kind": true,
+       "kind": "constraints",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "legal_lifecycle_transition_allowed",
+       "kernel_kind": true,
+       "kind": "policies",
+       "present": true,
+       "referenced_by_an_action": true
+      },
+      {
+       "compiled": true,
+       "id": "is_legal_transition",
+       "kernel_kind": true,
+       "kind": "functions",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "Hypothesis",
+       "kernel_kind": true,
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "state:SUPERSEDED",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 executable lifecycle"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "verdict-vocabulary",
+       "kernel_kind": true,
+       "kind": "constraints",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "Verdict",
+       "kernel_kind": true,
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "state:terminal_verdicts",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 executable lifecycle"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "preregistration_requires_complete_contract",
+       "kernel_kind": true,
+       "kind": "policies",
+       "present": true,
+       "referenced_by_an_action": true
+      },
+      {
+       "compiled": true,
+       "id": "preregistration-complete-contract",
+       "kernel_kind": true,
+       "kind": "constraints",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "preregister_hypothesis",
+       "kernel_kind": true,
+       "kind": "actions",
+       "present": true
+      }
+     ],
+     "id": "rule:preregistration_completeness",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 hard rules"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "threshold_edit_after_preregistration_denied",
+       "kernel_kind": true,
+       "kind": "policies",
+       "present": true,
+       "referenced_by_an_action": true
+      },
+      {
+       "compiled": true,
+       "id": "threshold-immutable-after-preregistration",
+       "kernel_kind": true,
+       "kind": "constraints",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "falsifier-immutable-after-preregistration",
+       "kernel_kind": true,
+       "kind": "constraints",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "evaluator-immutable-after-preregistration",
+       "kernel_kind": true,
+       "kind": "constraints",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "no-threshold-edit-after-preregistration",
+       "kernel_kind": true,
+       "kind": "authority_rules",
+       "present": true,
+       "referenced_by_an_action": true
+      },
+      {
+       "compiled": true,
+       "id": "new_experiment_version",
+       "kernel_kind": true,
+       "kind": "actions",
+       "present": true
+      }
+     ],
+     "id": "rule:post_freeze_immutability",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 hard rules"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "running_requires_freeze_hash",
+       "kernel_kind": true,
+       "kind": "policies",
+       "present": true,
+       "referenced_by_an_action": true
+      },
+      {
+       "compiled": true,
+       "id": "running-requires-freeze-hash",
+       "kernel_kind": true,
+       "kind": "constraints",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "start_run",
+       "kernel_kind": true,
+       "kind": "actions",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "compute_freeze_hash",
+       "kernel_kind": true,
+       "kind": "functions",
+       "present": true
+      }
+     ],
+     "id": "rule:running_requires_freeze_hash",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 hard rules"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "evaluated_requires_evidence_or_reason",
+       "kernel_kind": true,
+       "kind": "policies",
+       "present": true,
+       "referenced_by_an_action": true
+      },
+      {
+       "compiled": true,
+       "id": "evaluated-requires-evidence-or-reason",
+       "kernel_kind": true,
+       "kind": "constraints",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "evaluate_hypothesis",
+       "kernel_kind": true,
+       "kind": "actions",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "evidence_count",
+       "kernel_kind": true,
+       "kind": "functions",
+       "present": true
+      }
+     ],
+     "id": "rule:evaluated_requires_evidence_or_reason",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 hard rules"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "verdict_must_be_machine_derived",
+       "kernel_kind": true,
+       "kind": "policies",
+       "present": true,
+       "referenced_by_an_action": true
+      },
+      {
+       "compiled": true,
+       "id": "verdict-machine-derived",
+       "kernel_kind": true,
+       "kind": "constraints",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "verdict-vocabulary",
+       "kernel_kind": true,
+       "kind": "constraints",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "supported-needs-evidence",
+       "kernel_kind": true,
+       "kind": "constraints",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "no-direct-verdict-write",
+       "kernel_kind": true,
+       "kind": "authority_rules",
+       "present": true,
+       "referenced_by_an_action": true
+      },
+      {
+       "compiled": true,
+       "id": "derive_verdict",
+       "kernel_kind": true,
+       "kind": "functions",
+       "present": true
+      }
+     ],
+     "id": "rule:verdict_machine_derived",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 hard rules"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "evidence_must_bind_version_commit_environment",
+       "kernel_kind": true,
+       "kind": "policies",
+       "present": true,
+       "referenced_by_an_action": true
+      },
+      {
+       "compiled": true,
+       "id": "evidence-bound-to-version-commit-environment",
+       "kernel_kind": true,
+       "kind": "constraints",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "attach_evidence",
+       "kernel_kind": true,
+       "kind": "actions",
+       "present": true
+      }
+     ],
+     "id": "rule:evidence_binds_version_commit_environment",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 hard rules"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "orphan_component_is_flagged_not_deleted",
+       "kernel_kind": true,
+       "kind": "policies",
+       "present": true,
+       "referenced_by_an_action": true
+      },
+      {
+       "compiled": true,
+       "id": "orphan-component-flagged-not-deleted",
+       "kernel_kind": true,
+       "kind": "constraints",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "flag_orphan_component",
+       "kernel_kind": true,
+       "kind": "actions",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "find_orphan_components",
+       "kernel_kind": true,
+       "kind": "functions",
+       "present": true
+      }
+     ],
+     "id": "rule:orphan_flagged_not_deleted",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 hard rules"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "rebuild-reproduces-state-hash",
+       "kernel_kind": true,
+       "kind": "constraints",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "canonical_state_hash",
+       "kernel_kind": true,
+       "kind": "functions",
+       "present": true
+      }
+     ],
+     "id": "git:rebuild_reproduces_state_hash",
+     "ok": true,
+     "problems": [],
+     "source": "docs/05 required properties"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "durable-actions-are-git-changes",
+       "kernel_kind": true,
+       "kind": "constraints",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "no-canonical-write-outside-git",
+       "kernel_kind": true,
+       "kind": "authority_rules",
+       "present": true,
+       "referenced_by_an_action": true
+      }
+     ],
+     "id": "git:durable_actions_are_git_changes",
+     "ok": true,
+     "problems": [],
+     "source": "docs/05 required properties"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "stale_write_rejected",
+       "kernel_kind": true,
+       "kind": "policies",
+       "present": true,
+       "referenced_by_an_action": true
+      },
+      {
+       "compiled": true,
+       "id": "no-silent-stale-write",
+       "kernel_kind": true,
+       "kind": "constraints",
+       "present": true
+      }
+     ],
+     "id": "git:no_silent_stale_write",
+     "ok": true,
+     "problems": [],
+     "source": "docs/05 required properties"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "conflicting_change_denied_with_conflict",
+       "kernel_kind": true,
+       "kind": "policies",
+       "present": true,
+       "referenced_by_an_action": false
+      },
+      {
+       "compiled": true,
+       "id": "conflicts-surface-explicitly",
+       "kernel_kind": true,
+       "kind": "constraints",
+       "present": true
+      }
+     ],
+     "id": "git:conflicts_surface_explicitly",
+     "ok": true,
+     "problems": [],
+     "source": "docs/05 required properties"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "ephemeral_state_never_canonical",
+       "kernel_kind": true,
+       "kind": "policies",
+       "present": true,
+       "referenced_by_an_action": true
+      },
+      {
+       "compiled": true,
+       "id": "ephemeral-state-marked",
+       "kernel_kind": true,
+       "kind": "constraints",
+       "present": true
+      }
+     ],
+     "id": "git:ephemeral_state_marked",
+     "ok": true,
+     "problems": [],
+     "source": "docs/05 required properties"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "historical_binding_preserved",
+       "kernel_kind": true,
+       "kind": "policies",
+       "present": true,
+       "referenced_by_an_action": true
+      },
+      {
+       "compiled": true,
+       "id": "historical-binding-preserved",
+       "kernel_kind": true,
+       "kind": "constraints",
+       "present": true
+      },
+      {
+       "compiled": true,
+       "id": "ContractVersion",
+       "kernel_kind": true,
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "git:historical_binding_preserved",
+     "ok": true,
+     "problems": [],
+     "source": "docs/05 required properties"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "Hypothesis.phase",
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "prop:Hypothesis.phase",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 hard-rule properties"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "Hypothesis.freeze_hash",
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "prop:Hypothesis.freeze_hash",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 hard-rule properties"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "Experiment.version",
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "prop:Experiment.version",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 hard-rule properties"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "Experiment.freeze_hash",
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "prop:Experiment.freeze_hash",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 hard-rule properties"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "Evidence.git_commit",
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "prop:Evidence.git_commit",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 hard-rule properties"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "Evidence.experiment_version",
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "prop:Evidence.experiment_version",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 hard-rule properties"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "Evidence.environment",
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "prop:Evidence.environment",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 hard-rule properties"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "Component.orphan_flagged",
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "prop:Component.orphan_flagged",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 hard-rule properties"
+    },
+    {
+     "carriers": [
+      {
+       "compiled": true,
+       "id": "Verdict.derivation_hash",
+       "kind": "object_types",
+       "present": true
+      }
+     ],
+     "id": "prop:Verdict.derivation_hash",
+     "ok": true,
+     "problems": [],
+     "source": "docs/04 hard-rule properties"
+    }
+   ],
+   "total": 57,
+   "unwired_policy_or_authority_carriers": [
+    "policies:conflicting_change_denied_with_conflict"
+   ]
+  },
+  "domain_usage_note": "per-domain resource kinds used are in kernel-after.json",
+  "engine_core_files_diff": {
+   "added": [],
+   "changed": [],
+   "removed": []
+  },
+  "eoo_ir_files_diff": {
+   "added": [],
+   "changed": [],
+   "removed": []
+  },
+  "kernel_kinds_after": [
+   "actions",
+   "authority_rules",
+   "constraints",
+   "functions",
+   "interfaces",
+   "link_types",
+   "object_types",
+   "observation_types",
+   "policies"
+  ],
+  "kernel_kinds_before": [
+   "actions",
+   "authority_rules",
+   "constraints",
+   "functions",
+   "interfaces",
+   "link_types",
+   "object_types",
+   "observation_types",
+   "policies"
+  ],
+  "known_findings_carried_not_fixed": [
+   {
+    "finding": "manufacturing expedite_purchase_order and reschedule_work_order are unauthorizable on the frozen IR (their authority_refs name rules whose capability is action:transfer_inventory; the IR has no object binding)",
+    "id": "F1",
+    "kernel_impact": "none: a declaration-level (domain IR) gap, no new kernel kind or Engine branch was needed to observe it",
+    "source": "commit c9443a0 message; tests/domains/test_manufacturing_logic.py"
+   },
+   {
+    "finding": "one project policy is not referenced by any action (conflicting_change_denied_with_conflict); reported as unwired_policy_or_authority_carriers",
+    "id": "F2",
+    "kernel_impact": "none",
+    "source": "commit c9443a0 message"
+   },
+   {
+    "finding": "project v1 attach_evidence never created the SUPPORTS_OR_REFUTES link evidence_count reads; fixed in v2 by an ordinary action-effect declaration before any H16-H22 evidence",
+    "id": "F3",
+    "kernel_impact": "none",
+    "source": "commit c9443a0 message; domains/project/CHANGES_v2.md"
+   },
+   {
+    "finding": "high-priority protection is modelled as a deny policy over principal relations; three deny rules carry never-requested capabilities",
+    "id": "F4",
+    "kernel_impact": "none",
+    "source": "commit c9443a0 message"
+   }
+  ],
+  "new_kernel_primitive_kind_count": 0,
+  "new_kernel_primitive_kinds": [],
+  "project_contract_version_used": "domains/project/ir.v2.json (v1 ir.json is H15's frozen Gate-0 input; both compile, see kernel-after)",
+  "proposed_new_primitives_for_a_new_hypothesis_version": [],
+  "removed_kinds": [],
+  "schema_defs_added": [],
+  "schema_defs_removed": [],
+  "schema_package_fields_added": [],
+  "schema_resource_arrays_added": [],
+  "schema_sha256_after": "0e9bfa3380327d4b1f2e3e0ba3cf065968846c2c88b8071007c408fe965d0e2d",
+  "schema_sha256_before": "0e9bfa3380327d4b1f2e3e0ba3cf065968846c2c88b8071007c408fe965d0e2d",
+  "schema_sha_matches_freeze_entry": true,
+  "schema_unchanged": true,
+  "working_tree": {
+   "engine_core_working_tree_equals_head": true,
+   "live_dispatch_equals_head": true,
+   "live_schema_sha_equals_head": true
+  }
+ },
+ "payload_hash": "9e728cd44c599d3701843a987524b99d4c7a8f56a9f0ea99fa3cea4b45934064",
+ "payload_path": null,
+ "protocol_freeze_hash": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2",
+ "seed": 16
+}
