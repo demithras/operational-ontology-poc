@@ -1,0 +1,365 @@
+{
+ "created_at": "2026-10-02T19:40:43+00:00",
+ "engine_prereg_sha256": "03d2d56919b2f003766e54c89fdbfb47a7780577534f4d797ab2ecd9b6f3aefe",
+ "engine_version": "1.1",
+ "environment": {
+  "hypothesis": "6.168.3",
+  "jsonschema": "4.26.0",
+  "machine": "arm64",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "pytest": "9.1.1",
+  "python": "3.14.6"
+ },
+ "evidence_kind": "runtime-tax",
+ "experiment_id": "exp-h22-dev",
+ "git_commit": "10c9cc129c16e1a8c447e63a1bf643a3e4441ae5",
+ "harness_dirty": true,
+ "harness_dirty_paths": [
+  "round2/oracles/h22/",
+  "round2/scripts/evaluate_h22.py",
+  "round2/scripts/run_h22.py",
+  "round2/scripts/verify_h22.sh",
+  "round2/src/eoo_h22/",
+  "round2/tests/h22/"
+ ],
+ "harness_sha256": {
+  "oracles/h22/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "oracles/h22/gate_oracle.py": "71ad427e59aea843372fe6c0a646e2295057f9c2a835bf286f6e1502d31d7486",
+  "scripts/evaluate_h22.py": "eef17fe8f35944d53940ec3c85364008fb9044e1edff2987c9b4fef11e751a2d",
+  "scripts/run_h22.py": "152b669008cb9417641247b9dbcf51f75e9f3ef435b948254d89f517f5af100d",
+  "src/eoo_exp/__init__.py": "16754d2e26eb56fb0469b74cbb88351b20265ac3ae07ecc51ada09167199a90a",
+  "src/eoo_exp/outdir.py": "6997fdfe23a5bbd5fb3c80aa024f172940167d24c55770f3b83f163d9c86fd00",
+  "src/eoo_exp/provenance.py": "9076be346293debdd361cae3c24c781d3d463716d6be1c398ee4474b3201bb5e",
+  "src/eoo_exp/scaffold.py": "b7686662f08994431881ee411fb3b1f913ba63b6327cc6dce8e180e45496a765",
+  "src/eoo_exp/util.py": "64765edd82c60fa3e393878199331db360f14bbbe31c72f5bb8d4079ac6acd86",
+  "src/eoo_h22/__init__.py": "23dda27bdb93b7292a583dd55abf42e01d860f34107c40645893be92aee9440b",
+  "src/eoo_h22/evaluate.py": "17d4ef7d74f5b8ce924266ddef0dd580a2fa31bc9a92c568aa7189a609624638",
+  "src/eoo_h22/facts.py": "389c5614e8264fa3b44f275c2c9729f50cced155d2da5d51299281daa111721f",
+  "src/eoo_h22/fairness.py": "6a86df6d64493a19983f1102b0c7b1a32c22f162476d91cd968ee34973da6f07",
+  "src/eoo_h22/payloads.py": "4dd80ba724288a25652b0e0d1c4ca12ae469d63858cce9324beefaebb15d5d8c",
+  "src/eoo_h22/run.py": "bd16aabe3359f3531f045f765715479a6db747da991840a4e2ab3ffcf780701f"
+ },
+ "hypothesis_id": "H22",
+ "input_corpus_hash": "cf3e30e02fbf6ab2bedf366dbcf4bfc3f9e4a3a22d88f843bab6f8c2f54a5bd3",
+ "payload": {
+  "context": {
+   "committed_verdicts": {
+    "H15": "SUPPORTED",
+    "H18": "REJECTED"
+   },
+   "engine_toolchain_loc": {
+    "src/eoo_engine": {
+     "files": 21,
+     "lines": 2315,
+     "non_blank_lines": 1879
+    },
+    "src/eoo_engine_git": {
+     "files": 7,
+     "lines": 593,
+     "non_blank_lines": 489
+    },
+    "src/eoo_toolchain": {
+     "files": 9,
+     "lines": 757,
+     "non_blank_lines": 593
+    }
+   },
+   "git_head_at_read": "10c9cc129c16e1a8c447e63a1bf643a3e4441ae5",
+   "h15_compiler_loc": {
+    "dsl": 402,
+    "openpona": 1164
+   },
+   "h15_openpona_over_dsl_ratios": {
+    "manufacturing": {
+     "bytes": 1.6576547869993628,
+     "lines": 1.2971468336812804,
+     "text_bytes_only": 1.1850580910828963,
+     "tokens_re": 2.798776662484316
+    },
+    "project": {
+     "bytes": 1.6665065227835472,
+     "lines": 1.3658008658008658,
+     "text_bytes_only": 1.220628995897853,
+     "tokens_re": 2.6569767441860463
+    }
+   },
+   "h18_ratio_eoo_over_baseline_by_class": {
+    "TC1": 5.259,
+    "TC2": 3.714,
+    "TC3": 3.971
+   },
+   "h18_recurring_complexity_loc": {
+    "baseline": 39,
+    "eoo": 2191
+   },
+   "h18_totals_loc": {
+    "TC1": {
+     "baseline": 374,
+     "eoo": 1967
+    },
+    "TC2": {
+     "baseline": 21,
+     "eoo": 78
+    },
+    "TC3": {
+     "baseline": 35,
+     "eoo": 139
+    }
+   },
+   "label": "CONTEXT, NOT TREND: single-domain / single-task-set measurements already committed; no marginal slope can be read from them",
+   "sources": {
+    "experiments/h15/exp-h15-002/compiler-diff-metrics.json": {
+     "git_tag": "r2-h15-exp002",
+     "sha256": "7ec252bb80e68620275c4ed8af670c33bd6d7ae23851a36bc6d522266dde69dd"
+    },
+    "experiments/h18/exp-h18-001/bespoke-change-metrics.json": {
+     "git_tag": "r2-h18-exp001",
+     "sha256": "e72440adc0495f59989384416aa507e383f77605631029ea5f069f075b12ffac"
+    }
+   }
+  },
+  "fairness_context": {
+   "asymmetries": [],
+   "h18_snapshot": {
+    "assignment": {
+     "baseline": {
+      "config": {
+       "TC1": {
+        "baselines/h18_fileonly/schemas/component.schema.json": 20,
+        "baselines/h18_fileonly/schemas/contractversion.schema.json": 23,
+        "baselines/h18_fileonly/schemas/decision.schema.json": 19,
+        "baselines/h18_fileonly/schemas/evidence.schema.json": 28,
+        "baselines/h18_fileonly/schemas/experiment.schema.json": 27,
+        "baselines/h18_fileonly/schemas/hypothesis.schema.json": 30,
+        "baselines/h18_fileonly/schemas/threshold.schema.json": 14,
+        "baselines/h18_fileonly/schemas/verdict.schema.json": 33
+       },
+       "TC3": {
+        "baselines/h18_fileonly/schemas/replication.schema.json": 20
+       }
+      },
+      "python": {
+       "RECURRING": {
+        "baselines/h18_fileonly/ci.py": 5,
+        "baselines/h18_fileonly/repo.py": 34
+       },
+       "TC1": {
+        "baselines/h18_fileonly/actions.py": 54,
+        "baselines/h18_fileonly/derive.py": 15,
+        "baselines/h18_fileonly/rules.py": 111
+       },
+       "TC2": {
+        "baselines/h18_fileonly/queries.py": 21
+       },
+       "TC3": {
+        "baselines/h18_fileonly/ci.py": 2,
+        "baselines/h18_fileonly/replication.py": 13
+       }
+      }
+     },
+     "eoo": {
+      "config": {
+       "EXCL:freeze_hash_computation": {
+        "domains/project/ir.v2.json:functions": 49
+       },
+       "EXCL:h19_git_authority": {
+        "domains/project/ir.v2.json:constraints": 36,
+        "domains/project/ir.v2.json:policies": 24
+       },
+       "EXCL:unused_observation_type": {
+        "domains/project/ir.v2.json:observation_types": 29
+       },
+       "TC1": {
+        "domains/project/ir.v2.json:actions": 462,
+        "domains/project/ir.v2.json:constraints": 72,
+        "domains/project/ir.v2.json:functions": 86,
+        "domains/project/ir.v2.json:interfaces": 31,
+        "domains/project/ir.v2.json:link_types": 225,
+        "domains/project/ir.v2.json:object_types": 411,
+        "domains/project/ir.v2.json:observation_types": 20,
+        "domains/project/ir.v2.json:policies": 48
+       },
+       "TC1X": {
+        "domains/project/ir.v2.json:authority_rules": 104
+       },
+       "TC2": {
+        "src/eoo_h18/tc_patch.json:functions": 40,
+        "src/eoo_h18/tc_patch.json:link_types": 15
+       },
+       "TC3": {
+        "src/eoo_h18/tc_patch.json:actions": 49,
+        "src/eoo_h18/tc_patch.json:functions": 19,
+        "src/eoo_h18/tc_patch.json:link_types": 15,
+        "src/eoo_h18/tc_patch.json:object_types": 29
+       },
+       "TC3X": {
+        "src/eoo_h18/tc_patch.json:authority_rules": 8
+       }
+      },
+      "python": {
+       "EXCL:freeze_hash_computation": {
+        "domains/project/logic/freeze.py": 40,
+        "domains/project/logic/functions.py": 3
+       },
+       "EXCL:h19_git_authority": {
+        "domains/project/logic/constraints.py": 67,
+        "domains/project/logic/policies.py": 33
+       },
+       "EXCL:harness_plumbing": {
+        "src/eoo_h18/tc_eoo.py": 13
+       },
+       "EXCL:legacy_p4b_fake_git": {
+        "domains/project/adapters/git_fake.py": 48,
+        "domains/project/projection.py": 31
+       },
+       "EXCL:shared_evaluator_adapter": {
+        "domains/project/evaluators.py": 27
+       },
+       "EXCL:shared_seed_loader": {
+        "domains/project/seed_from_repo.py": 108
+       },
+       "TC1": {
+        "domains/project/logic/__init__.py": 18,
+        "domains/project/logic/actions.py": 49,
+        "domains/project/logic/constraints.py": 102,
+        "domains/project/logic/derive.py": 47,
+        "domains/project/logic/facts.py": 75,
+        "domains/project/logic/functions.py": 11,
+        "domains/project/logic/lifecycle.py": 14,
+        "domains/project/logic/payloads.py": 68,
+        "domains/project/logic/policies.py": 53,
+        "domains/project/pack.py": 30
+       },
+       "TC1X": {
+        "domains/project/logic/actions.py": 29,
+        "domains/project/logic/selectors.py": 12
+       },
+       "TC2": {
+        "src/eoo_h18/tc_eoo.py": 23
+       },
+       "TC3": {
+        "src/eoo_h18/tc_eoo.py": 9
+       },
+       "TC3X": {
+        "src/eoo_h18/tc_eoo.py": 10
+       }
+      }
+     }
+    },
+    "decision_rule": "support needs total <= 0.75 x baseline total in >= 1 class with no correctness loss (ENGINE_PREREG H18)",
+    "engine_version": "1.1",
+    "normalisation": "JSON counted as json.dumps(indent=2) lines for both variants; Python = non-blank, non-comment, non-docstring lines",
+    "per_class": {
+     "TC1": {
+      "baseline": {
+       "config_lines": 194,
+       "python_loc": 180,
+       "total": 374
+      },
+      "correctness": {
+       "baseline": true,
+       "baseline_agreement": 1.0,
+       "eoo": false,
+       "eoo_agreement": 0.99335
+      },
+      "declarative_resources": {
+       "baseline": 8,
+       "eoo": 80
+      },
+      "eoo": {
+       "config_lines": 1355,
+       "mandatory_extras": {
+        "config_lines": 104,
+        "python_loc": 41,
+        "total": 145
+       },
+       "python_loc": 467,
+       "total": 1967,
+       "total_without_extras": 1822
+      },
+      "eoo_reduction": -4.259,
+      "eoo_reduction_without_extras": -3.872,
+      "ratio_eoo_over_baseline": 5.259,
+      "ratio_without_extras": 4.872
+     },
+     "TC2": {
+      "baseline": {
+       "config_lines": 0,
+       "python_loc": 21,
+       "total": 21
+      },
+      "correctness": {
+       "baseline": true,
+       "eoo": true
+      },
+      "declarative_resources": {
+       "baseline": 0,
+       "eoo": 3
+      },
+      "eoo": {
+       "config_lines": 55,
+       "mandatory_extras": {
+        "config_lines": 0,
+        "python_loc": 0,
+        "total": 0
+       },
+       "python_loc": 23,
+       "total": 78,
+       "total_without_extras": 78
+      },
+      "eoo_reduction": -2.714,
+      "eoo_reduction_without_extras": -2.714,
+      "ratio_eoo_over_baseline": 3.714,
+      "ratio_without_extras": 3.714
+     },
+     "TC3": {
+      "baseline": {
+       "config_lines": 20,
+       "python_loc": 15,
+       "total": 35
+      },
+      "correctness": {
+       "baseline": true,
+       "eoo": true
+      },
+      "declarative_resources": {
+       "baseline": 1,
+       "eoo": 5
+      },
+      "eoo": {
+       "config_lines": 112,
+       "mandatory_extras": {
+        "config_lines": 8,
+        "python_loc": 10,
+        "total": 18
+       },
+       "python_loc": 9,
+       "total": 139,
+       "total_without_extras": 121
+      },
+      "eoo_reduction": -2.971,
+      "eoo_reduction_without_extras": -2.457,
+      "ratio_eoo_over_baseline": 3.971,
+      "ratio_without_extras": 3.457
+     }
+    },
+    "python_unassigned_lines": {
+     "baseline": {},
+     "eoo": {}
+    },
+    "recurring_complexity_loc": {
+     "baseline": 39,
+     "eoo": 2191
+    }
+   }
+  },
+  "realistic_tier": null,
+  "realistic_tier_gain_not_dominated_by_tax": null,
+  "reason": "gate closed: 2 real domains < 3 (protocol/thresholds.json H22.min_real_domains_for_verdict) and 0 blind tasks < 30; no D3+ source is registered",
+  "status": "not-run"
+ },
+ "payload_hash": "91417f5cd8819d6fd1bbc3175a2cbfcedf03df0a0ee3a1e8eaa716ceaff84277",
+ "payload_path": null,
+ "protocol_freeze_hash": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2",
+ "seed": 22
+}

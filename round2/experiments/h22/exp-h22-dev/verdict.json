@@ -1,0 +1,133 @@
+{
+ "common": {
+  "protocol_valid": true,
+  "reject_hit": false,
+  "required_evidence_complete": true,
+  "sample_sufficient": false,
+  "support_hit": false
+ },
+ "evaluator_sha256": "17d4ef7d74f5b8ce924266ddef0dd580a2fa31bc9a92c568aa7189a609624638",
+ "evidence_payload_hashes": {
+  "adaptation-costs.json": "d6c0bf5b14abd745d3592467707b4b113a30855bca3a770293bbc6ace5062c6c",
+  "blind-task-results.json": "7c2f3f610a676a08c3a62cf0c3ece7607c458586779a8e3cfc51aec86b66a9c1",
+  "correctness-security.json": "d9dc6b331a9e39b111d55bf016dcc74da288d06b2f1e8499fd23e79db9dc7bb0",
+  "domain-manifest.json": "aa795d83b0db68fec7b0d7b595cc30e68a5bf6f2aee1b4048fc3bcaa23502732",
+  "runtime-tax.json": "91417f5cd8819d6fd1bbc3175a2cbfcedf03df0a0ee3a1e8eaa716ceaff84277",
+  "trend-analysis.json": "f909fc0dca17a8a9b83635329490e83165ce31682d27308da546a49628dbac9f"
+ },
+ "experiment_id": "exp-h22-dev",
+ "gate": {
+  "completed_blind_tasks": 0,
+  "open": false,
+  "real_domains": 2
+ },
+ "hypothesis_id": "H22",
+ "interpretation_notes": [
+  "DEVELOPMENT RUN unless the experiment id is exp-h22-001 produced by the orchestrator in an isolated worktree.",
+  "Gate-closed state: the verdict is INCONCLUSIVE by the preregistered domain gate; context numbers are not a trend and feed no support/reject clause.",
+  "Slope-uncertainty rule (this evaluator's reading of 'spans both regions'): CI lower bound <= 0.75 and upper bound >= 0.90.",
+  "R1 'baseline has equal/lower marginal slope' is read as slope ratio >= 1.0."
+ ],
+ "numbers": {
+  "accounting_asymmetries": [],
+  "candidate_d3_sources": [],
+  "classes_supported_noninferior": [],
+  "classes_with_support_gain": [],
+  "completed_blind_tasks": 0,
+  "fair_baseline_savings_persist": null,
+  "gate_open": false,
+  "median_ratio_by_class": {},
+  "real_domain_count": 2,
+  "real_domains": [
+   "D1",
+   "D2"
+  ],
+  "regressions": 0,
+  "slope_ci": [
+   null,
+   null
+  ],
+  "slope_ratio": null,
+  "stated_real_domain_count": 2,
+  "thresholds": {
+   "min_blind_tasks": 30,
+   "min_independent_task_classes_with_support_gain": 2,
+   "min_real_domains_for_verdict": 3,
+   "reject_min_adaptation_ratio_all_classes": 0.9,
+   "support_max_median_adaptation_ratio": 0.75,
+   "support_max_slope_ratio": 0.75
+  },
+  "uncertainty_spans_support_and_reject": false,
+  "wrong_provenance_files": []
+ },
+ "predicates": {
+  "inconclusive_if": [
+   {
+    "clause": "Fewer than 3 real domains, fewer than 30 completed blind tasks, or the slope uncertainty spans both the support (<= 0.75) and reject (>= 0.90) regions",
+    "id": "I1",
+    "value": true
+   }
+  ],
+  "invalid_if": [
+   {
+    "clause": "Task corpus, cost metric or baseline capability changed after reveal",
+    "id": "V1",
+    "value": false
+   },
+   {
+    "clause": "Cost accounting is asymmetric: one variant's equivalent glue / recurring tax is not counted (per-task components or the H18 context snapshot)",
+    "id": "V2",
+    "value": false
+   },
+   {
+    "clause": "Evidence records carry a protocol-freeze / ENGINE_PREREG hash different from the files now",
+    "id": "V3",
+    "value": false
+   },
+   {
+    "clause": "Evidence records disagree on commit / seed / corpus hash",
+    "id": "V4",
+    "value": false
+   }
+  ],
+  "reject_if": [
+   {
+    "clause": "With >= 3 real domains and >= 30 tasks: all preregistered task classes have ratio >= 0.90, or the baseline has equal/lower marginal slope (ratio >= 1.0)",
+    "id": "R1",
+    "value": false
+   },
+   {
+    "clause": "With the gate open: apparent savings disappear under fair baseline tooling or require a correctness/security regression",
+    "id": "R2",
+    "value": false
+   }
+  ],
+  "support_if": [
+   {
+    "clause": "At least 3 independently useful real domains are included",
+    "id": "S1",
+    "value": false
+   },
+   {
+    "clause": "For >= 2 independent preregistered task classes, median normalized adaptation effort <= 0.75 of baseline with correctness/security non-inferior",
+    "id": "S2",
+    "value": false
+   },
+   {
+    "clause": "Overall marginal adaptation-cost slope across real domains <= 0.75 of baseline slope, with uncertainty reported",
+    "id": "S3",
+    "value": false
+   },
+   {
+    "clause": "A realistic workload tier exists where measured gains are not dominated by recurring ontology tax",
+    "id": "S4",
+    "value": false
+   }
+  ]
+ },
+ "problems": [],
+ "protocol": {
+  "freeze_sha256": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2"
+ },
+ "verdict": "INCONCLUSIVE"
+}
