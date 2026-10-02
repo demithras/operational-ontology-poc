@@ -5,7 +5,7 @@ import random
 from collections import Counter
 from pathlib import Path
 
-from hypothesis import given, strategies as st
+from hypothesis import given, settings, strategies as st
 
 from eoo_engine import DISPATCH_TABLE, Engine, Journal
 from eoo_engine.pipeline import TRANSITIONS
@@ -79,6 +79,8 @@ def _prop_random(pkg, rnd_seed, widen):
     check_invariants(model, eng, out)
 
 
+# derandomized: the success count asserted below is a property of the example set, which must not vary run to run
+@settings(derandomize=True)
 @given(pkg=valid_packages())
 def _prop_permissive(pkg):
     pkg = permissive_variant(pkg)
