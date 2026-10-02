@@ -1,0 +1,285 @@
+{
+ "candidate": {
+  "engine_tag": "r2-engine-v1.1",
+  "engine_tag_commit": "6005ff1d5c73ee564d1e789284fc465692ca4222",
+  "engine_version": "1.1",
+  "head": "7afeab80fe54d165e9ae2c7848b18e1455d1e170",
+  "includes": [
+   "src/eoo_engine",
+   "src/eoo_engine_git",
+   "domains/manufacturing",
+   "domains/project (ir.v2.json, the default contract)"
+  ]
+ },
+ "created_at": "2026-10-02T18:44:21+00:00",
+ "engine_prereg_sha256": "03d2d56919b2f003766e54c89fdbfb47a7780577534f4d797ab2ecd9b6f3aefe",
+ "engine_version": "1.1",
+ "environment": {
+  "hypothesis": "6.168.3",
+  "jsonschema": "4.26.0",
+  "machine": "arm64",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "pytest": "9.1.1",
+  "python": "3.14.6"
+ },
+ "evidence_kind": "handwritten-diff",
+ "experiment_id": "exp-h21-dev",
+ "git_commit": "7afeab80fe54d165e9ae2c7848b18e1455d1e170",
+ "harness_dirty": true,
+ "harness_dirty_paths": [
+  "round2/oracles/h21/",
+  "round2/scripts/evaluate_h21.py",
+  "round2/scripts/run_h21.py",
+  "round2/src/eoo_h21/",
+  "round2/src/eoo_toolchain/",
+  "round2/tests/h21/"
+ ],
+ "harness_sha256": {
+  "oracles/h21/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "oracles/h21/authority_oracle.py": "559f6642fbea9757281da258bd879463ea7a9c0d1614470e9b4af149fda92377",
+  "oracles/h21/typecheck_oracle.py": "a4027878cce4723866c421093c1514027afd38372c0dd1384000d7b78b9d1fd2",
+  "scripts/evaluate_h21.py": "fab574911a5cdeeb26065f91a08c0268478056be5337f521d3d37a383e2b147f",
+  "scripts/run_h21.py": "4d78f9a6cc26dcb18d0318f14cea9eed0d405bf344ea0a70c25d8803cf594921",
+  "src/eoo_exp/__init__.py": "16754d2e26eb56fb0469b74cbb88351b20265ac3ae07ecc51ada09167199a90a",
+  "src/eoo_exp/outdir.py": "6997fdfe23a5bbd5fb3c80aa024f172940167d24c55770f3b83f163d9c86fd00",
+  "src/eoo_exp/provenance.py": "9076be346293debdd361cae3c24c781d3d463716d6be1c398ee4474b3201bb5e",
+  "src/eoo_exp/scaffold.py": "b7686662f08994431881ee411fb3b1f913ba63b6327cc6dce8e180e45496a765",
+  "src/eoo_exp/util.py": "64765edd82c60fa3e393878199331db360f14bbbe31c72f5bb8d4079ac6acd86",
+  "src/eoo_h21/__init__.py": "5b2e5169754b734fac6fbe5c584c80057bdb259b4ae2a8e3095cdc2543f1e0d6",
+  "src/eoo_h21/adversarial.py": "4c20eaa44f4a184b12557f28bdfdfe8fa1025e6c5e84c43296d23e3da53c3dd1",
+  "src/eoo_h21/baseline.py": "ccfd880e7107db7cb9a6ba96d0a09a07888f514a444a5765cca2e3b7f816281b",
+  "src/eoo_h21/cases.py": "99b86899cd57bb986cf5cf7dc66f4ffd0bd62115f01c0ece60a6f296eb64eaa6",
+  "src/eoo_h21/conformance.py": "d9d3805d1f0d85d9e0eddc2717446c1d1098782e22c62d41d3809a656a133978",
+  "src/eoo_h21/differential.py": "7ce0756010c16fd2e14ca8e980f4fd87f834c624712ddccb0b592506e626ccfc",
+  "src/eoo_h21/engine_check.py": "fe8627eb59199fb7cbdfc471ab7146859a0fe18318f0f6a118822a984de3828a",
+  "src/eoo_h21/evaluate.py": "645c05074ec8c46819ead8b8eb712f7ca9c90f2dd9f4ebf552580dd790ffe79a",
+  "src/eoo_h21/handwritten.py": "4cebb3559c3560491c51b83a7d098702eee7a829c754879d824509f1c131954a",
+  "src/eoo_h21/mutants.py": "2250399f72a1b59065291b6d5f802eb0f50f5960a57780f65774ae79f7efad51",
+  "src/eoo_h21/opaque.py": "a011f77dc85a6cd6c370aa97739b5d37598462149d6a356d56a618ecdc532319",
+  "src/eoo_h21/polymorphism.py": "a9093791970f4f509038eeb4d58368e9b4e51a4a8ec54d37a1d499bcc8bf2147",
+  "src/eoo_h21/replication.py": "4179b435d409160ac11049547504c5a6026ebfff2917c44df91da030374095bc",
+  "src/eoo_h21/run.py": "96fef9126048381f62c843f1330989728887f50cac016c9763a7327f938dc5af",
+  "src/eoo_h21/static.py": "67df5f422a5e31ec5541811038477a253bb2d04e086faa5220b19393d815cf21",
+  "src/eoo_toolchain/__init__.py": "c48dfd322f541d3fd8a65f0c3f0e821f66615c563f020666cb72ccff3df0efe1",
+  "src/eoo_toolchain/build.py": "ed14456565bdab738320ffd9223b9ea2bc680d7c10fe53c6477c3047609809e6",
+  "src/eoo_toolchain/capdecide.py": "d63ff4dcdf25eabd67a9a35c6dd31e4348d25bf59cb57186d285174e925c9f6d",
+  "src/eoo_toolchain/gen_caps.py": "d170244cc71d146f5eec03ce6283018bf5f8e7bf97b5c1419980055abf1cdc9f",
+  "src/eoo_toolchain/gen_sdk.py": "2c2943035ca6d10f1c025372b29e7d8e774c44404bbbc800922094cd5107663b",
+  "src/eoo_toolchain/gen_surface.py": "3d6153ce3340a450c70b30997c66a68a747f7213f4f8b74c93fcb76b93a98027",
+  "src/eoo_toolchain/naming.py": "1abc221fb5f44a3a85981f2645b36a0c8ca0d3eba67ee100799a870c97c8f984",
+  "src/eoo_toolchain/runtime.py": "ffeb7efd17b80a2a5ecfb723ab6731089c7840a03efc5db600f4f26a88aed910",
+  "src/eoo_toolchain/selectors.py": "aa32376789771e964a83ad7fa36d3b753617f4fa3070676469c8eea9efad44b6"
+ },
+ "hypothesis_id": "H21",
+ "input_corpus_hash": "cc4fe5d7cce3eb90d3973bdbfa4e24878b3fe0c10f99e33045d1673920023e7f",
+ "payload": {
+  "declarative_additions": {
+   "actions": [
+    "register_replication"
+   ],
+   "authority_rules": [
+    "researcher-register-replication"
+   ],
+   "functions": [
+    "count_replications"
+   ],
+   "link_types": [
+    "REPLICATES"
+   ],
+   "object_types": [
+    "Replication"
+   ]
+  },
+  "domain_logic": {
+   "bindings": 4,
+   "bound": [
+    "function fn:count_replications:v1",
+    "precondition 'experiment is EVALUATED'",
+    "payload register_replication#1",
+    "outcome_predicate (replication + REPLICATES in Git)"
+   ],
+   "counted_separately": "domain logic is not endpoint/tool code; reported, not a support condition",
+   "file": "src/eoo_h21/replication.py",
+   "lines_per_function": {
+    "_count": 2,
+    "_experiment_evaluated": 3,
+    "_link_payload": 2,
+    "_outcome": 11,
+    "extend": 5
+   },
+   "lines_total": 23
+  },
+  "end_to_end": {
+   "all_ok": true,
+   "git_repo": "temporary repository (GitStore); commits are real",
+   "steps": [
+    {
+     "expected": "RECONCILED_SUCCESS",
+     "ok": true,
+     "state": "RECONCILED_SUCCESS",
+     "step": "researcher registers a replication of an EVALUATED experiment via the generated tool",
+     "tool_present": true
+    },
+    {
+     "denied_gate": "preconditions",
+     "expected": "DENIED at preconditions",
+     "ok": true,
+     "state": "DENIED",
+     "step": "same tool, experiment not EVALUATED"
+    },
+    {
+     "expected": "UnknownTool",
+     "ok": true,
+     "step": "viewer-1 has no register_replication tool (absent, not refused)",
+     "tool_present": false
+    },
+    {
+     "count_exp_h15_002": 1,
+     "count_exp_h16_001": 0,
+     "expected": "1 and 0",
+     "ok": true,
+     "step": "count_replications through the generated function tool on a freshly projected Engine"
+    },
+    {
+     "expected": "Replication among 7 types",
+     "ok": true,
+     "replications_returned": 1,
+     "step": "generic interface tool returns the new Replication object (7th implementer, no generator change)",
+     "types": [
+      "ContractVersion",
+      "Decision",
+      "Evidence",
+      "Experiment",
+      "Hypothesis",
+      "Replication",
+      "Verdict"
+     ]
+    }
+   ]
+  },
+  "extended_ir": "copy built in memory by eoo_h21.replication.extended_ir() (Gate-0 file untouched)",
+  "gate0_files_unchanged": true,
+  "generated_after": {
+   "files": {
+    "__init__.py": {
+     "lines": 1,
+     "sha256": "1dde090c002df253ef40b362ea7e5b9b7c9f3513346951b9931b6b8a0b147e92"
+    },
+    "caps.py": {
+     "lines": 3,
+     "sha256": "7f89945b3ccd339596e925f901af1bc7cab9a6acac895e6ab5294eb886eda1f0"
+    },
+    "sdk.py": {
+     "lines": 430,
+     "sha256": "cf32a858815dbff63b58914dd03c0089254a0135d09a5e58397f3f5ea53dcfb6"
+    },
+    "surface.py": {
+     "lines": 302,
+     "sha256": "0634be45bb8bc4441faad0a85965638917d65b1da9a64bd9d73557ea64a82744"
+    }
+   },
+   "tools": 68
+  },
+  "generated_before": {
+   "files": {
+    "__init__.py": {
+     "lines": 1,
+     "sha256": "1dde090c002df253ef40b362ea7e5b9b7c9f3513346951b9931b6b8a0b147e92"
+    },
+    "caps.py": {
+     "lines": 3,
+     "sha256": "2756db3912a3e703c775835e8988c8cf7777940a32221af4908d9ad4a046a08e"
+    },
+    "sdk.py": {
+     "lines": 397,
+     "sha256": "a75753d720c3771410dd5d45b83b7e7abd2d8db4c1fef92e5aa59b22377189ec"
+    },
+    "surface.py": {
+     "lines": 281,
+     "sha256": "f911fabb59f1be20bb2d63d35d4e943ba4609e3b6ddc121c946b84b1f50fd238"
+    }
+   },
+   "tools": 63
+  },
+  "generated_new_sdk_symbols": [
+   "Act_register_replication",
+   "Fn_count_replications",
+   "Replication"
+  ],
+  "generated_new_tools": [
+   "act_register_replication",
+   "call_count_replications",
+   "follow_REPLICATES",
+   "get_Replication",
+   "list_Replication"
+  ],
+  "handwritten_endpoint_definitions": {
+   "count": 0,
+   "scanned_files": {
+    "src/eoo_h21/replication.py": []
+   },
+   "scanner_known_negative_planted_endpoint": [
+    "act_register_replication"
+   ]
+  },
+  "handwritten_endpoint_or_tool_code_added": 0,
+  "ir_gate0_unchanged": {
+   "domains/project/ir.json": {
+    "sha256_HEAD": "e144926302f37a1a3d44ca569df6f12baa3923acb6305c4a916c803dd7499a45",
+    "sha256_now": "e144926302f37a1a3d44ca569df6f12baa3923acb6305c4a916c803dd7499a45"
+   },
+   "domains/project/ir.v2.json": {
+    "sha256_HEAD": "fe22ba0b43d31967f5ac91210dcf467ba2fb14031d23d40d8be1feeb4b2ad2b7",
+    "sha256_now": "fe22ba0b43d31967f5ac91210dcf467ba2fb14031d23d40d8be1feeb4b2ad2b7"
+   }
+  },
+  "preregistered_resources": [
+   "object type Replication",
+   "link REPLICATES",
+   "action register_replication",
+   "function count_replications"
+  ],
+  "read_only_paths_dirty": [],
+  "regenerated_conformance": {
+   "checks": 334,
+   "conformance": 1.0,
+   "failed": 0,
+   "failures": [],
+   "passed": 334
+  },
+  "regenerated_differential": {
+   "cases": 3000,
+   "mismatching_cases": 0,
+   "overexposed_total": 0,
+   "underexposed_total": 0
+  },
+  "token_occurrences_in_toolchain_and_domains": {},
+  "toolchain_files_after": {
+   "src/eoo_toolchain/__init__.py": "c48dfd322f541d3fd8a65f0c3f0e821f66615c563f020666cb72ccff3df0efe1",
+   "src/eoo_toolchain/build.py": "ed14456565bdab738320ffd9223b9ea2bc680d7c10fe53c6477c3047609809e6",
+   "src/eoo_toolchain/capdecide.py": "d63ff4dcdf25eabd67a9a35c6dd31e4348d25bf59cb57186d285174e925c9f6d",
+   "src/eoo_toolchain/gen_caps.py": "d170244cc71d146f5eec03ce6283018bf5f8e7bf97b5c1419980055abf1cdc9f",
+   "src/eoo_toolchain/gen_sdk.py": "2c2943035ca6d10f1c025372b29e7d8e774c44404bbbc800922094cd5107663b",
+   "src/eoo_toolchain/gen_surface.py": "3d6153ce3340a450c70b30997c66a68a747f7213f4f8b74c93fcb76b93a98027",
+   "src/eoo_toolchain/naming.py": "1abc221fb5f44a3a85981f2645b36a0c8ca0d3eba67ee100799a870c97c8f984",
+   "src/eoo_toolchain/runtime.py": "ffeb7efd17b80a2a5ecfb723ab6731089c7840a03efc5db600f4f26a88aed910",
+   "src/eoo_toolchain/selectors.py": "aa32376789771e964a83ad7fa36d3b753617f4fa3070676469c8eea9efad44b6"
+  },
+  "toolchain_files_before": {
+   "src/eoo_toolchain/__init__.py": "c48dfd322f541d3fd8a65f0c3f0e821f66615c563f020666cb72ccff3df0efe1",
+   "src/eoo_toolchain/build.py": "ed14456565bdab738320ffd9223b9ea2bc680d7c10fe53c6477c3047609809e6",
+   "src/eoo_toolchain/capdecide.py": "d63ff4dcdf25eabd67a9a35c6dd31e4348d25bf59cb57186d285174e925c9f6d",
+   "src/eoo_toolchain/gen_caps.py": "d170244cc71d146f5eec03ce6283018bf5f8e7bf97b5c1419980055abf1cdc9f",
+   "src/eoo_toolchain/gen_sdk.py": "2c2943035ca6d10f1c025372b29e7d8e774c44404bbbc800922094cd5107663b",
+   "src/eoo_toolchain/gen_surface.py": "3d6153ce3340a450c70b30997c66a68a747f7213f4f8b74c93fcb76b93a98027",
+   "src/eoo_toolchain/naming.py": "1abc221fb5f44a3a85981f2645b36a0c8ca0d3eba67ee100799a870c97c8f984",
+   "src/eoo_toolchain/runtime.py": "ffeb7efd17b80a2a5ecfb723ab6731089c7840a03efc5db600f4f26a88aed910",
+   "src/eoo_toolchain/selectors.py": "aa32376789771e964a83ad7fa36d3b753617f4fa3070676469c8eea9efad44b6"
+  },
+  "toolchain_files_changed": []
+ },
+ "payload_hash": "e6aea1c95949b675052cb79afd0b14dae5b605e274a190e8905783fabb8a8817",
+ "payload_path": null,
+ "protocol_freeze_hash": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2",
+ "seed": 21
+}

@@ -1,0 +1,531 @@
+{
+ "candidate": {
+  "engine_tag": "r2-engine-v1.1",
+  "engine_tag_commit": "6005ff1d5c73ee564d1e789284fc465692ca4222",
+  "engine_version": "1.1",
+  "head": "7afeab80fe54d165e9ae2c7848b18e1455d1e170",
+  "includes": [
+   "src/eoo_engine",
+   "src/eoo_engine_git",
+   "domains/manufacturing",
+   "domains/project (ir.v2.json, the default contract)"
+  ]
+ },
+ "created_at": "2026-10-02T18:44:21+00:00",
+ "engine_prereg_sha256": "03d2d56919b2f003766e54c89fdbfb47a7780577534f4d797ab2ecd9b6f3aefe",
+ "engine_version": "1.1",
+ "environment": {
+  "hypothesis": "6.168.3",
+  "jsonschema": "4.26.0",
+  "machine": "arm64",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "pytest": "9.1.1",
+  "python": "3.14.6"
+ },
+ "evidence_kind": "generated-surface-manifest",
+ "experiment_id": "exp-h21-dev",
+ "git_commit": "7afeab80fe54d165e9ae2c7848b18e1455d1e170",
+ "harness_dirty": true,
+ "harness_dirty_paths": [
+  "round2/oracles/h21/",
+  "round2/scripts/evaluate_h21.py",
+  "round2/scripts/run_h21.py",
+  "round2/src/eoo_h21/",
+  "round2/src/eoo_toolchain/",
+  "round2/tests/h21/"
+ ],
+ "harness_sha256": {
+  "oracles/h21/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "oracles/h21/authority_oracle.py": "559f6642fbea9757281da258bd879463ea7a9c0d1614470e9b4af149fda92377",
+  "oracles/h21/typecheck_oracle.py": "a4027878cce4723866c421093c1514027afd38372c0dd1384000d7b78b9d1fd2",
+  "scripts/evaluate_h21.py": "fab574911a5cdeeb26065f91a08c0268478056be5337f521d3d37a383e2b147f",
+  "scripts/run_h21.py": "4d78f9a6cc26dcb18d0318f14cea9eed0d405bf344ea0a70c25d8803cf594921",
+  "src/eoo_exp/__init__.py": "16754d2e26eb56fb0469b74cbb88351b20265ac3ae07ecc51ada09167199a90a",
+  "src/eoo_exp/outdir.py": "6997fdfe23a5bbd5fb3c80aa024f172940167d24c55770f3b83f163d9c86fd00",
+  "src/eoo_exp/provenance.py": "9076be346293debdd361cae3c24c781d3d463716d6be1c398ee4474b3201bb5e",
+  "src/eoo_exp/scaffold.py": "b7686662f08994431881ee411fb3b1f913ba63b6327cc6dce8e180e45496a765",
+  "src/eoo_exp/util.py": "64765edd82c60fa3e393878199331db360f14bbbe31c72f5bb8d4079ac6acd86",
+  "src/eoo_h21/__init__.py": "5b2e5169754b734fac6fbe5c584c80057bdb259b4ae2a8e3095cdc2543f1e0d6",
+  "src/eoo_h21/adversarial.py": "4c20eaa44f4a184b12557f28bdfdfe8fa1025e6c5e84c43296d23e3da53c3dd1",
+  "src/eoo_h21/baseline.py": "ccfd880e7107db7cb9a6ba96d0a09a07888f514a444a5765cca2e3b7f816281b",
+  "src/eoo_h21/cases.py": "99b86899cd57bb986cf5cf7dc66f4ffd0bd62115f01c0ece60a6f296eb64eaa6",
+  "src/eoo_h21/conformance.py": "d9d3805d1f0d85d9e0eddc2717446c1d1098782e22c62d41d3809a656a133978",
+  "src/eoo_h21/differential.py": "7ce0756010c16fd2e14ca8e980f4fd87f834c624712ddccb0b592506e626ccfc",
+  "src/eoo_h21/engine_check.py": "fe8627eb59199fb7cbdfc471ab7146859a0fe18318f0f6a118822a984de3828a",
+  "src/eoo_h21/evaluate.py": "645c05074ec8c46819ead8b8eb712f7ca9c90f2dd9f4ebf552580dd790ffe79a",
+  "src/eoo_h21/handwritten.py": "4cebb3559c3560491c51b83a7d098702eee7a829c754879d824509f1c131954a",
+  "src/eoo_h21/mutants.py": "2250399f72a1b59065291b6d5f802eb0f50f5960a57780f65774ae79f7efad51",
+  "src/eoo_h21/opaque.py": "a011f77dc85a6cd6c370aa97739b5d37598462149d6a356d56a618ecdc532319",
+  "src/eoo_h21/polymorphism.py": "a9093791970f4f509038eeb4d58368e9b4e51a4a8ec54d37a1d499bcc8bf2147",
+  "src/eoo_h21/replication.py": "4179b435d409160ac11049547504c5a6026ebfff2917c44df91da030374095bc",
+  "src/eoo_h21/run.py": "96fef9126048381f62c843f1330989728887f50cac016c9763a7327f938dc5af",
+  "src/eoo_h21/static.py": "67df5f422a5e31ec5541811038477a253bb2d04e086faa5220b19393d815cf21",
+  "src/eoo_toolchain/__init__.py": "c48dfd322f541d3fd8a65f0c3f0e821f66615c563f020666cb72ccff3df0efe1",
+  "src/eoo_toolchain/build.py": "ed14456565bdab738320ffd9223b9ea2bc680d7c10fe53c6477c3047609809e6",
+  "src/eoo_toolchain/capdecide.py": "d63ff4dcdf25eabd67a9a35c6dd31e4348d25bf59cb57186d285174e925c9f6d",
+  "src/eoo_toolchain/gen_caps.py": "d170244cc71d146f5eec03ce6283018bf5f8e7bf97b5c1419980055abf1cdc9f",
+  "src/eoo_toolchain/gen_sdk.py": "2c2943035ca6d10f1c025372b29e7d8e774c44404bbbc800922094cd5107663b",
+  "src/eoo_toolchain/gen_surface.py": "3d6153ce3340a450c70b30997c66a68a747f7213f4f8b74c93fcb76b93a98027",
+  "src/eoo_toolchain/naming.py": "1abc221fb5f44a3a85981f2645b36a0c8ca0d3eba67ee100799a870c97c8f984",
+  "src/eoo_toolchain/runtime.py": "ffeb7efd17b80a2a5ecfb723ab6731089c7840a03efc5db600f4f26a88aed910",
+  "src/eoo_toolchain/selectors.py": "aa32376789771e964a83ad7fa36d3b753617f4fa3070676469c8eea9efad44b6"
+ },
+ "hypothesis_id": "H21",
+ "input_corpus_hash": "cc4fe5d7cce3eb90d3973bdbfa4e24878b3fe0c10f99e33045d1673920023e7f",
+ "payload": {
+  "candidate": {
+   "engine_tag": "r2-engine-v1.1",
+   "engine_tag_commit": "6005ff1d5c73ee564d1e789284fc465692ca4222",
+   "engine_version": "1.1",
+   "head": "7afeab80fe54d165e9ae2c7848b18e1455d1e170",
+   "includes": [
+    "src/eoo_engine",
+    "src/eoo_engine_git",
+    "domains/manufacturing",
+    "domains/project (ir.v2.json, the default contract)"
+   ]
+  },
+  "domain_token_scan": {
+   "hits": {},
+   "identifiers_checked": 138,
+   "known_negative_ids_are_in_the_checked_set": [
+    "Hypothesis",
+    "transfer_inventory"
+   ]
+  },
+  "domains": {
+   "manufacturing": {
+    "clean_build": true,
+    "conformance": {
+     "by_kind": {
+      "accessor_exists": 60,
+      "action_distinct": 3,
+      "action_fields": 3,
+      "action_meta": 3,
+      "callable_set": 2,
+      "cardinality_annotation": 60,
+      "cardinality_behaviour": 60,
+      "function_distinct": 6,
+      "function_fields": 6,
+      "function_meta": 6,
+      "interface": 6,
+      "link_cardinality_table": 28,
+      "no_extra_accessors": 26,
+      "object_exists": 26,
+      "object_field_names": 26,
+      "object_field_required": 129,
+      "object_field_type": 129,
+      "object_meta": 26
+     },
+     "checks": 605,
+     "conformance": 1.0,
+     "failed": 0,
+     "failures": [],
+     "passed": 605
+    },
+    "files": {
+     "__init__.py": {
+      "lines": 1,
+      "sha256": "99ae3b401c766136607cadaaec23f13efdb9a337e03fe031665a25c20e567f1a"
+     },
+     "caps.py": {
+      "lines": 3,
+      "sha256": "f5fddfb6216810e2fc0e52d05ba9788b28ee6875f05c8f433e4a2b8d2b1392fd"
+     },
+     "sdk.py": {
+      "lines": 599,
+      "sha256": "77f8ba427c77c8cf6ccd3cf47358c003864d902a75c55a28d78563439d95cc68"
+     },
+     "surface.py": {
+      "lines": 422,
+      "sha256": "2e0707a1d6729c1344cd77b2fb2e87655770366b6a9f8eeeb36d6e2f5cace1cf"
+     }
+    },
+    "handwritten_files_in_generated_dir": [],
+    "ir_counts": {
+     "actions": 3,
+     "authority_rules": 7,
+     "functions": 6,
+     "interfaces": 6,
+     "link_types": 28,
+     "object_types": 26
+    },
+    "ir_sha256": "cda7aa9a60a673569fb6d189e658aec543e326e97c603decc59ecdc59857e3da",
+    "package_id": "manufacturing-ontology",
+    "package_version": "v3",
+    "rebuild_identical": true,
+    "tools": {
+     "by_kind": {
+      "action": 3,
+      "function": 6,
+      "query": 86
+     },
+     "count": 95,
+     "names": [
+      "act_expedite_purchase_order",
+      "act_reschedule_work_order",
+      "act_transfer_inventory",
+      "call_available_quantity",
+      "call_decision_content_hash",
+      "call_incoming_before",
+      "call_recommend_transfer_for_work_order",
+      "call_resolve_canonical_id",
+      "call_work_order_risk",
+      "follow_ActionExecution_destinationWarehouse",
+      "follow_ActionExecution_outcome",
+      "follow_ActionExecution_sourceWarehouse",
+      "follow_BomRequirement_requiresPart",
+      "follow_BomRequirement_workOrder",
+      "follow_Decision_actionExecution",
+      "follow_Decision_actor",
+      "follow_Decision_approvedBy",
+      "follow_Decision_authorizationCheck",
+      "follow_Decision_concernsDestinationWarehouse",
+      "follow_Decision_concernsPart",
+      "follow_Decision_concernsSourceWarehouse",
+      "follow_Decision_concernsWorkOrder",
+      "follow_Decision_conformanceCheck",
+      "follow_Decision_evidenceSnapshot",
+      "follow_Decision_executedBy",
+      "follow_Decision_policyEvaluation",
+      "follow_IdentityMapping_canonicalId",
+      "follow_InventoryLot_warehouse",
+      "follow_Observation_mappingRuleUsed",
+      "follow_PartReferencing_part",
+      "follow_PurchaseOrderLine_destinationWarehouse",
+      "follow_PurchaseOrderLine_purchaseOrder",
+      "follow_PurchaseOrder_suppliedBy",
+      "follow_SoftwareAgent_actsOnBehalfOf",
+      "follow_WmsTransferRecord_sourceWarehouse",
+      "follow_WorkOrder_productionLine",
+      "follow_WorkOrder_warehouse",
+      "get_ActionExecution",
+      "get_AuthorizationCheck",
+      "get_BomRequirement",
+      "get_ConformanceCheck",
+      "get_Decision",
+      "get_DecisionActivity",
+      "get_EvidenceSnapshot",
+      "get_HumanActor",
+      "get_IdentityMapping",
+      "get_IdentityResolutionActivity",
+      "get_InventoryLot",
+      "get_Observation",
+      "get_Outcome",
+      "get_Part",
+      "get_PolicyEvaluation",
+      "get_ProductionLine",
+      "get_PurchaseOrder",
+      "get_PurchaseOrderLine",
+      "get_QuarantinedIdentity",
+      "get_Shipment",
+      "get_SoftwareAgent",
+      "get_SourcePosition",
+      "get_Supplier",
+      "get_Warehouse",
+      "get_WmsTransferRecord",
+      "get_WorkOrder",
+      "list_ActionExecution",
+      "list_AuthorizationCheck",
+      "list_BomRequirement",
+      "list_ConformanceCheck",
+      "list_Decision",
+      "list_DecisionActivity",
+      "list_EvidenceSnapshot",
+      "list_HumanActor",
+      "list_IdentityMapping",
+      "list_IdentityResolutionActivity",
+      "list_InventoryLot",
+      "list_Observation",
+      "list_Outcome",
+      "list_Part",
+      "list_PolicyEvaluation",
+      "list_ProductionLine",
+      "list_PurchaseOrder",
+      "list_PurchaseOrderLine",
+      "list_QuarantinedIdentity",
+      "list_Shipment",
+      "list_SoftwareAgent",
+      "list_SourcePosition",
+      "list_Supplier",
+      "list_Warehouse",
+      "list_WmsTransferRecord",
+      "list_WorkOrder",
+      "query_PartReferencing",
+      "query_ProvActivity",
+      "query_ProvAgent",
+      "query_ProvEntity",
+      "query_Quantified",
+      "query_Statused"
+     ]
+    }
+   },
+   "project": {
+    "clean_build": true,
+    "conformance": {
+     "by_kind": {
+      "accessor_exists": 30,
+      "action_distinct": 10,
+      "action_fields": 10,
+      "action_meta": 10,
+      "callable_set": 2,
+      "cardinality_annotation": 30,
+      "cardinality_behaviour": 30,
+      "function_distinct": 6,
+      "function_fields": 6,
+      "function_meta": 6,
+      "interface": 2,
+      "link_cardinality_table": 15,
+      "no_extra_accessors": 15,
+      "object_exists": 15,
+      "object_field_names": 15,
+      "object_field_required": 47,
+      "object_field_type": 47,
+      "object_meta": 15
+     },
+     "checks": 311,
+     "conformance": 1.0,
+     "failed": 0,
+     "failures": [],
+     "passed": 311
+    },
+    "files": {
+     "__init__.py": {
+      "lines": 1,
+      "sha256": "1dde090c002df253ef40b362ea7e5b9b7c9f3513346951b9931b6b8a0b147e92"
+     },
+     "caps.py": {
+      "lines": 3,
+      "sha256": "2756db3912a3e703c775835e8988c8cf7777940a32221af4908d9ad4a046a08e"
+     },
+     "sdk.py": {
+      "lines": 397,
+      "sha256": "a75753d720c3771410dd5d45b83b7e7abd2d8db4c1fef92e5aa59b22377189ec"
+     },
+     "surface.py": {
+      "lines": 281,
+      "sha256": "f911fabb59f1be20bb2d63d35d4e943ba4609e3b6ddc121c946b84b1f50fd238"
+     }
+    },
+    "handwritten_files_in_generated_dir": [],
+    "ir_counts": {
+     "actions": 10,
+     "authority_rules": 13,
+     "functions": 6,
+     "interfaces": 2,
+     "link_types": 15,
+     "object_types": 15
+    },
+    "ir_sha256": "37562f6c4e85fd606a21d01c6213be656ec39cd5410770b238a0661eadc0c822",
+    "package_id": "project-ontology",
+    "package_version": "v2",
+    "rebuild_identical": true,
+    "tools": {
+     "by_kind": {
+      "action": 10,
+      "function": 6,
+      "query": 47
+     },
+     "count": 63,
+     "names": [
+      "act_attach_evidence",
+      "act_create_hypothesis",
+      "act_edit_threshold",
+      "act_evaluate_hypothesis",
+      "act_flag_orphan_component",
+      "act_new_experiment_version",
+      "act_preregister_hypothesis",
+      "act_record_decision",
+      "act_start_run",
+      "act_supersede_hypothesis",
+      "call_canonical_state_hash",
+      "call_compute_freeze_hash",
+      "call_derive_verdict",
+      "call_evidence_count",
+      "call_find_orphan_components",
+      "call_is_legal_transition",
+      "follow_CAPTURED_AT",
+      "follow_CHANGES",
+      "follow_DETECTED_BY",
+      "follow_EVALUATES",
+      "follow_EXISTS_FOR",
+      "follow_FALSIFIED_BY",
+      "follow_GOVERNED_BY",
+      "follow_HAS_RIVAL",
+      "follow_MEASURES",
+      "follow_PREDICTS",
+      "follow_PRODUCES",
+      "follow_SUPERSEDED_BY",
+      "follow_SUPPORTS_OR_REFUTES",
+      "follow_TESTED_BY",
+      "follow_VALIDATES",
+      "get_Commit",
+      "get_Component",
+      "get_ContractVersion",
+      "get_Decision",
+      "get_Evidence",
+      "get_Experiment",
+      "get_Failure",
+      "get_Falsifier",
+      "get_Hypothesis",
+      "get_Metric",
+      "get_Prediction",
+      "get_Rival",
+      "get_Test",
+      "get_Threshold",
+      "get_Verdict",
+      "list_Commit",
+      "list_Component",
+      "list_ContractVersion",
+      "list_Decision",
+      "list_Evidence",
+      "list_Experiment",
+      "list_Failure",
+      "list_Falsifier",
+      "list_Hypothesis",
+      "list_Metric",
+      "list_Prediction",
+      "list_Rival",
+      "list_Test",
+      "list_Threshold",
+      "list_Verdict",
+      "query_GitBound",
+      "query_VersionedResearchObject"
+     ]
+    }
+   }
+  },
+  "oracle": [
+   {
+    "file": "oracles/h21/__init__.py",
+    "forbidden_imports": [],
+    "imports": [],
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "file": "oracles/h21/authority_oracle.py",
+    "forbidden_imports": [],
+    "imports": [
+     "__future__",
+     "itertools",
+     "json"
+    ],
+    "sha256": "559f6642fbea9757281da258bd879463ea7a9c0d1614470e9b4af149fda92377"
+   },
+   {
+    "file": "oracles/h21/typecheck_oracle.py",
+    "forbidden_imports": [],
+    "imports": [
+     "__future__"
+    ],
+    "sha256": "a4027878cce4723866c421093c1514027afd38372c0dd1384000d7b78b9d1fd2"
+   }
+  ],
+  "toolchain": {
+   "files": [
+    {
+     "file": "src/eoo_toolchain/__init__.py",
+     "forbidden_imports": [],
+     "imports": [],
+     "lines": 7,
+     "sha256": "c48dfd322f541d3fd8a65f0c3f0e821f66615c563f020666cb72ccff3df0efe1"
+    },
+    {
+     "file": "src/eoo_toolchain/build.py",
+     "forbidden_imports": [],
+     "imports": [
+      "__future__",
+      "eoo_ir",
+      "hashlib",
+      "importlib",
+      "json",
+      "pathlib",
+      "sys"
+     ],
+     "lines": 53,
+     "sha256": "ed14456565bdab738320ffd9223b9ea2bc680d7c10fe53c6477c3047609809e6"
+    },
+    {
+     "file": "src/eoo_toolchain/capdecide.py",
+     "forbidden_imports": [],
+     "imports": [
+      "__future__",
+      "types"
+     ],
+     "lines": 102,
+     "sha256": "d63ff4dcdf25eabd67a9a35c6dd31e4348d25bf59cb57186d285174e925c9f6d"
+    },
+    {
+     "file": "src/eoo_toolchain/gen_caps.py",
+     "forbidden_imports": [],
+     "imports": [
+      "__future__"
+     ],
+     "lines": 52,
+     "sha256": "d170244cc71d146f5eec03ce6283018bf5f8e7bf97b5c1419980055abf1cdc9f"
+    },
+    {
+     "file": "src/eoo_toolchain/gen_sdk.py",
+     "forbidden_imports": [],
+     "imports": [
+      "__future__"
+     ],
+     "lines": 125,
+     "sha256": "2c2943035ca6d10f1c025372b29e7d8e774c44404bbbc800922094cd5107663b"
+    },
+    {
+     "file": "src/eoo_toolchain/gen_surface.py",
+     "forbidden_imports": [],
+     "imports": [
+      "__future__"
+     ],
+     "lines": 68,
+     "sha256": "3d6153ce3340a450c70b30997c66a68a747f7213f4f8b74c93fcb76b93a98027"
+    },
+    {
+     "file": "src/eoo_toolchain/naming.py",
+     "forbidden_imports": [],
+     "imports": [
+      "__future__",
+      "keyword",
+      "re"
+     ],
+     "lines": 67,
+     "sha256": "1abc221fb5f44a3a85981f2645b36a0c8ca0d3eba67ee100799a870c97c8f984"
+    },
+    {
+     "file": "src/eoo_toolchain/runtime.py",
+     "forbidden_imports": [],
+     "imports": [
+      "__future__",
+      "dataclasses",
+      "itertools",
+      "json",
+      "typing"
+     ],
+     "lines": 234,
+     "sha256": "ffeb7efd17b80a2a5ecfb723ab6731089c7840a03efc5db600f4f26a88aed910"
+    },
+    {
+     "file": "src/eoo_toolchain/selectors.py",
+     "forbidden_imports": [],
+     "imports": [
+      "__future__"
+     ],
+     "lines": 49,
+     "sha256": "aa32376789771e964a83ad7fa36d3b753617f4fa3070676469c8eea9efad44b6"
+    }
+   ],
+   "files_with_dynamic_import_machinery": [
+    "build.py"
+   ],
+   "forbidden_imports": [],
+   "imports_oracle": false,
+   "total_lines": 757
+  }
+ },
+ "payload_hash": "7cb1be865912a72f781440c7a4e456abee32bad5185dd134782edde6149abd17",
+ "payload_path": null,
+ "protocol_freeze_hash": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2",
+ "seed": 21
+}
