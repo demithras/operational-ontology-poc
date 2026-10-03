@@ -1,0 +1,411 @@
+{
+ "candidate": {
+  "engine_tag": "r2-engine-v1.1",
+  "engine_tag_commit": "6005ff1d5c73ee564d1e789284fc465692ca4222",
+  "engine_version": "1.2",
+  "head": "a31944699e87f50fb6627de6f4dde255cf2efcf4",
+  "includes": [
+   "src/eoo_engine",
+   "src/eoo_engine_git",
+   "domains/manufacturing",
+   "domains/project (ir.v2.json, the default contract)"
+  ]
+ },
+ "created_at": "2026-10-03T19:56:31+00:00",
+ "engine_prereg_sha256": "03d2d56919b2f003766e54c89fdbfb47a7780577534f4d797ab2ecd9b6f3aefe",
+ "engine_version": "1.2",
+ "environment": {
+  "hypothesis": "6.168.3",
+  "jsonschema": "4.26.0",
+  "machine": "arm64",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "pytest": "9.1.1",
+  "python": "3.14.6"
+ },
+ "evidence_kind": "interface-polymorphism",
+ "experiment_id": "exp-h21-002",
+ "git_commit": "a31944699e87f50fb6627de6f4dde255cf2efcf4",
+ "harness_dirty": false,
+ "harness_dirty_paths": [],
+ "harness_sha256": {
+  "oracles/h21/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "oracles/h21/authority_oracle.py": "559f6642fbea9757281da258bd879463ea7a9c0d1614470e9b4af149fda92377",
+  "oracles/h21/typecheck_oracle.py": "a4027878cce4723866c421093c1514027afd38372c0dd1384000d7b78b9d1fd2",
+  "scripts/evaluate_h21.py": "fab574911a5cdeeb26065f91a08c0268478056be5337f521d3d37a383e2b147f",
+  "scripts/run_h21.py": "4d78f9a6cc26dcb18d0318f14cea9eed0d405bf344ea0a70c25d8803cf594921",
+  "src/eoo_exp/__init__.py": "16754d2e26eb56fb0469b74cbb88351b20265ac3ae07ecc51ada09167199a90a",
+  "src/eoo_exp/outdir.py": "6997fdfe23a5bbd5fb3c80aa024f172940167d24c55770f3b83f163d9c86fd00",
+  "src/eoo_exp/provenance.py": "9076be346293debdd361cae3c24c781d3d463716d6be1c398ee4474b3201bb5e",
+  "src/eoo_exp/scaffold.py": "b7686662f08994431881ee411fb3b1f913ba63b6327cc6dce8e180e45496a765",
+  "src/eoo_exp/util.py": "64765edd82c60fa3e393878199331db360f14bbbe31c72f5bb8d4079ac6acd86",
+  "src/eoo_h21/__init__.py": "5b2e5169754b734fac6fbe5c584c80057bdb259b4ae2a8e3095cdc2543f1e0d6",
+  "src/eoo_h21/adversarial.py": "4c20eaa44f4a184b12557f28bdfdfe8fa1025e6c5e84c43296d23e3da53c3dd1",
+  "src/eoo_h21/baseline.py": "ccfd880e7107db7cb9a6ba96d0a09a07888f514a444a5765cca2e3b7f816281b",
+  "src/eoo_h21/cases.py": "99b86899cd57bb986cf5cf7dc66f4ffd0bd62115f01c0ece60a6f296eb64eaa6",
+  "src/eoo_h21/conformance.py": "d9d3805d1f0d85d9e0eddc2717446c1d1098782e22c62d41d3809a656a133978",
+  "src/eoo_h21/differential.py": "7ce0756010c16fd2e14ca8e980f4fd87f834c624712ddccb0b592506e626ccfc",
+  "src/eoo_h21/engine_check.py": "fe8627eb59199fb7cbdfc471ab7146859a0fe18318f0f6a118822a984de3828a",
+  "src/eoo_h21/evaluate.py": "645c05074ec8c46819ead8b8eb712f7ca9c90f2dd9f4ebf552580dd790ffe79a",
+  "src/eoo_h21/handwritten.py": "4cebb3559c3560491c51b83a7d098702eee7a829c754879d824509f1c131954a",
+  "src/eoo_h21/mutants.py": "2250399f72a1b59065291b6d5f802eb0f50f5960a57780f65774ae79f7efad51",
+  "src/eoo_h21/opaque.py": "a011f77dc85a6cd6c370aa97739b5d37598462149d6a356d56a618ecdc532319",
+  "src/eoo_h21/polymorphism.py": "a9093791970f4f509038eeb4d58368e9b4e51a4a8ec54d37a1d499bcc8bf2147",
+  "src/eoo_h21/replication.py": "4179b435d409160ac11049547504c5a6026ebfff2917c44df91da030374095bc",
+  "src/eoo_h21/run.py": "96fef9126048381f62c843f1330989728887f50cac016c9763a7327f938dc5af",
+  "src/eoo_h21/static.py": "67df5f422a5e31ec5541811038477a253bb2d04e086faa5220b19393d815cf21",
+  "src/eoo_toolchain/__init__.py": "c48dfd322f541d3fd8a65f0c3f0e821f66615c563f020666cb72ccff3df0efe1",
+  "src/eoo_toolchain/build.py": "ed14456565bdab738320ffd9223b9ea2bc680d7c10fe53c6477c3047609809e6",
+  "src/eoo_toolchain/capdecide.py": "d63ff4dcdf25eabd67a9a35c6dd31e4348d25bf59cb57186d285174e925c9f6d",
+  "src/eoo_toolchain/gen_caps.py": "d170244cc71d146f5eec03ce6283018bf5f8e7bf97b5c1419980055abf1cdc9f",
+  "src/eoo_toolchain/gen_sdk.py": "2c2943035ca6d10f1c025372b29e7d8e774c44404bbbc800922094cd5107663b",
+  "src/eoo_toolchain/gen_surface.py": "3d6153ce3340a450c70b30997c66a68a747f7213f4f8b74c93fcb76b93a98027",
+  "src/eoo_toolchain/naming.py": "1abc221fb5f44a3a85981f2645b36a0c8ca0d3eba67ee100799a870c97c8f984",
+  "src/eoo_toolchain/runtime.py": "ffeb7efd17b80a2a5ecfb723ab6731089c7840a03efc5db600f4f26a88aed910",
+  "src/eoo_toolchain/selectors.py": "aa32376789771e964a83ad7fa36d3b753617f4fa3070676469c8eea9efad44b6"
+ },
+ "hypothesis_id": "H21",
+ "input_corpus_hash": "cc4fe5d7cce3eb90d3973bdbfa4e24878b3fe0c10f99e33045d1673920023e7f",
+ "payload": {
+  "candidate": {
+   "engine_tag": "r2-engine-v1.1",
+   "engine_tag_commit": "6005ff1d5c73ee564d1e789284fc465692ca4222",
+   "engine_version": "1.2",
+   "head": "a31944699e87f50fb6627de6f4dde255cf2efcf4",
+   "includes": [
+    "src/eoo_engine",
+    "src/eoo_engine_git",
+    "domains/manufacturing",
+    "domains/project (ir.v2.json, the default contract)"
+   ]
+  },
+  "domains": {
+   "manufacturing": [
+    {
+     "after_adding_two_implementers": {
+      "added_types": [
+       "SynthAlpha",
+       "SynthBeta"
+      ],
+      "interface": "Statused",
+      "returned_types": [
+       "SynthAlpha",
+       "SynthBeta"
+      ],
+      "serves_new_types": true,
+      "tool_source_identical": true
+     },
+     "equals_store": true,
+     "implementer_count": 4,
+     "implementers": [
+      "ProductionLine",
+      "PurchaseOrder",
+      "Supplier",
+      "WorkOrder"
+     ],
+     "interface": "Statused",
+     "store_objects": {
+      "ProductionLine": 1,
+      "PurchaseOrder": 2,
+      "Supplier": 1,
+      "WorkOrder": 2
+     },
+     "tool_returned_by_type": {
+      "ProductionLine": 1,
+      "PurchaseOrder": 2,
+      "Supplier": 1,
+      "WorkOrder": 2
+     },
+     "tool_source": "def query_Statused(client):\n    return interface_list(client, 'Statused', sdk.CLASSES)",
+     "tool_source_names_an_implementer": [],
+     "types_served": 4,
+     "types_with_objects": 4
+    },
+    {
+     "after_adding_two_implementers": {
+      "added_types": [
+       "SynthAlpha",
+       "SynthBeta"
+      ],
+      "interface": "PartReferencing",
+      "returned_types": [
+       "SynthAlpha",
+       "SynthBeta"
+      ],
+      "serves_new_types": true,
+      "tool_source_identical": true
+     },
+     "equals_store": true,
+     "implementer_count": 2,
+     "implementers": [
+      "InventoryLot",
+      "PurchaseOrderLine"
+     ],
+     "interface": "PartReferencing",
+     "store_objects": {
+      "InventoryLot": 5,
+      "PurchaseOrderLine": 2
+     },
+     "tool_returned_by_type": {
+      "InventoryLot": 5,
+      "PurchaseOrderLine": 2
+     },
+     "tool_source": "def query_PartReferencing(client):\n    return interface_list(client, 'PartReferencing', sdk.CLASSES)",
+     "tool_source_names_an_implementer": [],
+     "types_served": 2,
+     "types_with_objects": 2
+    },
+    {
+     "after_adding_two_implementers": {
+      "added_types": [
+       "SynthAlpha",
+       "SynthBeta"
+      ],
+      "interface": "Quantified",
+      "returned_types": [
+       "SynthAlpha",
+       "SynthBeta"
+      ],
+      "serves_new_types": true,
+      "tool_source_identical": true
+     },
+     "equals_store": true,
+     "implementer_count": 2,
+     "implementers": [
+      "BomRequirement",
+      "PurchaseOrderLine"
+     ],
+     "interface": "Quantified",
+     "store_objects": {
+      "BomRequirement": 2,
+      "PurchaseOrderLine": 2
+     },
+     "tool_returned_by_type": {
+      "BomRequirement": 2,
+      "PurchaseOrderLine": 2
+     },
+     "tool_source": "def query_Quantified(client):\n    return interface_list(client, 'Quantified', sdk.CLASSES)",
+     "tool_source_names_an_implementer": [],
+     "types_served": 2,
+     "types_with_objects": 2
+    },
+    {
+     "after_adding_two_implementers": {
+      "added_types": [
+       "SynthAlpha",
+       "SynthBeta"
+      ],
+      "interface": "ProvEntity",
+      "returned_types": [
+       "SynthAlpha",
+       "SynthBeta"
+      ],
+      "serves_new_types": true,
+      "tool_source_identical": true
+     },
+     "equals_store": true,
+     "implementer_count": 7,
+     "implementers": [
+      "AuthorizationCheck",
+      "ConformanceCheck",
+      "EvidenceSnapshot",
+      "IdentityMapping",
+      "Outcome",
+      "PolicyEvaluation",
+      "QuarantinedIdentity"
+     ],
+     "interface": "ProvEntity",
+     "store_objects": {
+      "AuthorizationCheck": 0,
+      "ConformanceCheck": 0,
+      "EvidenceSnapshot": 1,
+      "IdentityMapping": 3,
+      "Outcome": 0,
+      "PolicyEvaluation": 0,
+      "QuarantinedIdentity": 0
+     },
+     "tool_returned_by_type": {
+      "EvidenceSnapshot": 1,
+      "IdentityMapping": 3
+     },
+     "tool_source": "def query_ProvEntity(client):\n    return interface_list(client, 'ProvEntity', sdk.CLASSES)",
+     "tool_source_names_an_implementer": [],
+     "types_served": 2,
+     "types_with_objects": 2
+    },
+    {
+     "after_adding_two_implementers": {
+      "added_types": [
+       "SynthAlpha",
+       "SynthBeta"
+      ],
+      "interface": "ProvActivity",
+      "returned_types": [
+       "SynthAlpha",
+       "SynthBeta"
+      ],
+      "serves_new_types": true,
+      "tool_source_identical": true
+     },
+     "equals_store": true,
+     "implementer_count": 4,
+     "implementers": [
+      "ActionExecution",
+      "DecisionActivity",
+      "IdentityResolutionActivity",
+      "Observation"
+     ],
+     "interface": "ProvActivity",
+     "store_objects": {
+      "ActionExecution": 0,
+      "DecisionActivity": 0,
+      "IdentityResolutionActivity": 0,
+      "Observation": 0
+     },
+     "tool_returned_by_type": {},
+     "tool_source": "def query_ProvActivity(client):\n    return interface_list(client, 'ProvActivity', sdk.CLASSES)",
+     "tool_source_names_an_implementer": [],
+     "types_served": 0,
+     "types_with_objects": 0
+    },
+    {
+     "after_adding_two_implementers": {
+      "added_types": [
+       "SynthAlpha",
+       "SynthBeta"
+      ],
+      "interface": "ProvAgent",
+      "returned_types": [
+       "SynthAlpha",
+       "SynthBeta"
+      ],
+      "serves_new_types": true,
+      "tool_source_identical": true
+     },
+     "equals_store": true,
+     "implementer_count": 2,
+     "implementers": [
+      "HumanActor",
+      "SoftwareAgent"
+     ],
+     "interface": "ProvAgent",
+     "store_objects": {
+      "HumanActor": 1,
+      "SoftwareAgent": 0
+     },
+     "tool_returned_by_type": {
+      "HumanActor": 1
+     },
+     "tool_source": "def query_ProvAgent(client):\n    return interface_list(client, 'ProvAgent', sdk.CLASSES)",
+     "tool_source_names_an_implementer": [],
+     "types_served": 1,
+     "types_with_objects": 1
+    }
+   ],
+   "project": [
+    {
+     "after_adding_two_implementers": {
+      "added_types": [
+       "SynthAlpha",
+       "SynthBeta"
+      ],
+      "interface": "VersionedResearchObject",
+      "returned_types": [
+       "SynthAlpha",
+       "SynthBeta"
+      ],
+      "serves_new_types": true,
+      "tool_source_identical": true
+     },
+     "equals_store": true,
+     "implementer_count": 6,
+     "implementers": [
+      "ContractVersion",
+      "Decision",
+      "Evidence",
+      "Experiment",
+      "Hypothesis",
+      "Verdict"
+     ],
+     "interface": "VersionedResearchObject",
+     "store_objects": {
+      "ContractVersion": 8,
+      "Decision": 1,
+      "Evidence": 12,
+      "Experiment": 9,
+      "Hypothesis": 8,
+      "Verdict": 1
+     },
+     "tool_returned_by_type": {
+      "ContractVersion": 8,
+      "Decision": 1,
+      "Evidence": 12,
+      "Experiment": 9,
+      "Hypothesis": 8,
+      "Verdict": 1
+     },
+     "tool_source": "def query_VersionedResearchObject(client):\n    return interface_list(client, 'VersionedResearchObject', sdk.CLASSES)",
+     "tool_source_names_an_implementer": [],
+     "types_served": 6,
+     "types_with_objects": 6
+    },
+    {
+     "after_adding_two_implementers": {
+      "added_types": [
+       "SynthAlpha",
+       "SynthBeta"
+      ],
+      "interface": "GitBound",
+      "returned_types": [
+       "SynthAlpha",
+       "SynthBeta"
+      ],
+      "serves_new_types": true,
+      "tool_source_identical": true
+     },
+     "equals_store": true,
+     "implementer_count": 3,
+     "implementers": [
+      "ContractVersion",
+      "Evidence",
+      "Verdict"
+     ],
+     "interface": "GitBound",
+     "store_objects": {
+      "ContractVersion": 8,
+      "Evidence": 12,
+      "Verdict": 1
+     },
+     "tool_returned_by_type": {
+      "ContractVersion": 8,
+      "Evidence": 12,
+      "Verdict": 1
+     },
+     "tool_source": "def query_GitBound(client):\n    return interface_list(client, 'GitBound', sdk.CLASSES)",
+     "tool_source_names_an_implementer": [],
+     "types_served": 3,
+     "types_with_objects": 3
+    }
+   ]
+  },
+  "extended_project_ir_replication_as_seventh_implementer": {
+   "expected": "Replication among 7 types",
+   "ok": true,
+   "replications_returned": 1,
+   "step": "generic interface tool returns the new Replication object (7th implementer, no generator change)",
+   "types": [
+    "ContractVersion",
+    "Decision",
+    "Evidence",
+    "Experiment",
+    "Hypothesis",
+    "Replication",
+    "Verdict"
+   ]
+  },
+  "min_implementers": 2
+ },
+ "payload_hash": "195d5f3ab8a85ebbcbcd7310b8cb7cf923bf4b2a5cfee19cf3dafa1d8c882e05",
+ "payload_path": null,
+ "protocol_freeze_hash": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2",
+ "seed": 21
+}
