@@ -15,9 +15,10 @@ def test_adapter_file_set_covers_both_domains_and_the_git_store():
             "src/eoo_engine_git/adapter.py", "src/eoo_engine_git/store.py"} <= set(files)
 
 
-def test_real_adapters_are_clean_with_one_declared_exception():
+def test_real_adapters_are_clean_with_no_declared_exception():  # Engine v1.2: the strict count is 0 with an EMPTY list
     a = AS.audit()
-    assert a["violations"] == 0 and a["declared_hits"] == 1 and a["declared_exceptions"][0]["qual"] == "GitStore._msg"
+    assert AS.DECLARED_EXCEPTIONS == [] and a["declared_exceptions"] == []
+    assert a["violations"] == 0 and a["declared_hits"] == 0 and sum(len(r["declared"]) for r in a["files"]) == 0
     assert a["allowed"] and a["forbidden"] == ["authority checks", "policy evaluation", "precondition evaluation", "idempotency decisions",
                                                "provenance writing", "action lifecycle state changes"]
 
@@ -50,10 +51,10 @@ def test_innocuous_names_are_a_declared_blind_spot_of_the_static_audit():
     assert a["violations"] == 0  # ... and the behavioural probe is what catches it (tests/h20/test_mutants.py)
 
 
-def test_declared_exception_is_scoped_to_its_function():
-    src = (ROOT / "src/eoo_engine_git/store.py").read_text() + "\n\ndef other(self):\n    if not self.provenance:\n        return 1\n"
+def test_no_exception_left_a_planted_provenance_branch_counts():
+    src = (ROOT / "src/eoo_engine_git/store.py").read_text() + "\n\ndef _msg(self):\n    if not self.provenance:\n        return 1\n"
     a = AS.audit(overrides={"src/eoo_engine_git/store.py": src})
-    assert a["violations"] == 1 and a["declared_hits"] == 1
+    assert a["violations"] == 1 and a["declared_hits"] == 0
 
 
 def test_taint_known_negative_sees_a_journal_write_from_an_adapter():
@@ -80,3 +81,34 @@ def test_tracer_records_adapter_calls_with_the_taint_set():
     with t.installed():
         AD.idempotency_probe()
     assert t.adapter_calls[("WmsFake", "apply")] >= 1 and t.adapter_violations == []
+
+
+# ---- behavioural twin of provenance_composition: what the adapter WROTE == effect['envelope_text'], byte for byte ----
+def test_provenance_verbatim_known_positive_real_adapters_write_the_envelope_verbatim():
+    from eoo_h20 import provenance_writes as PW
+    r = PW.probes(Tracer)
+    assert r["known_positive_clean"]
+    for name, x in r["known_positive"].items():
+        assert x["adapter_provenance_writes"] > 0 and x["adapter_provenance_verbatim_mismatches"] == 0, (name, x)
+    assert set(r["known_positive"]["git_fake"]["by_adapter"]) == {"GitFake"} and set(r["known_positive"]["git_adapter"]["by_adapter"]) == {"GitAdapter"}
+
+
+def test_provenance_verbatim_known_negative_an_appended_non_eoo_line_is_detected():
+    from eoo_h20 import provenance_writes as PW
+    r = PW.probes(Tracer)
+    assert r["known_negative_detected"]
+    for name, x in r["known_negative"].items():  # label "Writer: w1" does not start with EOO-: invisible to the static rule
+        assert x["adapter_provenance_verbatim_mismatches"] == 1, (name, x)
+        m = x["first_mismatches"][0]
+        assert "Writer: w1" in m["written"] or len(m["written"]) == 300  # truncated example still names the divergent adapter
+        assert m["adapter"] in ("GitFake", "GitAdapter")
+    from eoo_h20 import adapter_static as AS
+    assert AS.audit()["violations"] == 0  # the static rule alone sees nothing here: only the behavioural check closes the blind spot
+
+
+def test_tracer_counts_a_batch_commit_once_and_ignores_stores_it_cannot_read():
+    t = Tracer()
+    with t.installed():
+        AD.idempotency_probe()  # manufacturing (WmsFake: no readable commit store) + project (GitFake)
+    n = t.provenance_numbers()
+    assert n["by_adapter"] == {"GitFake": 1} and n["adapter_provenance_verbatim_mismatches"] == 0

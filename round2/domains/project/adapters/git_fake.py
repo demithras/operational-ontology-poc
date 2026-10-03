@@ -2,7 +2,7 @@
 the raw response (commit sha + the row as stored) and emits GitCommitObserved observations.
 
 Allowlist (protocol/ENGINE_PREREG.json H20): translate, answer, observe. No authority, policy, precondition,
-idempotency decision, provenance or lifecycle logic here. Like Git itself it is content-addressed: re-applying the
+idempotency decision, provenance or lifecycle logic here; the commit message is the Engine's envelope text, verbatim. Like Git itself it is content-addressed: re-applying the
 same effect (same id, target and row) returns the same commit and never writes twice; an effect id reused with a
 different row (a rebuilt Engine restarts its execution counter) is a new commit.
 
@@ -52,7 +52,8 @@ class GitFake:
             key = row.get("$key", row.get("id"))
             self.rows.setdefault((effect["target"], key), {}).update({k: v for k, v in row.items() if k != "$key"})
         commit = {"sha": sha, "parent": self.head, "effect_id": eid, "execution": effect["execution"],
-                  "target": effect["target"], "row": row, "committed_at": self._clock()}
+                  "target": effect["target"], "row": row, "committed_at": self._clock(),
+                  "message": effect.get("envelope_text")}  # the Engine's provenance envelope, verbatim (Engine v1.2)
         self.commits.append(commit)
         self.head = sha
         response = {"commit": sha, "parent": commit["parent"], "target": effect["target"], "row": row}

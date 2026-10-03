@@ -1,6 +1,8 @@
 """Evaluator: a known-positive is SUPPORTED; for EACH reject / inconclusive / invalid clause a known-negative flips exactly it."""
 import pytest
 
+from eoo_engine import ENGINE_VERSION
+
 from eoo_h18.evaluate import evaluate
 
 
@@ -21,7 +23,7 @@ def base(positive_dir):
 def test_known_positive_is_supported(base):
     assert base["verdict"] == "SUPPORTED", (base["verdict"], base["problems"], vals(base), base["protocol_mismatches"])
     assert [k for k, x in vals(base).items() if k[0] == "S" and x is not True] == [] and [k for k, x in vals(base).items() if k[0] in "RIV" and x is not False] == []
-    assert base["numbers"]["unique_cases"] == 3000 and base["engine_version"] == "1.1"
+    assert base["numbers"]["unique_cases"] == 3000 and base["engine_version"] == ENGINE_VERSION  # the small run is live (v1.2)
 
 
 def test_illegal_accepted_in_a_core_class_is_rejected(base, edit):

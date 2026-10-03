@@ -230,3 +230,33 @@ def test_every_contract_clause_has_a_named_predicate(pos):
 def test_verdict_is_a_pure_function_of_the_evidence(pos):
     a, b = evaluate(pos), evaluate(pos)
     assert json.dumps(a, sort_keys=True) == json.dumps(b, sort_keys=True)
+
+
+def test_s3_the_real_run_records_provenance_writes_and_zero_mismatches(pos):
+    n = evaluate(pos)["numbers"]
+    assert n["adapter_provenance_writes"] > 0 and n["adapter_provenance_verbatim_mismatches"] == 0
+    assert n["adapter_provenance_known_negative_detected"] is True and {"GitFake", "GitAdapter"} <= set(n["adapter_provenance_by_adapter"])
+
+
+def test_s3_a_verbatim_mismatch_is_rejected(pos):
+    def bad(p):
+        p["dynamic"]["provenance_verbatim"]["workloads"]["adapter_provenance_verbatim_mismatches"] = 1
+        p["dynamic"]["provenance_verbatim"]["workloads"]["first_mismatches"] = [{"adapter": "X", "written": "a\nWriter: w1\n", "envelope_text": "a\n"}]
+    v = flip(pos, "adapter-responsibility-audit.json", bad, ["R1"], "REJECTED", ["S3"])
+    assert v["numbers"]["adapter_provenance_verbatim_mismatches"] == 1 and v["numbers"]["adapter_provenance_first_mismatches"][0]["adapter"] == "X"
+
+
+def test_s3_zero_observed_writes_proves_nothing(pos):
+    def bad(p):
+        pv = p["dynamic"]["provenance_verbatim"]
+        for x in [pv["workloads"], *pv["probes"]["known_positive"].values()]:
+            x["adapter_provenance_writes"], x["by_adapter"] = 0, {}
+    flip(pos, "adapter-responsibility-audit.json", bad, [], "INCONCLUSIVE", ["S3"])
+
+
+def test_s3_a_missing_provenance_number_is_not_supported(pos):
+    flip(pos, "adapter-responsibility-audit.json", lambda p: p["dynamic"].pop("provenance_verbatim"), [], "INCONCLUSIVE", ["S3"])
+
+
+def test_s3_an_undetected_planted_appender_blocks_support(pos):
+    flip(pos, "adapter-responsibility-audit.json", lambda p: p["dynamic"]["provenance_verbatim"].update(known_negative_detected=False), [], "INCONCLUSIVE", ["S3"])

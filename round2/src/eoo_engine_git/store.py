@@ -1,8 +1,10 @@
 """GitStore: canonical state = deterministic projection of the artifact files at a Git commit.
 
 * ``import_ops`` / ``put_files`` write a commit (validated by the Engine's generic integrity rules first).
-* ``commit_rows`` is the only durable write path for governed changes: ONE commit per call, carrying execution id,
-  base commit and provenance trailers; optimistic concurrency on the writer's ``base``.
+* ``commit_rows`` is the only durable write path for governed changes: ONE commit per call whose message is the text the
+  caller hands in, written verbatim (the Engine-composed provenance envelope, Engine v1.2); optimistic concurrency on the
+  writer's ``base``. Facts about the write (base, head at write, merge mode, artifact digest, writer) are RETURNED, never
+  rendered into the message here.
 * ``state_at`` / ``seed_at`` / ``files_at`` / ``canonical_hash`` rebuild from a commit alone (pure; no clock, no runtime state).
 """
 from __future__ import annotations
@@ -31,9 +33,9 @@ def _epoch(clock: Callable[[], str]) -> int:
 
 
 class GitStore:
-    def __init__(self, repo: Repo, package: dict, *, engine_version: str, clock: Callable[[], str], provenance: bool = True):
+    def __init__(self, repo: Repo, package: dict, *, clock: Callable[[], str], engine_version: Optional[str] = None):
+        # engine_version: kept for callers' bookkeeping only; nothing in the store renders it (the envelope carries it)
         self.repo, self.package, self.engine_version, self.clock = repo, package, engine_version, clock
-        self.provenance = provenance
         # the observation type this package declares for Git (source_binding == "git"); None -> the store emits no observations
         self.obs_type = next((o["id"] for o in package.get("observation_types", []) if o.get("source_binding") == "git"), None)
         self.model = load_model(package)
@@ -116,24 +118,18 @@ class GitStore:
         self.repo.set_ref(ref, sha)
         return sha
 
-    def import_ops(self, ops: list, *, source: str, ref: str = MAIN, parent: Optional[str] = None, extra: dict | None = None) -> str:
+    def import_ops(self, ops: list, *, source: str, ref: str = MAIN, parent: Optional[str] = None) -> str:
         st, errs = would_be(State(self.model), to_plain(ops))
         if errs:
             raise RowRejected(errs)
-        trailers = {"EOO-Import-Source": source, **(extra or {})}
-        return self._write_commit(layout.serialize(st), parent, self._msg("import", trailers), ref)
+        return self._write_commit(layout.serialize(st), parent, f"import: {source}\n", ref)
 
     def put_files(self, files: dict, *, message: str, ref: str, parent: Optional[str]) -> str:
         """Commit an artifact snapshot (fixtures / test setup); it must project to a valid state."""
         _, errs = would_be(State(self.model), layout.to_ops(files))
         if errs:
             raise RowRejected(errs)
-        return self._write_commit(files, parent, self._msg(message, {"EOO-Import-Source": "fixture"}), ref)
-
-    def _msg(self, subject: str, trailers: dict) -> str:
-        if not self.provenance:
-            return subject + "\n"
-        return subject + "\n\n" + "\n".join(f"{k}: {v}" for k, v in trailers.items()) + "\n"
+        return self._write_commit(files, parent, message if message.endswith("\n") else message + "\n", ref)
 
     def rows_to_ops(self, st: State, rows: list) -> tuple[list, list[str]]:
         """Translate (target, row) pairs into store ops, validating on a running fork. Returns (ops, problems)."""
@@ -171,7 +167,11 @@ class GitStore:
             ops.append(op)
         return ops, errs
 
-    def commit_rows(self, *, rows: list, base: str, writer: str, meta: dict, ref: str = MAIN, merge_mode: str = "compatible") -> dict:
+    def commit_rows(self, *, rows: list, base: str, writer: str, meta: dict, message: str, ref: str = MAIN,
+                    merge_mode: str = "compatible") -> dict:
+        """``message`` is written as the commit message byte for byte (it must end with a newline)."""
+        if not isinstance(message, str) or not message.endswith("\n"):
+            raise StoreError("commit message must be a newline-terminated string (the envelope text, verbatim)")
         head = self.head(ref)
         base_state = self.state_at(base)
         ops, errs = self.rows_to_ops(base_state, rows)
@@ -195,14 +195,9 @@ class GitStore:
                 self.conflicts.append({"base": base, "head": head, "writer": writer, "meta": meta, "conflicts": conf})
                 raise ConflictError(base, head, conf)
             how = "compatible"
-        trailers = {"EOO-Execution": meta["execution"], "EOO-Writer": writer, "EOO-Action": meta["action"],
-                    "EOO-Idempotency-Key": meta.get("idempotency_key") or "-", "EOO-Effects": " ".join(meta["effects"]),
-                    "EOO-Targets": ",".join(t for t, _ in rows), "EOO-Base": base, "EOO-Head-At-Write": head or "-",
-                    "EOO-Merge": how, "EOO-Engine-Version": self.engine_version,
-                    "EOO-Package": f"{self.model.package_id}@{self.model.version}",
-                    "EOO-State-Hash": layout.artifact_digest(files)}
-        sha = self._write_commit(files, head, self._msg(f"{meta['action']}: {meta['execution']}", trailers), ref)
-        rec = {"sha": sha, "parent": head, "base": base, "merge": how, "joint_paths": joint, "writer": writer,
-               "execution": meta["execution"], "action": meta["action"], "targets": [t for t, _ in rows]}
+        sha = self._write_commit(files, head, message, ref)
+        rec = {"sha": sha, "parent": head, "base": base, "head_at_write": head, "merge": how, "joint_paths": joint,
+               "writer": writer, "state_hash": layout.artifact_digest(files), "execution": meta["execution"],
+               "action": meta["action"], "targets": [t for t, _ in rows]}
         self.log.append(rec)
         return rec

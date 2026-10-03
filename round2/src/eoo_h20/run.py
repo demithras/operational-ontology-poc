@@ -11,7 +11,7 @@ from eoo_exp import provenance as prov
 from eoo_exp.outdir import immutable_dir
 from eoo_exp.util import ROOT, REPO, git, load_oracle, sha_file, sha_text
 
-from . import adapter_dynamic, adapter_static, alias, loc, mutants, payloads, static_audit, synth, synth_run, workloads
+from . import adapter_dynamic, adapter_static, alias, loc, mutants, payloads, provenance_writes, static_audit, synth, synth_run, workloads
 from .closure import closure, domain_roots
 from .trace import Tracer, profiling_dispatch
 
@@ -101,7 +101,14 @@ def static_payload(t: Tracer) -> dict:
 def adapter_payload(t: Tracer) -> dict:
     st = adapter_static.audit()
     neg = adapter_dynamic.taint_known_negative(Tracer)
-    return {"static": st, "dynamic": {
+    pw = provenance_writes.probes(Tracer)
+    main = t.provenance_numbers()  # every adapter call of the workloads: the text written == effect['envelope_text']
+    parts = [main, *pw["known_positive"].values()]
+    prov = {"workloads": main, "probes": pw, "adapter_provenance_writes": sum(x["adapter_provenance_writes"] for x in parts),
+            "adapter_provenance_verbatim_mismatches": sum(x["adapter_provenance_verbatim_mismatches"] for x in parts),
+            "first_mismatches": [m for x in parts for m in x["first_mismatches"]][:5],
+            "known_negative_detected": pw["known_negative_detected"]}
+    return {"static": st, "dynamic": {"provenance_verbatim": prov,
         "adapter_calls_observed": {f"{c}.{m}": n for (c, m), n in sorted(t.adapter_calls.items())},
         "governance_calls_inside_adapters": t.adapter_violations, "taint_known_negative": neg,
         "engine_owns_idempotency_probe": adapter_dynamic.idempotency_probe(), "ok_mode_probe": adapter_dynamic.ok_mode_probe(),
@@ -109,8 +116,9 @@ def adapter_payload(t: Tracer) -> dict:
                                     + ["Engine." + x for x in __import__("eoo_h20.trace", fromlist=["x"]).GUARDED_ENGINE]
                                     + ["Journal.append", "AppendOnlyLog.append"]},
         "judgement_calls": [
-            "store.py GitStore._msg: commit-message trailers are the Git-side copy of the request the adapter was handed; declared exception "
-            "(see static.declared_exceptions), listed here so a reader can overrule it: strict count including it = static.violations + static.declared_hits.",
+            "Engine v1.2: the Engine composes the provenance envelope; GitAdapter / GitStore write effect['envelope_text'] verbatim as the "
+            "commit message and return the Git facts (commit, base, head at write, merge, state digest, writer) as the response. "
+            "static.declared_exceptions is EMPTY; the static rule provenance_composition flags any adapter that renders provenance itself.",
             "WmsFake / GitFake / GitAdapter answer a repeated call for the same execution / effect id with the stored response (external-system dedupe, as real "
             "WMS / Git would). The Engine's own idempotency decision is shown independent of it by dynamic.engine_owns_idempotency_probe.",
             "GitStore re-validates rows with the Engine's own would_be() (integrity of the external system, reusing Engine code, no re-implementation).",

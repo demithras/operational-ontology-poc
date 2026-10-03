@@ -2,8 +2,10 @@
 
 Per adapter file, from the AST: (1) imports of Engine governance modules, (2) governance vocabulary in a DECISION position
 (an if / while / ternary / assert / comparison / comprehension filter), (3) lifecycle state names as string constants,
-(4) definitions named after a governance concern. Data-position uses (a value copied into a commit message, a docstring)
-are listed as ``disclosed``, never counted. Vocabulary is the forbidden list of the preregistration, word by word.
+(4) definitions named after a governance concern, (5) provenance composition (Engine v1.2): an envelope label or any
+``EOO-`` trailer key as a string constant, a read of the structured ``envelope`` fields, or the ``envelope_text`` used in
+anything but a verbatim pass-through (concatenation, f-string, a method call on it). Data-position uses of governance words
+(a docstring, a value) are listed as ``disclosed``, never counted. Vocabulary is the forbidden list of the preregistration.
 """
 from __future__ import annotations
 
@@ -20,7 +22,8 @@ STEMS = {"authority": r"authori[tsz]", "policy": r"polic(y|ies)", "precondition"
 STATE_NAMES = {"PROPOSED", "PENDING_APPROVAL", "APPROVED", "EXECUTING", "EFFECTS_COMMITTED", "RECONCILED_SUCCESS",
                "RECONCILED_FAILED", "OUTCOME_UNKNOWN", "DENIED"}
 FORBIDDEN_ENGINE_MODULES = {"authority", "pipeline", "gates", "outcome", "gatepass", "journal", "capabilities", "snapshot",
-                            "engine"}
+                            "engine", "provenance"}
+TRAILER_KEY = re.compile(r"^EOO-[A-Za-z0-9-]*")  # every provenance label the Engine renders starts with EOO-
 FORBIDDEN_ENGINE_NAMES = {"Engine", "Principal", "Journal", "WriteGrant", "AdapterRegistry", "AppendOnlyLog"}
 
 
@@ -46,13 +49,43 @@ def _concern(text: str) -> str | None:
     return None
 
 
-# Decided BEFORE the experiment is evaluated, recorded verbatim in the evidence (see report "judgement calls").
-# A Git commit message carries the request it answers (execution, action, key, effects). It records; it never decides.
-DECLARED_EXCEPTIONS = [{
-    "file": "src/eoo_engine_git/store.py", "qual": "GitStore._msg", "concern": "provenance",
-    "reason": "store option that switches the commit-message trailers on/off (H18 ablation); the trailers copy fields of "
-              "the request the adapter was handed (execution, action, key, effects, targets); no gate, approval, principal "
-              "or policy information is written and nothing is decided from it"}]
+# Engine v1.2 (protocol/AUTHOR_DECISIONS_2026-10-03.md decision 2): the Engine composes the provenance envelope and
+# adapters write it verbatim, so there is nothing to declare. The v1.1 exception (GitStore._msg) is gone with the code.
+DECLARED_EXCEPTIONS: list = []
+ENVELOPE_TEXT, ENVELOPE = "envelope_text", "envelope"
+
+
+def _key_of(n) -> str | None:
+    """'k' for x['k'] / x.get('k')."""
+    if isinstance(n, ast.Subscript) and isinstance(n.slice, ast.Constant) and isinstance(n.slice.value, str):
+        return n.slice.value
+    if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and n.func.attr == "get" and n.args \
+            and isinstance(n.args[0], ast.Constant) and isinstance(n.args[0].value, str):
+        return n.args[0].value
+    return None
+
+
+def provenance_composition(tree, docs: set) -> list[dict]:
+    """Rule (5): an adapter that composes provenance text itself instead of writing the Engine's envelope verbatim."""
+    out = []
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Constant) and isinstance(n.value, str) and id(n) not in docs and TRAILER_KEY.match(n.value):
+            out.append({"line": n.lineno, "kind": "provenance_composition", "how": "provenance label literal",
+                        "value": n.value[:40], "concern": "provenance"})
+        if _key_of(n) == ENVELOPE:
+            out.append({"line": n.lineno, "kind": "provenance_composition", "how": "reads structured envelope fields",
+                        "concern": "provenance"})
+        uses = []
+        if isinstance(n, ast.BinOp):
+            uses = [n.left, n.right]
+        elif isinstance(n, ast.FormattedValue):
+            uses = [n.value]
+        elif isinstance(n, ast.Attribute):
+            uses = [n.value]
+        if any(_key_of(u) == ENVELOPE_TEXT for u in uses):
+            out.append({"line": n.lineno, "kind": "provenance_composition", "how": "envelope_text altered, not written verbatim",
+                        "concern": "provenance"})
+    return out
 
 
 def _quals(tree) -> dict:
@@ -86,6 +119,7 @@ def audit_file(path: str, text: str) -> dict:
             violations.append({"line": n.lineno, "kind": "governance_definition", "name": n.name, "concern": c})
         if isinstance(n, ast.Constant) and isinstance(n.value, str) and id(n) not in docs and n.value in STATE_NAMES:
             violations.append({"line": n.lineno, "kind": "lifecycle_state_literal", "value": n.value})
+    violations += provenance_composition(tree, docs)
     tests = []
     for n in ast.walk(tree):
         if isinstance(n, (ast.If, ast.While, ast.IfExp, ast.Assert)):

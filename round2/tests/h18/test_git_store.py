@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from eoo_engine import ENGINE_VERSION
+from eoo_engine import ENGINE_VERSION, ProvenanceEnvelope, render_envelope
 from eoo_engine.state import State
 from eoo_engine.store import would_be
 from eoo_engine_git import ConflictError, GitStore, RowRejected, artifact_digest
@@ -51,8 +51,13 @@ def test_one_commit_per_action_with_execution_base_and_provenance(fresh):
     head1 = st.head("refs/heads/main")
     assert _log(repo)[0] == head1 and _log(repo)[1] == head0  # exactly one new commit on top of the base
     t = trailers(subprocess.run(["git", "-C", str(repo), "log", "-1", "--format=%B", head1], capture_output=True, text=True).stdout)
-    assert (t["EOO-Execution"], t["EOO-Action"], t["EOO-Base"], t["EOO-Engine-Version"]) == (rec["exec"], "attach_evidence", head0, ENGINE_VERSION)
+    assert (t["EOO-Execution"], t["EOO-Action"], t["EOO-Engine-Version"]) == (rec["exec"], "attach_evidence", ENGINE_VERSION)
     assert {r["commit"] for r in rec["responses"].values()} == {head1} and len(rec["responses"]) == 3  # 3 effects, ONE commit
+    # v1.2: the base is a Git fact returned in the response (recorded by the Engine), not rendered into the message
+    assert {r["base"] for r in rec["responses"].values()} == {head0} and {r["head_at_write"] for r in rec["responses"].values()} == {head0}
+    first = sorted(rec["envelopes"])[0]  # the effect whose apply wrote the commit: its envelope text IS the message, byte for byte
+    assert st.repo.read_commit(head1)["message"] == render_envelope(ProvenanceEnvelope.from_plain(rec["envelopes"][first]))
+    assert [x[0] for x in rec["envelopes"][first]["execution_effects"]] == sorted(rec["responses"])  # the batch is named
     assert subprocess.run(["git", "-C", str(repo), "fsck", "--strict"], capture_output=True).returncode == 0
 
 
@@ -82,8 +87,9 @@ def test_stale_compatible_concurrent_changes_merge_on_a_linear_history(fresh):
     assert rb["state"] == "RECONCILED_SUCCESS" and st.log[-1]["merge"] == "compatible" and st.log[-1]["parent"] == ha
     files = st.files_at(st.head(ref))
     assert sum(1 for p in files if p.startswith("ontology/links/PRODUCES/") and "exp-h15-002" in p) == 2
-    t = trailers(st.repo.read_commit(st.head(ref))["message"])
-    assert t["EOO-Base"] == base and t["EOO-Head-At-Write"] == ha and t["EOO-Merge"] == "compatible"
+    resp = list(rb["responses"].values())  # v1.2: base / head at write / merge mode come back in the adapter response
+    assert {r["base"] for r in resp} == {base} and {r["head_at_write"] for r in resp} == {ha} and {r["merge"] for r in resp} == {"compatible"}
+    assert {r["commit"] for r in resp} == {st.head(ref)} and trailers(st.repo.read_commit(st.head(ref))["message"])["EOO-Execution"] == rb["exec"]
 
 
 def test_conflicting_concurrent_change_is_explicit_and_loses_nothing(fresh):
@@ -118,9 +124,9 @@ def test_integrity_of_a_row_is_enforced_by_the_store(fresh):
     base = st.head(ref)
     meta = {"execution": "x9", "action": "a", "effects": ["x9/e0"]}
     with pytest.raises(RowRejected, match="immutable"):
-        st.commit_rows(rows=[("Evidence", {"$key": EV[0], "payload_hash": "tampered"})], base=base, writer="w", meta=meta)
+        st.commit_rows(rows=[("Evidence", {"$key": EV[0], "payload_hash": "tampered"})], base=base, writer="w", meta=meta, message="t\n")
     with pytest.raises(RowRejected, match="undeclared"):
-        st.commit_rows(rows=[("Hypothesis", {"$key": "H15", "nonsense": 1})], base=base, writer="w", meta=meta)
+        st.commit_rows(rows=[("Hypothesis", {"$key": "H15", "nonsense": 1})], base=base, writer="w", meta=meta, message="t\n")
     assert st.head(ref) == base
 
 

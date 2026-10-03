@@ -37,6 +37,9 @@ class Tracer:
         self._serial = itertools.count(1)
         self.prov_fields = defaultdict(set)  # pkg -> {tuple(sorted keys)}
         self.engines = Counter()
+        self.prov_writes = Counter()  # adapter class -> provenance-bearing external writes observed (new commit per envelope)
+        self.prov_mismatches: list = []  # written text != effect['envelope_text'], byte for byte
+        self._written_ids: set = set()
 
     # ---- wrappers ---------------------------------------------------------------------------
     def _pkg(self, eng) -> str:
@@ -113,14 +116,42 @@ class Tracer:
                 t.in_adapter += 1
                 t.current_adapter = f"{cls}.{_m}"
                 try:
-                    return _orig(*a, **k)
+                    out = _orig(*a, **k)
                 finally:
                     t.in_adapter -= 1
                     t.current_adapter = prev
+                if _m == "apply":
+                    t.check_provenance_write(adapter, a[0] if a else k.get("effect"), out)
+                return out
             setattr(adapter, m, w)
         adapter._h20_wrapped = True
 
     current_adapter = None
+
+    def check_provenance_write(self, adapter, effect, response) -> None:
+        """Behavioural twin of the static provenance_composition rule: the text the adapter actually wrote into the external system
+        (Git commit message) must equal effect['envelope_text'] byte for byte. Only a call that created a NEW external artifact counts
+        (a repeated answer for an already-written commit, or the other effects of a batch commit, wrote nothing)."""
+        from .provenance_writes import written_text
+        env = effect.get("envelope_text") if isinstance(effect, dict) or hasattr(effect, "get") else None
+        if env is None or not isinstance(response, dict) or "commit" not in response:
+            return
+        key = (id(adapter), response["commit"])
+        if key in self._written_ids:
+            return
+        text = written_text(adapter, response["commit"])
+        if text is None:  # not a provenance-bearing artifact store we can read (e.g. the WMS fake): nothing to compare
+            return
+        self._written_ids.add(key)
+        cls = type(adapter).__name__
+        self.prov_writes[cls] += 1
+        if text != env:
+            self.prov_mismatches.append({"adapter": cls, "effect_id": effect.get("effect_id"), "commit": response["commit"],
+                                         "written": text[:300], "envelope_text": env[:300]})
+
+    def provenance_numbers(self) -> dict:
+        return {"adapter_provenance_writes": sum(self.prov_writes.values()), "by_adapter": dict(self.prov_writes),
+                "adapter_provenance_verbatim_mismatches": len(self.prov_mismatches), "first_mismatches": self.prov_mismatches[:5]}
 
     # ---- install ----------------------------------------------------------------------------
     @contextmanager

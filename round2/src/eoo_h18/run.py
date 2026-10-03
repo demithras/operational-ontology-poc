@@ -72,7 +72,7 @@ def build(seed: int, n: int, mut_n: int, log=print) -> tuple[dict, dict]:
                          "corpus_total": agg["evaluations"]["accepted_evaluations"], "corpus_reproducible": agg["evaluations"]["verdict_matches_oracle"]}}
     gt = {"engine_version": ENGINE_VERSION, "corpus": agg["trace"], "dogfood_git_cli": dog["git_cli"], "dogfood_repo_commits": len(dog["steps"]),
           "mutation_provenance": [m for m in mut["mutants"] if m["id"].startswith("M3")],
-          "definition": "canonical change = an accepted Action. Traced = exactly one new commit on the case branch whose trailers name the Engine execution, action, base commit and engine version; "
+          "definition": "canonical change = an accepted Action. Traced = exactly one new commit on the case branch whose message (the Engine provenance envelope, Engine v1.2) names the Engine execution, action and engine version, and whose adapter response recorded by the Engine names that commit and the base commit; "
                         "ontology-only write = the Engine's own store changed, a non-git effect ran, or a commit appeared without an accepted Action."}
     bc = {"engine_version": ENGINE_VERSION, "baseline": "round2/baselines/h18_fileonly (Git + JSON files + JSON Schema + Python CI gate)", "same_corpus_cases": ginfo["unique_cases"],
           "baseline_result": {k: agg["base"][k] for k in ("steps", "accepted", "illegal_accepted", "legal_rejected", "state_mismatches", "exceptions", "agreement", "illegal_accepted_core",

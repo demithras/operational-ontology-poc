@@ -201,10 +201,12 @@ def execute(eng, spec, execution: str) -> dict:
             eid = f"{execution}/e{eff.index}"
             if eid in rec["responses"]:
                 continue  # already answered before a crash: never call the adapter twice
+            env = eng.envelope(rec, spec, eff)  # Engine-composed provenance, journaled with the intent (v1.2)
+            rec.setdefault("envelopes", {})[eid] = env.to_plain()
             rec["intents"].append(eid)
             eng.record(rec, "EXECUTING", note=f"intent {eid}", fault="ext_intent")
             try:
-                resp = eng.call_adapter(grant, rec, spec, eff, payloads[eff.index])
+                resp = eng.call_adapter(grant, rec, spec, eff, payloads[eff.index], env)
             except Exception as exc:
                 rec["adapter_errors"].append({"effect": eid, "error": f"{type(exc).__name__}: {exc}"})
                 return eng.record(rec, "OUTCOME_UNKNOWN", note=f"adapter failed on {eid}; effect uncertain")

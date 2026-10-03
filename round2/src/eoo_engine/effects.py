@@ -4,7 +4,7 @@ create/update/delete/link/unlink on a local type -> canonical store ops (need a 
 external_call, git_change and any import-qualified target -> an Adapter looked up by
 (operation, target), falling back to (operation, "*"). Adapter interface (ENGINE_PREREG H20):
 ``apply(effect, payload) -> response`` and ``observations() -> iterable of dicts``; adapters never
-see gates, policies or provenance.
+see gates or policies, and receive provenance only as the Engine-composed envelope (provenance.py) to write verbatim.
 
 Payload of effect i of action A: the ``payload`` binding "A#i" if bound; otherwise derived only when
 derivation is unambiguous (fields named exactly like inputs; object key from the single input typed
@@ -16,6 +16,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from .canon import freeze, to_plain
+from .provenance import render_envelope
 
 STORE_OPS = ("create", "update", "delete", "link", "unlink")
 ADAPTER_OPS = ("external_call", "git_change")
@@ -111,7 +112,13 @@ class AdapterRegistry:
         return [self._by_key[k] for k in sorted(self._by_key)]
 
 
-def effect_request(execution: str, action_spec, eff, idem_key: Optional[str]):
-    return freeze({"execution": execution, "effect_id": f"{execution}/e{eff.index}", "operation": eff.operation,
-                   "target": eff.target, "fields": list(eff.fields) if eff.fields is not None else None,
-                   "action": action_spec.rid, "idempotency_key": idem_key})
+def effect_request(execution: str, action_spec, eff, idem_key: Optional[str], envelope=None):
+    """The read-only request an adapter receives. ``envelope`` (Engine v1.2) is the Engine-composed provenance of this
+    effect: ``envelope`` = its fields, ``envelope_text`` = ``render_envelope`` (the only provenance an adapter may write,
+    verbatim)."""
+    req = {"execution": execution, "effect_id": f"{execution}/e{eff.index}", "operation": eff.operation,
+           "target": eff.target, "fields": list(eff.fields) if eff.fields is not None else None,
+           "action": action_spec.rid, "idempotency_key": idem_key}
+    if envelope is not None:
+        req["envelope"], req["envelope_text"] = envelope.to_plain(), render_envelope(envelope)
+    return freeze(req)

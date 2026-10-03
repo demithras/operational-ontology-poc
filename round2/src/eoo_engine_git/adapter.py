@@ -8,6 +8,11 @@ action before the first adapter call, through the ``payload`` bindings. ``attach
 learns the full batch first; the first ``apply`` of an execution then commits all of its effects at once and every
 effect's response names that one commit. If the batch is not complete the adapter refuses (BatchError): it never
 falls back to one commit per effect.
+
+Provenance (Engine v1.2): the commit message is ``effect["envelope_text"]`` of the effect whose ``apply`` triggers the
+commit, written verbatim (its execution-effects field lists the whole batch). The adapter composes no provenance; the
+facts of the write (commit, parent = head at write, base, merge mode, state digest, writer, batch) go back in the
+response, and the Engine records them.
 """
 from __future__ import annotations
 
@@ -47,13 +52,16 @@ class GitAdapter:
         if want is None or len(batch) != want or idx not in batch or batch[idx][1] != pay:
             raise BatchError(f"{eid}: payloads announced {sorted(batch)} of {want} effects; refusing a partial commit")
         rows = [batch[i] for i in sorted(batch)]
+        effects = [f"{ex}/e{i}" for i in sorted(batch)]
         rec = self.store.commit_rows(rows=rows, base=self.base, writer=self.writer, merge_mode=self.merge_mode, ref=self.ref,
-                                     meta={"execution": ex, "action": effect["action"], "idempotency_key": effect.get("idempotency_key"),
-                                           "effects": [f"{ex}/e{i}" for i in sorted(batch)]})
+                                     meta={"execution": ex, "action": effect["action"], "effects": effects},
+                                     message=effect.get("envelope_text"))
         self._commits.append({**rec, "committed_at": self.store.clock()})
         for i in sorted(batch):
             self._responses[f"{ex}/e{i}"] = {"commit": rec["sha"], "parent": rec["parent"], "target": batch[i][0],
-                                             "row": batch[i][1]}
+                                             "row": batch[i][1], "base": rec["base"], "head_at_write": rec["head_at_write"],
+                                             "merge": rec["merge"], "state_hash": rec["state_hash"], "writer": rec["writer"],
+                                             "batch": effects}
         del self._board[ex]
         return dict(self._responses[eid])
 

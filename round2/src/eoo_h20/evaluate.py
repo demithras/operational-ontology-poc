@@ -18,7 +18,7 @@ from .run import FORBIDDEN_IMPORTS, HID, REQUIRED
 SUPPORT = {
     "S1": "0 forbidden domain-specific core branches (token scan + identity-in-branch scan over the whole import closure)",
     "S2": "100% registered domain operations use generic lifecycle states (all executions conform; every registered Action executed; dispatch is kind-keyed)",
-    "S3": "0 governance semantics found in adapters beyond declared external binding responsibilities (static, in-adapter taint, ok-mode, Engine-owned idempotency)",
+    "S3": "0 governance semantics found in adapters beyond declared external binding responsibilities (static, in-adapter taint, ok-mode, Engine-owned idempotency, provenance written verbatim: 0 byte mismatches over > 0 observed writes, planted appender detected)",
     "S4": "Generated synthetic resource/action executes without Engine edit (>= 3,000 unique, oracle-equal, Engine bytes + dispatch table unchanged, alias-invariant)",
     "S5": "All target mutations detected (controls clean)",
 }
@@ -92,7 +92,15 @@ def evaluate(exp_dir, root: Path = ROOT) -> dict:
                  adapter_taint_known_negative=dy["taint_known_negative"]["detected"], adapter_calls=sum(dy["adapter_calls_observed"].values()),
                  ok_mode_refusals=[r for r in dy["ok_mode_probe"] if not r["carried_out"]],
                  engine_owns_idempotency=all(r["engine_decided"] for r in dy["engine_owns_idempotency_probe"]),
-                 adapter_strict_count_without_exceptions=viol + decl)
+                 adapter_strict_count_without_exceptions=viol + decl, adapter_declared_exceptions=len(s.get("declared_exceptions", [])))
+    pv = dy.get("provenance_verbatim") if ad else None
+    if pv:  # recomputed from the per-run parts, not copied from the summary fields
+        parts = [pv["workloads"], *pv["probes"]["known_positive"].values()]
+        n.update(adapter_provenance_writes=sum(x["adapter_provenance_writes"] for x in parts),
+                 adapter_provenance_verbatim_mismatches=sum(x["adapter_provenance_verbatim_mismatches"] for x in parts),
+                 adapter_provenance_first_mismatches=[m for x in parts for m in x["first_mismatches"]][:5],
+                 adapter_provenance_by_adapter={k: sum(x["by_adapter"].get(k, 0) for x in parts) for x in parts for k in x["by_adapter"]},
+                 adapter_provenance_known_negative_detected=bool(pv["known_negative_detected"]))
     if sy:
         R = sy["definitions"]  # recomputed from the per-definition rows
         kinds = {k for r in R for k in r["kinds"]}
@@ -127,7 +135,9 @@ def evaluate(exp_dir, root: Path = ROOT) -> dict:
           and n["cross_domain"]["state_sets_equal_or_subset_of_frozen"] and n["provenance_complete"]) if ok("lifecycle_conformity") else None
     s3 = (n["adapter_static_violations"] <= th["max_governance_semantics_in_adapters"] and n["adapter_taint_violations"] == 0
           and n["adapter_taint_known_negative"] and not n["ok_mode_refusals"] and n["engine_owns_idempotency"]
-          and n["adapter_calls"] > 0) if ok("adapter_static_violations", "ok_mode_refusals") else None
+          and n["adapter_calls"] > 0
+          and n.get("adapter_provenance_verbatim_mismatches") == 0 and n.get("adapter_provenance_writes", 0) > 0
+          and n.get("adapter_provenance_known_negative_detected") is True) if ok("adapter_static_violations", "ok_mode_refusals") else None
     s4 = (n["synthetic_unique"] >= minimum and n["synthetic_mismatches"] == 0 and not n["synthetic_engine_edited"]
           and not n["synthetic_dispatch_changed"] and not n["synthetic_unknown_kinds"] and not n["synthetic_id_clash"]
           and n["alias_disagreements"] == 0 and n["alias_definitions"] >= 100 and n["synthetic_replays_identical"]
@@ -140,7 +150,8 @@ def evaluate(exp_dir, root: Path = ROOT) -> dict:
     if ok("alias_disagreements"):
         r1_parts.append(n["alias_disagreements"] > 0)
     if ok("adapter_static_violations"):
-        r1_parts.append(n["adapter_static_violations"] > 0 or n["adapter_taint_violations"] > 0 or bool(n["ok_mode_refusals"]))
+        r1_parts.append(n["adapter_static_violations"] > 0 or n["adapter_taint_violations"] > 0 or bool(n["ok_mode_refusals"])
+                        or n.get("adapter_provenance_verbatim_mismatches", 0) > 0)
     r1 = any(r1_parts) if r1_parts else None
     i1 = (any(not (p["read_dispatches"] and p["function_dispatches"] and p["governed_action_executions"] and p["security_authority_decisions"]
                    and p["security_authority_denials"] and p["provenance_records"]) or n["completed_actions"][x] == 0
@@ -168,8 +179,9 @@ def evaluate(exp_dir, root: Path = ROOT) -> dict:
                                 "generic sweep), every execution of every workload conforms to the frozen state machine, and every dispatched (kind, op) "
                                 "belongs to the frozen kind-keyed set. Registered Functions / policies / reads are reported as dispatched-or-not "
                                 "(numbers.not_dispatched_registered), not required.",
-                                "S3 includes one declared exception (store.py GitStore._msg, commit-message trailers); numbers.adapter_strict_count_without_exceptions "
-                                "is the count when it is not accepted.",
+                                "S3 counts adapter violations against the declared-exception list in the evidence (numbers.adapter_declared_exceptions; EMPTY "
+                                "from Engine v1.2, where the Engine composes the provenance envelope and adapters write it verbatim); "
+                                "numbers.adapter_strict_count_without_exceptions is the count with no exception accepted.",
                                 "The alias-invariance probe (neutral vs real domain identifiers for the same synthetic definition) is the dynamic twin of the static "
                                 "token scan; a domain-name-keyed behaviour that avoids every literal would still show up there.",
                                 "Baseline is CONTEXTUAL only (numbers.baseline_contextual): it supports no clause."]})

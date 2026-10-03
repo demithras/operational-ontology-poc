@@ -10,8 +10,9 @@ from .errors import (CapabilityError, EngineError, IntegrityError, InvalidReques
                      Unbound)
 from .journal import Journal
 from .logic import LogicBindings
+from .provenance import ProvenanceEnvelope, parse_envelope, render_envelope
 from .registry import DISPATCH_TABLE
 
 __all__ = ["ENGINE_VERSION", "AdapterRegistry", "CapabilityError", "DISPATCH_TABLE", "Engine", "EngineError", "IntegrityError",
-           "InvalidRequest", "Journal", "LoadError", "LogicBindings", "Principal", "SimulatedCrash", "Unbound",
-           "WriteGrant", "required_bindings"]
+           "InvalidRequest", "Journal", "LoadError", "LogicBindings", "Principal", "ProvenanceEnvelope", "SimulatedCrash", "Unbound",
+           "WriteGrant", "parse_envelope", "render_envelope", "required_bindings"]

@@ -5,7 +5,7 @@ import ast
 from datetime import datetime, timezone
 from typing import Any, Callable, Iterable, Optional
 
-from . import effects, outcome, queries
+from . import effects, outcome, provenance as prov, queries
 from .authority import Principal
 from .canon import digest, freeze, to_plain
 from .capabilities import Minter, tool_facade
@@ -19,10 +19,11 @@ from .snapshot import ExecutionsView, snapshot
 from .store import Store
 
 _PROV_FIELDS = ("exec", "state", "package_id", "package_version", "action", "action_version", "policy_versions",
-                "principal", "inputs", "key", "gates", "approvals", "soft_flags", "effect_ids", "responses",
+                "principal", "inputs", "key", "gates", "approvals", "soft_flags", "effect_ids", "envelopes", "responses",
                 "observed", "updated_at")
 
-ENGINE_VERSION = "1.1"  # v1.1: snapshot returns + journaled gate-pass check (docs/engine_semantics.md)
+ENGINE_VERSION = "1.2"  # v1.1: snapshot returns + journaled gate-pass check; v1.2: Engine-owned provenance envelope
+# (docs/engine_semantics.md sections 8 and 9)
 
 
 def utc_clock() -> str:
@@ -167,7 +168,7 @@ class Engine:
                "package_version": self.model.version, "principal": {"pid": pid}, "inputs": inputs, "key": key,
                "key_conflict": conflict, "digest": intent, "expected_versions": dict(expected_versions or {}), "presented": presented, "state": None, "history": [], "gates": [],
                "policy_versions": policy_versions, "approvals": [], "base_versions": {}, "soft_flags": [],
-               "intents": [], "responses": {}, "adapter_errors": [], "observations": [], "rejected_observations": [],
+               "intents": [], "envelopes": {}, "responses": {}, "adapter_errors": [], "observations": [], "rejected_observations": [],
                "effect_ids": [], "observed": None, "created_at": self.now(), "updated_at": None}
         self._executions[xid] = rec
         if key is not None and not conflict:
@@ -194,10 +195,15 @@ class Engine:
         self._write({"kind": "attempt", "exec": rec["exec"], "who": who if isinstance(who, str) else
                      getattr(who, "pid", repr(who)), "why": why, "at": self.now()})
 
-    def call_adapter(self, grant, rec: dict, spec, eff, payload: dict):
+    def envelope(self, rec: dict, spec, eff) -> "prov.ProvenanceEnvelope":
+        """The provenance envelope of one adapter-routed effect (a pure function of the execution record)."""
+        return prov.build_envelope(rec, spec, eff, [e for e in spec.effects if effects.routes_to_adapter(e)], ENGINE_VERSION)
+
+    def call_adapter(self, grant, rec: dict, spec, eff, payload: dict, envelope=None):
         self.minter.verifier()(grant, rec["exec"])
         adapter = self.adapters.lookup(eff.operation, eff.target)
-        return adapter.apply(effects.effect_request(rec["exec"], spec, eff, rec["key"]), freeze(payload))
+        env = envelope if envelope is not None else self.envelope(rec, spec, eff)
+        return adapter.apply(effects.effect_request(rec["exec"], spec, eff, rec["key"], env), freeze(payload))
 
     # ---- public API ----------------------------------------------------------------------
     def propose(self, action_id: str, inputs: dict, principal: Any, idempotency_key: Optional[str] = None,

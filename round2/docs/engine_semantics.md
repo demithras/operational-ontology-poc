@@ -4,10 +4,13 @@ One in-process, generic Engine executes any IR package that passes `eoo_ir.valid
 (`ontology/ir.schema.json`). It has no domain knowledge: domain logic arrives as `LogicBindings`,
 external systems as adapters. Scope and disclosure rules: `protocol/ENGINE_PREREG.json`.
 
-Version: `eoo_engine.ENGINE_VERSION == "1.1"`. v1.1 (P5c) closes the exp-h17-001 gate bypass (Engine v1 returned
+Version: `eoo_engine.ENGINE_VERSION == "1.2"`. v1.1 (P5c) closes the exp-h17-001 gate bypass (Engine v1 returned
 its live execution record; editing it turned gate-denied requests into executed effects): see section 8.
 No gate order, policy/authority, idempotency or lifecycle-state semantics changed; the one new transition
 (APPROVED -> DENIED, gate `gate_pass`) is reachable only when the journal does not authorise the execution.
+v1.2 (P10, protocol/AUTHOR_DECISIONS_2026-10-03.md decision 2) moves provenance composition out of the adapters: the
+Engine builds a provenance envelope for every adapter-routed effect and adapters write it verbatim (section 9).
+Gates, lifecycle, idempotency, Git concurrency/merge/conflict semantics and deterministic rebuild are unchanged.
 
 ## 1. Registry and kind dispatch (`registry.py`)
 
@@ -238,3 +241,54 @@ gates passed, and an approver whose delegation chain is disjoint from the propos
 failure appends gate `gate_pass` (passed: false, reason) and moves the execution to DENIED with zero effects.
 The check reads only the journal and the identity directory (`gatepass.py`), never a caller-supplied record.
 A v1 journal has no gate-pass records: an execution it left APPROVED/EXECUTING is DENIED on v1.1 recovery.
+
+## 9. Provenance envelope and the adapter contract (Engine v1.2)
+
+**Who composes provenance.** Only the Engine (`provenance.py`). For every effect routed to an adapter
+(`external_call`, `git_change`, import-qualified targets) `pipeline.execute` builds a `ProvenanceEnvelope` from the
+Engine's own execution record, journals it in `rec["envelopes"][effect_id]` with the intent record (before the
+adapter is called), and hands it to the adapter inside the effect request. The envelope is a frozen dataclass; the
+adapter sees its fields as a `MappingProxyType` (`effect["envelope"]`) and its canonical text as a string
+(`effect["envelope_text"]`). It is a pure function of the record, so a recovery that re-calls an adapter hands it
+the identical envelope.
+
+| Field | Label | Source |
+|---|---|---|
+| envelope_version | `EOO-Envelope` | constant `1` |
+| execution | `EOO-Execution` | execution id |
+| action, action_version | `EOO-Action`, `EOO-Action-Version` | action id and IR version |
+| package | `EOO-Package` | `package_id@version` |
+| engine_version | `EOO-Engine-Version` | `ENGINE_VERSION` |
+| principal, delegated_by | `EOO-Principal`, `EOO-Delegated-By` | identified principal id, its immediate delegator id (or null) |
+| idempotency_key | `EOO-Idempotency-Key` | the request key (or null) |
+| effect_id, operation, target | `EOO-Effect`, `EOO-Operation`, `EOO-Target` | the effect handed over |
+| execution_effects | `EOO-Execution-Effects` | `[effect_id, operation, target]` of every adapter-routed effect of the execution |
+
+**Canonical text** (`render_envelope(env) -> str`): a subject line `<action>: <execution> <effect_id>` (JSON-escaped,
+informative only), an empty line, then one line `<label>: <value>` per field in the table's order, where `<value>`
+is canonical JSON (ASCII, sorted keys, no spaces); the text ends with exactly one newline. A value is always one JSON
+token, so no input (an idempotency key with a newline, say) can break a line or forge another field.
+`parse_envelope(text)` returns the fields; a message without an envelope parses to `{}`.
+
+**Adapter contract.** An adapter may (ENGINE_PREREG H20 `adapter_allowed`) translate the effect into an external
+call, write `effect["envelope_text"]` into the external system byte for byte (Git: the commit message), return the
+raw external response, and emit observations. It may not compose provenance: no provenance labels of its own, no
+reading of the structured envelope to re-render it, no altering of the text. Facts about the external system are
+response data: `GitAdapter` returns, per effect, `commit`, `parent` (= head at write), `base`, `head_at_write`,
+`merge`, `state_hash` (artifact digest of the committed tree), `writer` and `batch` (the effect ids the commit
+carries). The Engine records the response in `rec["responses"]`, which enters the ProvenanceLog together with
+`rec["envelopes"]`.
+
+**Git.** `GitStore.commit_rows(..., message=...)` writes `message` verbatim (it must be newline-terminated) and returns
+the write facts; it renders nothing. One governed action is still one commit: the commit is written by the first
+`apply` of the execution and carries that effect's envelope, whose `EOO-Execution-Effects` names the whole batch.
+Traceability: commit -> execution and action by `parse_envelope(message)`; execution -> commit by the Engine's
+ProvenanceLog entry (`responses[effect_id]["commit"]`). Import and fixture commits (`import_ops`, `put_files`) are not
+governed effects and carry a plain subject (`import: <source>`), no envelope.
+
+**Audit.** `eoo_h20.adapter_static` has no declared exceptions (`DECLARED_EXCEPTIONS == []`) and a rule
+`provenance_composition` that flags, in adapter files, any string constant starting `EOO-`, any read of
+`effect["envelope"]`, and any use of `envelope_text` inside a concatenation, f-string or method call; importing
+`eoo_engine.provenance` into an adapter is an `engine_governance_import`. Known blind spot: an adapter that renders
+provenance under labels not starting with `EOO-` from data it was not handed as the envelope is invisible to this
+vocabulary rule (like the innocuous-name blind spot of the existing audit).

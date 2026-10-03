@@ -9,7 +9,8 @@ from pathlib import Path
 from domains._pack import boot, load_ir
 from domains.project.pack import build_pack
 from domains.project.seed_from_repo import build_seed
-from eoo_engine import ENGINE_VERSION
+from eoo_engine import ENGINE_VERSION, parse_envelope
+from eoo_engine.provenance import LABELS
 from eoo_engine_git import GitStore
 from eoo_exp.util import load_oracle
 
@@ -25,7 +26,8 @@ PRINCIPAL = "researcher-1"
 
 
 def trailers(msg: str) -> dict:
-    return dict(ln.split(": ", 1) for ln in msg.splitlines() if ln.startswith("EOO-") and ": " in ln)
+    """Engine v1.2: the commit message IS the Engine's provenance envelope; {label: value} of its parsed fields."""
+    return {LABELS[f]: v for f, v in parse_envelope(msg).items()}
 
 
 class EooRig:
@@ -37,8 +39,10 @@ class EooRig:
         self.seed = build_seed(reader, h15_state=h15_state)
         self.base_ops, self.commit0 = self.seed["ops"] + list(extra_ops), self.seed["head_commit"]
         self.tick = 0
-        self.store = GitStore.init(self.workdir / "repo", self.package, engine_version=ENGINE_VERSION, clock=self._clock,
-                                   provenance=provenance)
+        self.store = GitStore.init(self.workdir / "repo", self.package, engine_version=ENGINE_VERSION, clock=self._clock)
+        if not provenance:  # H18 mutant M3 (ablation, harness-side): the envelope never reaches the commit message
+            commit_rows = self.store.commit_rows
+            self.store.commit_rows = lambda **kw: commit_rows(**{**kw, "message": "detached\n"})
         self.root = self.store.import_ops(self.base_ops, source=f"real-repo@{self.commit0}")
         self.evaluators = registry(reader)
 
@@ -84,7 +88,8 @@ class EooRig:
             tr = trailers(msg)
             resp = {r["commit"] for r in rec["responses"].values()}
             row["trace"] = {"execution": tr.get("EOO-Execution") == rec["exec"], "action": tr.get("EOO-Action") == action,
-                            "base": tr.get("EOO-Base") == head0, "engine_version": tr.get("EOO-Engine-Version") == ENGINE_VERSION,
+                            "base": bool(rec["responses"]) and all(r.get("base") == head0 for r in rec["responses"].values()),
+                            "engine_version": tr.get("EOO-Engine-Version") == ENGINE_VERSION,
                             "responses_name_the_commit": resp == {head1},
                             "observed": any(o["observation"]["data"]["sha"] == head1 for o in rec["observations"])}
         row["summary"] = summarize(st.files_at(head1), case["subject"], case)

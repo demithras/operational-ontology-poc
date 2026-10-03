@@ -34,8 +34,8 @@ def _containers(v, out):
 
 
 # ---- returned values are immutable, detached snapshots --------------------------------------------------------
-def test_engine_version_is_1_1():
-    assert ENGINE_VERSION == "1.1"
+def test_engine_version_is_1_2():  # v1.2 (provenance envelope) keeps every v1.1 guarantee tested in this file
+    assert ENGINE_VERSION == "1.2"
 
 
 def test_every_returned_record_refuses_mutation_and_shares_no_container_with_internal_state():
@@ -81,8 +81,8 @@ def test_every_provenance_record_names_the_engine_version():
     eng.propose("fill_box", {"box": "b1", "amount": 60}, "filler", idempotency_key="k")  # retry record
     eng.propose("fill_box", {"box": "b1", "amount": 5}, "nobody", idempotency_key="z")  # denied
     prov = eng.provenance.entries()
-    assert prov and {p["engine_version"] for p in prov} == {"1.1"}
-    assert {r["engine_version"] for r in eng.journal} == {"1.1"}
+    assert prov and {p["engine_version"] for p in prov} == {ENGINE_VERSION}
+    assert {r["engine_version"] for r in eng.journal} == {ENGINE_VERSION}
 
 
 def test_gate_pass_is_journaled_before_approved_with_the_gated_inputs_hash():
