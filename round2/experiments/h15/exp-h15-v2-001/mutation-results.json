@@ -1,0 +1,759 @@
+{
+ "candidate_combined_sha256": "e9b057c1b9366b2737a4e76dcdf765d5be16e971b8c9dae4fae76ffd55a297e0",
+ "candidate_pin_path": "/private/tmp/claude-501/-Users-d-surchis-work-operational-ontology-poc/83ecb957-a4bb-430b-84f3-5b83562a7f31/scratchpad/wt-r15v2/round2/protocol/H15_V2_CANDIDATE.json",
+ "candidate_surface": "openpona2",
+ "created_at": "2026-10-03T20:12:51+00:00",
+ "environment": {
+  "hypothesis": "6.168.3",
+  "jsonschema": "4.26.0",
+  "machine": "arm64",
+  "openpona-language-corpus": "0.2.0",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.6",
+  "pyyaml": "6.0.3"
+ },
+ "evidence_kind": "mutation-results",
+ "experiment_id": "exp-h15-v2-001",
+ "gate0_combined_sha256": "2b632c47bb56e285d74b52cb04c079e439117bed5bc879268cefc1658b125f19",
+ "git_commit": "6fa0a0f8219d2773dbd90a15c7d146159f488cf6",
+ "h15_v2_prereg_sha256": "1822dad087651d81da3dfd4749021dbaf9d9e83d44536c9c76f9d1698fbc932b",
+ "harness_dirty": false,
+ "harness_dirty_paths": [],
+ "harness_sha256": {
+  "scripts/evaluate_h15.py": "40410343c5bc1ffe6c5758cc1d5538e74863d4dd8ef1142b51b9946884166fed",
+  "scripts/run_h15.py": "06048aeace5bea84dc82d36d7e89c79e766c956e89be7c359ad351c21b167a17",
+  "src/eoo_h15/__init__.py": "1cf0d035db467c476099cb4caf2a4d23ea769fed945bdcc8397d9b3cc8d55230",
+  "src/eoo_h15/ambiguity.py": "94fc6a192e9d6edd38facee5bf2a3fb2eaa2c0b9f66332dda1506a3398149aae",
+  "src/eoo_h15/candidate.py": "e73681d9577bc38c1ce7aa0306eb4e77df46fe27f11367bf95a6c7b5039bfab2",
+  "src/eoo_h15/corpus.py": "43582480e7eb6857e6962c6fa5b9eddfc75aebe13cf870229624c1083ff9a018",
+  "src/eoo_h15/domains.py": "07203d6b4d218551a7c8d9bdd7a6e6812e64e13b6afa10bc3b8668b8cd1dbcc8",
+  "src/eoo_h15/evaluate.py": "2600801de27adaa5d901a764ece0a90bd9c75eca569d93778b8acea5046d7827",
+  "src/eoo_h15/evaluate_v2.py": "ae186d11cc5834a116a72f6022232b93fb4ba68ce5464a7df032b16ed39c4159",
+  "src/eoo_h15/evidence.py": "9e98abeec92f42d0d0f5c5876fecc59111b28e6c42dc2cc753f8356a39d4a2f2",
+  "src/eoo_h15/genloop.py": "519071ab79ba6b5904974cfa6c110a99978a626f5074b674b93b7af80971edda",
+  "src/eoo_h15/isolation.py": "2a0ed3170ec32e3cd42fb305ae57f99904f2d33d1ed332b25c25dd22d3f302bd",
+  "src/eoo_h15/meaning.py": "9e0cf4f8fb543172cbaa5f8aa7bdd487c74b790df535a4b99424f542e67571e6",
+  "src/eoo_h15/metrics.py": "20e519dda85f05963c42c4755a6727950886f238f004c28628a1fa9990bd8eaf",
+  "src/eoo_h15/metrics2.py": "a81c5817e4e898eb60d1e86cfab55845e56eb1eb759d76ce881e73603e351330",
+  "src/eoo_h15/mutants.py": "31deff788b1f161923e0990a5c89351d2c37d6564fbfe49c8fd48dd8d7a548a4",
+  "src/eoo_h15/mutants_v2.py": "a4781a5224f7f0817387850a091dc16bc4bdcb77767992ec62c5c64890006830",
+  "src/eoo_h15/opdoc.py": "8a4b81735a18b7d2cc04c4507f2c712547972fde4ab1a777e04b47c295f23543",
+  "src/eoo_h15/opdoc2.py": "7b015305c22058fd0420e7d53d0166fc3846c447a9f5652c1a2a0f2bbd3cfe8f",
+  "src/eoo_h15/report.py": "be82b9485378c2bcebe15d65e121270c381a45911bd7ecea02d46927fa5cdbad",
+  "src/eoo_h15/roundtrip.py": "5a213a042d25f515cb80c910a845c0fcc2a9f6eb4161f8170606f758dd33f114",
+  "src/eoo_h15/run.py": "e6a5aa1e7f544b0f75576eb6547accabe1140901a0173432fa709a2fa0dccc6c",
+  "src/eoo_h15/sidecar.py": "31fb68a8e607f24f8b1898b08ceff9840ec1962c4a567eb191778a65b2a73ad5",
+  "src/eoo_h15/sidecar2.py": "0b9d26d4c9feb17a17a607a2cfb9a00d4a23c6be3c1959ec0af899ac1573b398",
+  "src/eoo_h15/slots.py": "433f37215b81c8995f33dd3920db0581ac12d07852c977ecb198849b6420d170",
+  "src/eoo_h15/surfaces.py": "11b9a38137fd4c360d3a82d27d916616265bd93f0b4a828d29f2cbce121e8b3d",
+  "src/eoo_h15/util.py": "69507bd7a787db010b0fb1ef504af5931ae01f3406affd76b1ca4fdb457facfd"
+ },
+ "hypothesis_id": "H15",
+ "input_corpus_hash": "14cfed5e7dfff9301a309ebe5712e9be45ce0b93923f760b0569bf68d0b28ab0",
+ "openpona_pin": {
+  "commit": "97a9b9e",
+  "grammar_lark_sha256": "37228468d80e7f5a90fcd8bca6ef8208fe813728f4f5d358936177b1a6310d69",
+  "repository": "https://github.com/demithras/openpona-language-corpus",
+  "rule": "The token inventory and grammar are frozen at this commit. Any change to tokens, grammar or parser semantics needed to encode a frozen IR kind during the experiment is recorded as an adaptation event and counts toward the 'new primitive' falsifier.",
+  "tokens_csv_sha256": "eb91ae649ba8bc35b46e9a00047a063807eeb80aa4ef91c94f9ff7907a66e7d0",
+  "version": "0.2.0"
+ },
+ "oracle_version": "eoo_ir@gate0:2b632c47bb56e285d74b52cb04c079e439117bed5bc879268cefc1658b125f19",
+ "payload": {
+  "classes": {
+   "accept_ambiguous_binding": "ambiguous / duplicate reference accepted (first reading picked)",
+   "default_missing_type": "a missing property/parameter type defaulted to string",
+   "drop_authority_ref": "Action authority_refs dropped",
+   "drop_cardinality": "link cardinality (min/max) lost: replaced by 0..*",
+   "drop_version": "package / action / policy version replaced by a constant",
+   "swap_function_action": "Function and Action kinds exchanged"
+  },
+  "controls": {
+   "dsl": {
+    "clean": true,
+    "clean_after_restore": true,
+    "declared_cases": 39,
+    "deletion_mutants": 300,
+    "examples": [],
+    "hits": {},
+    "probes": 65
+   },
+   "openpona": {
+    "clean": true,
+    "clean_after_restore": true,
+    "declared_cases": 49,
+    "deletion_mutants": 300,
+    "examples": [],
+    "hits": {},
+    "probes": 65
+   }
+  },
+  "mutants": [
+   {
+    "class": "drop_cardinality",
+    "crash_hits": 0,
+    "declared_cases": 49,
+    "deletion_mutants": 300,
+    "examples": [
+     {
+      "kind": "valid_input_rejected",
+      "what": "coverage_ir: unused_statement"
+     },
+     {
+      "kind": "valid_input_rejected",
+      "what": "manufacturing: unused_statement"
+     },
+     {
+      "kind": "valid_input_rejected",
+      "what": "project: unused_statement"
+     },
+     {
+      "kind": "valid_input_rejected",
+      "what": "project-domain-minimal: unused_statement"
+     },
+     {
+      "kind": "valid_input_rejected",
+      "what": "generated[2]: unused_statement"
+     }
+    ],
+    "hits": {
+     "valid_input_rejected": 40
+    },
+    "id": "openpona:drop_cardinality",
+    "killed": true,
+    "probes": 65,
+    "surface": "openpona",
+    "target": true
+   },
+   {
+    "class": "swap_function_action",
+    "crash_hits": 0,
+    "declared_cases": 49,
+    "deletion_mutants": 300,
+    "examples": [
+     {
+      "kind": "valid_input_rejected",
+      "what": "coverage_ir: missing:output"
+     },
+     {
+      "kind": "valid_input_rejected",
+      "what": "manufacturing: missing:output"
+     },
+     {
+      "kind": "valid_input_rejected",
+      "what": "project: missing:output"
+     },
+     {
+      "kind": "valid_input_rejected",
+      "what": "manufacturing-minimal: missing:output"
+     },
+     {
+      "kind": "valid_input_rejected",
+      "what": "project-domain-minimal: missing:output"
+     }
+    ],
+    "hits": {
+     "valid_input_rejected": 52
+    },
+    "id": "openpona:swap_function_action",
+    "killed": true,
+    "probes": 65,
+    "surface": "openpona",
+    "target": true
+   },
+   {
+    "class": "drop_authority_ref",
+    "crash_hits": 0,
+    "declared_cases": 49,
+    "deletion_mutants": 300,
+    "examples": [
+     {
+      "kind": "non_equivalent",
+      "what": "coverage_ir: actions[place].authority_refs[0]: \"auth:clerk\" != absent"
+     },
+     {
+      "kind": "non_equivalent",
+      "what": "manufacturing: actions[expedite_purchase_order].authority_refs[0]: \"auth:approve-large-transfer-supervisor\" != abse"
+     },
+     {
+      "kind": "non_equivalent",
+      "what": "project: actions[attach_evidence].authority_refs[0]: \"auth:no-canonical-write-outside-git\" != absent"
+     },
+     {
+      "kind": "non_equivalent",
+      "what": "manufacturing-minimal: actions[transfer_inventory].authority_refs[0]: \"auth:inventory-transfer\" != absent"
+     },
+     {
+      "kind": "non_equivalent",
+      "what": "project-domain-minimal: actions[preregister_hypothesis].authority_refs[0]: \"auth:researcher-preregister\" != absent"
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[4]"
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[4]"
+     }
+    ],
+    "hits": {
+     "deletion_mutant_invented": 20,
+     "non_equivalent": 23
+    },
+    "id": "openpona:drop_authority_ref",
+    "killed": true,
+    "probes": 65,
+    "surface": "openpona",
+    "target": true
+   },
+   {
+    "class": "drop_version",
+    "crash_hits": 0,
+    "declared_cases": 49,
+    "deletion_mutants": 300,
+    "examples": [
+     {
+      "kind": "valid_input_rejected",
+      "what": "coverage_ir: unused_statement"
+     },
+     {
+      "kind": "valid_input_rejected",
+      "what": "manufacturing: unused_statement"
+     },
+     {
+      "kind": "valid_input_rejected",
+      "what": "project: unused_statement"
+     },
+     {
+      "kind": "valid_input_rejected",
+      "what": "manufacturing-minimal: unused_statement"
+     },
+     {
+      "kind": "valid_input_rejected",
+      "what": "project-domain-minimal: unused_statement"
+     }
+    ],
+    "hits": {
+     "valid_input_rejected": 65
+    },
+    "id": "openpona:drop_version",
+    "killed": true,
+    "probes": 65,
+    "surface": "openpona",
+    "target": true
+   },
+   {
+    "class": "accept_ambiguous_binding",
+    "crash_hits": 0,
+    "declared_cases": 49,
+    "deletion_mutants": 300,
+    "examples": [
+     {
+      "kind": "ambiguity_case_accepted",
+      "what": "bind-git-change-shared-id"
+     }
+    ],
+    "hits": {
+     "ambiguity_case_accepted": 1
+    },
+    "id": "openpona:accept_ambiguous_binding",
+    "killed": true,
+    "probes": 65,
+    "surface": "openpona",
+    "target": true
+   },
+   {
+    "class": "default_missing_type",
+    "crash_hits": 0,
+    "declared_cases": 49,
+    "deletion_mutants": 300,
+    "examples": [
+     {
+      "kind": "ambiguity_case_accepted",
+      "what": "type-missing-property"
+     },
+     {
+      "kind": "ambiguity_case_accepted",
+      "what": "type-missing-parameter"
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[2]"
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[6]"
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[6]"
+     }
+    ],
+    "hits": {
+     "ambiguity_case_accepted": 2,
+     "deletion_mutant_invented": 5
+    },
+    "id": "openpona:default_missing_type",
+    "killed": true,
+    "probes": 65,
+    "surface": "openpona",
+    "target": true
+   },
+   {
+    "class": "default_immutable_false",
+    "crash_hits": 0,
+    "declared_cases": 49,
+    "deletion_mutants": 300,
+    "examples": [
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[0]"
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[2]"
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[3]"
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[3]"
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[3]"
+     }
+    ],
+    "hits": {
+     "deletion_mutant_invented": 63
+    },
+    "id": "openpona:default_immutable_false",
+    "killed": true,
+    "probes": 65,
+    "surface": "openpona",
+    "target": false
+   },
+   {
+    "class": "accept_parse_ambiguity",
+    "crash_hits": 0,
+    "declared_cases": 49,
+    "deletion_mutants": 300,
+    "examples": [],
+    "hits": {},
+    "id": "openpona:accept_parse_ambiguity",
+    "killed": false,
+    "probes": 65,
+    "surface": "openpona",
+    "target": false
+   },
+   {
+    "class": "auto_close_metadata",
+    "crash_hits": 0,
+    "declared_cases": 49,
+    "deletion_mutants": 300,
+    "examples": [
+     {
+      "kind": "ambiguity_case_accepted",
+      "what": "surface-metadata-unclosed-at-end"
+     }
+    ],
+    "hits": {
+     "ambiguity_case_accepted": 1
+    },
+    "id": "openpona:auto_close_metadata",
+    "killed": true,
+    "probes": 65,
+    "surface": "openpona",
+    "target": false
+   },
+   {
+    "class": "drop_cardinality",
+    "crash_hits": 0,
+    "declared_cases": 39,
+    "deletion_mutants": 300,
+    "examples": [
+     {
+      "kind": "non_equivalent",
+      "what": "coverage_ir: link_types[Peer].from_cardinality.max: 3 != \"*\""
+     },
+     {
+      "kind": "non_equivalent",
+      "what": "manufacturing: link_types[ActionExecution_destinationWarehouse].from_cardinality.max: 1 != \"*\""
+     },
+     {
+      "kind": "non_equivalent",
+      "what": "project: link_types[CAPTURED_AT].from_cardinality.max: 1 != \"*\""
+     },
+     {
+      "kind": "non_equivalent",
+      "what": "project-domain-minimal: link_types[HypothesisHasEvidence].to_cardinality.max: 1 != \"*\""
+     },
+     {
+      "kind": "non_equivalent",
+      "what": "generated[2]: link_types[F\u00cc\udb80\udf37\u00ba(\ud860\udc29\u012f\u00aa\u012d\u00b9].from_cardinality.min: 2 != 0"
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[2]"
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[3]"
+     }
+    ],
+    "hits": {
+     "deletion_mutant_invented": 23,
+     "non_equivalent": 40
+    },
+    "id": "dsl:drop_cardinality",
+    "killed": true,
+    "probes": 65,
+    "surface": "dsl",
+    "target": true
+   },
+   {
+    "class": "swap_function_action",
+    "crash_hits": 0,
+    "declared_cases": 39,
+    "deletion_mutants": 300,
+    "examples": [
+     {
+      "kind": "non_equivalent",
+      "what": "coverage_ir: actions[ask]: absent != {\"determinism\":\"external-model\",\"id\":\"ask\",\"implementation_ref\":\"fn..."
+     },
+     {
+      "kind": "non_equivalent",
+      "what": "manufacturing: actions[available_quantity]: absent != {\"determinism\":\"deterministic\",\"id\":\"available_quantity\",\"imp"
+     },
+     {
+      "kind": "non_equivalent",
+      "what": "project: actions[attach_evidence]: {\"authority_refs\":[\"auth:no-canonical-write-outside-git\",\"auth:rese... != "
+     },
+     {
+      "kind": "non_equivalent",
+      "what": "manufacturing-minimal: actions[available_quantity]: absent != {\"determinism\":\"deterministic\",\"id\":\"available_quantity\",\"imp"
+     },
+     {
+      "kind": "non_equivalent",
+      "what": "project-domain-minimal: actions[evidence_count]: absent != {\"determinism\":\"deterministic\",\"id\":\"evidence_count\",\"implementat"
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[0]"
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[0]"
+     }
+    ],
+    "hits": {
+     "deletion_mutant_invented": 69,
+     "non_equivalent": 52
+    },
+    "id": "dsl:swap_function_action",
+    "killed": true,
+    "probes": 65,
+    "surface": "dsl",
+    "target": true
+   },
+   {
+    "class": "drop_authority_ref",
+    "crash_hits": 0,
+    "declared_cases": 39,
+    "deletion_mutants": 300,
+    "examples": [
+     {
+      "kind": "non_equivalent",
+      "what": "coverage_ir: actions[place].authority_refs[0]: \"auth:clerk\" != absent"
+     },
+     {
+      "kind": "non_equivalent",
+      "what": "manufacturing: actions[expedite_purchase_order].authority_refs[0]: \"auth:approve-large-transfer-supervisor\" != abse"
+     },
+     {
+      "kind": "non_equivalent",
+      "what": "project: actions[attach_evidence].authority_refs[0]: \"auth:no-canonical-write-outside-git\" != absent"
+     },
+     {
+      "kind": "non_equivalent",
+      "what": "manufacturing-minimal: actions[transfer_inventory].authority_refs[0]: \"auth:inventory-transfer\" != absent"
+     },
+     {
+      "kind": "non_equivalent",
+      "what": "project-domain-minimal: actions[preregister_hypothesis].authority_refs[0]: \"auth:researcher-preregister\" != absent"
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[4]"
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[4]"
+     }
+    ],
+    "hits": {
+     "deletion_mutant_invented": 25,
+     "non_equivalent": 23
+    },
+    "id": "dsl:drop_authority_ref",
+    "killed": true,
+    "probes": 65,
+    "surface": "dsl",
+    "target": true
+   },
+   {
+    "class": "drop_version",
+    "crash_hits": 0,
+    "declared_cases": 39,
+    "deletion_mutants": 300,
+    "examples": [
+     {
+      "kind": "non_equivalent",
+      "what": "coverage_ir: actions[cancel].version: \"1\" != \"v\""
+     },
+     {
+      "kind": "non_equivalent",
+      "what": "manufacturing: actions[expedite_purchase_order].version: \"v1\" != \"v\""
+     },
+     {
+      "kind": "non_equivalent",
+      "what": "project: actions[attach_evidence].version: \"v1\" != \"v\""
+     },
+     {
+      "kind": "non_equivalent",
+      "what": "manufacturing-minimal: actions[transfer_inventory].version: \"v1\" != \"v\""
+     },
+     {
+      "kind": "non_equivalent",
+      "what": "project-domain-minimal: actions[preregister_hypothesis].version: \"v1\" != \"v\""
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[0]"
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[0]"
+     }
+    ],
+    "hits": {
+     "deletion_mutant_invented": 78,
+     "non_equivalent": 65
+    },
+    "id": "dsl:drop_version",
+    "killed": true,
+    "probes": 65,
+    "surface": "dsl",
+    "target": true
+   },
+   {
+    "class": "accept_ambiguous_binding",
+    "crash_hits": 0,
+    "declared_cases": 39,
+    "deletion_mutants": 300,
+    "examples": [
+     {
+      "kind": "ambiguity_case_accepted",
+      "what": "bind-ambiguous-reads"
+     },
+     {
+      "kind": "ambiguity_case_accepted",
+      "what": "bind-ambiguous-git-target"
+     }
+    ],
+    "hits": {
+     "ambiguity_case_accepted": 2
+    },
+    "id": "dsl:accept_ambiguous_binding",
+    "killed": true,
+    "probes": 65,
+    "surface": "dsl",
+    "target": true
+   },
+   {
+    "class": "default_missing_type",
+    "crash_hits": 0,
+    "declared_cases": 39,
+    "deletion_mutants": 300,
+    "examples": [
+     {
+      "kind": "ambiguity_case_accepted",
+      "what": "type-missing-property"
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[2]"
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[2]"
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[2]"
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[6]"
+     }
+    ],
+    "hits": {
+     "ambiguity_case_accepted": 1,
+     "deletion_mutant_invented": 10
+    },
+    "id": "dsl:default_missing_type",
+    "killed": true,
+    "probes": 65,
+    "surface": "dsl",
+    "target": true
+   },
+   {
+    "class": "default_required_false",
+    "crash_hits": 1,
+    "declared_cases": 39,
+    "deletion_mutants": 300,
+    "examples": [
+     {
+      "kind": "ambiguity_case_accepted",
+      "what": "required-missing-property"
+     },
+     {
+      "kind": "crash",
+      "what": "case dangling-bare-item"
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[1]"
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[2]"
+     },
+     {
+      "kind": "deletion_mutant_invented",
+      "what": "generated[3]"
+     }
+    ],
+    "hits": {
+     "ambiguity_case_accepted": 1,
+     "crash": 1,
+     "deletion_mutant_invented": 11
+    },
+    "id": "dsl:default_required_false",
+    "killed": true,
+    "probes": 65,
+    "surface": "dsl",
+    "target": false
+   }
+  ],
+  "n_probes": 65,
+  "oracle_known_negatives": {
+   "all_detected": true,
+   "applied": 531,
+   "detected": 531,
+   "per_class": {
+    "action_authority_refs_change": {
+     "applied": 23,
+     "detected": 23
+    },
+    "action_authority_refs_remove": {
+     "applied": 23,
+     "detected": 23
+    },
+    "action_idempotency": {
+     "applied": 33,
+     "detected": 33
+    },
+    "action_version": {
+     "applied": 33,
+     "detected": 33
+    },
+    "from_cardinality_max": {
+     "applied": 40,
+     "detected": 40
+    },
+    "from_cardinality_min": {
+     "applied": 40,
+     "detected": 40
+    },
+    "kind_action_to_function": {
+     "applied": 33,
+     "detected": 33
+    },
+    "kind_function_to_action": {
+     "applied": 42,
+     "detected": 42
+    },
+    "link_from": {
+     "applied": 40,
+     "detected": 40
+    },
+    "package_version": {
+     "applied": 65,
+     "detected": 65
+    },
+    "policy_version": {
+     "applied": 43,
+     "detected": 43
+    },
+    "to_cardinality_max": {
+     "applied": 40,
+     "detected": 40
+    },
+    "to_cardinality_min": {
+     "applied": 40,
+     "detected": 40
+    },
+    "type_primitive": {
+     "applied": 36,
+     "detected": 36
+    }
+   }
+  },
+  "probes": [
+   "coverage_ir",
+   "manufacturing",
+   "project",
+   "manufacturing-minimal",
+   "project-domain-minimal",
+   "generated[0]",
+   "generated[1]",
+   "generated[2]",
+   "..."
+  ],
+  "summary": {
+   "dsl": {
+    "kill_rate": 1.0,
+    "killed": 6,
+    "target_mutants": 6
+   },
+   "openpona": {
+    "kill_rate": 1.0,
+    "killed": 6,
+    "target_mutants": 6
+   }
+  }
+ },
+ "payload_hash": "8566358a56fe1e9faebe2c1aba28f5e01f140d3d7151f9a3147c32a5ab992121",
+ "payload_path": null,
+ "protocol_freeze_hash": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2",
+ "seed": 15,
+ "variant_versions": {
+  "dsl": {
+   "gate0_combined_sha256": "2b632c47bb56e285d74b52cb04c079e439117bed5bc879268cefc1658b125f19"
+  },
+  "openpona": {
+   "candidate_combined_sha256": "e9b057c1b9366b2737a4e76dcdf765d5be16e971b8c9dae4fae76ffd55a297e0",
+   "installed": {
+    "commit": "97a9b9e8ca8800fda0a22f51ea59fccb6f60f35b",
+    "grammar_lark_sha256": "37228468d80e7f5a90fcd8bca6ef8208fe813728f4f5d358936177b1a6310d69",
+    "parser_py_sha256": "af0aa5c42a70ba4a16efe45fcc3d5a255a2a2729f7c6694ee75fd37773bc7719",
+    "tokens_csv_sha256": "eb91ae649ba8bc35b46e9a00047a063807eeb80aa4ef91c94f9ff7907a66e7d0",
+    "url": "https://github.com/demithras/openpona-language-corpus"
+   },
+   "pin": "97a9b9e"
+  }
+ }
+}
