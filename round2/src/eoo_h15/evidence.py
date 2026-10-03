@@ -35,18 +35,41 @@ def candidate_hash() -> tuple[str, str]:
     return h.hexdigest(), c["combined_sha256"]
 
 
+def candidate_hash_v2(pin_path: Path) -> tuple[str, str, list[str]]:
+    """(recomputed, pinned, problems) for the H15 v2 candidate pin (same hashing as candidate_hash)."""
+    from .candidate import v2_files
+    c = json.loads(Path(pin_path).read_text())
+    listed = [e["path"] for e in c["files"]]
+    problems = [] if sorted(listed) == sorted(v2_files()) else [
+        f"pin lists {sorted(set(listed) ^ set(v2_files()))} differently from the v2 candidate file set"]
+    h = hashlib.sha256()
+    for e in c["files"]:
+        h.update(e["path"].encode() + b"\0" + (ROOT / e["path"]).read_bytes() + b"\0")
+    return h.hexdigest(), c["combined_sha256"], problems
+
+
 def head_commit() -> str:
     git = REPO / ".git"
-    head = (git / "HEAD").read_text().strip()
+    dirs = [git]
+    if git.is_file():  # a linked worktree: '.git' is 'gitdir: <dir>'; refs may live in the common dir
+        gd = Path(git.read_text().split(":", 1)[1].strip())
+        gd = gd if gd.is_absolute() else (REPO / gd).resolve()
+        dirs = [gd]
+        if (gd / "commondir").is_file():
+            cd = Path((gd / "commondir").read_text().strip())
+            dirs.append(cd if cd.is_absolute() else (gd / cd).resolve())
+    head = (dirs[0] / "HEAD").read_text().strip()
     if not head.startswith("ref:"):
         return head
     ref = head.split(" ", 1)[1]
-    f = git / ref
-    if f.exists():
-        return f.read_text().strip()
-    for ln in (git / "packed-refs").read_text().splitlines():
-        if ln.endswith(" " + ref):
-            return ln.split()[0]
+    for d in dirs:
+        if (d / ref).exists():
+            return (d / ref).read_text().strip()
+    for d in dirs:
+        if (d / "packed-refs").exists():
+            for ln in (d / "packed-refs").read_text().splitlines():
+                if ln.endswith(" " + ref):
+                    return ln.split()[0]
     raise RuntimeError(f"cannot resolve {ref}")
 
 
@@ -72,18 +95,31 @@ def preflight() -> dict:
     r = subprocess.run([sys.executable, str(ROOT / "scripts/h15_gate0_hash.py"), "--check"], capture_output=True, text=True, timeout=120)
     if r.returncode != 0:
         raise SystemExit("REFUSED: Gate-0 check failed\n" + r.stdout + r.stderr)
-    got, want = candidate_hash()
-    if got != want:
-        raise SystemExit(f"REFUSED: candidate hash {got} != H15_CANDIDATE.json {want}")
+    from . import candidate
+    if candidate.is_v2():
+        pin_path = candidate.pin_path()
+        if not pin_path.is_file():
+            raise SystemExit(f"REFUSED: no H15 v2 candidate pin at {pin_path} (scripts/h15_v2_candidate.py --write)")
+        got, want, probs = candidate_hash_v2(pin_path)
+        if got != want or probs:
+            raise SystemExit(f"REFUSED: v2 candidate hash {got} != pin {want} ({pin_path}) {probs}")
+    else:
+        got, want = candidate_hash()
+        if got != want:
+            raise SystemExit(f"REFUSED: candidate hash {got} != H15_CANDIDATE.json {want}")
     pin = json.loads((ROOT / "hypotheses/h15/contract.json").read_text())["experiment"]["openpona_pin"]
     inst = openpona_install()
     if not (inst["commit"].startswith(pin["commit"]) and inst["tokens_csv_sha256"] == pin["tokens_csv_sha256"]
             and inst["grammar_lark_sha256"] == pin["grammar_lark_sha256"]):
         raise SystemExit(f"REFUSED: installed OpenPona differs from the pin: {inst}")
     g0 = json.loads((ROOT / "protocol/H15_GATE0.json").read_text())
-    return {"protocol_freeze_hash": fz["protocol_sha256"], "gate0_combined_sha256": g0["combined_sha256"],
-            "candidate_combined_sha256": got, "openpona_pin": pin, "openpona_installed": inst,
-            "gate0_check": r.stdout.strip().splitlines()[-1]}
+    out = {"protocol_freeze_hash": fz["protocol_sha256"], "gate0_combined_sha256": g0["combined_sha256"],
+           "candidate_combined_sha256": got, "openpona_pin": pin, "openpona_installed": inst,
+           "gate0_check": r.stdout.strip().splitlines()[-1]}
+    if candidate.is_v2():
+        out["v2"] = {"candidate_surface": "openpona2", "candidate_pin_path": str(candidate.pin_path()),
+                     "h15_v2_prereg_sha256": sha_file(ROOT / "protocol/H15_V2_PREREG.json")}
+    return out
 
 
 def harness_hashes() -> dict:
@@ -103,6 +139,13 @@ def environment() -> dict:
 
 def provenance(pre: dict, exp_id: str, seed: int, corpus_hash: str) -> dict:
     dirty = dirty_paths()
+    v2 = pre.get("v2")
+    if v2:  # H15 v2: the candidate surface and the v2 preregistration travel with every record
+        return {**_prov(pre, exp_id, seed, corpus_hash, dirty), **v2}
+    return _prov(pre, exp_id, seed, corpus_hash, dirty)
+
+
+def _prov(pre: dict, exp_id: str, seed: int, corpus_hash: str, dirty: list) -> dict:
     return {"experiment_id": exp_id, "hypothesis_id": "H15", "git_commit": head_commit(),
             "protocol_freeze_hash": pre["protocol_freeze_hash"], "environment": environment(), "seed": seed,
             "input_corpus_hash": corpus_hash, "oracle_version": "eoo_ir@gate0:" + pre["gate0_combined_sha256"],

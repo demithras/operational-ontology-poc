@@ -60,5 +60,13 @@ def render_report(d: Path, v: dict) -> str:
               _t([[x["domain"], x["resources"], x["openpona"]["bytes"], x["dsl"]["bytes"], x["openpona"]["lines"], x["dsl"]["lines"],
                    x["openpona"]["tokens_re"], x["dsl"]["tokens_re"]] for x in met["domains"]],
                  ["domain", "resources", "OP bytes", "DSL bytes", "OP lines", "DSL lines", "OP tokens", "DSL tokens"]), ""]
+    if v.get("candidate_surface") == "openpona2" and side and side.get("meaning_rule"):
+        m = side["meaning_rule"]
+        L += ["## Meaning rule (H15 v2 bounded-vocabulary test)", "",
+              f"{m['verdict']}: {m['distinct_phrases_total']} distinct phrases over {m['packages']} packages "
+              f"(phrase table {m['phrase_table_size']}); sizes over the bound: {m['sizes_over_bound'] or 'none'}.", "",
+              _t([[r["size"], r["packages"], r["mean_distinct_per_package"], r["max_distinct_per_package"],
+                   r["distinct_in_group"], r["cumulative_distinct_up_to_size"]] for r in m["per_size"]],
+                 ["size", "packages", "mean distinct", "max distinct", "distinct in group", "cumulative"]), ""]
     L += ["## Interpretation notes", ""] + [f"- {x}" for x in v["interpretation_notes"]] + [""]
     return "\n".join(L)

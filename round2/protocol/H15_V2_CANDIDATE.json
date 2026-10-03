@@ -1,0 +1,97 @@
+{
+  "purpose": "H15 v2 candidate (OpenPona v2 surface, no coreference labels) pinned before exp-h15-v2-001",
+  "prereg": "protocol/H15_V2_PREREG.json",
+  "prereg_sha256": "1822dad087651d81da3dfd4749021dbaf9d9e83d44536c9c76f9d1698fbc932b",
+  "openpona_commit": "97a9b9e8ca8800fda0a22f51ea59fccb6f60f35b",
+  "combined_sha256": "e9b057c1b9366b2737a4e76dcdf765d5be16e971b8c9dae4fae76ffd55a297e0",
+  "files": [
+    {
+      "path": "domains/manufacturing/openpona2.op",
+      "sha256": "f0494ced428d198fc3b31aca094dff8566d81c8c1c5194645a6741da3bcfcdba"
+    },
+    {
+      "path": "domains/manufacturing/openpona2.record.json",
+      "sha256": "733afef8d542ffc6441cfcb411007ce4227ab00f28bde091fc683ec8a644e365"
+    },
+    {
+      "path": "domains/project/openpona2.op",
+      "sha256": "39313d20531112c9f0c6a0c5b403d663baa8e4a58f445931bc1f40b4c5c37fd7"
+    },
+    {
+      "path": "domains/project/openpona2.record.json",
+      "sha256": "75bda6da6fefd8b9e0095b8309753d12d929f6e1a3bf21043c3c4ab7bad4e64d"
+    },
+    {
+      "path": "ontology/openpona2_encoding.md",
+      "sha256": "adddff6fd7404a2fd119c2b1373af46b4b9a3ffbdb58f3999bd4b2e7f9437489"
+    },
+    {
+      "path": "ontology/openpona2_gaps.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "src/eoo_openpona2/__init__.py",
+      "sha256": "33e2e97275b94d20b934e228eb64fd7d767dac51e3b366fdf300de5ffe510fa3"
+    },
+    {
+      "path": "src/eoo_openpona2/compiler.py",
+      "sha256": "ee60c11f180ef7ba92eae3b2d1f67762d17508822d24957212bb367ad6c289c7"
+    },
+    {
+      "path": "src/eoo_openpona2/ctx.py",
+      "sha256": "6362d44a9200c7cfffeb4e22db3cbd03354cc871ff75ddf2a9d24c165cace6db"
+    },
+    {
+      "path": "src/eoo_openpona2/document.py",
+      "sha256": "96d4566e6b0e5a918c55d8478f323699e485039abfb0c90d5e5ed0d1367b455b"
+    },
+    {
+      "path": "src/eoo_openpona2/errors.py",
+      "sha256": "840fc8b4f9e30c223fabc6c9a2e7248151fca8b835520df12350ad87ce3631a5"
+    },
+    {
+      "path": "src/eoo_openpona2/facts.py",
+      "sha256": "08514135f756d9c1cc23f1e16b4114aeee4b0a786a64bcf1b269687812029a6f"
+    },
+    {
+      "path": "src/eoo_openpona2/gaps.py",
+      "sha256": "a4a0b06a067cf68a0c4ac113bc250e6858b2723d4fb69ff8aea02057ca68f666"
+    },
+    {
+      "path": "src/eoo_openpona2/lines.py",
+      "sha256": "ce020e8b0af48e93d38d3fb09789c010092ca8fb7e3479e5bbc308dff4f78551"
+    },
+    {
+      "path": "src/eoo_openpona2/meta.py",
+      "sha256": "c0862a8cb1ba6ed8ba3d7c2271c8d9da9038a06096a27ab061d428a346246a62"
+    },
+    {
+      "path": "src/eoo_openpona2/phrases.py",
+      "sha256": "7494ee2a76bf5ee531f6c7402ea67ba0bb64083c40ca0331357b4454586d5c67"
+    },
+    {
+      "path": "src/eoo_openpona2/record.py",
+      "sha256": "7497106a61ad81210ec831d7e2955a805004abd37daccb47309e70f255ff2547"
+    },
+    {
+      "path": "src/eoo_openpona2/render.py",
+      "sha256": "9dc8e15f79c67ed5e1dd6a5cf33db61c88fbf2234a8bd08f0e0613ffe67f3432"
+    },
+    {
+      "path": "src/eoo_openpona2/render_base.py",
+      "sha256": "919d12424d0c8c602c37e5d01200be449107c28caab38c75e8d79552b961923b"
+    },
+    {
+      "path": "src/eoo_openpona2/resources.py",
+      "sha256": "6b037090426de91580a69402c1ea38de4e8b39dd6eae1061ef30c2e498b12b93"
+    },
+    {
+      "path": "src/eoo_openpona2/table.py",
+      "sha256": "80deec6d18112367056a91f84d286655b968d2d5b123f0c5e4118066d93702c4"
+    },
+    {
+      "path": "src/eoo_openpona2/vocab.py",
+      "sha256": "6ec8eb0da2562b5ca2c8245ce26072b28843ce1d2c24cc82950809811c5b5cd3"
+    }
+  ]
+}

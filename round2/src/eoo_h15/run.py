@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import sys
 
-from . import ambiguity, domains, evidence, metrics, mutants, sidecar
+from . import ambiguity, candidate, domains, evidence, metrics, metrics2, mutants, sidecar, sidecar2
 from .genloop import GenLoop
 from .corpus import generate
 from .util import ROOT, load_json, resource_counts
@@ -22,7 +22,7 @@ def substantive(pkgs: list[dict], k: int | None = None, line_target: int | None 
     their position in the kept sample; stops after k packages or once line_target lines are reached."""
     out, lines = [], 0
     for i, p in enumerate(pkgs):
-        n = len(eoo_openpona.render(p)[0].splitlines())
+        n = len(_render(p)[0].splitlines())
         if n < MIN_LINES:
             continue
         out.append((f"kept[{i}]", p))
@@ -30,6 +30,10 @@ def substantive(pkgs: list[dict], k: int | None = None, line_target: int | None 
         if (k and len(out) >= k) or (line_target and lines >= line_target):
             break
     return out
+
+
+def _render(ir: dict):
+    return candidate.current().pkg.render(ir) if candidate.is_v2() else eoo_openpona.render(ir)
 
 
 def _sidecar(domain_irs: dict, head: list[dict]) -> dict:
@@ -93,13 +97,13 @@ def run(seed: int, n: int, out_dir, exp_id: str, log=sys.stderr) -> dict:
     dels = substantive(loop.head, line_target=DELETION_LINE_TARGET)
     amb = ambiguity.run(dels, [(d, dom[d]) for d in dom], seed)
     print("[run] sidecar", file=log, flush=True)
-    side = _sidecar(dom, loop.head)
+    side = sidecar2.run_audit(dom, loop.head) if candidate.is_v2() else _sidecar(dom, loop.head)
     print("[run] mutation", file=log, flush=True)
     mut = mutants.run([p for _, p in substantive(loop.head, k=MUTATION_PKGS)] or loop.head[:MUTATION_PKGS], seed)
     print("[run] metrics", file=log, flush=True)
     stats = {s: {"mean_render_ms": gen["surfaces"][s]["mean_render_ms"], "mean_compile_ms": gen["surfaces"][s]["mean_compile_ms"],
                  "packages": gen["generation"]["generated"]} for s in gen["surfaces"]}
-    met = metrics.build(dom, stats, amb["summary"], set(gen["tokens_seen_in_openpona_text"]))
+    met = (metrics2 if candidate.is_v2() else metrics).build(dom, stats, amb["summary"], set(gen["tokens_seen_in_openpona_text"]))
     prov = evidence.provenance(pre, exp_id, seed, gen["generation"]["corpus_sha256"])
     files = {"real-domain-roundtrip.json": real, "generated-roundtrip.json": gen, "ambiguity-corpus.json": amb,
              "sidecar-audit.json": side, "mutation-results.json": mut, "compiler-diff-metrics.json": met}

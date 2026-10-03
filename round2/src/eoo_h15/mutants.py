@@ -23,7 +23,7 @@ from eoo_ir import equivalent
 from eoo_ir.mutations import REGISTRY, apply_class
 from eoo_openpona.errors import Invalid
 
-from . import ambiguity
+from . import ambiguity, candidate, mutants_v2
 from .roundtrip import attempt
 from .surfaces import SURFACES
 from .util import ROOT, load_json
@@ -244,7 +244,11 @@ def run(generated: list[dict], seed: int, n_deletion_pkgs: int = 12) -> dict:
     for surface in ("openpona", "dsl"):
         c = suite(surface, probes, dels, seed)
         out["controls"][surface] = {**c, "clean": not c["hits"]}
-        for target, table in ((True, MUTANTS[surface]), (False, EXTRAS[surface])):
+        if surface == "openpona" and candidate.is_v2():
+            tables = ((True, mutants_v2.MUTANTS), (False, mutants_v2.EXTRAS))
+        else:
+            tables = ((True, MUTANTS[surface]), (False, EXTRAS[surface]))
+        for target, table in tables:
             for cid, fn in table.items():
                 with pytest.MonkeyPatch.context() as mp:
                     fn(mp)

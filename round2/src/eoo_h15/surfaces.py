@@ -9,6 +9,8 @@ import eoo_dsl
 import eoo_dsl.compiler as dsl_compiler
 import eoo_openpona
 import eoo_openpona.compiler as op_compiler
+import eoo_openpona2
+import eoo_openpona2.compiler as op2_compiler
 from eoo_dsl import DslError
 from eoo_openpona import OpenPonaError, Unrepresentable
 
@@ -30,12 +32,20 @@ def _op_compile(art):
     return op_compiler.compile(text, rec)
 
 
+def _op2_compile(art):
+    text, rec = art
+    return op2_compiler.compile(text, rec)
+
+
 def _dsl_compile(text):
     return dsl_compiler.compile(text)
 
 
 OPENPONA = Surface("openpona", eoo_openpona.render, _op_compile, (OpenPonaError,), (Unrepresentable,))
 DSL = Surface("dsl", eoo_dsl.render, _dsl_compile, (DslError,), ())
+# H15 v2 candidate. It fills the "openpona" (candidate) slot only after candidate.use("openpona2").
+OPENPONA2 = Surface("openpona", eoo_openpona2.render, _op2_compile, (eoo_openpona2.OpenPonaError,),
+                    (eoo_openpona2.Unrepresentable,))
 SURFACES = {"openpona": OPENPONA, "dsl": DSL}
 
 

@@ -17,6 +17,7 @@ import eoo_dsl.compiler as dsl_compiler
 from eoo_ir import validate
 from eoo_openpona import OpenPonaError, load_record
 
+from . import candidate, opdoc2
 from .opdoc import canonical_doc, delete_line
 from .util import ROOT, canon
 
@@ -32,14 +33,19 @@ def classes() -> dict:
 
 
 def declared_openpona() -> dict:
+    cand = candidate.current()
+    if candidate.is_v2():  # same procedure, the v2 candidate's own declared cases and compiler
+        comp, load, err = cand.compiler.compile, cand.pkg.load_record, cand.pkg.OpenPonaError
+    else:
+        comp, load, err = op_compiler.compile, load_record, OpenPonaError
     res = []
-    for c in _jsonl("tests/h15/openpona_ambiguity_cases.jsonl"):
+    for c in _jsonl(cand.cases):
         out = {"id": c["id"], "class": c["class"], "expected": c["expected"], "declared": f"{c['error']}/{c['code']}"}
         try:
-            rec = load_record(c["record_json"]) if "record_json" in c else c["record"]
-            op_compiler.compile(c["text"], rec)
+            rec = load(c["record_json"]) if "record_json" in c else c["record"]
+            comp(c["text"], rec)
             out["outcome"] = "accepted"
-        except OpenPonaError as e:
+        except err as e:
             out["got"] = f"{type(e).__name__}/{e.code}"
             out["outcome"] = "as_declared" if out["got"] == out["declared"] else "closed_other"
         except Exception as e:  # noqa: BLE001 - any other exception is a crash, not a refusal
@@ -99,13 +105,18 @@ def _fin(d: dict) -> dict:
 
 
 def op_deletions(ir: dict, label: str, acc: dict, lines: list[int] | None = None) -> None:
-    text, rec = eoo_openpona.render(ir)
+    if candidate.is_v2():
+        cand = candidate.current()
+        render, comp, err, canon_doc = cand.pkg.render, cand.compiler.compile, cand.pkg.OpenPonaError, opdoc2.canonical_doc
+    else:
+        render, comp, err, canon_doc = eoo_openpona.render, op_compiler.compile, OpenPonaError, canonical_doc
+    text, rec = render(ir)
     for k in lines or range(1, len(text.splitlines()) + 1):
         mt, mr = delete_line(text, rec, k)
         acc["total"] += 1
         try:
-            out = op_compiler.compile(mt, mr)
-        except OpenPonaError as e:
+            out = comp(mt, mr)
+        except err as e:
             acc["raised"] += 1
             acc["raised_by_error"][f"{type(e).__name__}/{e.code}"] += 1
             continue
@@ -113,7 +124,7 @@ def op_deletions(ir: dict, label: str, acc: dict, lines: list[int] | None = None
             acc["crashed"].append({"source": label, "line": k, "error": f"{type(e).__name__}: {str(e)[:100]}"})
             continue
         try:
-            same = canonical_doc(*eoo_openpona.render(out)) == canonical_doc(mt, mr)
+            same = canon_doc(*render(out)) == canon_doc(mt, mr)
         except Exception as e:  # noqa: BLE001
             acc["crashed"].append({"source": label, "line": k, "error": f"re-render {type(e).__name__}: {str(e)[:100]}"})
             continue
@@ -174,7 +185,7 @@ def deletion_mutants(packages: list[tuple[str, dict]], domains: list[tuple[str, 
         op_deletions(ir, label, op)
         dsl_deletions(ir, label, ds, rnd, dsl_sites)
     for label, ir in domains:
-        n = len(eoo_openpona.render(ir)[0].splitlines())
+        n = len((candidate.current().pkg.render if candidate.is_v2() else eoo_openpona.render)(ir)[0].splitlines())
         op_deletions(ir, label, op, sorted(rnd.sample(range(1, n + 1), min(domain_lines, n))))
         dsl_deletions(ir, label, ds, rnd, 4 * dsl_sites)
     return {"openpona": _fin(op), "dsl": _fin(ds)}
