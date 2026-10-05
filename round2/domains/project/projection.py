@@ -21,7 +21,8 @@ def project(seed: dict, git: GitFake) -> dict:
         target, row = c["target"], dict(c["row"])
         if "$src" in row:
             end = {"EVALUATES": ("Verdict", "Hypothesis"), "PRODUCES": ("Experiment", "Evidence"),
-                   "SUPERSEDED_BY": ("Hypothesis", "Hypothesis"), "CHANGES": ("Decision", "ContractVersion"), "SUPPORTS_OR_REFUTES": ("Evidence", "Hypothesis")}[target]
+                   "SUPERSEDED_BY": ("Hypothesis", "Hypothesis"), "CHANGES": ("Decision", "ContractVersion"), "SUPPORTS_OR_REFUTES": ("Evidence", "Hypothesis"),
+                   "NEW_VERSION_OF": ("Experiment", "Experiment")}[target]
             if any(o["op"] == "link" and o["type"] == target and o["src"] == [end[0], row["$src"]]
                    and o["dst"] == [end[1], row["$dst"]] for o in ops):
                 continue  # already projected (seed pre-declares it, or a replayed commit)

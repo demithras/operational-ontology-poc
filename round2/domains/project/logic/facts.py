@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from eoo_engine import InvalidRequest
+
 PHASES = ("DRAFT", "PREREGISTERED", "RUNNING", "EVALUATED", "SUPERSEDED")
 VERDICTS = ("SUPPORTED", "REJECTED", "INCONCLUSIVE", "INVALID")
 LIFECYCLE_ACTIONS = {"preregister_hypothesis": "PREREGISTERED", "start_run": "RUNNING",
@@ -36,7 +38,20 @@ def experiments_of(view, hid: Any) -> list:
 
 
 def hypotheses_of_experiment(view, eid: Any) -> list:
-    return inn(view, "TESTED_BY", "Experiment", eid)
+    """Hypotheses testing ``eid``; a version created by new_experiment_version (v3, NEW_VERSION_OF) belongs to the
+    hypotheses of the version it continues, so the chain is walked back to the first TESTED_BY experiment."""
+    seen: set = set()
+    while eid not in seen:
+        seen.add(eid)
+        hs = inn(view, "TESTED_BY", "Experiment", eid)
+        try:
+            prev = out(view, "NEW_VERSION_OF", "Experiment", eid)
+        except InvalidRequest:  # contract v1/v2 declare no NEW_VERSION_OF: versions are not chained there
+            prev = []
+        if hs or not prev:
+            return hs
+        eid = prev[0]
+    return []
 
 
 def hypotheses_of_threshold(view, tid: Any) -> list:

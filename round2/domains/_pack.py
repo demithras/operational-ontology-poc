@@ -10,7 +10,7 @@ from eoo_engine import Engine, Principal
 ROOT = Path(__file__).resolve().parents[1]
 
 
-DEFAULT_IR = {"project": "v2"}  # the contract used for H16-H22; "v1" (ir.json) is H15's frozen Gate-0 input
+DEFAULT_IR = {"project": "v3"}  # the contract used by new runs (H18w); v2 = H16-H22 / exp-h18-001, "v1" (ir.json) is H15's frozen Gate-0 input
 
 
 def load_ir(domain: str, version: Optional[str] = None) -> dict:

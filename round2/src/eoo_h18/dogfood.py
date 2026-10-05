@@ -27,8 +27,8 @@ def _draft(ops):
     return out
 
 
-def run_dogfood(reader, workdir=None) -> dict:
-    rig = EooRig(workdir, reader=reader, h15_state="RUNNING")
+def run_dogfood(reader, workdir=None, ir_version=None) -> dict:
+    rig = EooRig(workdir, reader=reader, h15_state="RUNNING", ir_version=ir_version)
     rig.evaluators = registry(reader, memo_h15=False)  # the real, un-memoised H15 evaluator
     st, ref = rig.store, "refs/heads/dogfood"
     st.import_ops(_draft(rig.base_ops), source="h15-replay", ref=ref, parent=rig.root)

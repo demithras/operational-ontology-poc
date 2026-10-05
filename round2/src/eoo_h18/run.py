@@ -6,6 +6,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+from domains._pack import load_ir
 from domains.project.logic.freeze import git_blob_reader
 from eoo_engine import ENGINE_VERSION
 from eoo_exp import provenance as prov
@@ -21,7 +22,8 @@ REQUIRED = ["project-state-machine.json", "verdict-reproducibility.json", "git-t
 HARNESS = [*sorted((ROOT / "src/eoo_h18").glob("*.py")), *sorted((ROOT / "src/eoo_h18").glob("*.json")), *sorted((ROOT / "src/eoo_engine_git").glob("*.py")),
            *sorted((ROOT / "src/eoo_exp").glob("*.py")), *sorted((ROOT / "oracles/h18").glob("*.py")),
            *sorted((ROOT / "baselines/h18_fileonly").glob("*.py")), *sorted((ROOT / "baselines/h18_fileonly/schemas").glob("*.json")),
-           ROOT / "domains/project/pack.py", ROOT / "domains/project/logic/actions.py", ROOT / "scripts/run_h18.py", ROOT / "scripts/evaluate_h18.py"]
+           ROOT / "domains/project/pack.py", ROOT / "domains/_pack.py", *sorted((ROOT / "domains/project/logic").glob("*.py")),
+           ROOT / "domains/project/ir.v2.json", ROOT / "domains/project/ir.v3.json", ROOT / "scripts/run_h18.py", ROOT / "scripts/evaluate_h18.py"]
 EOO_ONLY = ["identity (unknown principal denied)", "authority rules (role-based allow / default deny)", "idempotency keys (replay writes nothing twice)",
             "observed-outcome reconciliation (Git observation checked against the intended row)", "refusal of direct canonical writes without a live grant",
             "typed integrity rules from the IR on every Git row (undeclared property, bad type, immutable change, cardinality)"]
@@ -33,18 +35,18 @@ def head_sha() -> str:
     return subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
 
 
-def build(seed: int, n: int, mut_n: int, log=print) -> tuple[dict, dict]:
+def build(seed: int, n: int, mut_n: int, log=print, ir_version=None) -> tuple[dict, dict]:
     sha = head_sha()
     reader = git_blob_reader(sha)
-    rig = EooRig(tempfile.mkdtemp(prefix="eoo-h18-run-"), reader=reader)
+    rig = EooRig(tempfile.mkdtemp(prefix="eoo-h18-run-"), reader=reader, ir_version=ir_version)
     cases, ginfo = corpus.generate(rig, seed, n)
     log(f"[run] corpus {ginfo}")
     results = corpus.execute(rig, cases, log)
     agg = corpus.aggregate(results)
     log("[run] corpus done: " + str({k: agg['eoo'][k] for k in ('steps', 'illegal_accepted', 'legal_rejected', 'state_mismatches')}))
     battery = extras.eoo_only_battery(rig)
-    dog = dogfood.run_dogfood(reader)
-    trig = tc_run.tc_rig(reader)
+    dog = dogfood.run_dogfood(reader, ir_version=ir_version)
+    trig = tc_run.tc_rig(reader, ir_version=ir_version)
     tc2, tc3 = tc_run.run_tc2(trig, reader), tc_run.run_tc3(trig, reader)
     corr = {"TC1": {"eoo": agg["eoo"]["illegal_accepted"] == 0 and agg["eoo"]["legal_rejected"] == 0 and agg["eoo"]["state_mismatches"] == 0,
                     "baseline": agg["base"]["illegal_accepted"] == 0 and agg["base"]["legal_rejected"] == 0 and agg["base"]["state_mismatches"] == 0,
@@ -54,7 +56,7 @@ def build(seed: int, n: int, mut_n: int, log=print) -> tuple[dict, dict]:
     log("[run] metrics")
     met = metrics.measure(corr)
     log("[run] mutations")
-    mut = mutation_run.run_mutations(reader, n=mut_n)
+    mut = mutation_run.run_mutations(reader, n=mut_n, ir_version=ir_version)
     eng = audit.engine_audit()
     sm_payload = {"engine_version": ENGINE_VERSION, "real_repo_pinned_commit": sha, "corpus": ginfo, "oracle": {
         "phase_legality": "src/hdd/project_lifecycle_reference.py (HypothesisState transitions)", "world_model": "oracles/h18/world.py",
@@ -89,11 +91,12 @@ def build(seed: int, n: int, mut_n: int, log=print) -> tuple[dict, dict]:
              "bespoke-change-metrics.json": bm, "mutation-results.json": {"engine_version": ENGINE_VERSION, **mut}}, ginfo)
 
 
-def run(seed: int, n: int, out_root: Path, exp_id: str, mut_n: int = 200, log=print) -> dict:
+def run(seed: int, n: int, out_root: Path, exp_id: str, mut_n: int = 200, log=print, ir_version=None) -> dict:
     pre = prov.preflight()
     with immutable_dir(out_root, exp_id) as tmp:
-        payloads, info = build(seed, n, mut_n, log)
-        p = prov.provenance(pre, exp_id, HID, seed, info["corpus_hash"], HARNESS, engine_version=ENGINE_VERSION, real_repo_pinned_commit=head_sha())
+        payloads, info = build(seed, n, mut_n, log, ir_version)
+        p = prov.provenance(pre, exp_id, HID, seed, info["corpus_hash"], HARNESS, engine_version=ENGINE_VERSION, real_repo_pinned_commit=head_sha(),
+                        ir_version=load_ir("project", ir_version)["version"])
         for fn in REQUIRED:
             prov.write(tmp, fn, prov.wrap(p, fn[:-5], payloads[fn]))
     return info

@@ -11,8 +11,8 @@ from domains.project.logic import facts
 PATCH = json.loads((Path(__file__).parent / "tc_patch.json").read_text())
 
 
-def patched_ir() -> dict:
-    ir = copy.deepcopy(load_ir("project"))
+def patched_ir(ir_version=None) -> dict:
+    ir = copy.deepcopy(load_ir("project", ir_version))
     for kind, items in PATCH.items():
         ir[kind] = ir[kind] + copy.deepcopy(items)
     return ir

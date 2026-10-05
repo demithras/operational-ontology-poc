@@ -34,27 +34,27 @@ def corpus(rig: EooRig, seed: int, n: int) -> list:
     return out
 
 
-def run_rows(reader, cases: list, *, mutate=None, provenance=True) -> list:
-    rig = EooRig(tempfile.mkdtemp(prefix="eoo-h18-mut-"), reader=reader, mutate=mutate, provenance=provenance)
+def run_rows(reader, cases: list, *, mutate=None, provenance=True, ir_version=None) -> list:
+    rig = EooRig(tempfile.mkdtemp(prefix="eoo-h18-mut-"), reader=reader, mutate=mutate, provenance=provenance, ir_version=ir_version)
     return [r for c in cases for r in rig.run_case(c, case_hash(c))]
 
 
-def run_mutations(reader, seed: int = 1801, n: int = 250) -> dict:
-    probe = EooRig(tempfile.mkdtemp(prefix="eoo-h18-mutp-"), reader=reader)
+def run_mutations(reader, seed: int = 1801, n: int = 250, ir_version=None) -> dict:
+    probe = EooRig(tempfile.mkdtemp(prefix="eoo-h18-mutp-"), reader=reader, ir_version=ir_version)
     cases = corpus(probe, seed, n)
     expects = [m["expect"] for m in REGISTRY]
 
     def signals(rows):
         return [count(rows, e) for e in expects]
-    control = run_rows(reader, cases)
+    control = run_rows(reader, cases, ir_version=ir_version)
     c0 = signals(control)
     out = []
     for m in REGISTRY:
-        rows = run_rows(reader, cases, mutate=m["mutate"], provenance=m["provenance"])
+        rows = run_rows(reader, cases, mutate=m["mutate"], provenance=m["provenance"], ir_version=ir_version)
         hit, base = count(rows, m["expect"]), c0[REGISTRY.index(m)]
         fails = [r for r in rows if r.get("exception")]
         out.append({"id": m["id"], "class": m["class"], "target": m["target"], "expected_signal": m["expect"], "signal_count": hit,
                     "control_signal_count": base, "killed": hit > 0 and base == 0, "steps": len(rows), "exceptions": len(fails)})
-    after = signals(run_rows(reader, cases))
+    after = signals(run_rows(reader, cases, ir_version=ir_version))
     return {"corpus_cases": n, "seed": seed, "controls": {"clean": not any(c0), "clean_after": not any(after), "signals_before": c0, "signals_after": after},
             "mutants": out}

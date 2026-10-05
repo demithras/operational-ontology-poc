@@ -122,23 +122,25 @@ def test_supersede_of_a_hypothesis_that_is_not_evaluated_is_denied_zero_effects(
 
 
 def test_FINDING_conflicting_change_policy_is_bound_but_no_action_references_it():
-    """IR gap, reported not fixed: policy ``conflicting_change_denied_with_conflict`` (docs/05 explicit conflict) is in
-    no action's policy_refs, so the Engine never evaluates it and superseding a hypothesis by itself is accepted.
-    The binding itself is correct: once an action references it (test-only patched IR) the self-supersede is denied."""
+    """IR gap in v2 (kept byte-identical, pinned here), fixed in v3 (CHANGES_v3.md): policy ``conflicting_change_denied_with_conflict``
+    (docs/05 explicit conflict) is in no v2 action's policy_refs, so the Engine never evaluates it and superseding a hypothesis by
+    itself is accepted. The binding itself is correct: once an action references it the self-supersede is denied."""
     from domains._pack import load_ir
     import copy
-    ir = load_ir("project")
+    ir = load_ir("project", "v2")
     assert not [a["id"] for a in ir["actions"] if "policy:conflicting_change_denied_with_conflict" in a["policy_refs"]]
-    e, git, _, _ = make()
+    e, git, _, _ = make(ir_version="v2")
     assert e.propose("supersede_hypothesis", {"hypothesis": "H15", "successor": "H15"}, R1, idempotency_key="s")["state"] == "RECONCILED_SUCCESS"
     patched = copy.deepcopy(ir)
     for a in patched["actions"]:
         if a["id"] == "supersede_hypothesis":
             a["policy_refs"].append("policy:conflicting_change_denied_with_conflict")
-    e, git, _, _ = make(package=patched)
+    e, git, _, _ = make(package=patched, ir_version="v2")
     z = Snap(e, git)
     rec = e.propose("supersede_hypothesis", {"hypothesis": "H15", "successor": "H15"}, R1, idempotency_key="s")
     assert rec["state"] == "DENIED" and failed_gates(rec) == ["policy"] and z.unchanged()
+    v3 = load_ir("project", "v3")  # v3 wires it
+    assert [a["id"] for a in v3["actions"] if "policy:conflicting_change_denied_with_conflict" in a["policy_refs"]] == ["supersede_hypothesis"]
 
 
 def test_second_supersede_of_the_same_hypothesis_is_a_stale_write():

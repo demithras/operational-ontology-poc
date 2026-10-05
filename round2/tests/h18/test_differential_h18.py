@@ -12,7 +12,7 @@ from eoo_h18.gen import classify
 from eoo_h18.rig import EooRig
 
 W = load_oracle("h18", "world")
-KNOWN_GAPS = {"supersede_self", "new_version_chain"}  # pinned in test_findings_h18.py
+KNOWN_GAPS: set = set()  # v3 closed both exp-h18-001 gaps (supersede_self, new_version_chain); v2 pins: test_findings_h18.py, test_v3_h18.py
 _RIG = []
 
 

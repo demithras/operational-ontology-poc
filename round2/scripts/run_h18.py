@@ -25,10 +25,11 @@ def main() -> int:
     ap.add_argument("--n", type=int, default=json.loads((ROOT / "hypotheses/h18/contract.json").read_text())["experiment"]["minimum_runs"],
                     help="unique lifecycle cases (default: the contract minimum_runs)")
     ap.add_argument("--mutation-cases", type=int, default=200)
+    ap.add_argument("--ir-version", default="v2", help="Project contract version; v2 (default) reproduces exp-h18-001, v3 is the H18w candidate")
     ap.add_argument("--out-root", default=str(ROOT / "experiments/h18"))
     a = ap.parse_args()
     try:
-        info = runner.run(a.seed, a.n, Path(a.out_root), a.exp_id, a.mutation_cases, log=lambda m: print(m, flush=True))
+        info = runner.run(a.seed, a.n, Path(a.out_root), a.exp_id, a.mutation_cases, log=lambda m: print(m, flush=True), ir_version=a.ir_version)
     except OutputExists as e:
         print(f"REFUSED: {e}", file=sys.stderr)
         return 2

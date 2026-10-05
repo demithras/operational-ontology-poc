@@ -16,8 +16,8 @@ OQ = load_oracle("h18", "queries")
 EXPERIMENT = "exp-h15-002"
 
 
-def tc_rig(reader, workdir=None) -> EooRig:
-    return EooRig(workdir, reader=reader, package=tc_eoo.patched_ir(), extend=tc_eoo.extend, extra_ops=tc_eoo.dependency_ops(reader))
+def tc_rig(reader, workdir=None, ir_version=None) -> EooRig:
+    return EooRig(workdir, reader=reader, package=tc_eoo.patched_ir(ir_version), extend=tc_eoo.extend, extra_ops=tc_eoo.dependency_ops(reader))
 
 
 def run_tc2(rig: EooRig, reader) -> dict:

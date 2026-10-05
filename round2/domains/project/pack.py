@@ -18,7 +18,8 @@ from .seed_from_repo import H15_EVALUATOR, build_seed, principals
 def build_pack(seed: dict | None = None, reader=None, git: GitFake | None = None, ir_version: str | None = None, *,
                store=None, writer: str = "w1", base: str | None = None, evaluators: dict | None = None,
                merge_mode: str = "compatible", mutate=None, ref: str | None = None, ir: dict | None = None, extend=None):
-    """``mutate(bindings)`` (mutation proof only) may override built bindings; ``ir`` replaces the package (an extended
+    """``ir_version``: "v1" (H15 Gate-0), "v2" (H16-H22, exp-h18-001) or "v3" (H18w); None = the default, v3 (``domains._pack.DEFAULT_IR``).
+    ``mutate(bindings)`` (mutation proof only) may override built bindings; ``ir`` replaces the package (an extended
     contract, H18 task TC2/TC3) and ``extend(bindings)`` binds the logic its additions need. Both run before the store wrap."""
     reader = reader or git_blob_reader()
     ir = ir if ir is not None else load_ir("project", ir_version)

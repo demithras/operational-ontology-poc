@@ -32,6 +32,13 @@ def rig(reader, tmp_path_factory):
 
 
 @pytest.fixture(scope="session")
+def rig_v2(reader, tmp_path_factory):
+    """The Project contract v2 (exp-h18-001's candidate): used where a v2 behaviour is pinned (findings, v2-red tests)."""
+    from eoo_h18.rig import EooRig
+    return EooRig(tmp_path_factory.mktemp("h18rig_v2"), reader=reader, ir_version="v2")
+
+
+@pytest.fixture(scope="session")
 def small_run(tmp_path_factory):
     """A REAL (tiny) H18 run: real provenance, hashes and payload shapes; the evaluator tests edit copies of it."""
     from eoo_h18 import run as runner

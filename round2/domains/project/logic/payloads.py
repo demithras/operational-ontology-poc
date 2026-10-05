@@ -53,7 +53,8 @@ def new_experiment_version(ctx, deriver, reader):
     return [{"id": new_id, "version": ver, "evidence_schema_ref": old["evidence_schema_ref"],
              "evaluator_ref": old["evaluator_ref"]},
             {"id": cv_id, "sha256": ctx.call("compute_freeze_hash", {"experiment": old_id}),
-             "git_commit": head_commit(ctx.view)}]
+             "git_commit": head_commit(ctx.view)},
+            {"$src": new_id, "$dst": old_id}]  # v3 effect #2: NEW_VERSION_OF (new version -> its predecessor)
 
 
 def start_run(ctx, deriver, reader):

@@ -32,10 +32,10 @@ def trailers(msg: str) -> dict:
 
 class EooRig:
     def __init__(self, workdir=None, *, reader, mutate=None, provenance=True, merge_mode="compatible", h15_state="EVALUATED",
-                 package=None, extend=None, extra_ops=()):
+                 package=None, extend=None, extra_ops=(), ir_version=None):
         self.workdir = Path(workdir or tempfile.mkdtemp(prefix="eoo-h18-"))
         self.reader, self.mutate, self.merge_mode = reader, mutate, merge_mode
-        self.package, self.extend = package or load_ir("project"), extend
+        self.package, self.extend = package or load_ir("project", ir_version), extend
         self.seed = build_seed(reader, h15_state=h15_state)
         self.base_ops, self.commit0 = self.seed["ops"] + list(extra_ops), self.seed["head_commit"]
         self.tick = 0
