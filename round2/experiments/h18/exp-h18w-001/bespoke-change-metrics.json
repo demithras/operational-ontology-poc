@@ -1,0 +1,456 @@
+{
+ "created_at": "2026-10-05T09:04:10+00:00",
+ "engine_prereg_sha256": "03d2d56919b2f003766e54c89fdbfb47a7780577534f4d797ab2ecd9b6f3aefe",
+ "engine_version": "1.2",
+ "environment": {
+  "hypothesis": "6.168.3",
+  "jsonschema": "4.26.0",
+  "machine": "arm64",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "pytest": "9.1.1",
+  "python": "3.14.6"
+ },
+ "evidence_kind": "bespoke-change-metrics",
+ "experiment_id": "exp-h18w-001",
+ "git_commit": "d9640a080013c8ea0773a40d36e71fa123de571e",
+ "harness_dirty": false,
+ "harness_dirty_paths": [],
+ "harness_sha256": {
+  "baselines/h18_fileonly/__init__.py": "0ef7a490acf6bc8d17899582eec5ff91ca0bf2a6f219e20f229aa5eb318d2c14",
+  "baselines/h18_fileonly/actions.py": "b1c5cc2cb0988a860de582f7b316b457dd3bf6180324572ea8411ec153fe4d0c",
+  "baselines/h18_fileonly/ci.py": "5cb977f76ade0ca7047d2ad39447893381cc4feaa097cecfabb0ffb8fea1e660",
+  "baselines/h18_fileonly/derive.py": "2616056b99670dd3606027adccd2216eeeb02d262b5b324e00aa12e701e657dc",
+  "baselines/h18_fileonly/queries.py": "587b7157c8b6ed8370a51499193bfdce464e1e6f42347f3e1435fc02ee690c8f",
+  "baselines/h18_fileonly/replication.py": "f64c95459e4b75d6f0acd804f07941141ccbee5d57ba302c338142ae356b7e0f",
+  "baselines/h18_fileonly/repo.py": "8b0530ce297c330bd98c6722cc37f5542135d5f686c97323540a4d9ccc10148f",
+  "baselines/h18_fileonly/rules.py": "c5554dac0621251c6b638099ac0b333ed91a803cf354fcdce9d88ef7f4bfc61b",
+  "baselines/h18_fileonly/schemas/component.schema.json": "317db3f61303ac97c0537a987815f22feafffa985cbf4107c05243da2c390d60",
+  "baselines/h18_fileonly/schemas/contractversion.schema.json": "dc426f23abe2b0a97564f9c5f39d9bbaa2f9ece0d8d115c1f83475e29f4f2104",
+  "baselines/h18_fileonly/schemas/decision.schema.json": "14284ff86d250cae82cd7836e73bb711a4eae1ad5ccde3eda3ce96004e6d181c",
+  "baselines/h18_fileonly/schemas/evidence.schema.json": "d1ca7149a50fa8a671e2c672f2fc5b0d1504b12e52fa066e5c5b5c9315059931",
+  "baselines/h18_fileonly/schemas/experiment.schema.json": "44b09c6533b10aeb7834428f944b1362398fb181a4f7ac5a25f43ec06dba9ec6",
+  "baselines/h18_fileonly/schemas/hypothesis.schema.json": "f283b6e065dcaf499fee848430272fbe1715c2d3e827ac39bf40a4bf92dca93a",
+  "baselines/h18_fileonly/schemas/replication.schema.json": "338edabc36c7c06149dd91d7c005957cd00321754a4657b9505e6e9c7b678136",
+  "baselines/h18_fileonly/schemas/threshold.schema.json": "95bffdf7acbffb70ddec6eb0b224ed55aeb6a313e95122f66cb79a53f8200574",
+  "baselines/h18_fileonly/schemas/verdict.schema.json": "2f0b44da3ae9b38a193a7d63ade4bb572713507b51e5a9abd3c0570a40d27e5c",
+  "domains/_pack.py": "4fa39b4f93110992c2d447c71ccbd07b22d28aae5205ad4b6ead50b098e37daa",
+  "domains/project/ir.v2.json": "fe22ba0b43d31967f5ac91210dcf467ba2fb14031d23d40d8be1feeb4b2ad2b7",
+  "domains/project/ir.v3.json": "2c5e953711f9aad324b17d3788b069ddcaa76163e7da30783ba58881f6534565",
+  "domains/project/logic/__init__.py": "95ca06739bfcc29099f1eb1f458ae175c4437739bf401973df7e266cd0e802bc",
+  "domains/project/logic/actions.py": "7ca68ee6f9907423cbc3d5cdc60d71efb2904bc3df6681a168ea5f28b4caf277",
+  "domains/project/logic/constraints.py": "83edac23a41fd1ae9b62f6f17449d328ce5b3637d88c7d4810cc54a42b28694d",
+  "domains/project/logic/derive.py": "edfd043f9e7de48d984d3643974357e0a626291c212f427c49ba7662d5c235bc",
+  "domains/project/logic/facts.py": "2f40511da0a88591e177e8f7312fc606c2f89cbd24db0980123e70069cf8ce3d",
+  "domains/project/logic/freeze.py": "396cf417a536e3e108ff6922dde96c8cf298f73fbbaccc5817ee232e62c73f3e",
+  "domains/project/logic/functions.py": "5916ede9c38ee000a2076734fdb15cb8f9969e97db80edcfb932b848b088a7ad",
+  "domains/project/logic/lifecycle.py": "9fdc7cb659fb866fed6dae95604d29ff550ebd6548964264f3a1964aed24e1cb",
+  "domains/project/logic/payloads.py": "7ba1efef915d34addda749672275fb957d9ae9c0d8c27d56b3bcc8aad1d3b45e",
+  "domains/project/logic/policies.py": "6c78314ee904caf2d77d7c12b93e2d7cff486fc0f1a455b452e8022ddc6373c5",
+  "domains/project/logic/selectors.py": "4e61177eee97c1abee097ccd948085080cb2bd3f423878e5a01f958a0087eab0",
+  "domains/project/pack.py": "a21dfafd3ec54664b85a6a6c4b59b294584147147eb576d5bdd3949798d7b4fd",
+  "oracles/h18/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "oracles/h18/queries.py": "3aa388b37ff25211e17e628fda0f84106b29fa47c7579bbc27a7e8c260ec67e6",
+  "oracles/h18/world.py": "0c994debdbe3f2eaa16372b1087f1b6a9f634edfe5b114c98c4d8782b542f46c",
+  "scripts/evaluate_h18.py": "4742e9b09a06af8dbec42c1cb8276cedb699b6ec806bb01088572f378dc85b7f",
+  "scripts/run_h18.py": "0eccfa0ea0804d422a593cd9052db91bce57173a812a6800f6066335f9d9ddc1",
+  "src/eoo_engine_git/__init__.py": "687ffc6e09a23bbf10e05454f2b261c9af6013f951f7caf032b58ae489c63879",
+  "src/eoo_engine_git/adapter.py": "2d92987832031a257a9d2d04d88b8d6caafeda003f6972a5b372acb94d9394b4",
+  "src/eoo_engine_git/errors.py": "b197e61ecc2be75322c2ae1da0e5b0669ea04711ff2f11ea525a5d0dc3a0b794",
+  "src/eoo_engine_git/layout.py": "afd2c584cd7903f6b0931b61c24733d8629da8817c16b096669210771be6a079",
+  "src/eoo_engine_git/merge.py": "e82d795915aa8557e2377b548a20aa0551c665e9c37d16baba0d3ccca1400bbf",
+  "src/eoo_engine_git/objects.py": "81e18de9e43fc26130649a840cf29aa0233de26ef2d50e7f370e5676f09e0a40",
+  "src/eoo_engine_git/store.py": "c50d4a359933e57d40f43e1747ffacfcb4b383bc2d11ae77ef8ce48a796dcf04",
+  "src/eoo_exp/__init__.py": "16754d2e26eb56fb0469b74cbb88351b20265ac3ae07ecc51ada09167199a90a",
+  "src/eoo_exp/outdir.py": "6997fdfe23a5bbd5fb3c80aa024f172940167d24c55770f3b83f163d9c86fd00",
+  "src/eoo_exp/provenance.py": "9076be346293debdd361cae3c24c781d3d463716d6be1c398ee4474b3201bb5e",
+  "src/eoo_exp/scaffold.py": "b7686662f08994431881ee411fb3b1f913ba63b6327cc6dce8e180e45496a765",
+  "src/eoo_exp/util.py": "64765edd82c60fa3e393878199331db360f14bbbe31c72f5bb8d4079ac6acd86",
+  "src/eoo_h18/__init__.py": "658c25db50cecab93274e74e0d53dd0bb25bd0dd29b74971e794b5b53f2a93e0",
+  "src/eoo_h18/audit.py": "bb77e30d34289e05155e5cf61bd4d263f25b5f967c8fa6560fe8153fcafc6c91",
+  "src/eoo_h18/base_run.py": "9b6ccb6e31874d8e7739f8051e7934cc16509b19e01bfd19e33a2525d213f125",
+  "src/eoo_h18/corpus.py": "cdcbd0c5b6d374b46511683c2ba29cb31ba06bf21b82726af0275c212541c261",
+  "src/eoo_h18/dogfood.py": "44069fa8f000769abebcd0ef60ccc99f6e7db8ff31b159e0d3c3d6cdb916e983",
+  "src/eoo_h18/evaluate.py": "e44f9dfd0e9ca47743848737bb7365a77f729614be3f81d839264e4a4978f561",
+  "src/eoo_h18/evaluate_w.py": "d3544a45cedc48b44da82f37fd8a2165a4085bfcbfc233fa5b865a70096d2387",
+  "src/eoo_h18/evaluators.py": "c8d088eaf771901f29d187b302e2847263295edbb05fc7d5ed6826678339f292",
+  "src/eoo_h18/extras.py": "36453e23bf0e466eb0f367d7e025d5114b68a94875d52919e1c0e066c3b13703",
+  "src/eoo_h18/fixture.py": "6de0ab5ec031d360344a1847f02ee1b003d632d7911a541ed3e7d92bba51e658",
+  "src/eoo_h18/gen.py": "b0c0c4bcfda6d4d5622cba42f2366659802ae4fe09e9311383f7290cad82082d",
+  "src/eoo_h18/loc.py": "609ab0a755eea73fcb7e96e1f2ce6ecaeb29ea307b6c1bffdbed69204f951807",
+  "src/eoo_h18/manifest.py": "f006151882200b4d37c0a05b1d90a26ee77c40ba39c00b1b58ad9c2cbc651c86",
+  "src/eoo_h18/metrics.py": "b6d2e4007a03c7b808d9ec65c356a2ec1eba1ab14293a5c7aae016efbc16d94b",
+  "src/eoo_h18/mutants.py": "f7db0771fafb95e44918ea02c03af3d4073e42f2974fc705a04aaed9b06c54b8",
+  "src/eoo_h18/mutation_run.py": "e2a9ca008bb42d88849a94e5a450223e3acd86a64fc1bf39f2bd335ea929c122",
+  "src/eoo_h18/ops.py": "e39eb4f8948f54cd140f2a3eb0062487a923cc0662f966b981dcf37eb3cbec81",
+  "src/eoo_h18/rig.py": "ade10acf3713f4dc303eef08101cb786b47836f26320939709572ea437e5661f",
+  "src/eoo_h18/run.py": "0a9e1286747b85a6d862b9715b57af07347fc8c28b8771282390f15314e76da9",
+  "src/eoo_h18/summary.py": "2ecdb5ca5b30cdbd557c45e103240c4d0be3e28b572cba32e9d31a442e7af576",
+  "src/eoo_h18/tc_eoo.py": "acfd18a704c35abd946bb43970c121e1a3adf719ce97420e202cc6b8e7e7fe7c",
+  "src/eoo_h18/tc_patch.json": "b06e2a3a4af6ac1ecdf3471929c27c86f26fd6966d22d64191f4cb723e85878c",
+  "src/eoo_h18/tc_run.py": "a0274723efe81b20bece95f2c544f09e0258b2d1e0ab0151d34bf5e9e8b59a05"
+ },
+ "hypothesis_id": "H18",
+ "input_corpus_hash": "7c2378dd2e77aa5c630f4627d0ccf11201ee73abed1ab29ccf71ced63b2c035e",
+ "ir_version": "v3",
+ "payload": {
+  "assignment": {
+   "baseline": {
+    "config": {
+     "TC1": {
+      "baselines/h18_fileonly/schemas/component.schema.json": 20,
+      "baselines/h18_fileonly/schemas/contractversion.schema.json": 23,
+      "baselines/h18_fileonly/schemas/decision.schema.json": 19,
+      "baselines/h18_fileonly/schemas/evidence.schema.json": 28,
+      "baselines/h18_fileonly/schemas/experiment.schema.json": 27,
+      "baselines/h18_fileonly/schemas/hypothesis.schema.json": 30,
+      "baselines/h18_fileonly/schemas/threshold.schema.json": 14,
+      "baselines/h18_fileonly/schemas/verdict.schema.json": 33
+     },
+     "TC3": {
+      "baselines/h18_fileonly/schemas/replication.schema.json": 20
+     }
+    },
+    "python": {
+     "RECURRING": {
+      "baselines/h18_fileonly/ci.py": 5,
+      "baselines/h18_fileonly/repo.py": 34
+     },
+     "TC1": {
+      "baselines/h18_fileonly/actions.py": 54,
+      "baselines/h18_fileonly/derive.py": 15,
+      "baselines/h18_fileonly/rules.py": 111
+     },
+     "TC2": {
+      "baselines/h18_fileonly/queries.py": 21
+     },
+     "TC3": {
+      "baselines/h18_fileonly/ci.py": 2,
+      "baselines/h18_fileonly/replication.py": 13
+     }
+    }
+   },
+   "eoo": {
+    "config": {
+     "EXCL:freeze_hash_computation": {
+      "domains/project/ir.v2.json:functions": 49
+     },
+     "EXCL:h19_git_authority": {
+      "domains/project/ir.v2.json:constraints": 36,
+      "domains/project/ir.v2.json:policies": 24
+     },
+     "EXCL:unused_observation_type": {
+      "domains/project/ir.v2.json:observation_types": 29
+     },
+     "TC1": {
+      "domains/project/ir.v2.json:actions": 462,
+      "domains/project/ir.v2.json:constraints": 72,
+      "domains/project/ir.v2.json:functions": 86,
+      "domains/project/ir.v2.json:interfaces": 31,
+      "domains/project/ir.v2.json:link_types": 225,
+      "domains/project/ir.v2.json:object_types": 411,
+      "domains/project/ir.v2.json:observation_types": 20,
+      "domains/project/ir.v2.json:policies": 48
+     },
+     "TC1X": {
+      "domains/project/ir.v2.json:authority_rules": 104
+     },
+     "TC2": {
+      "src/eoo_h18/tc_patch.json:functions": 40,
+      "src/eoo_h18/tc_patch.json:link_types": 15
+     },
+     "TC3": {
+      "src/eoo_h18/tc_patch.json:actions": 49,
+      "src/eoo_h18/tc_patch.json:functions": 19,
+      "src/eoo_h18/tc_patch.json:link_types": 15,
+      "src/eoo_h18/tc_patch.json:object_types": 29
+     },
+     "TC3X": {
+      "src/eoo_h18/tc_patch.json:authority_rules": 8
+     }
+    },
+    "python": {
+     "EXCL:freeze_hash_computation": {
+      "domains/project/logic/freeze.py": 40,
+      "domains/project/logic/functions.py": 3
+     },
+     "EXCL:h19_git_authority": {
+      "domains/project/logic/constraints.py": 67,
+      "domains/project/logic/policies.py": 33
+     },
+     "EXCL:harness_plumbing": {
+      "src/eoo_h18/tc_eoo.py": 13
+     },
+     "EXCL:legacy_p4b_fake_git": {
+      "domains/project/adapters/git_fake.py": 49,
+      "domains/project/projection.py": 32
+     },
+     "EXCL:shared_evaluator_adapter": {
+      "domains/project/evaluators.py": 27
+     },
+     "EXCL:shared_seed_loader": {
+      "domains/project/seed_from_repo.py": 108
+     },
+     "TC1": {
+      "domains/project/logic/__init__.py": 18,
+      "domains/project/logic/actions.py": 49,
+      "domains/project/logic/constraints.py": 102,
+      "domains/project/logic/derive.py": 47,
+      "domains/project/logic/facts.py": 87,
+      "domains/project/logic/functions.py": 11,
+      "domains/project/logic/lifecycle.py": 14,
+      "domains/project/logic/payloads.py": 69,
+      "domains/project/logic/policies.py": 53,
+      "domains/project/pack.py": 30
+     },
+     "TC1X": {
+      "domains/project/logic/actions.py": 29,
+      "domains/project/logic/selectors.py": 12
+     },
+     "TC2": {
+      "src/eoo_h18/tc_eoo.py": 23
+     },
+     "TC3": {
+      "src/eoo_h18/tc_eoo.py": 9
+     },
+     "TC3X": {
+      "src/eoo_h18/tc_eoo.py": 10
+     }
+    }
+   }
+  },
+  "decision_rule": "support needs total <= 0.75 x baseline total in >= 1 class with no correctness loss (ENGINE_PREREG H18)",
+  "engine_version": "1.2",
+  "excluded_not_counted": {
+   "EXCL:freeze_hash_computation": {
+    "config_lines": 49,
+    "python_loc": 43,
+    "total": 92
+   },
+   "EXCL:h19_git_authority": {
+    "config_lines": 60,
+    "python_loc": 100,
+    "total": 160
+   },
+   "EXCL:harness_plumbing": {
+    "config_lines": 0,
+    "python_loc": 13,
+    "total": 13
+   },
+   "EXCL:legacy_p4b_fake_git": {
+    "config_lines": 0,
+    "python_loc": 81,
+    "total": 81
+   },
+   "EXCL:shared_evaluator_adapter": {
+    "config_lines": 0,
+    "python_loc": 27,
+    "total": 27
+   },
+   "EXCL:shared_seed_loader": {
+    "config_lines": 0,
+    "python_loc": 108,
+    "total": 108
+   },
+   "EXCL:unused_observation_type": {
+    "config_lines": 29,
+    "python_loc": 0,
+    "total": 29
+   }
+  },
+  "normalisation": "JSON counted as json.dumps(indent=2) lines for both variants; Python = non-blank, non-comment, non-docstring lines",
+  "per_class": {
+   "TC1": {
+    "baseline": {
+     "config_lines": 194,
+     "python_loc": 180,
+     "total": 374
+    },
+    "correctness": {
+     "baseline": true,
+     "baseline_agreement": 1.0,
+     "eoo": true,
+     "eoo_agreement": 1.0
+    },
+    "declarative_resources": {
+     "baseline": 8,
+     "eoo": 80
+    },
+    "eoo": {
+     "config_lines": 1355,
+     "mandatory_extras": {
+      "config_lines": 104,
+      "python_loc": 41,
+      "total": 145
+     },
+     "python_loc": 480,
+     "total": 1980,
+     "total_without_extras": 1835
+    },
+    "eoo_reduction": -4.294,
+    "eoo_reduction_without_extras": -3.906,
+    "ratio_eoo_over_baseline": 5.294,
+    "ratio_without_extras": 4.906
+   },
+   "TC2": {
+    "baseline": {
+     "config_lines": 0,
+     "python_loc": 21,
+     "total": 21
+    },
+    "correctness": {
+     "baseline": true,
+     "eoo": true
+    },
+    "declarative_resources": {
+     "baseline": 0,
+     "eoo": 3
+    },
+    "eoo": {
+     "config_lines": 55,
+     "mandatory_extras": {
+      "config_lines": 0,
+      "python_loc": 0,
+      "total": 0
+     },
+     "python_loc": 23,
+     "total": 78,
+     "total_without_extras": 78
+    },
+    "eoo_reduction": -2.714,
+    "eoo_reduction_without_extras": -2.714,
+    "ratio_eoo_over_baseline": 3.714,
+    "ratio_without_extras": 3.714
+   },
+   "TC3": {
+    "baseline": {
+     "config_lines": 20,
+     "python_loc": 15,
+     "total": 35
+    },
+    "correctness": {
+     "baseline": true,
+     "eoo": true
+    },
+    "declarative_resources": {
+     "baseline": 1,
+     "eoo": 5
+    },
+    "eoo": {
+     "config_lines": 112,
+     "mandatory_extras": {
+      "config_lines": 8,
+      "python_loc": 10,
+      "total": 18
+     },
+     "python_loc": 9,
+     "total": 139,
+     "total_without_extras": 121
+    },
+    "eoo_reduction": -2.971,
+    "eoo_reduction_without_extras": -2.457,
+    "ratio_eoo_over_baseline": 3.971,
+    "ratio_without_extras": 3.457
+   }
+  },
+  "python_unassigned_lines": {
+   "baseline": {},
+   "eoo": {}
+  },
+  "recurring_complexity_loc": {
+   "baseline": 39,
+   "eoo": 2259,
+   "eoo_files": [
+    "domains/_pack.py",
+    "domains/_support.py",
+    "src/eoo_engine/__init__.py",
+    "src/eoo_engine/authority.py",
+    "src/eoo_engine/canon.py",
+    "src/eoo_engine/capabilities.py",
+    "src/eoo_engine/effects.py",
+    "src/eoo_engine/engine.py",
+    "src/eoo_engine/errors.py",
+    "src/eoo_engine/functions.py",
+    "src/eoo_engine/gatepass.py",
+    "src/eoo_engine/gates.py",
+    "src/eoo_engine/journal.py",
+    "src/eoo_engine/logic.py",
+    "src/eoo_engine/model.py",
+    "src/eoo_engine/outcome.py",
+    "src/eoo_engine/pipeline.py",
+    "src/eoo_engine/provenance.py",
+    "src/eoo_engine/queries.py",
+    "src/eoo_engine/registry.py",
+    "src/eoo_engine/snapshot.py",
+    "src/eoo_engine/state.py",
+    "src/eoo_engine/store.py",
+    "src/eoo_engine/typecheck.py",
+    "src/eoo_engine_git/__init__.py",
+    "src/eoo_engine_git/adapter.py",
+    "src/eoo_engine_git/errors.py",
+    "src/eoo_engine_git/layout.py",
+    "src/eoo_engine_git/merge.py",
+    "src/eoo_engine_git/objects.py",
+    "src/eoo_engine_git/store.py"
+   ]
+  },
+  "tc2": {
+   "baseline_correct": {
+    "q1": true,
+    "q2": true,
+    "q3": true
+   },
+   "eoo_correct": {
+    "q1": true,
+    "q2": true,
+    "q3": true
+   }
+  },
+  "tc3": {
+   "baseline_correct": true,
+   "counts": {
+    "exp-h15-002": {
+     "baseline": 2,
+     "eoo": 2,
+     "expected": 2
+    },
+    "exp-h16-001": {
+     "baseline": 0,
+     "eoo": 0,
+     "expected": 0
+    }
+   },
+   "eoo_correct": true,
+   "steps": [
+    {
+     "baseline_accept": true,
+     "eoo_accept": true,
+     "expected_accept": true,
+     "step": "register_for_evaluated_experiment"
+    },
+    {
+     "baseline_accept": false,
+     "eoo_accept": false,
+     "expected_accept": false,
+     "step": "register_for_unevaluated_experiment"
+    },
+    {
+     "baseline_accept": true,
+     "eoo_accept": true,
+     "expected_accept": true,
+     "step": "register_second_for_evaluated_experiment"
+    },
+    {
+     "baseline_accept": false,
+     "eoo_accept": false,
+     "expected_accept": false,
+     "step": "register_for_unknown_experiment"
+    }
+   ]
+  }
+ },
+ "payload_hash": "8e2a9c6c53ed6ca07bdee954a3cac89483d2864cb520a4c6eeda18216311fc96",
+ "payload_path": null,
+ "protocol_freeze_hash": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2",
+ "real_repo_pinned_commit": "d9640a080013c8ea0773a40d36e71fa123de571e",
+ "seed": 1818
+}

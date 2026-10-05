@@ -1,0 +1,230 @@
+{
+ "common": {
+  "protocol_valid": true,
+  "reject_hit": false,
+  "required_evidence_complete": true,
+  "sample_sufficient": true,
+  "support_hit": true
+ },
+ "engine_version": "1.2",
+ "evaluator_sha256": "d3544a45cedc48b44da82f37fd8a2165a4085bfcbfc233fa5b865a70096d2387",
+ "evidence_payload_hashes": {
+  "baseline-comparison.json": "ad1b379b7dfbf237209c6356ad8627e41336d83f87d384feddea1395ca7235ae",
+  "bespoke-change-metrics.json": "8e2a9c6c53ed6ca07bdee954a3cac89483d2864cb520a4c6eeda18216311fc96",
+  "git-traceability.json": "7fab12169a62f1dcc5114c04fee163dfd7167b1eb318fb923f80fd616ebf8f08",
+  "mutation-results.json": "6fda27c2acb0aa28a0f752982da26bed1b5751eef76834835b3ba6ec39a70f08",
+  "project-state-machine.json": "de360727408d68e9b3c3f7bcb05a112b5b54a53b37ce3b30615cbfee3eea8b1c",
+  "verdict-reproducibility.json": "f358d6ad857f31d560e4e311d3204c4e4797835e25039d1dd435502f1f78877c"
+ },
+ "experiment_id": "exp-h18w-001",
+ "hypothesis_id": "H18w",
+ "interpretation_notes": [
+  "H18w is POST-HOC (formulated after exp-h18-001 was known): lower evidential weight than a preregistered hypothesis (H18W_PREREG.json).",
+  "S1 counts illegal ops accepted in EVERY class (core and extension); S1b adds legal_rejected and state mismatches (strictly stronger than H18).",
+  "S5/R2 of H18 are dropped by the prereg and not evaluated; the baseline/metrics evidence files are still required (same run).",
+  "V5 reads the dirty paths recorded in the evidence against the harness files hashed in it (evaluator files excluded)."
+ ],
+ "numbers": {
+  "authoritative_reproducible": true,
+  "baseline_exceptions": 0,
+  "class_counts": {
+   "blank_freeze": 26,
+   "decision_blank_rationale": 100,
+   "decision_ok": 83,
+   "evaluate_with_evidence": 154,
+   "evidence_pinned_ok": 445,
+   "evidence_unpinned": 2024,
+   "evidence_wrong_version": 784,
+   "flag_non_orphan": 457,
+   "flag_orphan": 103,
+   "forced_verdict": 216,
+   "incomplete_preregistration": 829,
+   "new_version_overwrite": 48,
+   "post_freeze_threshold_edit": 199,
+   "preregister": 683,
+   "start_out_of_order": 220,
+   "supersede_non_evaluated": 179,
+   "supersede_ok": 502,
+   "supersede_self": 76,
+   "verdict_without_evidence": 190
+  },
+  "dogfood_cli": {
+   "accepted_actions": 11,
+   "accepted_with_matching_commit_trailers": 11,
+   "cli_commits_on_branch": 13,
+   "expected_commits": 13,
+   "fsck": true,
+   "history_agrees": true
+  },
+  "dogfood_hostile_accepted": [],
+  "engine_audit": {
+   "domain_identity_branches": 0,
+   "project_domain_branches": 0
+  },
+  "engine_audit_probes_found": {
+   "engine_core": true,
+   "git_store": true
+  },
+  "engine_audit_scopes": {
+   "engine_core": {
+    "branch_hits": 0,
+    "files_scanned": 22,
+    "literal_hits": 0,
+    "string_constants_scanned": 1263
+   },
+   "git_store": {
+    "branch_hits": 0,
+    "files_scanned": 7,
+    "literal_hits": 0,
+    "string_constants_scanned": 314
+   }
+  },
+  "engine_paths_differing_from_tag": [],
+  "evaluations": {
+   "accepted_evaluations": 676,
+   "verdict_matches_oracle": 676,
+   "verdicts": {
+    "INCONCLUSIVE": 640,
+    "REJECTED": 29,
+    "SUPPORTED": 7
+   }
+  },
+  "exceptions": 0,
+  "harness_dirty_files_at_run": {},
+  "harness_self_check": [],
+  "illegal_accepted": 0,
+  "illegal_accepted_by_class": {},
+  "illegal_accepted_core": 0,
+  "ir_version_in_evidence": "v3",
+  "legal_rejected": 0,
+  "legal_rejected_by_class": {},
+  "minimum_sequences": 3000,
+  "mutation_controls_clean": [
+   true,
+   true
+  ],
+  "mutation_exceptions": 0,
+  "mutation_target_killed": 3,
+  "mutation_target_survivors": [],
+  "mutation_target_total": 3,
+  "new_version_chain_steps": 65,
+  "oracle_independent": true,
+  "oracle_paths_differing_from_tag": [],
+  "state_mismatches": 0,
+  "steps": 10563,
+  "supersede_self_steps": 76,
+  "target_mutants": {
+   "M1_allow_post_freeze_threshold_edit": true,
+   "M2_allow_verdict_without_evidence": true,
+   "M3_detach_commit_provenance": true
+  },
+  "thresholds": {
+   "max_canonical_changes_without_git": 0,
+   "max_illegal_lifecycle_transitions": 0,
+   "min_bespoke_surface_reduction_in_one_task_class": 0.25,
+   "required_mutation_kill_rate": 1.0,
+   "required_verdict_reproducibility": 1.0
+  },
+  "trace": {
+   "accepted_actions": 4743,
+   "commits_without_acceptance": 0,
+   "non_git_effects": 0,
+   "one_commit_each": 4743,
+   "ontology_only_writes": 0,
+   "refused_with_commit": 0,
+   "trace_ok": 4743
+  },
+  "unique_cases": 3000
+ },
+ "post_hoc": true,
+ "predicates": {
+  "inconclusive_if": [
+   {
+    "clause": "fewer than 3000 unique sequences, or any H18 hostile-edit class missing from the corpus",
+    "id": "I",
+    "value": false
+   }
+  ],
+  "invalid_if": [
+   {
+    "clause": "Evidence records carry a protocol-freeze / ENGINE_PREREG hash different from the files now",
+    "id": "V1",
+    "value": false
+   },
+   {
+    "clause": "Evidence records disagree on commit / seed / corpus hash or do not name the current Engine version",
+    "id": "V2",
+    "value": false
+   },
+   {
+    "clause": "The Engine (src/eoo_engine, src/eoo_engine_git) differs from tag r2-engine-v1.2",
+    "id": "V3",
+    "value": false
+   },
+   {
+    "clause": "The lifecycle oracle (src/hdd/project_lifecycle_reference.py, oracles/h18) is changed",
+    "id": "V4",
+    "value": false
+   },
+   {
+    "clause": "Harness files were dirty at run time",
+    "id": "V5",
+    "value": false
+   },
+   {
+    "clause": "Harness self-check failed (mutation control not clean, harness error rows, harness files changed since the run) or the oracle is not independent",
+    "id": "V6",
+    "value": false
+   }
+  ],
+  "reject_if": [
+   {
+    "clause": "Any of S1/S1b/S3/S4 violated, or any core governance invariant bypassable (core-class illegal op accepted, hostile dogfood step accepted)",
+    "id": "R",
+    "value": false
+   }
+  ],
+  "support_if": [
+   {
+    "clause": "0 illegal lifecycle transitions accepted across >= 3000 unique generated sequences (any class; no refused op reached Git)",
+    "id": "S1",
+    "value": true
+   },
+   {
+    "clause": "0 legal lifecycle transitions refused and 0 state mismatches: step-by-step agreement with the oracle in both directions",
+    "id": "S1b",
+    "value": true
+   },
+   {
+    "clause": "100% of authoritative verdicts reproducible from frozen evidence/evaluator",
+    "id": "S2",
+    "value": true
+   },
+   {
+    "clause": "0 canonical ontology-only changes lacking a Git trace",
+    "id": "S3",
+    "value": true
+   },
+   {
+    "clause": "0 Project-domain branches in the generic Engine (static audit, planted known-positives found)",
+    "id": "S4",
+    "value": true
+   },
+   {
+    "clause": "all H18 target mutations detected (post-freeze threshold edit, verdict without evidence, detached commit provenance), controls clean",
+    "id": "S6",
+    "value": true
+   }
+  ]
+ },
+ "problems": [],
+ "protocol": {
+  "freeze_sha256": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2"
+ },
+ "protocol_mismatches": {
+  "disagreeing_provenance": false,
+  "records_not_naming_current_engine_version": [],
+  "records_with_wrong_hashes": []
+ },
+ "verdict": "SUPPORTED"
+}
