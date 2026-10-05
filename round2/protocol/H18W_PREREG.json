@@ -1,0 +1,28 @@
+{
+  "id": "H18w",
+  "status": "POST-HOC hypothesis, formulated 2026-10-05 AFTER exp-h18-001 was known; frozen before any H18w code or run. Lower evidential weight than a preregistered hypothesis; reported as such.",
+  "author_decision": "User asked for a weak version of H18 (2026-10-05) and approved this plan; H18 stays REJECTED (value claim) permanently.",
+  "claim": "The same generic Engine (v1.2, unchanged) governs the real hypothesis-driven lifecycle of operational-ontology-poc through ordinary domain declarations: it accepts exactly the transitions the independent lifecycle oracle accepts, makes verdicts reproducible from frozen evidence, keeps every canonical change traceable to Git, and needs no Project-specific Engine branch.",
+  "dropped_from_H18": ["S5 (>=25% lower bespoke surface than the file-only baseline)", "R2 (parity/worse bespoke surface in all task classes)"],
+  "support_if": [
+    "S1: 0 illegal lifecycle transitions accepted across >= 3,000 unique generated sequences",
+    "S1b (stricter than H18): 0 legal lifecycle transitions refused, i.e. step-by-step agreement with the oracle in both directions",
+    "S2: 100% of authoritative verdicts reproducible from frozen evidence/evaluator",
+    "S3: 0 canonical ontology-only changes lacking a Git trace",
+    "S4: 0 Project-domain branches in the generic Engine",
+    "S6: all H18 target mutations detected (post-freeze threshold edit, verdict without evidence, detached commit provenance)"
+  ],
+  "reject_if": ["Any of S1/S1b/S3/S4 violated, or any core governance invariant bypassable"],
+  "inconclusive_if": ["fewer than 3,000 unique sequences, or any H18 hostile-edit class missing from the corpus"],
+  "invalid_if": ["the Engine (src/eoo_engine, src/eoo_engine_git) differs from tag r2-engine-v1.2", "the lifecycle oracle (src/hdd/project_lifecycle_reference.py, oracles/h18) is changed", "harness files dirty at run time"],
+  "candidate_change_allowed": {
+    "what": "project domain contract v3 (domains/project/ir.v3.json + logic/payload bindings + CHANGES_v3.md); ordinary declarations only",
+    "scope": [
+      "wire the existing policy conflicting_change_denied_with_conflict into the action(s) where the exp-h18-001 self-supersession was accepted",
+      "make new_experiment_version link the new Experiment to its predecessor (an ordinary link type may be added) so legal version chains are accepted"
+    ],
+    "forbidden": ["any Engine or Git-store change", "any oracle or harness change that alters what counts as legal", "removing a class from the generated corpus"]
+  },
+  "run": {"harness": "the H18 harness unchanged except an evaluator variant that maps evidence to the clauses above", "exp_id": "exp-h18w-001", "seed": 1818, "where": "isolated git worktree by the orchestrator"},
+  "downstream": "H19 depends on H18w (author decision 2026-10-05) instead of the rejected value claim of H18."
+}
