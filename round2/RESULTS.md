@@ -12,7 +12,8 @@ author decisions `protocol/AUTHOR_DECISIONS_2026-10-03.md`. Branch `round2-v2`.
 | H16 bounded kernel across two domains | **SUPPORTED** | `experiments/h16/exp-h16-001` | `r2-h16-exp001` |
 | H17 Function ≠ Action hard boundary | **SUPPORTED** on Engine v1.2 | `experiments/h17/exp-h17-004` | `r2-h17-exp004` |
 | H18 Project Ontology as executable second domain | **REJECTED** | `experiments/h18/exp-h18-001` | `r2-h18-exp001` |
-| H19 Git authority without split brain | **STOPPED BY DEPENDENCY** (H18 rejected) | `experiments/h19/DEPENDENCY_STOP.json` | `r2-h19-stop` |
+| H18w (post-hoc) the executable Project Ontology works | **SUPPORTED** (claim formulated after H18's result) | `experiments/h18/exp-h18w-001` | `r2-h18w-exp001` |
+| H19 Git authority without split brain | **SUPPORTED** (upstream: H18w) | `experiments/h19/exp-h19-001` | `r2-h19-exp001` |
 | H20 one generic Engine, no domain branches | **SUPPORTED** on Engine v1.2, no exceptions | `experiments/h20/exp-h20-002` | `r2-h20-exp002` |
 | H21 Toolchain generated with security equivalence | **SUPPORTED** on Engine v1.2 | `experiments/h21/exp-h21-002` | `r2-h21-exp002` |
 | H22 semantic-variety break-even | **INCONCLUSIVE** (gate: 2 of 3 real domains, 0 of 30 blind tasks) | `experiments/h22/exp-h22-001` | `r2-h22-exp001` |
@@ -28,6 +29,7 @@ author decisions `protocol/AUTHOR_DECISIONS_2026-10-03.md`. Branch `round2-v2`.
 | H17 | exp-h17-003 | Engine v1.1 | SUPPORTED | superseded by the v1.2 re-run |
 | H20 | exp-h20-001 | Engine v1.1 | SUPPORTED with one ruled exception | adapter composed Git trailers; replaced by author decision 2 |
 | H21 | exp-h21-001 | Engine v1.1 | SUPPORTED | superseded by the v1.2 re-run |
+| H19 | DEPENDENCY_STOP.json | — | STOPPED (H18 rejected) | lifted after H18w was SUPPORTED (`experiments/h19/STOP_LIFTED.md`) |
 
 ## What the result says
 
@@ -35,7 +37,9 @@ The executable machinery works. One kernel serves both domains without new primi
 hard Function/Action boundary once its v1 aliasing bug is fixed (H17). It runs both domains through one generic
 lifecycle, and adapters only bind to external systems: they write the provenance the Engine composes byte for byte
 (H20). Typed, security-equivalent tool surfaces generate from the contract (H21). OpenPona can carry the IR
-losslessly with every word combination meaningful, ids kept as record metadata (H15 v2).
+losslessly with every word combination meaningful, ids kept as record metadata (H15 v2). The project's own research
+lifecycle runs on the same Engine in exact agreement with an independent lifecycle oracle (H18w, post-hoc), with Git as
+the single source of truth: deterministic rebuilds, no lost updates, explicit conflicts, history stays pinned (H19).
 
 The value claim fails where it was tested. On the project's own lifecycle, the ontology needed about 4–5x the bespoke
 surface of an equally strong Git + JSON Schema + scripts baseline in every preregistered task class, plus 2,191 vs 39
@@ -51,7 +55,8 @@ domains accumulate cannot be judged with two domains (H22).
 | H15 v2 meaning test | cannot fail for v2 by construction; its teeth are the known-negatives (v1 fails it: 3,190 phrases vs bound 188; injected labels fail it) |
 | H17 kill-chain | Engine v1 bypass fixed as new candidate versions (v1.1, v1.2) with the H17 harness unchanged (`protocol/H17_REJECTION_DECISION.md`). Strict alternative: stop H18–H22 after exp-h17-001 |
 | H18 | also 7 self-supersession steps accepted (a project policy referenced by no action) and 61 legal version-chain steps refused |
-| H19 | stopped because H18 failed on its claim; `src/eoo_engine_git` exists if the Git-authority question is to be answered on its own |
+| H18w | post-hoc (formulated after H18's result, frozen before its own run); needed project contract v3 to close two declaration gaps found by exp-h18-001 (`domains/project/CHANGES_v3.md`); lower evidential weight |
+| H19 | upstream changed from H18 to H18w by author decision; contract and thresholds unchanged |
 | H20 | real Git adapter covered by one real-action probe (7 writes); the bulk of workloads use the in-process Git fake (232 writes) |
 | H21 | oracle and toolchain share an author; the live-Engine cross-check is the second oracle |
 
@@ -62,4 +67,4 @@ domains accumulate cannot be judged with two domains (H22).
 - Frozen-IR limits: one decision per Policy; compensation must name a governed Action; no Action object binding. As a
   result, manufacturing `expedite_purchase_order` and `reschedule_work_order` can be authorized for nobody.
 - Project contract v2 (`domains/project/ir.v2.json`) fixed one declaration defect before any H16–H22 evidence
-  (`domains/project/CHANGES_v2.md`); H15 used the frozen v1 IR.
+  (`domains/project/CHANGES_v2.md`); H15 used the frozen v1 IR; H18w and H19 use contract v3 (`CHANGES_v3.md`).
