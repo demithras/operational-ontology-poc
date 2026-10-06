@@ -1,6 +1,12 @@
 """Pure effective-authority oracle. Implements the frozen rule of spec/protections/PROT-H23.md over the neutral
 authority fixture (spec/authority/<domain>.json). Imports nothing from any variant.
 
+Delegate semantics (PROT-H23.md, on_behalf_of bullet, protocol P1b): a principal whose auth-spec `delegated_by` is P
+is a delegate of P and EVERY request it makes is evaluated under rule (a)-(d) with delegator P, whether or not
+on_behalf_of is supplied. on_behalf_of different from P -> DENY; `delegated_by: null` with on_behalf_of -> DENY.
+Business rules that check the actor's relations (`actor_holds`) therefore consult the delegator for delegates
+(`actor_for_rules`).
+
 decide(subject, on_behalf_of, operation, resources, auth_spec) -> Decision(allow, reason)
 `resources` = the (type, key) pairs of the request's resource-typed inputs.
 """
@@ -84,17 +90,23 @@ def _self_allowed(spec: dict, pid: str, op: str, resources) -> tuple[bool, str, 
 
 def decide(subject: str, on_behalf_of: str | None, operation: str, resources, auth_spec: dict) -> Decision:
     resources = [tuple(r) for r in resources]
+    me = _principal(auth_spec, subject)
+    delegator = me["delegated_by"] if me is not None else None
+    if on_behalf_of is not None and delegator is None:
+        return Decision(False, "on_behalf_of supplied but the subject is nobody's delegate")
+    if delegator is not None and on_behalf_of is not None and on_behalf_of != delegator:
+        return Decision(False, f"on_behalf_of {on_behalf_of} differs from the delegator {delegator}")
     ok, why, allows = _self_allowed(auth_spec, subject, operation, resources)
-    if on_behalf_of is None:
+    if delegator is None:
         return Decision(ok, why)
     if not ok:
         return Decision(False, f"agent itself not allowed: {why}")
-    if not any(d["agent"] == subject and d["on_behalf_of"] == on_behalf_of and operation in d["operations"]
+    if not any(d["agent"] == subject and d["on_behalf_of"] == delegator and operation in d["operations"]
                for d in auth_spec["delegations"]):
         return Decision(False, "no delegation entry for this agent/principal/operation")
     if not any(g["delegable"] for g in allows):
         return Decision(False, "matching allow grant is not delegable")
-    p_ok, p_why, _ = _self_allowed(auth_spec, on_behalf_of, operation, resources)
+    p_ok, p_why, _ = _self_allowed(auth_spec, delegator, operation, resources)
     if not p_ok:
         return Decision(False, f"delegator not allowed: {p_why}")
     for who in _chain(auth_spec, subject):
@@ -104,8 +116,10 @@ def decide(subject: str, on_behalf_of: str | None, operation: str, resources, au
 
 
 def actor_for_rules(subject: str, on_behalf_of: str | None, auth_spec: dict) -> str:
-    """Principal whose relations business rules (`actor_holds`) consult: the delegator when acting on behalf of."""
-    return on_behalf_of if on_behalf_of is not None else subject
+    """Principal whose relations business rules (`actor_holds`) consult: the delegator for a delegate (intrinsic,
+    PROT-H23 delegate semantics), else the subject. A mismatching on_behalf_of is already DENIED by decide()."""
+    p = _principal(auth_spec, subject)
+    return p["delegated_by"] if p is not None and p["delegated_by"] is not None else subject
 
 
 def relations_of(auth_spec: dict, pid: str) -> set[tuple[str, str, str]]:
@@ -140,8 +154,13 @@ def could_ever_allow(subject: str, operation: str, auth_spec: dict) -> bool:
                 out.append(g)
         return out
 
-    # delegation needs the agent's OWN delegable allow grant, so it never widens the upper bound.
-    return bool(own(subject))
+    if not own(subject):
+        return False
+    if p["delegated_by"] is None:
+        return True
+    # a delegate needs a delegation entry for the operation AND a delegator that could itself be granted it
+    return any(d["agent"] == subject and d["on_behalf_of"] == p["delegated_by"] and operation in d["operations"]
+               for d in auth_spec["delegations"]) and bool(own(p["delegated_by"]))
 
 
 def revoke(auth_spec: dict, subject: str, operation: str) -> dict:

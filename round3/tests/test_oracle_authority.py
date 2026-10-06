@@ -41,8 +41,22 @@ def test_non_delegable_grant_blocks_delegation():
     for g in spec["grants"]:
         if g["id"] == "transfer-inventory-agent-grant":
             g["delegable"] = False
-    assert d("agent-1", None, OP, WH("WH-A", "WH-B"), spec)
+    assert not d("agent-1", None, OP, WH("WH-A", "WH-B"), spec)  # delegate semantics: rule (b) applies without obo too
     assert not d("agent-1", "planner-1", OP, WH("WH-A", "WH-B"), spec)
+
+
+def test_delegate_semantics_are_intrinsic_prot_h23():
+    assert not d("agent-orphan", None, OP, WH("WH-A", "WH-B"))  # delegator nobody-1 holds nothing
+    assert not d("agent-orphan", "nobody-1", OP, WH("WH-A", "WH-B"))
+    assert d("agent-1", None, OP, WH("WH-A", "WH-B"))  # evaluated with delegator planner-1
+    assert d("agent-1", "planner-1", OP, WH("WH-A", "WH-B"))
+    assert not d("agent-1", "junior-1", OP, WH("WH-A", "WH-B"))  # obo differs from delegated_by
+    assert not d("agent-hostile-1", None, OP, WH("WH-B", "WH-A"))
+    assert not d("planner-1", "agent-1", OP, WH("WH-A", "WH-B"))  # delegated_by null + obo -> DENY
+    assert not d("planner-1", "planner-1", OP, WH("WH-A", "WH-B"))
+    assert authority.actor_for_rules("agent-1", None, M) == "planner-1"
+    assert authority.actor_for_rules("planner-1", None, M) == "planner-1"
+    assert not authority.could_ever_allow("agent-orphan", OP, M) and authority.could_ever_allow("agent-1", OP, M)
 
 
 def test_deny_overrides_allow_and_delegation_chain_deny():

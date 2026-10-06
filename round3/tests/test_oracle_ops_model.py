@@ -98,7 +98,9 @@ def test_on_behalf_of_changes_the_effective_actor_for_business_rules():
     ok = ev("manufacturing", "agent-1", "transfer_inventory", T, obo="planner-1")
     assert ok.kind == M.COMMIT  # planner-1 holds the planner relation on the protected route's source
     assert ev("manufacturing", "agent-1", "transfer_inventory", T, obo="junior-1").kind == M.DENIED_AUTHORITY
-    assert ev("manufacturing", "agent-1", "transfer_inventory", T).kind == M.DENIED_RULE  # acts as itself: not planner
+    # delegate semantics (PROT-H23): the delegator is the effective actor even without on_behalf_of
+    assert ev("manufacturing", "agent-1", "transfer_inventory", T).kind == M.COMMIT
+    assert ev("manufacturing", "agent-orphan", "transfer_inventory", T).kind == M.DENIED_AUTHORITY
 
 
 def test_stale_evidence_depends_on_the_clock():
