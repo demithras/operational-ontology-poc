@@ -1,0 +1,1620 @@
+{
+  "package_id": "project-ontology",
+  "domain_id": "operational-ontology-poc",
+  "version": "v1",
+  "imports": [],
+  "object_types": [
+    {
+      "id": "Hypothesis",
+      "primary_key": "id",
+      "properties": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "claim",
+          "type": "string",
+          "required": true,
+          "immutable": false
+        },
+        {
+          "name": "phase",
+          "type": "string",
+          "required": true,
+          "immutable": false,
+          "constraints": [
+            "enum:DRAFT|PREREGISTERED|RUNNING|EVALUATED|SUPERSEDED"
+          ]
+        },
+        {
+          "name": "freeze_hash",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "implements": [
+        "VersionedResearchObject"
+      ]
+    },
+    {
+      "id": "Rival",
+      "primary_key": "id",
+      "properties": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "statement",
+          "type": "string",
+          "required": true,
+          "immutable": false
+        }
+      ],
+      "implements": []
+    },
+    {
+      "id": "Prediction",
+      "primary_key": "id",
+      "properties": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "statement",
+          "type": "string",
+          "required": true,
+          "immutable": false
+        }
+      ],
+      "implements": []
+    },
+    {
+      "id": "Falsifier",
+      "primary_key": "id",
+      "properties": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "statement",
+          "type": "string",
+          "required": true,
+          "immutable": false
+        }
+      ],
+      "implements": []
+    },
+    {
+      "id": "Experiment",
+      "primary_key": "id",
+      "properties": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "version",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "evidence_schema_ref",
+          "type": "string",
+          "required": true,
+          "immutable": false
+        },
+        {
+          "name": "evaluator_ref",
+          "type": "string",
+          "required": true,
+          "immutable": false
+        },
+        {
+          "name": "freeze_hash",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "implements": [
+        "VersionedResearchObject"
+      ]
+    },
+    {
+      "id": "Metric",
+      "primary_key": "id",
+      "properties": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "immutable": false
+        }
+      ],
+      "implements": []
+    },
+    {
+      "id": "Threshold",
+      "primary_key": "id",
+      "properties": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "value",
+          "type": "json",
+          "required": true,
+          "immutable": false
+        }
+      ],
+      "implements": []
+    },
+    {
+      "id": "Evidence",
+      "primary_key": "id",
+      "properties": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "payload_hash",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "git_commit",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "experiment_version",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "environment",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        }
+      ],
+      "implements": [
+        "VersionedResearchObject",
+        "GitBound"
+      ]
+    },
+    {
+      "id": "Verdict",
+      "primary_key": "id",
+      "properties": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "value",
+          "type": "string",
+          "required": true,
+          "immutable": true,
+          "constraints": [
+            "enum:SUPPORTED|REJECTED|INCONCLUSIVE|INVALID"
+          ]
+        },
+        {
+          "name": "reason",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "derivation_hash",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "git_commit",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        }
+      ],
+      "implements": [
+        "VersionedResearchObject",
+        "GitBound"
+      ]
+    },
+    {
+      "id": "Component",
+      "primary_key": "id",
+      "properties": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "path",
+          "type": "string",
+          "required": true,
+          "immutable": false
+        },
+        {
+          "name": "orphan_flagged",
+          "type": "boolean",
+          "required": true,
+          "immutable": false
+        }
+      ],
+      "implements": []
+    },
+    {
+      "id": "ContractVersion",
+      "primary_key": "id",
+      "properties": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "sha256",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "git_commit",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "frozen_at",
+          "type": "datetime",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "implements": [
+        "VersionedResearchObject",
+        "GitBound"
+      ]
+    },
+    {
+      "id": "Commit",
+      "primary_key": "sha",
+      "properties": [
+        {
+          "name": "sha",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "message",
+          "type": "string",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "committed_at",
+          "type": "datetime",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "implements": []
+    },
+    {
+      "id": "Test",
+      "primary_key": "id",
+      "properties": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "immutable": false
+        },
+        {
+          "name": "last_result",
+          "type": "string",
+          "required": false,
+          "immutable": false,
+          "constraints": [
+            "enum:passed|failed|error"
+          ]
+        }
+      ],
+      "implements": []
+    },
+    {
+      "id": "Decision",
+      "primary_key": "id",
+      "properties": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "rationale",
+          "type": "string",
+          "required": true,
+          "immutable": false
+        },
+        {
+          "name": "decided_at",
+          "type": "datetime",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "implements": [
+        "VersionedResearchObject"
+      ]
+    },
+    {
+      "id": "Failure",
+      "primary_key": "id",
+      "properties": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": true,
+          "immutable": false
+        }
+      ],
+      "implements": []
+    }
+  ],
+  "link_types": [
+    {
+      "id": "HAS_RIVAL",
+      "from": "Hypothesis",
+      "to": "Rival",
+      "from_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "to_cardinality": {
+        "min": 1,
+        "max": 1
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "PREDICTS",
+      "from": "Hypothesis",
+      "to": "Prediction",
+      "from_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "to_cardinality": {
+        "min": 1,
+        "max": 1
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "FALSIFIED_BY",
+      "from": "Hypothesis",
+      "to": "Falsifier",
+      "from_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "to_cardinality": {
+        "min": 1,
+        "max": 1
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "TESTED_BY",
+      "from": "Hypothesis",
+      "to": "Experiment",
+      "from_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "to_cardinality": {
+        "min": 1,
+        "max": 1
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "MEASURES",
+      "from": "Experiment",
+      "to": "Metric",
+      "from_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "GOVERNED_BY",
+      "from": "Metric",
+      "to": "Threshold",
+      "from_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "PRODUCES",
+      "from": "Experiment",
+      "to": "Evidence",
+      "from_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "to_cardinality": {
+        "min": 1,
+        "max": 1
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "SUPPORTS_OR_REFUTES",
+      "from": "Evidence",
+      "to": "Hypothesis",
+      "from_cardinality": {
+        "min": 1,
+        "max": "*"
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "EVALUATES",
+      "from": "Verdict",
+      "to": "Hypothesis",
+      "from_cardinality": {
+        "min": 1,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "CAPTURED_AT",
+      "from": "Evidence",
+      "to": "Commit",
+      "from_cardinality": {
+        "min": 1,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "EXISTS_FOR",
+      "from": "Component",
+      "to": "Hypothesis",
+      "from_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "VALIDATES",
+      "from": "Test",
+      "to": "Component",
+      "from_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "DETECTED_BY",
+      "from": "Failure",
+      "to": "Test",
+      "from_cardinality": {
+        "min": 1,
+        "max": "*"
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "CHANGES",
+      "from": "Decision",
+      "to": "ContractVersion",
+      "from_cardinality": {
+        "min": 1,
+        "max": "*"
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": "*"
+      },
+      "directed": true,
+      "properties": []
+    },
+    {
+      "id": "SUPERSEDED_BY",
+      "from": "Hypothesis",
+      "to": "Hypothesis",
+      "from_cardinality": {
+        "min": 0,
+        "max": 1
+      },
+      "to_cardinality": {
+        "min": 0,
+        "max": 1
+      },
+      "directed": true,
+      "properties": []
+    }
+  ],
+  "interfaces": [
+    {
+      "id": "VersionedResearchObject",
+      "required_properties": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        }
+      ],
+      "required_links": [],
+      "capabilities": [
+        "read",
+        "audit"
+      ]
+    },
+    {
+      "id": "GitBound",
+      "required_properties": [
+        {
+          "name": "git_commit",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        }
+      ],
+      "required_links": [],
+      "capabilities": [
+        "audit"
+      ]
+    }
+  ],
+  "functions": [
+    {
+      "id": "evidence_count",
+      "inputs": [
+        {
+          "name": "hypothesis",
+          "type": {
+            "ref": "Hypothesis"
+          },
+          "required": true
+        }
+      ],
+      "output": "integer",
+      "purity": "NO_COMMITTED_BUSINESS_SIDE_EFFECT",
+      "reads": [
+        "SUPPORTS_OR_REFUTES"
+      ],
+      "implementation_ref": "fn:evidence_count:v1",
+      "determinism": "deterministic"
+    },
+    {
+      "id": "compute_freeze_hash",
+      "inputs": [
+        {
+          "name": "experiment",
+          "type": {
+            "ref": "Experiment"
+          },
+          "required": true
+        }
+      ],
+      "output": "string",
+      "purity": "NO_COMMITTED_BUSINESS_SIDE_EFFECT",
+      "reads": [
+        "Experiment.version",
+        "Experiment.evidence_schema_ref",
+        "Experiment.evaluator_ref",
+        "MEASURES",
+        "GOVERNED_BY",
+        "Threshold.value"
+      ],
+      "implementation_ref": "scripts/freeze_protocol.py",
+      "determinism": "deterministic"
+    },
+    {
+      "id": "derive_verdict",
+      "inputs": [
+        {
+          "name": "hypothesis",
+          "type": {
+            "ref": "Hypothesis"
+          },
+          "required": true
+        }
+      ],
+      "output": "string",
+      "purity": "NO_COMMITTED_BUSINESS_SIDE_EFFECT",
+      "reads": [
+        "TESTED_BY",
+        "PRODUCES",
+        "SUPPORTS_OR_REFUTES",
+        "Evidence.payload_hash",
+        "Experiment.evaluator_ref",
+        "Threshold.value",
+        "GOVERNED_BY",
+        "MEASURES"
+      ],
+      "implementation_ref": "src/hdd/verdict.py:evaluate_common",
+      "determinism": "deterministic"
+    },
+    {
+      "id": "find_orphan_components",
+      "inputs": [],
+      "output": {
+        "list": {
+          "ref": "Component"
+        }
+      },
+      "purity": "NO_COMMITTED_BUSINESS_SIDE_EFFECT",
+      "reads": [
+        "Component",
+        "EXISTS_FOR",
+        "Hypothesis.phase"
+      ],
+      "implementation_ref": "fn:find_orphan_components:v1",
+      "determinism": "deterministic"
+    },
+    {
+      "id": "canonical_state_hash",
+      "inputs": [],
+      "output": "string",
+      "purity": "NO_COMMITTED_BUSINESS_SIDE_EFFECT",
+      "reads": [
+        "Hypothesis",
+        "Rival",
+        "Prediction",
+        "Falsifier",
+        "Experiment",
+        "Metric",
+        "Threshold",
+        "Evidence",
+        "Verdict",
+        "Component",
+        "ContractVersion",
+        "Commit",
+        "Test",
+        "Decision",
+        "Failure"
+      ],
+      "implementation_ref": "fn:canonical_state_hash:v1",
+      "determinism": "deterministic"
+    },
+    {
+      "id": "is_legal_transition",
+      "inputs": [
+        {
+          "name": "hypothesis",
+          "type": {
+            "ref": "Hypothesis"
+          },
+          "required": true
+        },
+        {
+          "name": "target_phase",
+          "type": "string",
+          "required": true
+        }
+      ],
+      "output": "boolean",
+      "purity": "NO_COMMITTED_BUSINESS_SIDE_EFFECT",
+      "reads": [
+        "Hypothesis.phase"
+      ],
+      "implementation_ref": "src/hdd/project_lifecycle_reference.py",
+      "determinism": "deterministic"
+    }
+  ],
+  "actions": [
+    {
+      "id": "create_hypothesis",
+      "inputs": [
+        {
+          "name": "claim",
+          "type": "string",
+          "required": true
+        }
+      ],
+      "authority_refs": [
+        "auth:researcher-create-hypothesis",
+        "auth:no-canonical-write-outside-git"
+      ],
+      "policy_refs": [
+        "policy:stale_write_rejected",
+        "policy:ephemeral_state_never_canonical"
+      ],
+      "preconditions": [
+        "claim is non-empty"
+      ],
+      "effects": [
+        {
+          "target": "Hypothesis",
+          "operation": "git_change",
+          "fields": [
+            "id",
+            "claim",
+            "phase"
+          ]
+        }
+      ],
+      "idempotency": "required",
+      "outcome_predicate": "Git contains the hypothesis contract at the expected commit with phase == DRAFT",
+      "compensation_action": null,
+      "version": "v1"
+    },
+    {
+      "id": "edit_threshold",
+      "inputs": [
+        {
+          "name": "threshold",
+          "type": {
+            "ref": "Threshold"
+          },
+          "required": true
+        },
+        {
+          "name": "value",
+          "type": "json",
+          "required": true
+        }
+      ],
+      "authority_refs": [
+        "auth:researcher-edit-threshold",
+        "auth:no-canonical-write-outside-git",
+        "auth:no-threshold-edit-after-preregistration"
+      ],
+      "policy_refs": [
+        "policy:threshold_edit_after_preregistration_denied",
+        "policy:stale_write_rejected"
+      ],
+      "preconditions": [
+        "phase == DRAFT"
+      ],
+      "effects": [
+        {
+          "target": "Threshold",
+          "operation": "git_change",
+          "fields": [
+            "value"
+          ]
+        }
+      ],
+      "idempotency": "required",
+      "outcome_predicate": "Git contains the new threshold value while the hypothesis phase is still DRAFT",
+      "compensation_action": null,
+      "version": "v1"
+    },
+    {
+      "id": "preregister_hypothesis",
+      "inputs": [
+        {
+          "name": "hypothesis",
+          "type": {
+            "ref": "Hypothesis"
+          },
+          "required": true
+        },
+        {
+          "name": "freeze_hash",
+          "type": "string",
+          "required": true
+        }
+      ],
+      "authority_refs": [
+        "auth:researcher-preregister-hypothesis",
+        "auth:no-canonical-write-outside-git"
+      ],
+      "policy_refs": [
+        "policy:preregistration_requires_complete_contract",
+        "policy:legal_lifecycle_transition_allowed",
+        "policy:stale_write_rejected"
+      ],
+      "preconditions": [
+        "phase == DRAFT",
+        "freeze_hash exists"
+      ],
+      "effects": [
+        {
+          "target": "Hypothesis",
+          "operation": "git_change",
+          "fields": [
+            "phase",
+            "freeze_hash"
+          ]
+        }
+      ],
+      "idempotency": "required",
+      "outcome_predicate": "Git contains preregistered contract at expected commit",
+      "compensation_action": null,
+      "version": "v1"
+    },
+    {
+      "id": "new_experiment_version",
+      "inputs": [
+        {
+          "name": "experiment",
+          "type": {
+            "ref": "Experiment"
+          },
+          "required": true
+        },
+        {
+          "name": "contract_version",
+          "type": {
+            "ref": "ContractVersion"
+          },
+          "required": true
+        }
+      ],
+      "authority_refs": [
+        "auth:researcher-new-experiment-version",
+        "auth:no-canonical-write-outside-git"
+      ],
+      "policy_refs": [
+        "policy:threshold_edit_after_preregistration_denied",
+        "policy:historical_binding_preserved",
+        "policy:stale_write_rejected"
+      ],
+      "preconditions": [
+        "phase != DRAFT"
+      ],
+      "effects": [
+        {
+          "target": "Experiment",
+          "operation": "git_change",
+          "fields": [
+            "id",
+            "version",
+            "evidence_schema_ref",
+            "evaluator_ref"
+          ]
+        },
+        {
+          "target": "ContractVersion",
+          "operation": "git_change",
+          "fields": [
+            "id",
+            "sha256",
+            "git_commit",
+            "frozen_at"
+          ]
+        }
+      ],
+      "idempotency": "required",
+      "outcome_predicate": "Git contains a new Experiment row with a new version and the matching ContractVersion; the old experiment version is unchanged",
+      "compensation_action": null,
+      "version": "v1"
+    },
+    {
+      "id": "start_run",
+      "inputs": [
+        {
+          "name": "hypothesis",
+          "type": {
+            "ref": "Hypothesis"
+          },
+          "required": true
+        }
+      ],
+      "authority_refs": [
+        "auth:researcher-start-run",
+        "auth:no-canonical-write-outside-git"
+      ],
+      "policy_refs": [
+        "policy:running_requires_freeze_hash",
+        "policy:legal_lifecycle_transition_allowed",
+        "policy:stale_write_rejected"
+      ],
+      "preconditions": [
+        "phase == PREREGISTERED",
+        "freeze_hash exists"
+      ],
+      "effects": [
+        {
+          "target": "Hypothesis",
+          "operation": "git_change",
+          "fields": [
+            "phase"
+          ]
+        }
+      ],
+      "idempotency": "required",
+      "outcome_predicate": "Git contains the hypothesis with phase == RUNNING at the expected commit",
+      "compensation_action": null,
+      "version": "v1"
+    },
+    {
+      "id": "attach_evidence",
+      "inputs": [
+        {
+          "name": "hypothesis",
+          "type": {
+            "ref": "Hypothesis"
+          },
+          "required": true
+        },
+        {
+          "name": "evidence",
+          "type": {
+            "ref": "Evidence"
+          },
+          "required": true
+        }
+      ],
+      "authority_refs": [
+        "auth:researcher-attach-evidence",
+        "auth:no-canonical-write-outside-git"
+      ],
+      "policy_refs": [
+        "policy:evidence_must_bind_version_commit_environment",
+        "policy:historical_binding_preserved",
+        "policy:stale_write_rejected"
+      ],
+      "preconditions": [
+        "phase == RUNNING",
+        "evidence is pinned to experiment version, commit and environment"
+      ],
+      "effects": [
+        {
+          "target": "Evidence",
+          "operation": "git_change",
+          "fields": [
+            "id",
+            "payload_hash",
+            "git_commit",
+            "experiment_version",
+            "environment"
+          ]
+        },
+        {
+          "target": "PRODUCES",
+          "operation": "git_change"
+        }
+      ],
+      "idempotency": "required",
+      "outcome_predicate": "Git contains the evidence artifact bound to the experiment version, commit and environment",
+      "compensation_action": null,
+      "version": "v1"
+    },
+    {
+      "id": "evaluate_hypothesis",
+      "inputs": [
+        {
+          "name": "hypothesis",
+          "type": {
+            "ref": "Hypothesis"
+          },
+          "required": true
+        }
+      ],
+      "authority_refs": [
+        "auth:researcher-evaluate-hypothesis",
+        "auth:no-canonical-write-outside-git",
+        "auth:no-direct-verdict-write"
+      ],
+      "policy_refs": [
+        "policy:evaluated_requires_evidence_or_reason",
+        "policy:verdict_must_be_machine_derived",
+        "policy:legal_lifecycle_transition_allowed",
+        "policy:stale_write_rejected"
+      ],
+      "preconditions": [
+        "phase == RUNNING",
+        "evidence_count(hypothesis) >= 1 or an explicit INCONCLUSIVE/INVALID reason is given"
+      ],
+      "effects": [
+        {
+          "target": "Verdict",
+          "operation": "git_change",
+          "fields": [
+            "id",
+            "value",
+            "reason",
+            "derivation_hash",
+            "git_commit"
+          ]
+        },
+        {
+          "target": "Hypothesis",
+          "operation": "git_change",
+          "fields": [
+            "phase"
+          ]
+        },
+        {
+          "target": "EVALUATES",
+          "operation": "git_change"
+        }
+      ],
+      "idempotency": "required",
+      "outcome_predicate": "Git contains a Verdict whose value equals derive_verdict(hypothesis) and the hypothesis with phase == EVALUATED",
+      "compensation_action": null,
+      "version": "v1"
+    },
+    {
+      "id": "supersede_hypothesis",
+      "inputs": [
+        {
+          "name": "hypothesis",
+          "type": {
+            "ref": "Hypothesis"
+          },
+          "required": true
+        },
+        {
+          "name": "successor",
+          "type": {
+            "ref": "Hypothesis"
+          },
+          "required": true
+        }
+      ],
+      "authority_refs": [
+        "auth:researcher-supersede-hypothesis",
+        "auth:no-canonical-write-outside-git"
+      ],
+      "policy_refs": [
+        "policy:legal_lifecycle_transition_allowed",
+        "policy:historical_binding_preserved",
+        "policy:stale_write_rejected"
+      ],
+      "preconditions": [
+        "phase == EVALUATED"
+      ],
+      "effects": [
+        {
+          "target": "Hypothesis",
+          "operation": "git_change",
+          "fields": [
+            "phase"
+          ]
+        },
+        {
+          "target": "SUPERSEDED_BY",
+          "operation": "git_change"
+        }
+      ],
+      "idempotency": "required",
+      "outcome_predicate": "Git contains the hypothesis with phase == SUPERSEDED and a SUPERSEDED_BY link to the successor",
+      "compensation_action": null,
+      "version": "v1"
+    },
+    {
+      "id": "record_decision",
+      "inputs": [
+        {
+          "name": "decision",
+          "type": {
+            "ref": "Decision"
+          },
+          "required": true
+        },
+        {
+          "name": "contract_version",
+          "type": {
+            "ref": "ContractVersion"
+          },
+          "required": true
+        }
+      ],
+      "authority_refs": [
+        "auth:researcher-record-decision",
+        "auth:no-canonical-write-outside-git"
+      ],
+      "policy_refs": [
+        "policy:stale_write_rejected",
+        "policy:historical_binding_preserved"
+      ],
+      "preconditions": [
+        "rationale is non-empty"
+      ],
+      "effects": [
+        {
+          "target": "Decision",
+          "operation": "git_change",
+          "fields": [
+            "id",
+            "rationale",
+            "decided_at"
+          ]
+        },
+        {
+          "target": "CHANGES",
+          "operation": "git_change"
+        }
+      ],
+      "idempotency": "required",
+      "outcome_predicate": "Git contains the decision and its CHANGES link to the contract version",
+      "compensation_action": null,
+      "version": "v1"
+    },
+    {
+      "id": "flag_orphan_component",
+      "inputs": [
+        {
+          "name": "component",
+          "type": {
+            "ref": "Component"
+          },
+          "required": true
+        }
+      ],
+      "authority_refs": [
+        "auth:researcher-flag-orphan-component",
+        "auth:no-canonical-write-outside-git"
+      ],
+      "policy_refs": [
+        "policy:orphan_component_is_flagged_not_deleted",
+        "policy:stale_write_rejected"
+      ],
+      "preconditions": [
+        "component is returned by find_orphan_components"
+      ],
+      "effects": [
+        {
+          "target": "Component",
+          "operation": "git_change",
+          "fields": [
+            "orphan_flagged"
+          ]
+        }
+      ],
+      "idempotency": "required",
+      "outcome_predicate": "Git contains the component with orphan_flagged == true; the component is not deleted",
+      "compensation_action": null,
+      "version": "v1"
+    }
+  ],
+  "policies": [
+    {
+      "id": "preregistration_requires_complete_contract",
+      "decision": "deny",
+      "expression_ref": "docs/04#preregistration-completeness",
+      "version": "v1"
+    },
+    {
+      "id": "threshold_edit_after_preregistration_denied",
+      "decision": "deny",
+      "expression_ref": "docs/04#threshold-immutable",
+      "version": "v1"
+    },
+    {
+      "id": "running_requires_freeze_hash",
+      "decision": "deny",
+      "expression_ref": "docs/04#running-needs-freeze-hash",
+      "version": "v1"
+    },
+    {
+      "id": "evaluated_requires_evidence_or_reason",
+      "decision": "deny",
+      "expression_ref": "docs/04#evaluated-needs-evidence",
+      "version": "v1"
+    },
+    {
+      "id": "verdict_must_be_machine_derived",
+      "decision": "deny",
+      "expression_ref": "docs/04#verdict-machine-derived",
+      "version": "v1"
+    },
+    {
+      "id": "evidence_must_bind_version_commit_environment",
+      "decision": "deny",
+      "expression_ref": "docs/04#evidence-binding",
+      "version": "v1"
+    },
+    {
+      "id": "orphan_component_is_flagged_not_deleted",
+      "decision": "classify",
+      "expression_ref": "docs/04#orphan-classification",
+      "version": "v1"
+    },
+    {
+      "id": "stale_write_rejected",
+      "decision": "deny",
+      "expression_ref": "docs/05#stale-write",
+      "version": "v1"
+    },
+    {
+      "id": "conflicting_change_denied_with_conflict",
+      "decision": "deny",
+      "expression_ref": "docs/05#explicit-conflict",
+      "version": "v1"
+    },
+    {
+      "id": "ephemeral_state_never_canonical",
+      "decision": "deny",
+      "expression_ref": "docs/05#ephemeral-state",
+      "version": "v1"
+    },
+    {
+      "id": "historical_binding_preserved",
+      "decision": "deny",
+      "expression_ref": "docs/05#historical-binding",
+      "version": "v1"
+    },
+    {
+      "id": "legal_lifecycle_transition_allowed",
+      "decision": "allow",
+      "expression_ref": "docs/04#lifecycle-order",
+      "version": "v1"
+    }
+  ],
+  "authority_rules": [
+    {
+      "id": "researcher-create-hypothesis",
+      "principal_selector": "role:researcher",
+      "capability": "action:create_hypothesis",
+      "resource_selector": "Hypothesis:*",
+      "effect": "allow",
+      "delegation_allowed": false
+    },
+    {
+      "id": "researcher-edit-threshold",
+      "principal_selector": "role:researcher",
+      "capability": "action:edit_threshold",
+      "resource_selector": "ProjectOntology:*",
+      "effect": "allow",
+      "delegation_allowed": false
+    },
+    {
+      "id": "researcher-preregister-hypothesis",
+      "principal_selector": "role:researcher",
+      "capability": "action:preregister_hypothesis",
+      "resource_selector": "Hypothesis:*",
+      "effect": "allow",
+      "delegation_allowed": false
+    },
+    {
+      "id": "researcher-new-experiment-version",
+      "principal_selector": "role:researcher",
+      "capability": "action:new_experiment_version",
+      "resource_selector": "ProjectOntology:*",
+      "effect": "allow",
+      "delegation_allowed": false
+    },
+    {
+      "id": "researcher-start-run",
+      "principal_selector": "role:researcher",
+      "capability": "action:start_run",
+      "resource_selector": "ProjectOntology:*",
+      "effect": "allow",
+      "delegation_allowed": false
+    },
+    {
+      "id": "researcher-attach-evidence",
+      "principal_selector": "role:researcher",
+      "capability": "action:attach_evidence",
+      "resource_selector": "ProjectOntology:*",
+      "effect": "allow",
+      "delegation_allowed": false
+    },
+    {
+      "id": "researcher-evaluate-hypothesis",
+      "principal_selector": "role:researcher",
+      "capability": "action:evaluate_hypothesis",
+      "resource_selector": "Hypothesis:*",
+      "effect": "allow",
+      "delegation_allowed": false
+    },
+    {
+      "id": "researcher-supersede-hypothesis",
+      "principal_selector": "role:researcher",
+      "capability": "action:supersede_hypothesis",
+      "resource_selector": "Hypothesis:*",
+      "effect": "allow",
+      "delegation_allowed": false
+    },
+    {
+      "id": "researcher-record-decision",
+      "principal_selector": "role:researcher",
+      "capability": "action:record_decision",
+      "resource_selector": "ProjectOntology:*",
+      "effect": "allow",
+      "delegation_allowed": false
+    },
+    {
+      "id": "researcher-flag-orphan-component",
+      "principal_selector": "role:researcher",
+      "capability": "action:flag_orphan_component",
+      "resource_selector": "ProjectOntology:*",
+      "effect": "allow",
+      "delegation_allowed": false
+    },
+    {
+      "id": "no-direct-verdict-write",
+      "principal_selector": "*",
+      "capability": "write:Verdict.value",
+      "resource_selector": "Verdict:*",
+      "effect": "deny",
+      "delegation_allowed": false
+    },
+    {
+      "id": "no-threshold-edit-after-preregistration",
+      "principal_selector": "*",
+      "capability": "update:Threshold",
+      "resource_selector": "Threshold:preregistered",
+      "effect": "deny",
+      "delegation_allowed": false
+    },
+    {
+      "id": "no-canonical-write-outside-git",
+      "principal_selector": "*",
+      "capability": "write:canonical-state",
+      "resource_selector": "ProjectOntology:*",
+      "effect": "deny",
+      "delegation_allowed": false
+    }
+  ],
+  "observation_types": [
+    {
+      "id": "TestRunObserved",
+      "subject_type": "Test",
+      "properties": [
+        {
+          "name": "outcome",
+          "type": "string",
+          "required": true,
+          "immutable": true,
+          "constraints": [
+            "enum:passed|failed|error"
+          ]
+        },
+        {
+          "name": "duration_ms",
+          "type": "integer",
+          "required": false,
+          "immutable": false
+        },
+        {
+          "name": "git_commit",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        }
+      ],
+      "source_binding": "pytest",
+      "truth_status": "observed"
+    },
+    {
+      "id": "GitCommitObserved",
+      "subject_type": "Commit",
+      "properties": [
+        {
+          "name": "sha",
+          "type": "string",
+          "required": true,
+          "immutable": true
+        },
+        {
+          "name": "committed_at",
+          "type": "datetime",
+          "required": false,
+          "immutable": false
+        }
+      ],
+      "source_binding": "git",
+      "truth_status": "observed"
+    }
+  ],
+  "constraints": [
+    {
+      "id": "supported-needs-evidence",
+      "scope": "Hypothesis",
+      "expression_ref": "constraint:supported-needs-evidence:v1",
+      "severity": "hard"
+    },
+    {
+      "id": "preregistration-complete-contract",
+      "scope": "Hypothesis",
+      "expression_ref": "constraint:preregistration-complete-contract:v1",
+      "severity": "hard"
+    },
+    {
+      "id": "threshold-immutable-after-preregistration",
+      "scope": "Threshold",
+      "expression_ref": "constraint:threshold-immutable-after-preregistration:v1",
+      "severity": "hard"
+    },
+    {
+      "id": "falsifier-immutable-after-preregistration",
+      "scope": "Falsifier",
+      "expression_ref": "constraint:falsifier-immutable-after-preregistration:v1",
+      "severity": "hard"
+    },
+    {
+      "id": "evaluator-immutable-after-preregistration",
+      "scope": "Experiment",
+      "expression_ref": "constraint:evaluator-immutable-after-preregistration:v1",
+      "severity": "hard"
+    },
+    {
+      "id": "running-requires-freeze-hash",
+      "scope": "Hypothesis",
+      "expression_ref": "constraint:running-requires-freeze-hash:v1",
+      "severity": "hard"
+    },
+    {
+      "id": "evaluated-requires-evidence-or-reason",
+      "scope": "Hypothesis",
+      "expression_ref": "constraint:evaluated-requires-evidence-or-reason:v1",
+      "severity": "hard"
+    },
+    {
+      "id": "verdict-machine-derived",
+      "scope": "Verdict",
+      "expression_ref": "constraint:verdict-machine-derived:v1",
+      "severity": "hard"
+    },
+    {
+      "id": "verdict-vocabulary",
+      "scope": "Verdict",
+      "expression_ref": "enum:SUPPORTED|REJECTED|INCONCLUSIVE|INVALID on value",
+      "severity": "hard"
+    },
+    {
+      "id": "evidence-bound-to-version-commit-environment",
+      "scope": "Evidence",
+      "expression_ref": "constraint:evidence-bound-to-version-commit-environment:v1",
+      "severity": "hard"
+    },
+    {
+      "id": "orphan-component-flagged-not-deleted",
+      "scope": "Component",
+      "expression_ref": "constraint:orphan-component-flagged-not-deleted:v1",
+      "severity": "soft"
+    },
+    {
+      "id": "lifecycle-order",
+      "scope": "Hypothesis",
+      "expression_ref": "constraint:lifecycle-order:v1",
+      "severity": "hard"
+    },
+    {
+      "id": "rebuild-reproduces-state-hash",
+      "scope": "ProjectOntology",
+      "expression_ref": "constraint:rebuild-reproduces-state-hash:v1",
+      "severity": "hard"
+    },
+    {
+      "id": "durable-actions-are-git-changes",
+      "scope": "ProjectOntology",
+      "expression_ref": "constraint:durable-actions-are-git-changes:v1",
+      "severity": "hard"
+    },
+    {
+      "id": "no-silent-stale-write",
+      "scope": "ProjectOntology",
+      "expression_ref": "constraint:no-silent-stale-write:v1",
+      "severity": "hard"
+    },
+    {
+      "id": "conflicts-surface-explicitly",
+      "scope": "ProjectOntology",
+      "expression_ref": "constraint:conflicts-surface-explicitly:v1",
+      "severity": "hard"
+    },
+    {
+      "id": "ephemeral-state-marked",
+      "scope": "ProjectOntology",
+      "expression_ref": "constraint:ephemeral-state-marked:v1",
+      "severity": "hard"
+    },
+    {
+      "id": "historical-binding-preserved",
+      "scope": "ProjectOntology",
+      "expression_ref": "constraint:historical-binding-preserved:v1",
+      "severity": "hard"
+    }
+  ],
+  "metadata": {
+    "derived_from": "docs/04_project_ontology_domain.md, docs/05_git_authority.md, AGENTS.md, src/hdd"
+  }
+}

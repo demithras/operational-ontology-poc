@@ -1,0 +1,439 @@
+{
+ "package_id": "cov",
+ "domain_id": "coverage",
+ "version": "v9",
+ "imports": [
+  "ext-pkg@v2"
+ ],
+ "object_types": [
+  {
+   "id": "Order",
+   "primary_key": "id",
+   "description": "an order",
+   "implements": [
+    "Named",
+    "ext-pkg@v2#Audited"
+   ],
+   "properties": [
+    {
+     "name": "id",
+     "type": "string",
+     "required": true,
+     "immutable": true,
+     "description": "key"
+    },
+    {
+     "name": "qty",
+     "type": "integer",
+     "required": true,
+     "immutable": false,
+     "constraints": [
+      "qty>=0"
+     ]
+    },
+    {
+     "name": "price",
+     "type": "number",
+     "required": false,
+     "constraints": []
+    },
+    {
+     "name": "paid",
+     "type": "boolean",
+     "required": false
+    },
+    {
+     "name": "at",
+     "type": "datetime",
+     "required": false
+    },
+    {
+     "name": "day",
+     "type": "date",
+     "required": false
+    },
+    {
+     "name": "blob",
+     "type": "json",
+     "required": false
+    },
+    {
+     "name": "raw",
+     "type": "bytes",
+     "required": false
+    },
+    {
+     "name": "tags",
+     "type": {
+      "list": {
+       "optional": "string"
+      }
+     },
+     "required": false
+    },
+    {
+     "name": "owner",
+     "type": {
+      "ref": "Customer"
+     },
+     "required": false
+    },
+    {
+     "name": "ext",
+     "type": {
+      "optional": {
+       "ref": "ext-pkg@v2#Thing"
+      }
+     },
+     "required": false
+    }
+   ]
+  },
+  {
+   "id": "Customer",
+   "primary_key": "cid",
+   "implements": [],
+   "properties": [
+    {
+     "name": "cid",
+     "type": "string",
+     "required": true
+    }
+   ]
+  }
+ ],
+ "link_types": [
+  {
+   "id": "Places",
+   "from": "Customer",
+   "to": "Order",
+   "from_cardinality": {
+    "min": 0,
+    "max": "*"
+   },
+   "to_cardinality": {
+    "min": 1,
+    "max": 1
+   },
+   "directed": true,
+   "properties": [
+    {
+     "name": "since",
+     "type": "date",
+     "required": false
+    }
+   ]
+  },
+  {
+   "id": "Peer",
+   "from": "Named",
+   "to": "Named",
+   "from_cardinality": {
+    "min": 0,
+    "max": 3
+   },
+   "to_cardinality": {
+    "min": 0,
+    "max": "*"
+   },
+   "directed": false,
+   "properties": []
+  }
+ ],
+ "interfaces": [
+  {
+   "id": "Named",
+   "required_properties": [
+    {
+     "name": "id",
+     "type": "string",
+     "required": true
+    }
+   ],
+   "required_links": [
+    "Places"
+   ],
+   "capabilities": [
+    "read",
+    ""
+   ]
+  }
+ ],
+ "functions": [
+  {
+   "id": "total",
+   "inputs": [
+    {
+     "name": "o",
+     "type": {
+      "ref": "Order"
+     },
+     "required": true
+    },
+    {
+     "name": "x",
+     "type": "number",
+     "required": false
+    },
+    {
+     "name": "",
+     "type": "string"
+    }
+   ],
+   "output": {
+    "list": "number"
+   },
+   "purity": "NO_COMMITTED_BUSINESS_SIDE_EFFECT",
+   "reads": [
+    "Order.qty",
+    "Places",
+    "Seen",
+    "ext-pkg@v2#Feed",
+    "Customer"
+   ],
+   "implementation_ref": "fn:total",
+   "determinism": "deterministic"
+  },
+  {
+   "id": "guess",
+   "inputs": [],
+   "output": "boolean",
+   "purity": "NO_COMMITTED_BUSINESS_SIDE_EFFECT",
+   "reads": [],
+   "implementation_ref": "fn:guess",
+   "determinism": "nondeterministic"
+  },
+  {
+   "id": "ask",
+   "inputs": [],
+   "output": "json",
+   "purity": "NO_COMMITTED_BUSINESS_SIDE_EFFECT",
+   "reads": [],
+   "implementation_ref": "fn:ask",
+   "determinism": "external-model"
+  },
+  {
+   "id": "plain",
+   "inputs": [],
+   "output": "string",
+   "purity": "NO_COMMITTED_BUSINESS_SIDE_EFFECT",
+   "reads": [],
+   "implementation_ref": "fn:plain"
+  }
+ ],
+ "actions": [
+  {
+   "id": "place",
+   "inputs": [
+    {
+     "name": "c",
+     "type": {
+      "ref": "Customer"
+     }
+    }
+   ],
+   "authority_refs": [
+    "auth:clerk",
+    "ext-pkg@v2#root"
+   ],
+   "policy_refs": [
+    "policy:p-allow",
+    "policy:p-appr"
+   ],
+   "preconditions": [
+    "c exists",
+    "c exists"
+   ],
+   "effects": [
+    {
+     "target": "Order",
+     "operation": "create",
+     "fields": [
+      "qty",
+      "price"
+     ]
+    },
+    {
+     "target": "Order",
+     "operation": "update",
+     "fields": []
+    },
+    {
+     "target": "Order",
+     "operation": "delete"
+    },
+    {
+     "target": "Places",
+     "operation": "link",
+     "fields": [
+      "since"
+     ]
+    },
+    {
+     "target": "Places",
+     "operation": "unlink"
+    },
+    {
+     "target": "Customer",
+     "operation": "git_change"
+    },
+    {
+     "target": "ERP",
+     "operation": "external_call",
+     "fields": [
+      "a",
+      "b"
+     ]
+    },
+    {
+     "target": "ext-pkg@v2#Ledger",
+     "operation": "update",
+     "fields": [
+      "sum"
+     ]
+    }
+   ],
+   "idempotency": "required",
+   "outcome_predicate": "order visible",
+   "compensation_action": "cancel",
+   "version": "1"
+  },
+  {
+   "id": "cancel",
+   "inputs": [],
+   "authority_refs": [],
+   "policy_refs": [
+    "policy:p-deny"
+   ],
+   "preconditions": [],
+   "effects": [
+    {
+     "target": "Order",
+     "operation": "delete"
+    }
+   ],
+   "idempotency": "not_applicable",
+   "outcome_predicate": "gone",
+   "compensation_action": null,
+   "version": "1"
+  },
+  {
+   "id": "total",
+   "inputs": [],
+   "authority_refs": [],
+   "policy_refs": [
+    "policy:p-class"
+   ],
+   "preconditions": [],
+   "effects": [
+    {
+     "target": "S",
+     "operation": "external_call"
+    }
+   ],
+   "idempotency": "required",
+   "outcome_predicate": "ok",
+   "compensation_action": "ext-pkg@v2#undo",
+   "version": "2"
+  }
+ ],
+ "policies": [
+  {
+   "id": "p-allow",
+   "decision": "allow",
+   "expression_ref": "true",
+   "version": "1"
+  },
+  {
+   "id": "p-deny",
+   "decision": "deny",
+   "expression_ref": "",
+   "version": ""
+  },
+  {
+   "id": "p-appr",
+   "decision": "require_approval",
+   "expression_ref": "x",
+   "version": "1"
+  },
+  {
+   "id": "p-class",
+   "decision": "classify",
+   "expression_ref": "y",
+   "version": "1"
+  }
+ ],
+ "authority_rules": [
+  {
+   "id": "clerk",
+   "principal_selector": "role:clerk",
+   "capability": "action:place",
+   "resource_selector": "Order:*",
+   "effect": "allow",
+   "delegation_allowed": true
+  },
+  {
+   "id": "nobody",
+   "principal_selector": "*",
+   "capability": "*",
+   "resource_selector": "*",
+   "effect": "deny",
+   "delegation_allowed": false
+  },
+  {
+   "id": "plain",
+   "principal_selector": "a",
+   "capability": "b",
+   "resource_selector": "c",
+   "effect": "allow"
+  }
+ ],
+ "observation_types": [
+  {
+   "id": "Seen",
+   "subject_type": "Order",
+   "properties": [
+    {
+     "name": "qty",
+     "type": "integer",
+     "required": true
+    }
+   ],
+   "source_binding": "cdc",
+   "truth_status": "observed"
+  }
+ ],
+ "constraints": [
+  {
+   "id": "c1",
+   "scope": "Order",
+   "expression_ref": "qty>=0",
+   "severity": "hard"
+  },
+  {
+   "id": "c2",
+   "scope": "",
+   "expression_ref": "z",
+   "severity": "soft"
+  }
+ ],
+ "metadata": {
+  "s": "x",
+  "i": -3,
+  "f": 1.5,
+  "t": true,
+  "fa": false,
+  "n": null,
+  "l": [
+   1,
+   [],
+   {}
+  ],
+  "o": {
+   "k": {
+    "j": []
+   }
+  },
+  "e": {}
+ }
+}

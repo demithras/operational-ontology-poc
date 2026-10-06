@@ -1,0 +1,253 @@
+{
+ "created_at": "2026-10-02T12:15:09+00:00",
+ "engine_prereg_sha256": "03d2d56919b2f003766e54c89fdbfb47a7780577534f4d797ab2ecd9b6f3aefe",
+ "environment": {
+  "hypothesis": "6.168.3",
+  "jsonschema": "4.26.0",
+  "machine": "arm64",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "pytest": "9.1.1",
+  "python": "3.14.6"
+ },
+ "evidence_kind": "kernel-before",
+ "experiment_id": "exp-h16-001",
+ "git_commit": "c9443a0dcf9ed328727269d0558ace003af58210",
+ "harness_dirty": true,
+ "harness_dirty_paths": [
+  "round2/oracles/",
+  "round2/scripts/evaluate_h16.py",
+  "round2/scripts/run_h16.py",
+  "round2/scripts/verify_h16.sh",
+  "round2/src/eoo_exp/",
+  "round2/src/eoo_h16/",
+  "round2/tests/h16/"
+ ],
+ "harness_sha256": {
+  "scripts/evaluate_h16.py": "d645ed20a50961b86abcdda9036f2fbe49df1b3685e8007eba4f8ba44271d137",
+  "scripts/run_h16.py": "052c567270911920ff6f0c0849c763495b21129d56aa8bf88199d1e5c416f88b",
+  "src/eoo_exp/__init__.py": "16754d2e26eb56fb0469b74cbb88351b20265ac3ae07ecc51ada09167199a90a",
+  "src/eoo_exp/outdir.py": "6997fdfe23a5bbd5fb3c80aa024f172940167d24c55770f3b83f163d9c86fd00",
+  "src/eoo_exp/provenance.py": "9076be346293debdd361cae3c24c781d3d463716d6be1c398ee4474b3201bb5e",
+  "src/eoo_exp/scaffold.py": "b7686662f08994431881ee411fb3b1f913ba63b6327cc6dce8e180e45496a765",
+  "src/eoo_exp/util.py": "64765edd82c60fa3e393878199331db360f14bbbe31c72f5bb8d4079ac6acd86",
+  "src/eoo_h16/__init__.py": "366faf62ed41b334d824f9c576815a6b8c4ffa27d7953b664cefc71a83f479fe",
+  "src/eoo_h16/audit.py": "1643857db3cd5f3d7cdffa785e25bec69a046fc29c19f23f66bf2026dce57460",
+  "src/eoo_h16/coverage.py": "2c951c0cbbf2b98e4f5de41a662aaa9790cf685a952fd585812677b79d7c8c53",
+  "src/eoo_h16/detectors.py": "ac7ad61868d9665f06514e78e2f70d7d8cb5d40dc32d5460d494beae7f715739",
+  "src/eoo_h16/evaluate.py": "66a678afbf473909e5f6147a7d30fc017bc6889db152fe1bec62c7da946989ba",
+  "src/eoo_h16/gen.py": "111f73a9295851c97945b9106a1b2634e29c03b0e390bd7a122ad95828b63828",
+  "src/eoo_h16/kernel.py": "1025c42ab705ca0ddd3c10678a0e22db05d17f14450dd77345096903e619dbb9",
+  "src/eoo_h16/loadcheck.py": "9074203e284b1a8275a3cc96a0413874680b85995c4a8a6523a14ba9a520468e",
+  "src/eoo_h16/mixed.py": "6ab49ae95d972e5bcea5075dafdf1e3039d026c850f430093b1c6d5af71914fb",
+  "src/eoo_h16/mutants.py": "e864f9dfdb35e67ce2b5588ddf61cc88cb4dd9307095dca54dbbc26f0db83969",
+  "src/eoo_h16/mutation_run.py": "8e6ab60dd1bbe025f9ee5fc91f56bb765d47537d3e6ceed59f2ea37f7dc11c1f",
+  "src/eoo_h16/requirements.py": "5d519d4c34435d6b8efc5dab2cdf80b0a735553ff46cae237eada7408a7a0efb",
+  "src/eoo_h16/run.py": "6011ce88341fe58fde23f7e7734a969ed0bd29026026ec249f10617d334f2092"
+ },
+ "hypothesis_id": "H16",
+ "input_corpus_hash": "8f7016f790a8a62cfe277a69c6c4fc1c3be4701e20bf303c11894323834c13d5",
+ "kernel_after_commit": "c9443a0dcf9ed328727269d0558ace003af58210",
+ "kernel_before_commit": "0aad1ff54e267cc51cc0057b85ef762072b6431e",
+ "payload": {
+  "prereg_kernel_snapshot_source": "protocol/ENGINE_PREREG.json at the before commit",
+  "snapshot": {
+   "dispatch": {
+    "engine_file": "<git archive 0aad1ff54e26>/eoo_engine/__init__.py",
+    "handlers": {
+     "actions": {
+      "handler": "ActionHandler",
+      "handler_kind_attr": "actions",
+      "handler_source_sha256": "858cdb65ce3065c9ce40b31c7bbbeaa372c8f4372c668f29965e300f8e08bd99",
+      "operations": [
+       "approve",
+       "execute",
+       "propose",
+       "reconcile",
+       "reject"
+      ]
+     },
+     "authority_rules": {
+      "handler": "AuthorityRuleHandler",
+      "handler_kind_attr": "authority_rules",
+      "handler_source_sha256": "b784946aff9ebb195bdf3b133fb083eca75c84bdda4f4280ebb9abc3c21b8c63",
+      "operations": [
+       "decide"
+      ]
+     },
+     "constraints": {
+      "handler": "ConstraintHandler",
+      "handler_kind_attr": "constraints",
+      "handler_source_sha256": "80bb1a4eb658152082f15c7d6cf03a0b68083c9b783c2e8b437af83cf17ffa5b",
+      "operations": [
+       "evaluate"
+      ]
+     },
+     "functions": {
+      "handler": "FunctionHandler",
+      "handler_kind_attr": "functions",
+      "handler_source_sha256": "7b7fddbbe016ce552b18983dd79450bc997c79205efdf9dbdb573b0efa199cc3",
+      "operations": [
+       "call"
+      ]
+     },
+     "interfaces": {
+      "handler": "InterfaceHandler",
+      "handler_kind_attr": "interfaces",
+      "handler_source_sha256": "294220792318039b3417f8ff0c20e3cddfd669d8f366f640ad5a287610ac7ae8",
+      "operations": [
+       "query"
+      ]
+     },
+     "link_types": {
+      "handler": "LinkTypeHandler",
+      "handler_kind_attr": "link_types",
+      "handler_source_sha256": "62a2813ebba13a8849b273ac2450afffd29705dbc0dd796b8ba561fa4e438d6f",
+      "operations": [
+       "follow"
+      ]
+     },
+     "object_types": {
+      "handler": "ObjectTypeHandler",
+      "handler_kind_attr": "object_types",
+      "handler_source_sha256": "a254886bb3cc4b998b19d183635183d602ee15ed0936c05890728871aa7076fb",
+      "operations": [
+       "get",
+       "list"
+      ]
+     },
+     "observation_types": {
+      "handler": "ObservationTypeHandler",
+      "handler_kind_attr": "observation_types",
+      "handler_source_sha256": "2a84abbdbb0a8edf3cd045f916f0a1b127c5fbfcbb128d93861b4bf7b8be2bc3",
+      "operations": [
+       "validate"
+      ]
+     },
+     "policies": {
+      "handler": "PolicyHandler",
+      "handler_kind_attr": "policies",
+      "handler_source_sha256": "1b23b7be188c64f6a3eab1f8d6b7a0bd021a6cdc9e14cf213ba795f0cf286f71",
+      "operations": [
+       "evaluate"
+      ]
+     }
+    },
+    "order": [
+     "interfaces",
+     "object_types",
+     "link_types",
+     "observation_types",
+     "functions",
+     "policies",
+     "authority_rules",
+     "constraints",
+     "actions"
+    ]
+   },
+   "engine_core_files": {
+    "eoo_engine/__init__.py": "cb676ce1d746825c034fb91f461b68346b2a7342d2cdaa0994ae37b0f7f6e2cb",
+    "eoo_engine/authority.py": "1a135cc5e6f9515eb8c6273f40cfef7a0c9a8ef5b48587307e7219483f572df8",
+    "eoo_engine/canon.py": "1ca4e8ec1291334a033c9043a58fc1e5991e3f26e920546c926bdc9b6de28e39",
+    "eoo_engine/capabilities.py": "6fb7723b7282b376ea93476d406bd528dd8b084c07a0a7b47aea1a24956b50a2",
+    "eoo_engine/effects.py": "77742e44d2adbf59f5cedb5e0d0f5eada13da38a84b0d49d805fece303e91327",
+    "eoo_engine/engine.py": "45a3578dc1086469dec5695f49b9e780a6d99fbd01518b50258709f5512659d5",
+    "eoo_engine/errors.py": "f188eec7363d7c7bb99e47367ac230fc87d9c3281dd79083b270e6cc9384c122",
+    "eoo_engine/functions.py": "747f1bbf21b22495f30dc7122c27997233975419dc0e4e2dce6558abeb1cde4e",
+    "eoo_engine/gates.py": "009c2c6fff52f3e7710a3f7a9b0f7f2e78deaab658964312c7a3ce138145fcd2",
+    "eoo_engine/journal.py": "07eb4dfbd07d33f1f2aab73d444a1719d6a189914778d1e526ab13b0289cf707",
+    "eoo_engine/logic.py": "88583c4182ab9f057fb6095044f27f5f0a842ba1600dc89cc22ea1d59874d78c",
+    "eoo_engine/model.py": "9c2117a5d277ff0f839b4574f29492cb478fb4b663c290139c27e6d0a208940f",
+    "eoo_engine/outcome.py": "7b749be1fd327edb1496ee98228934b96450c07c4ceac6c1f3d3b23325a88f15",
+    "eoo_engine/pipeline.py": "8198d43711f0ca1600c9348d59d5591c196f842dca5c5649c6246e2b48e0998d",
+    "eoo_engine/queries.py": "7308ddacf691d80489ce3809c5156de447f4905a55483871111c8e37cb74fd1f",
+    "eoo_engine/registry.py": "d38f7d7972de737248e520051d8df380572a94d4d18d3cf11a77152cc82e2540",
+    "eoo_engine/state.py": "515f7adf217501a5e93835476f196960a29a3e5cef952a2566226fa85ce5a2b5",
+    "eoo_engine/store.py": "bbaec42e14e4e06be83ab1e87e535101bec378b02cf71d1cded2a3535bedb62a",
+    "eoo_engine/typecheck.py": "8e254216f087ca6597f52810fdb834cc404c2421a3fd95c83a05dbbc8d4abd7c"
+   },
+   "engine_prereg_blob_sha256": "03d2d56919b2f003766e54c89fdbfb47a7780577534f4d797ab2ecd9b6f3aefe",
+   "eoo_ir_files": {
+    "eoo_ir/__init__.py": "9096fc42f146011a21e66bf7f81de9a1277699f6110e61dcbfdf5381d067600d",
+    "eoo_ir/conformance.py": "8ca1d633d25cb2e19c791b39f5fa261f1a449b7b4570cf5a00eb2d502a93f98e",
+    "eoo_ir/coverage.py": "06246a2401474cff6f70a4297200a01547be57ac4bee1e2758a32ad797fb38da",
+    "eoo_ir/equivalence.py": "639a7ffb03e612804f2b292936daad5fb60dc3639246cd99ac37dcb39d7fcdc2",
+    "eoo_ir/gen_atoms.py": "a2b356900ff5693a575af149c4de5740349924c978f760886c6199c641a2ee3f",
+    "eoo_ir/kinds.py": "7eb0af1a02cd5dcccdaa403cf629b245f8785109d5f54c10604add0b568bead5",
+    "eoo_ir/mutations.py": "1edf4d3bc8da6b7efe0ed9d2adf0db2c426eb4db9eb9aaa20abdda44c64f9491",
+    "eoo_ir/mutations_fields.py": "74c7fc600899d93cbb4e760aed3c16bd52bcb43b4f43c0b31f0e084f0c8f5c7d",
+    "eoo_ir/mutations_fields2.py": "5ac75667d2d1d2186306abbdcacbf8c39d04273b1f1877c09e7afc27295849fe",
+    "eoo_ir/mutations_fields3.py": "d87efa575f03053f30c7258c6086b854b25d6f49acc66664e55835a6c3e7a45d",
+    "eoo_ir/normalize.py": "5203f01bd87a2d94bcec6d1d29349979f926b90427795df3b4e24e0308cbfb66",
+    "eoo_ir/rewrites.py": "300cc12a0685807520738ead2ece5f83288fca75d2b04c1f4cbcb9ae4560c95a",
+    "eoo_ir/strategies.py": "0e5e5f08a1039afb14ea2d9773f38263cfe038091b4a68e23d70aaa398b24080",
+    "eoo_ir/validate.py": "6013a0ff425ad993622bfb4f81710608fe886f9d708b7851abc59422fc2061ad"
+   },
+   "git_commit": "0aad1ff54e267cc51cc0057b85ef762072b6431e",
+   "git_rev": "r2-engine-core",
+   "ir_schema": {
+    "additionalProperties": false,
+    "defs": [
+     "action",
+     "actionEffect",
+     "authorityRule",
+     "cardinality",
+     "constraint",
+     "function",
+     "interface",
+     "linkType",
+     "objectType",
+     "observationType",
+     "parameter",
+     "policy",
+     "property",
+     "ref",
+     "typeExpr"
+    ],
+    "package_fields": [
+     "actions",
+     "authority_rules",
+     "constraints",
+     "domain_id",
+     "functions",
+     "imports",
+     "interfaces",
+     "link_types",
+     "metadata",
+     "object_types",
+     "observation_types",
+     "package_id",
+     "policies",
+     "version"
+    ],
+    "resource_array_fields": [
+     "actions",
+     "authority_rules",
+     "constraints",
+     "functions",
+     "interfaces",
+     "link_types",
+     "object_types",
+     "observation_types",
+     "policies"
+    ],
+    "sha256": "0e9bfa3380327d4b1f2e3e0ba3cf065968846c2c88b8071007c408fe965d0e2d"
+   },
+   "ir_schema_blob_sha256": "0e9bfa3380327d4b1f2e3e0ba3cf065968846c2c88b8071007c408fe965d0e2d",
+   "kernel_resource_kinds": [
+    "actions",
+    "authority_rules",
+    "constraints",
+    "functions",
+    "interfaces",
+    "link_types",
+    "object_types",
+    "observation_types",
+    "policies"
+   ]
+  }
+ },
+ "payload_hash": "4791f5bff9b29ceb9d9e414eecb78812361b0c4be2a486404574faac1b1fc77c",
+ "payload_path": null,
+ "protocol_freeze_hash": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2",
+ "seed": 16
+}

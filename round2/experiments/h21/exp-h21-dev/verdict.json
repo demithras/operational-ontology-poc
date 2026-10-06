@@ -1,0 +1,383 @@
+{
+ "common": {
+  "protocol_valid": true,
+  "reject_hit": false,
+  "required_evidence_complete": true,
+  "sample_sufficient": true,
+  "support_hit": true
+ },
+ "evaluator_sha256": "645c05074ec8c46819ead8b8eb712f7ca9c90f2dd9f4ebf552580dd790ffe79a",
+ "evidence_payload_hashes": {
+  "agent-adversarial.json": "d5aff2a969aa6ba06269b869be0d9e99a53e9ae24a64702329239afefa4c7809",
+  "generated-surface-manifest.json": "7cb1be865912a72f781440c7a4e456abee32bad5185dd134782edde6149abd17",
+  "handwritten-diff.json": "e6aea1c95949b675052cb79afd0b14dae5b605e274a190e8905783fabb8a8817",
+  "interface-polymorphism.json": "7b5944d4ca80c176153b146a35d6ff0d9de0f3abdb962e8d0490cc0f8b7797ad",
+  "mutation-results.json": "8e85e910e5e58d5d2fc20c8962e20e712b733f28d38d75e12cdbddf1e812849e",
+  "security-differential.json": "7358f08b4efa40fd8294ebe80fa270cd9f82319a17385ef81eaffcb06dde5a20"
+ },
+ "experiment_id": "exp-h21-dev",
+ "hypothesis_id": "H21",
+ "interpretation_notes": [
+  "DEVELOPMENT RUN unless the experiment id is exp-h21-001 produced by the orchestrator in an isolated worktree.",
+  "visible/queryable capabilities are all-or-nothing by principal registration: the IR carries no read-authority rules, so the differential is informative mainly for actionable/approvable capability sets (numbers.capabilities_compared).",
+  "Opaque selectors (ProjectOntology:*, Threshold:preregistered) are domain logic injected into the surface; the differential uses harness/oracle models of them over the case world; the Engine cross-check uses the domain pack's real bindings.",
+  "The surface/Engine boundary: hidden tools are absent from the surface; the Engine's authority gate is a second line, measured separately (adversarial backstop_denied), not credited to the Toolchain.",
+  "Baseline is CONTEXTUAL only (numbers.baseline_contextual): it supports no clause."
+ ],
+ "numbers": {
+  "adversarial": {
+   "manufacturing": {
+    "attribute_leaks": 0,
+    "backstop_calls": 21,
+    "backstop_denied": 21,
+    "direct_calls": 21,
+    "engine_touched_by_surface_attacks": 0,
+    "fuzz_calls": 1200,
+    "hidden_action_instances": 21,
+    "other_outcomes": 0,
+    "principals": 8,
+    "principals_with_effects": 0,
+    "surface_oracle_tool_mismatches": 0,
+    "unknown_tool": 1221
+   },
+   "project": {
+    "attribute_leaks": 0,
+    "backstop_calls": 20,
+    "backstop_denied": 20,
+    "direct_calls": 20,
+    "engine_touched_by_surface_attacks": 0,
+    "fuzz_calls": 600,
+    "hidden_action_instances": 20,
+    "other_outcomes": 0,
+    "principals": 4,
+    "principals_with_effects": 0,
+    "surface_oracle_tool_mismatches": 0,
+    "unknown_tool": 620
+   }
+  },
+  "adversarial_calls": 1882,
+  "baseline_contextual": {
+   "manufacturing": {
+    "glue_additions_per_new_action": 1,
+    "glue_vs_oracle_on_actions_exposed": {
+     "cases_compared": 958,
+     "cases_where_glue_differs_from_oracle": 0
+    },
+    "handwritten_authz_glue_loc": 10,
+    "note": "baseline exposes every action route; per-principal exposure needs the hand-written glue above (not generated, no per-principal tool surface, no cardinality-aware accessors or Function/Action type split)",
+    "openapi_paths": 61,
+    "openapi_schemas": 26
+   },
+   "project": {
+    "glue_additions_per_new_action": 1,
+    "glue_vs_oracle_on_actions_exposed": {
+     "cases_compared": 947,
+     "cases_where_glue_differs_from_oracle": 3
+    },
+    "handwritten_authz_glue_loc": 6,
+    "note": "baseline exposes every action route; per-principal exposure needs the hand-written glue above (not generated, no per-principal tool surface, no cardinality-aware accessors or Function/Action type split)",
+    "openapi_paths": 46,
+    "openapi_schemas": 15
+   }
+  },
+  "capabilities_compared": {
+   "manufacturing": {
+    "actionable": 33078,
+    "approvable": 13921,
+    "queryable": 1051008,
+    "tools": 1055747,
+    "visible": 685440
+   },
+   "project": {
+    "actionable": 45472,
+    "approvable": 0,
+    "queryable": 603776,
+    "tools": 630159,
+    "visible": 364544
+   }
+  },
+  "capability_equality": 1.0,
+  "clean_builds": true,
+  "conformance_checks": {
+   "manufacturing": 605,
+   "project": 311
+  },
+  "conformance_failed": {
+   "manufacturing": 0,
+   "project": 0
+  },
+  "conformance_rate": 1.0,
+  "coverage": {
+   "manufacturing": {
+    "cases": 12000,
+    "delegated": 4756,
+    "delegated_with_allowed_action": 662,
+    "registered": 11424,
+    "selector_fault_world": 335,
+    "with_allowed_action": 4739,
+    "with_approval_capability": 2051,
+    "with_denied_binding_space": 11424
+   },
+   "project": {
+    "cases": 12000,
+    "delegated": 4814,
+    "delegated_with_allowed_action": 0,
+    "registered": 11392,
+    "selector_fault_world": 356,
+    "with_allowed_action": 3464,
+    "with_approval_capability": 0,
+    "with_denied_binding_space": 11392
+   }
+  },
+  "dimensions": [
+   "actionable",
+   "approvable",
+   "queryable",
+   "tools",
+   "visible"
+  ],
+  "domain_logic": 23,
+  "e2e_ok": true,
+  "e2e_steps": [
+   [
+    "researcher registers a replication of an EVALUATED experimen",
+    true
+   ],
+   [
+    "same tool, experiment not EVALUATED",
+    true
+   ],
+   [
+    "viewer-1 has no register_replication tool (absent, not refus",
+    true
+   ],
+   [
+    "count_replications through the generated function tool on a ",
+    true
+   ],
+   [
+    "generic interface tool returns the new Replication object (7",
+    true
+   ]
+  ],
+  "engine_cross_check": {
+   "manufacturing": {
+    "cases": 1500,
+    "decisions_compared": 87000,
+    "disagreements": 0
+   },
+   "project": {
+    "cases": 1500,
+    "decisions_compared": 468000,
+    "disagreements": 0
+   }
+  },
+  "forbidden_effects": 0,
+  "gate0_unchanged": true,
+  "handwritten_endpoint_code": 0,
+  "interface_failures": [],
+  "interface_implementers": {
+   "manufacturing": 4,
+   "project": 6
+  },
+  "interface_min_served": 4,
+  "interfaces": {
+   "manufacturing": 6,
+   "project": 2
+  },
+  "minimum_runs": 10000,
+  "mismatching_cases": {
+   "manufacturing": 0,
+   "project": 0
+  },
+  "mutation_contract_four_present": [
+   "drop_cardinality",
+   "drop_property",
+   "expose_denied_action",
+   "hardcode_concrete_interface_type",
+   "suppress_allowed_action"
+  ],
+  "mutation_controls_clean": true,
+  "mutation_detected_by": {
+   "delegation_flag_ignored": [
+    "security_differential"
+   ],
+   "drop_cardinality": [
+    "type_conformance"
+   ],
+   "drop_property": [
+    "type_conformance"
+   ],
+   "expose_denied_action": [
+    "security_differential"
+   ],
+   "function_generated_as_action": [
+    "type_conformance"
+   ],
+   "hardcode_concrete_interface_type": [
+    "interface_polymorphism"
+   ],
+   "suppress_allowed_action": [
+    "security_differential"
+   ]
+  },
+  "mutation_errors": {},
+  "mutation_kill_rate": 1.0,
+  "mutation_killed": 7,
+  "mutation_survivors": [],
+  "mutation_total": 7,
+  "new_generated_tools": [
+   "act_register_replication",
+   "call_count_replications",
+   "follow_REPLICATES",
+   "get_Replication",
+   "list_Replication"
+  ],
+  "oracle_forbidden_imports": [],
+  "oracle_sha_matches": true,
+  "overexposed": {
+   "manufacturing": 0,
+   "project": 0
+  },
+  "positive_control": {
+   "manufacturing": true,
+   "project": true
+  },
+  "read_only_paths_dirty": [],
+  "regenerated_conformance": 1.0,
+  "regenerated_diff_mismatches": 0,
+  "replication_seventh": true,
+  "scanner_known_negative": [
+   "act_register_replication"
+  ],
+  "stray_files_in_generated_dir": {
+   "manufacturing": [],
+   "project": []
+  },
+  "thresholds": {
+   "max_forbidden_effects": 0,
+   "max_handwritten_endpoints_for_preregistered_ordinary_resources": 0,
+   "min_generated_principal_cases": 10000,
+   "min_interface_implementations": 2,
+   "required_capability_set_equality": 1.0,
+   "required_mutation_kill_rate": 1.0,
+   "required_type_conformance": 1.0
+  },
+  "token_hits_outside_logic": {},
+  "toolchain_domain_token_hits": {},
+  "toolchain_files_changed": [],
+  "toolchain_files_scanned": 9,
+  "toolchain_forbidden_imports": [],
+  "toolchain_imports_oracle": false,
+  "tools": {
+   "manufacturing": {
+    "action": 3,
+    "function": 6,
+    "query": 86
+   },
+   "project": {
+    "action": 10,
+    "function": 6,
+    "query": 47
+   }
+  },
+  "underexposed": {
+   "manufacturing": 0,
+   "project": 0
+  },
+  "unique_cases": {
+   "manufacturing": 12000,
+   "project": 12000
+  }
+ },
+ "predicates": {
+  "inconclusive_if": [
+   {
+    "clause": "Generated principal corpus below the frozen minimum, or the interface-polymorphism case is not implemented",
+    "id": "I1",
+    "value": false
+   },
+   {
+    "clause": "Harness cannot answer: the effect meter never saw an effect, conformance had no checks, the end-to-end replication demo failed, or a mutant run errored",
+    "id": "I2",
+    "value": false
+   },
+   {
+    "clause": "Engine cross-check disagrees with the oracle where the surface and oracle agree (the oracle or the live Engine is wrong about the case space)",
+    "id": "I3",
+    "value": false
+   }
+  ],
+  "invalid_if": [
+   {
+    "clause": "The Toolchain imports (or dynamically loads) the authority oracle implementation, making the differential tautological",
+    "id": "V1",
+    "value": false
+   },
+   {
+    "clause": "Evidence records carry a protocol-freeze / ENGINE_PREREG hash different from the files now",
+    "id": "V2",
+    "value": false
+   },
+   {
+    "clause": "Evidence records disagree on commit / seed / corpus hash",
+    "id": "V3",
+    "value": false
+   },
+   {
+    "clause": "The oracle imports the Engine / Toolchain / domains, or an oracle file changed since the run",
+    "id": "V4",
+    "value": false
+   },
+   {
+    "clause": "Harness self-check failed (mutation controls not clean, Engine / domain / protocol / IR files differ from HEAD)",
+    "id": "V5",
+    "value": false
+   }
+  ],
+  "reject_if": [
+   {
+    "clause": "A preregistered ordinary resource required bespoke endpoint/tool code, or a security overexposure / forbidden effect occurred",
+    "id": "R1",
+    "value": false
+   }
+  ],
+  "support_if": [
+   {
+    "clause": "0 handwritten endpoint/tool additions for the preregistered ordinary Domain 2 resources (Toolchain, domains and IR-gate files unchanged; resources usable through generated tools)",
+    "id": "S1",
+    "value": true
+   },
+   {
+    "clause": "100% type/cardinality/function-action conformance on generated surface tests (both domains and the regenerated extended project surface)",
+    "id": "S2",
+    "value": true
+   },
+   {
+    "clause": "100% capability-set equality with the independent authority oracle across >= 10,000 unique generated principal cases per domain",
+    "id": "S3",
+    "value": true
+   },
+   {
+    "clause": "0 forbidden external/canonical effects from adversarial agent calls (positive control proves effects are observable)",
+    "id": "S4",
+    "value": true
+   },
+   {
+    "clause": "Generic interface tool works across >= 2 implementing object types with no per-type code (also after adding implementers)",
+    "id": "S5",
+    "value": true
+   },
+   {
+    "clause": "All target mutations detected (controls clean)",
+    "id": "S6",
+    "value": true
+   }
+  ]
+ },
+ "problems": [],
+ "protocol": {
+  "freeze_sha256": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2"
+ },
+ "verdict": "SUPPORTED"
+}

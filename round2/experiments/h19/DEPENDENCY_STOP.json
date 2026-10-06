@@ -1,0 +1,12 @@
+{
+  "hypothesis_id": "H19",
+  "status": "STOPPED_BY_DEPENDENCY",
+  "verdict": null,
+  "decided_at": "2026-10-02",
+  "upstream": {"hypothesis_id": "H18", "verdict": "REJECTED", "experiment": "experiments/h18/exp-h18-001", "commit": "4f94a91"},
+  "rule": "hypotheses/h19/contract.json upstream_dependencies = [H18]; AGENTS.md section 13: stop when a downstream hypothesis depends on a rejected upstream claim; README execution order: a rejected hypothesis narrows or stops downstream work unless a new version explicitly changes the thesis.",
+  "why_not_a_new_version": "H18 was rejected on its claim (R2: no task class shows the preregistered >=25% bespoke-surface reduction against an equally strong file-only baseline; EOO is ~4-5x larger in every class), not on an implementation defect. Unlike H17 (Engine v1 aliasing bug fixed in v1.1), there is no defect whose repair would change that outcome without changing the thesis.",
+  "not_run": ["rebuild-hashes.json", "concurrency-state-machine.json", "canonical-change-audit.json", "historical-binding-results.json", "mutation-results.json"],
+  "exists_anyway": "src/eoo_engine_git (Git-backed canonical store with deterministic rebuild, base-commit concurrency and explicit conflicts) was built for H18 and is committed; H19 could be run against it under a new hypothesis version if the author decides the Git-authority question is worth answering independently of H18's value claim.",
+  "pack_definition_of_done": "docs/11_definition_of_done.md: every active hypothesis has an authoritative verdict or an explicit dependency-based stop."
+}

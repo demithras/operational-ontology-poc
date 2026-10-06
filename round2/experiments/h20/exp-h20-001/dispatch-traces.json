@@ -1,0 +1,707 @@
+{
+ "candidate": {
+  "engine_tag": "r2-engine-v1.1",
+  "engine_tag_commit": "6005ff1d5c73ee564d1e789284fc465692ca4222",
+  "engine_version": "1.1",
+  "head": "74255638c3b866a2e7d1c876376200e5583e171a",
+  "includes": [
+   "src/eoo_engine",
+   "src/eoo_engine_git (Git-backed store, Engine-participating by import closure)",
+   "src/eoo_ir (loaded by the Engine)",
+   "domains/manufacturing",
+   "domains/project (ir.v2.json, the default contract)"
+  ]
+ },
+ "created_at": "2026-10-02T18:25:37+00:00",
+ "engine_prereg_sha256": "03d2d56919b2f003766e54c89fdbfb47a7780577534f4d797ab2ecd9b6f3aefe",
+ "engine_version": "1.1",
+ "environment": {
+  "hypothesis": "6.168.3",
+  "jsonschema": "4.26.0",
+  "machine": "arm64",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "pytest": "9.1.1",
+  "python": "3.14.6"
+ },
+ "evidence_kind": "dispatch-traces",
+ "experiment_id": "exp-h20-001",
+ "git_commit": "74255638c3b866a2e7d1c876376200e5583e171a",
+ "harness_dirty": false,
+ "harness_dirty_paths": [],
+ "harness_sha256": {
+  "oracles/h20/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "oracles/h20/lifecycle.py": "972ad2a13dfa864fc3720b2be0fe60ab9a3aa99335781d4a6d385416fc9ee2a2",
+  "oracles/h20/synth_oracle.py": "cf85bcbe483da1b71c353fda8d5440270bd9c695380f7f01e4e307cc895961c7",
+  "scripts/evaluate_h20.py": "f2e0e63f0a91cd7f205bd263df5c96a01906a42553405d53f3764baacb12ebac",
+  "scripts/run_h20.py": "f8cf97a875a4b9c7859d0e497583e705963a15e0f8bf5daf1682652c1f6b0bf2",
+  "src/eoo_exp/__init__.py": "16754d2e26eb56fb0469b74cbb88351b20265ac3ae07ecc51ada09167199a90a",
+  "src/eoo_exp/outdir.py": "6997fdfe23a5bbd5fb3c80aa024f172940167d24c55770f3b83f163d9c86fd00",
+  "src/eoo_exp/provenance.py": "9076be346293debdd361cae3c24c781d3d463716d6be1c398ee4474b3201bb5e",
+  "src/eoo_exp/scaffold.py": "b7686662f08994431881ee411fb3b1f913ba63b6327cc6dce8e180e45496a765",
+  "src/eoo_exp/util.py": "64765edd82c60fa3e393878199331db360f14bbbe31c72f5bb8d4079ac6acd86",
+  "src/eoo_h20/__init__.py": "83cf257e1b225fb251ac97d4ddf3077f80d9eebd9f2b8d9a7850e3e74e06b724",
+  "src/eoo_h20/adapter_dynamic.py": "51bcf4b49feac2feca7e68f917d303dc9f93b99e58d4321a871b5b0fd47dc256",
+  "src/eoo_h20/adapter_static.py": "9f955427124a020343b9824b215c4c0e860432cb1f040940978c67845b2f45de",
+  "src/eoo_h20/alias.py": "656c6cb7ef44230b34beb20936c9ef53ef35198af3ccbdf998a7780c4dc85f7d",
+  "src/eoo_h20/closure.py": "3145a1c0d1201a7ce7530d13a5787d1c537e5ca1473f4c1097b49c7049615c49",
+  "src/eoo_h20/evaluate.py": "ff6952afa682a8d9d19ad3e9842a5dd13589da773d57f59a1ba104e392511a2f",
+  "src/eoo_h20/loc.py": "3c49d4208baa55c6edba81b8b19ff4ee67d5c373f195b72bc6f96fdc02c24f2d",
+  "src/eoo_h20/mutant_probe.py": "07c8628aba4633129adc97de1dd48440aed807fc75ccec1efd922efb8d8da638",
+  "src/eoo_h20/mutants.py": "1bac661f8e6657143b0b98665e4844d780e6e259911812bf7e4a3cdcd2cdbc3d",
+  "src/eoo_h20/payloads.py": "243fccb50e77c26fb31b6431e94286fbd71c1487d3bd977d3b920a8eff52dcc5",
+  "src/eoo_h20/run.py": "65266b5c05ca5c1e17108ee3aad566c7e58dafb84c1557cc5fb30f1b26e852f3",
+  "src/eoo_h20/static_audit.py": "57f6b4a0937874641db39f9a521a7898a4c0c740f70f412d2a2f32ce77156558",
+  "src/eoo_h20/synth.py": "4df1390c5eb29c2e6bdacf09807d72d3a657f7a82036b1744eb6aad9114eb8c9",
+  "src/eoo_h20/synth_run.py": "c08de353eea6350b4245107b88fe2ada42b29160034c71a0b08bc389846dcc97",
+  "src/eoo_h20/trace.py": "4a5bce42998f64e36f2aa35f21c80a241a0f2cfeec054e8635b7f975ceae4fb6",
+  "src/eoo_h20/workloads.py": "eed3e1c43233c3c81bbfa74195f1d718ba07ae9180baefe7f52a62b799b08d0b"
+ },
+ "hypothesis_id": "H20",
+ "input_corpus_hash": "e920e70a4ee805d2553253874f1e457d24f4562ddd8c8fc458f30298895f26ee",
+ "payload": {
+  "baseline_contextual": {
+   "generic_engine": {
+    "engine_core": {
+     "files": 21,
+     "loc": 1663
+    },
+    "git_backed_store": {
+     "files": 7,
+     "loc": 416
+    },
+    "lifecycle_modules_loc": 631
+   },
+   "per_domain": {
+    "manufacturing": {
+     "bound_callables_the_generic_engine_needs": 46,
+     "domain_adapters": {
+      "files": 3,
+      "loc": 85
+     },
+     "domain_logic": {
+      "files": 7,
+      "loc": 351
+     },
+     "plugin_handlers_the_rival_needs": 44,
+     "registered_by_kind": {
+      "actions": 3,
+      "authority_rules": 7,
+      "constraints": 19,
+      "functions": 6,
+      "interfaces": 6,
+      "link_types": 28,
+      "object_types": 26,
+      "observation_types": 7,
+      "policies": 9
+     },
+     "rival_lifecycle_copies_loc_if_each_action_owns_its_gates": 1893
+    },
+    "project": {
+     "bound_callables_the_generic_engine_needs": 76,
+     "domain_adapters": {
+      "files": 2,
+      "loc": 46
+     },
+     "domain_logic": {
+      "files": 11,
+      "loc": 550
+     },
+     "plugin_handlers_the_rival_needs": 59,
+     "registered_by_kind": {
+      "actions": 10,
+      "authority_rules": 13,
+      "constraints": 18,
+      "functions": 6,
+      "interfaces": 2,
+      "link_types": 15,
+      "object_types": 15,
+      "observation_types": 2,
+      "policies": 12
+     },
+     "rival_lifecycle_copies_loc_if_each_action_owns_its_gates": 6310
+    }
+   },
+   "reading": "Domain logic and adapters are per-domain code in BOTH designs; the generic Engine shares one copy of the lifecycle (631 LOC) across every action of every domain, a per-domain plugin architecture repeats the gate sequence per handler. The count of bound callables is not smaller than the rival's handler count by construction: the difference is where the governance code lives, not how much domain code exists.",
+   "status": "CONTEXTUAL: derived from this repository's own numbers; no plugin implementation was written or measured"
+  },
+  "cross_domain": {
+   "handler_classes": {
+    "actions": [
+     "ActionHandler"
+    ],
+    "authority_rules": [
+     "AuthorityRuleHandler"
+    ],
+    "constraints": [
+     "ConstraintHandler"
+    ],
+    "functions": [
+     "FunctionHandler"
+    ],
+    "interfaces": [
+     "InterfaceHandler"
+    ],
+    "link_types": [
+     "LinkTypeHandler"
+    ],
+    "object_types": [
+     "ObjectTypeHandler"
+    ],
+    "observation_types": [
+     "ObservationTypeHandler"
+    ],
+    "policies": [
+     "PolicyHandler"
+    ]
+   },
+   "handler_object_per_kind_is_single": true,
+   "other_packages_traced": [],
+   "provenance_key_sets_equal": true,
+   "state_sets_equal_or_subset_of_frozen": true
+  },
+  "domains": {
+   "manufacturing": {
+    "actions": {
+     "coverage": 1.0,
+     "executed_with_conformant_history": [
+      "expedite_purchase_order",
+      "reschedule_work_order",
+      "transfer_inventory"
+     ],
+     "registered": [
+      "expedite_purchase_order",
+      "reschedule_work_order",
+      "transfer_inventory"
+     ],
+     "unexecuted": []
+    },
+    "dispatch": [
+     {
+      "calls": 31,
+      "generic": true,
+      "kind": "actions",
+      "op": "approve"
+     },
+     {
+      "calls": 50,
+      "generic": true,
+      "kind": "actions",
+      "op": "execute"
+     },
+     {
+      "calls": 576,
+      "generic": true,
+      "kind": "actions",
+      "op": "propose"
+     },
+     {
+      "calls": 52,
+      "generic": true,
+      "kind": "actions",
+      "op": "reconcile"
+     },
+     {
+      "calls": 16,
+      "generic": true,
+      "kind": "actions",
+      "op": "reject"
+     },
+     {
+      "calls": 440,
+      "generic": true,
+      "kind": "authority_rules",
+      "op": "decide"
+     },
+     {
+      "calls": 2119,
+      "generic": true,
+      "kind": "constraints",
+      "op": "evaluate"
+     },
+     {
+      "calls": 85,
+      "generic": true,
+      "kind": "functions",
+      "op": "call"
+     },
+     {
+      "calls": 7,
+      "generic": true,
+      "kind": "interfaces",
+      "op": "query"
+     },
+     {
+      "calls": 44,
+      "generic": true,
+      "kind": "link_types",
+      "op": "follow"
+     },
+     {
+      "calls": 29,
+      "generic": true,
+      "kind": "object_types",
+      "op": "get"
+     },
+     {
+      "calls": 236,
+      "generic": true,
+      "kind": "object_types",
+      "op": "list"
+     },
+     {
+      "calls": 66,
+      "generic": true,
+      "kind": "observation_types",
+      "op": "validate"
+     },
+     {
+      "calls": 852,
+      "generic": true,
+      "kind": "policies",
+      "op": "evaluate"
+     }
+    ],
+    "dispatch_outside_generic_set": [],
+    "dispatched_or_decided_counts": {
+     "actions": 3,
+     "authority_rules": 3,
+     "constraints": 19,
+     "functions": 6,
+     "interfaces": 6,
+     "link_types": 22,
+     "object_types": 26,
+     "observation_types": 3,
+     "policies": 9
+    },
+    "engines_built": 241,
+    "executions": {
+     "by_final_state": {
+      "DENIED": 251,
+      "EFFECTS_COMMITTED": 4,
+      "EXECUTING": 5,
+      "OUTCOME_UNKNOWN": 32,
+      "PENDING_APPROVAL": 99,
+      "PROPOSED": 84,
+      "RECONCILED_FAILED": 3,
+      "RECONCILED_SUCCESS": 81
+     },
+     "count": 559,
+     "distinct_histories": 14,
+     "histories_sample": [
+      "PROPOSED",
+      "PROPOSED > APPROVED > EXECUTING",
+      "PROPOSED > APPROVED > EXECUTING > DENIED",
+      "PROPOSED > APPROVED > EXECUTING > EFFECTS_COMMITTED",
+      "PROPOSED > APPROVED > EXECUTING > EFFECTS_COMMITTED > RECONCILED_FAILED",
+      "PROPOSED > APPROVED > EXECUTING > EFFECTS_COMMITTED > RECONCILED_SUCCESS",
+      "PROPOSED > APPROVED > EXECUTING > OUTCOME_UNKNOWN",
+      "PROPOSED > APPROVED > EXECUTING > OUTCOME_UNKNOWN > RECONCILED_SUCCESS",
+      "PROPOSED > DENIED",
+      "PROPOSED > PENDING_APPROVAL",
+      "PROPOSED > PENDING_APPROVAL > APPROVED > EXECUTING > DENIED",
+      "PROPOSED > PENDING_APPROVAL > APPROVED > EXECUTING > EFFECTS_COMMITTED > RECONCILED_SUCCESS"
+     ],
+     "history_counts": {
+      "PROPOSED": 84,
+      "PROPOSED > APPROVED > EXECUTING": 5,
+      "PROPOSED > APPROVED > EXECUTING > DENIED": 5,
+      "PROPOSED > APPROVED > EXECUTING > EFFECTS_COMMITTED": 4,
+      "PROPOSED > APPROVED > EXECUTING > EFFECTS_COMMITTED > RECONCILED_FAILED": 3,
+      "PROPOSED > APPROVED > EXECUTING > EFFECTS_COMMITTED > RECONCILED_SUCCESS": 69,
+      "PROPOSED > APPROVED > EXECUTING > OUTCOME_UNKNOWN": 28,
+      "PROPOSED > APPROVED > EXECUTING > OUTCOME_UNKNOWN > RECONCILED_SUCCESS": 1,
+      "PROPOSED > DENIED": 233,
+      "PROPOSED > PENDING_APPROVAL": 99,
+      "PROPOSED > PENDING_APPROVAL > APPROVED > EXECUTING > DENIED": 2,
+      "PROPOSED > PENDING_APPROVAL > APPROVED > EXECUTING > EFFECTS_COMMITTED > RECONCILED_SUCCESS": 11,
+      "PROPOSED > PENDING_APPROVAL > APPROVED > EXECUTING > OUTCOME_UNKNOWN": 4,
+      "PROPOSED > PENDING_APPROVAL > DENIED": 11
+     },
+     "nonconforming": [],
+     "nonconforming_count": 0,
+     "states_used": [
+      "APPROVED",
+      "DENIED",
+      "EFFECTS_COMMITTED",
+      "EXECUTING",
+      "OUTCOME_UNKNOWN",
+      "PENDING_APPROVAL",
+      "PROPOSED",
+      "RECONCILED_FAILED",
+      "RECONCILED_SUCCESS"
+     ]
+    },
+    "not_dispatched": {
+     "authority_rules": [
+      "approve-large-transfer-senior-approver",
+      "approve-large-transfer-supervisor",
+      "mitigate-high-priority-planner",
+      "mitigate-high-priority-supervisor"
+     ],
+     "link_types": [
+      "ActionExecution_destinationWarehouse",
+      "ActionExecution_outcome",
+      "ActionExecution_sourceWarehouse",
+      "Observation_mappingRuleUsed",
+      "SoftwareAgent_actsOnBehalfOf",
+      "WmsTransferRecord_sourceWarehouse"
+     ],
+     "observation_types": [
+      "InventoryLotObserved",
+      "PartObserved",
+      "ProductionLineObserved",
+      "SupplierObserved"
+     ]
+    },
+    "package_id": "manufacturing-ontology",
+    "paths": {
+     "function_dispatches": 85,
+     "governed_action_executions": 559,
+     "policy_evaluations": 852,
+     "provenance_records": 559,
+     "provenance_required_fields_present": 559,
+     "read_dispatches": 316,
+     "security_authority_decisions": 440,
+     "security_authority_denials": 85,
+     "security_executions_with_authority_gate": 410
+    },
+    "provenance_key_sets": [
+     "action action_version approvals effect_ids engine_version exec gates inputs key note observed package_id package_version policy_versions principal responses soft_flags state updated_at"
+    ],
+    "registered_counts": {
+     "actions": 3,
+     "authority_rules": 7,
+     "constraints": 19,
+     "functions": 6,
+     "interfaces": 6,
+     "link_types": 28,
+     "object_types": 26,
+     "observation_types": 7,
+     "policies": 9
+    }
+   },
+   "project": {
+    "actions": {
+     "coverage": 1.0,
+     "executed_with_conformant_history": [
+      "attach_evidence",
+      "create_hypothesis",
+      "edit_threshold",
+      "evaluate_hypothesis",
+      "flag_orphan_component",
+      "new_experiment_version",
+      "preregister_hypothesis",
+      "record_decision",
+      "start_run",
+      "supersede_hypothesis"
+     ],
+     "registered": [
+      "attach_evidence",
+      "create_hypothesis",
+      "edit_threshold",
+      "evaluate_hypothesis",
+      "flag_orphan_component",
+      "new_experiment_version",
+      "preregister_hypothesis",
+      "record_decision",
+      "start_run",
+      "supersede_hypothesis"
+     ],
+     "unexecuted": []
+    },
+    "dispatch": [
+     {
+      "calls": 36,
+      "generic": true,
+      "kind": "actions",
+      "op": "execute"
+     },
+     {
+      "calls": 569,
+      "generic": true,
+      "kind": "actions",
+      "op": "propose"
+     },
+     {
+      "calls": 34,
+      "generic": true,
+      "kind": "actions",
+      "op": "reconcile"
+     },
+     {
+      "calls": 402,
+      "generic": true,
+      "kind": "authority_rules",
+      "op": "decide"
+     },
+     {
+      "calls": 5400,
+      "generic": true,
+      "kind": "constraints",
+      "op": "evaluate"
+     },
+     {
+      "calls": 290,
+      "generic": true,
+      "kind": "functions",
+      "op": "call"
+     },
+     {
+      "calls": 2,
+      "generic": true,
+      "kind": "interfaces",
+      "op": "query"
+     },
+     {
+      "calls": 40,
+      "generic": true,
+      "kind": "link_types",
+      "op": "follow"
+     },
+     {
+      "calls": 286,
+      "generic": true,
+      "kind": "object_types",
+      "op": "get"
+     },
+     {
+      "calls": 655,
+      "generic": true,
+      "kind": "object_types",
+      "op": "list"
+     },
+     {
+      "calls": 273,
+      "generic": true,
+      "kind": "observation_types",
+      "op": "validate"
+     },
+     {
+      "calls": 959,
+      "generic": true,
+      "kind": "policies",
+      "op": "evaluate"
+     }
+    ],
+    "dispatch_outside_generic_set": [],
+    "dispatched_or_decided_counts": {
+     "actions": 10,
+     "authority_rules": 10,
+     "constraints": 18,
+     "functions": 6,
+     "interfaces": 2,
+     "link_types": 13,
+     "object_types": 15,
+     "observation_types": 1,
+     "policies": 12
+    },
+    "engines_built": 234,
+    "executions": {
+     "by_final_state": {
+      "DENIED": 199,
+      "EFFECTS_COMMITTED": 2,
+      "EXECUTING": 25,
+      "OUTCOME_UNKNOWN": 45,
+      "PROPOSED": 34,
+      "RECONCILED_FAILED": 1,
+      "RECONCILED_SUCCESS": 231
+     },
+     "count": 537,
+     "distinct_histories": 9,
+     "histories_sample": [
+      "PROPOSED",
+      "PROPOSED > APPROVED > EXECUTING",
+      "PROPOSED > APPROVED > EXECUTING > DENIED",
+      "PROPOSED > APPROVED > EXECUTING > EFFECTS_COMMITTED",
+      "PROPOSED > APPROVED > EXECUTING > EFFECTS_COMMITTED > OUTCOME_UNKNOWN > RECONCILED_SUCCESS",
+      "PROPOSED > APPROVED > EXECUTING > EFFECTS_COMMITTED > RECONCILED_FAILED",
+      "PROPOSED > APPROVED > EXECUTING > EFFECTS_COMMITTED > RECONCILED_SUCCESS",
+      "PROPOSED > APPROVED > EXECUTING > OUTCOME_UNKNOWN",
+      "PROPOSED > DENIED"
+     ],
+     "history_counts": {
+      "PROPOSED": 34,
+      "PROPOSED > APPROVED > EXECUTING": 25,
+      "PROPOSED > APPROVED > EXECUTING > DENIED": 18,
+      "PROPOSED > APPROVED > EXECUTING > EFFECTS_COMMITTED": 2,
+      "PROPOSED > APPROVED > EXECUTING > EFFECTS_COMMITTED > OUTCOME_UNKNOWN > RECONCILED_SUCCESS": 1,
+      "PROPOSED > APPROVED > EXECUTING > EFFECTS_COMMITTED > RECONCILED_FAILED": 1,
+      "PROPOSED > APPROVED > EXECUTING > EFFECTS_COMMITTED > RECONCILED_SUCCESS": 230,
+      "PROPOSED > APPROVED > EXECUTING > OUTCOME_UNKNOWN": 45,
+      "PROPOSED > DENIED": 181
+     },
+     "nonconforming": [],
+     "nonconforming_count": 0,
+     "states_used": [
+      "APPROVED",
+      "DENIED",
+      "EFFECTS_COMMITTED",
+      "EXECUTING",
+      "OUTCOME_UNKNOWN",
+      "PROPOSED",
+      "RECONCILED_FAILED",
+      "RECONCILED_SUCCESS"
+     ]
+    },
+    "not_dispatched": {
+     "authority_rules": [
+      "no-canonical-write-outside-git",
+      "no-direct-verdict-write",
+      "no-threshold-edit-after-preregistration"
+     ],
+     "link_types": [
+      "DETECTED_BY",
+      "VALIDATES"
+     ],
+     "observation_types": [
+      "TestRunObserved"
+     ]
+    },
+    "package_id": "project-ontology",
+    "paths": {
+     "function_dispatches": 290,
+     "governed_action_executions": 537,
+     "policy_evaluations": 959,
+     "provenance_records": 537,
+     "provenance_required_fields_present": 537,
+     "read_dispatches": 983,
+     "security_authority_decisions": 402,
+     "security_authority_denials": 8,
+     "security_executions_with_authority_gate": 410
+    },
+    "provenance_key_sets": [
+     "action action_version approvals effect_ids engine_version exec gates inputs key note observed package_id package_version policy_versions principal responses soft_flags state updated_at"
+    ],
+    "registered_counts": {
+     "actions": 10,
+     "authority_rules": 13,
+     "constraints": 18,
+     "functions": 6,
+     "interfaces": 2,
+     "link_types": 15,
+     "object_types": 15,
+     "observation_types": 2,
+     "policies": 12
+    }
+   }
+  },
+  "frozen": {
+   "kind_ops": {
+    "actions": [
+     "approve",
+     "execute",
+     "propose",
+     "reconcile",
+     "reject"
+    ],
+    "authority_rules": [
+     "decide"
+    ],
+    "constraints": [
+     "evaluate"
+    ],
+    "functions": [
+     "call"
+    ],
+    "interfaces": [
+     "query"
+    ],
+    "link_types": [
+     "follow"
+    ],
+    "object_types": [
+     "get",
+     "list"
+    ],
+    "observation_types": [
+     "validate"
+    ],
+    "policies": [
+     "evaluate"
+    ]
+   },
+   "oracle": "oracles/h20/lifecycle.py",
+   "states": [
+    "PROPOSED",
+    "PENDING_APPROVAL",
+    "APPROVED",
+    "EXECUTING",
+    "EFFECTS_COMMITTED",
+    "RECONCILED_SUCCESS",
+    "RECONCILED_FAILED",
+    "OUTCOME_UNKNOWN",
+    "DENIED"
+   ],
+   "terminal": [
+    "DENIED",
+    "RECONCILED_SUCCESS",
+    "RECONCILED_FAILED"
+   ]
+  },
+  "suites": {
+   "generic_sweep": {
+    "manufacturing": {
+     "actions_proposed": [
+      "expedite_purchase_order",
+      "reschedule_work_order",
+      "transfer_inventory"
+     ],
+     "all_in_known_states": true,
+     "proposals": 36
+    },
+    "project": {
+     "actions_proposed": [
+      "attach_evidence",
+      "create_hypothesis",
+      "edit_threshold",
+      "evaluate_hypothesis",
+      "flag_orphan_component",
+      "new_experiment_version",
+      "preregister_hypothesis",
+      "record_decision",
+      "start_run",
+      "supersede_hypothesis"
+     ],
+     "all_in_known_states": true,
+     "proposals": 120
+    }
+   },
+   "pytest": {
+    "args": [
+     "tests/domains",
+     "tests/h18/test_git_store.py"
+    ],
+    "error": 0,
+    "exit_code": 0,
+    "failed": 0,
+    "failed_ids": [],
+    "passed": 89,
+    "skipped": 0
+   },
+   "read_sweep": {
+    "manufacturing": {
+     "completed": 73,
+     "refused": 0
+    },
+    "project": {
+     "completed": 56,
+     "refused": 0
+    }
+   },
+   "state_machine_sample": {
+    "manufacturing": {
+     "examples": 108,
+     "failures": 0
+    },
+    "project": {
+     "examples": 112,
+     "failures": 0
+    }
+   }
+  }
+ },
+ "payload_hash": "dd83e1ead70ca2d00de5bd71a64d9751c00513923487a576e70af8ac07f637f9",
+ "payload_path": null,
+ "protocol_freeze_hash": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2",
+ "seed": 20
+}

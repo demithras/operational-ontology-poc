@@ -1,0 +1,77 @@
+{
+  "id": "H21",
+  "title": "The Toolchain can be generated from the ontology contract with security equivalence",
+  "claim": "From the shared Ontology Language/IR, the system can generate typed object/query/function/action/agent surfaces for both domains so that new ordinary domain resources require no handwritten endpoint and expose exactly the capabilities allowed by the security model.",
+  "null_hypothesis": "A useful developer/agent surface still requires bespoke endpoints and permission glue per domain; the ontology is not functioning as a backend/toolchain contract.",
+  "rivals": [
+    "Generic GraphQL/REST schema generation provides the same result without ontology-specific machinery.",
+    "Generated surfaces exist but security/runtime semantics diverge from the core authorization oracle."
+  ],
+  "mechanism": "Typed resource definitions contain enough shape/capability/security metadata to derive SDK types, query operations and governed Action tools mechanically.",
+  "scope": "Manufacturing + Project Ontology object/link/interface/function/action resources and generated principal/capability combinations.",
+  "predictions": [
+    "Adding a normal Project object/action requires zero handwritten API/tool endpoint code.",
+    "Generated SDK types preserve object/link/interface cardinalities and Function/Action distinction.",
+    "For every generated principal case, visible/queryable/actionable capabilities equal the independent authority oracle.",
+    "Agent tool surface excludes forbidden actions rather than relying on prompt obedience.",
+    "Interface-polymorphic tooling works for multiple implementing object types without type-specific endpoint additions."
+  ],
+  "falsifiers": [
+    "A normal domain object/action needs a handwritten endpoint to become usable.",
+    "Generated surface exposes a capability denied by the authority oracle.",
+    "Generated surface hides an allowed capability because permission logic is duplicated incorrectly.",
+    "Interface polymorphism requires per-concrete-type tool code."
+  ],
+  "experiment": {
+    "summary": "Generate SDK/query/action/agent surfaces from frozen IR; compare type/security behavior against independent schema and authority oracles.",
+    "steps": [
+      "Generate both domains from a clean toolchain build.",
+      "Diff handwritten code before/after adding selected ordinary Project resources.",
+      "Generate principals/permissions/object sets with Hypothesis and compare surface capabilities to authority oracle.",
+      "Run adversarial agent calls against hidden/denied capabilities.",
+      "Add two object types implementing one interface and test generic tooling.",
+      "Inject security/type-generation mutations."
+    ],
+    "minimum_runs": 10000
+  },
+  "oracle": "Independent IR type checker plus independent authority/capability reference model.",
+  "baseline": "Generic OpenAPI/GraphQL/typed-code generation over conventional schemas with equivalent authorization integration.",
+  "required_evidence": [
+    "generated-surface-manifest.json",
+    "handwritten-diff.json",
+    "security-differential.json",
+    "agent-adversarial.json",
+    "interface-polymorphism.json",
+    "mutation-results.json"
+  ],
+  "evaluator": {
+    "support_if": [
+      "0 handwritten endpoint/tool additions for preregistered ordinary Domain 2 resources.",
+      "100% type/cardinality/function-action conformance on generated surface tests.",
+      "100% capability-set equality with authority oracle across at least 10,000 generated principal cases.",
+      "0 forbidden external/canonical effects from adversarial agent calls.",
+      "Generic interface tool works across at least two implementing object types.",
+      "All target mutations detected."
+    ],
+    "reject_if": [
+      "Any preregistered ordinary resource requires bespoke endpoint/tool code or any security overexposure occurs."
+    ],
+    "inconclusive_if": [
+      "Generated principal corpus below 10,000 or interface-polymorphism case not implemented."
+    ],
+    "invalid_if": [
+      "Toolchain imports the authority oracle implementation directly, making differential security checks tautological."
+    ]
+  },
+  "python_hypothesis_role": {
+    "level": "PRIMARY",
+    "strategy": "Generate schemas, principals, resource sets, capabilities and agent requests; differential-test generated surface against independent type/security oracles.",
+    "mutation_proof": "Drop a property/cardinality, expose a denied action, suppress an allowed action and hard-code a concrete interface type; all must be detected."
+  },
+  "upstream_dependencies": [
+    "H20"
+  ],
+  "stop_conditions": [
+    "If ordinary resources repeatedly require handwritten endpoints, reject Toolchain-generation claim before building UI/convenience layers."
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "id": "H18",
+  "title": "Project Ontology is a meaningful executable second domain",
+  "claim": "The same generic EOO mechanisms can govern the real hypothesis-driven lifecycle of operational-ontology-poc, enforce preregistration/evidence/verdict invariants, and provide at least one operational advantage over file-only discipline without replacing Git as authority.",
+  "null_hypothesis": "Project Ontology merely mirrors Markdown/JSON and requires equally bespoke validators/actions, adding no operational value beyond conventional repository scripts.",
+  "rivals": [
+    "A small set of JSON schemas plus CI scripts enforces the same lifecycle more simply.",
+    "Self-hosting appears valuable only because the baseline is intentionally under-validated."
+  ],
+  "mechanism": "Representing research entities, links, states and governed actions in the shared EOO should allow generic lifecycle enforcement, provenance queries and generated action surfaces already needed by other domains.",
+  "scope": "Actual H15-H22 artifacts and their lifecycle, not a toy project dataset.",
+  "predictions": [
+    "Illegal transitions such as post-freeze threshold mutation, verdict without evidence and evidence bound to the wrong version are blocked or classified explicitly.",
+    "Verdicts are reproducible from frozen evaluator + evidence.",
+    "The same generic Engine action pipeline used by Manufacturing executes Project Ontology state changes.",
+    "At least one preregistered task class requires less bespoke integrity/tooling code than an equally strong file-only baseline.",
+    "Every canonical change remains traceable to Git."
+  ],
+  "falsifiers": [
+    "Project lifecycle enforcement requires bespoke runtime branches.",
+    "A supported/rejected verdict can be set arbitrarily without evaluator evidence.",
+    "Project Ontology cannot prevent or surface a preregistered illegal transition.",
+    "The equally strong file-only baseline achieves the same generated/query/action behavior with no greater bespoke change and lower recurring complexity across all measured task classes."
+  ],
+  "experiment": {
+    "summary": "Dogfood H15-H22 themselves through Project Ontology and compare invariant enforcement/tooling against a strong Git+schema+CI baseline.",
+    "steps": [
+      "Load H15-H22 as real project objects linked to contracts/commits/evidence.",
+      "Generate valid/invalid lifecycle sequences.",
+      "Execute preregistration, freeze, run, attach evidence, derive verdict, supersede through generic Actions.",
+      "Build an equally strong file-only baseline with the same invariants.",
+      "Measure bespoke code/config touched for lifecycle, forensic queries and one change to the hypothesis model.",
+      "Inject target lifecycle mutations."
+    ],
+    "minimum_runs": 3000
+  },
+  "oracle": "Independent pure lifecycle state machine plus Git history for canonical facts.",
+  "baseline": "Git + JSON/Markdown + JSON Schema + CI scripts implementing the same declared invariants without the EOO runtime.",
+  "required_evidence": [
+    "project-state-machine.json",
+    "verdict-reproducibility.json",
+    "git-traceability.json",
+    "baseline-comparison.json",
+    "bespoke-change-metrics.json",
+    "mutation-results.json"
+  ],
+  "evaluator": {
+    "support_if": [
+      "0 illegal lifecycle transitions accepted across generated corpus.",
+      "100% authoritative verdicts reproducible from frozen evidence/evaluator.",
+      "0 canonical ontology-only changes lacking Git trace.",
+      "0 Project-domain branches in generic Engine.",
+      "At least one preregistered operational task class shows >=25% lower bespoke implementation/change surface than the equally strong file-only baseline with no correctness loss."
+    ],
+    "reject_if": [
+      "Any core governance invariant can be bypassed, or all preregistered operational task classes show parity/worse bespoke change surface while EOO adds recurring complexity."
+    ],
+    "inconclusive_if": [
+      "The baseline is not implemented to equivalent invariant strength or the task corpus is incomplete."
+    ],
+    "invalid_if": [
+      "Project Ontology is allowed to grade its own hypothesis without independent lifecycle oracle/evidence checks."
+    ]
+  },
+  "python_hypothesis_role": {
+    "level": "PRIMARY",
+    "strategy": "RuleBasedStateMachine generates hypothesis lifecycle operations, stale edits, evidence binding errors, verdict attempts and supersession sequences.",
+    "mutation_proof": "Allow post-freeze threshold edit, allow verdict without evidence, and detach commit provenance; each mutation must be found."
+  },
+  "upstream_dependencies": [
+    "H17"
+  ],
+  "stop_conditions": [
+    "If self-hosting requires Project-specific Engine code, reject/narrow before adding more project features."
+  ]
+}

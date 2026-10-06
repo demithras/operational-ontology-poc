@@ -1,0 +1,135 @@
+{
+  "written_at": "2026-10-01T15:59:40.299645+00:00",
+  "gate": "H15 Gate 0",
+  "hash_algorithm": "sha256",
+  "files": [
+    {
+      "path": "domains/manufacturing/dsl.yaml",
+      "sha256": "84756d1e56f51ccfaeaa3076c39addd00881d6ffc72dfb50297e12977c9fba2e"
+    },
+    {
+      "path": "domains/manufacturing/ir.json",
+      "sha256": "fab42916cc1174e3e27eb88e13cfab836ea4cc15882177f743f469c99426d565"
+    },
+    {
+      "path": "domains/project/dsl.yaml",
+      "sha256": "39163748060d141adc05bf2d3cc12cee06aa19e454428c15601be2322cf7b91b"
+    },
+    {
+      "path": "domains/project/ir.json",
+      "sha256": "e144926302f37a1a3d44ca569df6f12baa3923acb6305c4a916c803dd7499a45"
+    },
+    {
+      "path": "ontology/h15_oracle_notes.md",
+      "sha256": "6ee76a5d3c1f6709628b1fbeb14d8c4608ca1ab55054196571683e714b7ff922"
+    },
+    {
+      "path": "protocol/h15_ambiguity_classes.json",
+      "sha256": "acd60efa4e32d7dcdb07efc2795ff66dde5a196db63637349f488d8dbe78384c"
+    },
+    {
+      "path": "src/eoo_dsl/__init__.py",
+      "sha256": "675ca9e09cd103a7d6611005bdb92052594a9eeb41bc17be725b6945468be8b7"
+    },
+    {
+      "path": "src/eoo_dsl/compiler.py",
+      "sha256": "dc3ebabae1cb66bec25ef86a4cac25a08320d16b6f594094516aa37a6d92cd15"
+    },
+    {
+      "path": "src/eoo_dsl/emit.py",
+      "sha256": "efeb5f2600bd2b9cac73c2432239fb85d6c404853862a5e571a4e7e4bd7901ba"
+    },
+    {
+      "path": "src/eoo_dsl/errors.py",
+      "sha256": "eb1a321f547df55fd2f673442f269645ac101a9de952139a1efcff872be8e25d"
+    },
+    {
+      "path": "src/eoo_dsl/loader.py",
+      "sha256": "acabd93adbbf79370c25838feff0e930f2547a64302fabf45bcf69444a4890ca"
+    },
+    {
+      "path": "src/eoo_dsl/spec.py",
+      "sha256": "42e3da23c3d08226ef6c0d91fdd15c412a73f653c066a99b7ec79fbbf1795f53"
+    },
+    {
+      "path": "src/eoo_ir/__init__.py",
+      "sha256": "9096fc42f146011a21e66bf7f81de9a1277699f6110e61dcbfdf5381d067600d"
+    },
+    {
+      "path": "src/eoo_ir/conformance.py",
+      "sha256": "8ca1d633d25cb2e19c791b39f5fa261f1a449b7b4570cf5a00eb2d502a93f98e"
+    },
+    {
+      "path": "src/eoo_ir/coverage.py",
+      "sha256": "06246a2401474cff6f70a4297200a01547be57ac4bee1e2758a32ad797fb38da"
+    },
+    {
+      "path": "src/eoo_ir/equivalence.py",
+      "sha256": "639a7ffb03e612804f2b292936daad5fb60dc3639246cd99ac37dcb39d7fcdc2"
+    },
+    {
+      "path": "src/eoo_ir/gen_atoms.py",
+      "sha256": "a2b356900ff5693a575af149c4de5740349924c978f760886c6199c641a2ee3f"
+    },
+    {
+      "path": "src/eoo_ir/kinds.py",
+      "sha256": "7eb0af1a02cd5dcccdaa403cf629b245f8785109d5f54c10604add0b568bead5"
+    },
+    {
+      "path": "src/eoo_ir/mutations.py",
+      "sha256": "1edf4d3bc8da6b7efe0ed9d2adf0db2c426eb4db9eb9aaa20abdda44c64f9491"
+    },
+    {
+      "path": "src/eoo_ir/mutations_fields.py",
+      "sha256": "74c7fc600899d93cbb4e760aed3c16bd52bcb43b4f43c0b31f0e084f0c8f5c7d"
+    },
+    {
+      "path": "src/eoo_ir/mutations_fields2.py",
+      "sha256": "5ac75667d2d1d2186306abbdcacbf8c39d04273b1f1877c09e7afc27295849fe"
+    },
+    {
+      "path": "src/eoo_ir/mutations_fields3.py",
+      "sha256": "d87efa575f03053f30c7258c6086b854b25d6f49acc66664e55835a6c3e7a45d"
+    },
+    {
+      "path": "src/eoo_ir/normalize.py",
+      "sha256": "5203f01bd87a2d94bcec6d1d29349979f926b90427795df3b4e24e0308cbfb66"
+    },
+    {
+      "path": "src/eoo_ir/rewrites.py",
+      "sha256": "300cc12a0685807520738ead2ece5f83288fca75d2b04c1f4cbcb9ae4560c95a"
+    },
+    {
+      "path": "src/eoo_ir/strategies.py",
+      "sha256": "0e5e5f08a1039afb14ea2d9773f38263cfe038091b4a68e23d70aaa398b24080"
+    },
+    {
+      "path": "src/eoo_ir/validate.py",
+      "sha256": "6013a0ff425ad993622bfb4f81710608fe886f9d708b7851abc59422fc2061ad"
+    }
+  ],
+  "supporting_files": [
+    {
+      "path": "domains/manufacturing/provenance.md",
+      "sha256": "3a8a5002c69bae76c710dce291b99cc85c0022a0248df9a2dfabcbabfc888395"
+    },
+    {
+      "path": "domains/project/provenance.md",
+      "sha256": "df1a0392ae500a3f77326479cd166907912c949c1f9a8e8cf46d799f0f25dbfa"
+    },
+    {
+      "path": "tests/h15/dsl_ambiguity_cases.jsonl",
+      "sha256": "8268b1436309974c0adbbf22016a64b7e2596f31089222b4066c757926398db7"
+    }
+  ],
+  "openpona_pin": {
+    "repository": "https://github.com/demithras/openpona-language-corpus",
+    "commit": "97a9b9e",
+    "version": "0.2.0",
+    "tokens_csv_sha256": "eb91ae649ba8bc35b46e9a00047a063807eeb80aa4ef91c94f9ff7907a66e7d0",
+    "grammar_lark_sha256": "37228468d80e7f5a90fcd8bca6ef8208fe813728f4f5d358936177b1a6310d69",
+    "rule": "The token inventory and grammar are frozen at this commit. Any change to tokens, grammar or parser semantics needed to encode a frozen IR kind during the experiment is recorded as an adaptation event and counts toward the 'new primitive' falsifier."
+  },
+  "contract_sha256": "694740d32ccc4a4726bf48a4b88550682040ac9cd7d5aebed153206dfbea7472",
+  "combined_sha256": "2b632c47bb56e285d74b52cb04c079e439117bed5bc879268cefc1658b125f19"
+}

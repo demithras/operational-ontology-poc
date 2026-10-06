@@ -1,0 +1,27 @@
+{
+ "type": "object",
+ "required": [
+  "id",
+  "version",
+  "evidence_schema_ref",
+  "evaluator_ref"
+ ],
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "version": {
+   "type": "string"
+  },
+  "evidence_schema_ref": {
+   "type": "string"
+  },
+  "evaluator_ref": {
+   "type": "string"
+  },
+  "freeze_hash": {
+   "type": "string"
+  }
+ },
+ "additionalProperties": false
+}

@@ -1,0 +1,308 @@
+{
+ "common": {
+  "protocol_valid": true,
+  "reject_hit": false,
+  "required_evidence_complete": true,
+  "sample_sufficient": true,
+  "support_hit": true
+ },
+ "engine_version": "1.2",
+ "evaluator_sha256": "fdb314509e352f5a1f0f83c6da0620a7d31606ee8b87836e240efc88bebe549a",
+ "evidence_payload_hashes": {
+  "canonical-change-audit.json": "beac8beba0c262e198b8fd14b75a307472db69e298cb5e028bfb9c1187c71660",
+  "concurrency-state-machine.json": "f53f46d84f8cfad53e0fd22236627ff9338fdd6e6f57be3ea7ccb508baa26969",
+  "historical-binding-results.json": "588ee7e7846729aa26263851a1d536a8cb82cbeb88d7f9aafc94047a5111f152",
+  "mutation-results.json": "efada4b686cb9e4aa0817b3eb2643197f8c773bdb7ae9ea6ee27297805aa6b45",
+  "rebuild-hashes.json": "bbb46c753b7828f265b349a52b8bee90fdd494a5cd626ad49e7c23a5d28e00cd"
+ },
+ "experiment_id": "exp-h19-001",
+ "hypothesis_id": "H19",
+ "interpretation_notes": [
+  "H19 depends on H18w (author decision 2026-10-05), not on the rejected value claim of H18.",
+  "S3b and the lost-update definition (a value the writer set equal to its own base is not a change) are harness definitions, stated in the evidence.",
+  "Engine-level histories are checked for rebuild determinism, bijection and projection == Git, not against an oracle DAG prediction (the oracle is domain-blind).",
+  "V5 reads the dirty paths recorded in the evidence against the harness files hashed in it (evaluator files excluded)."
+ ],
+ "numbers": {
+  "audit": {
+   "accepted_actions": 909,
+   "accepted_one_commit": 909,
+   "accepted_traced": 909,
+   "bindings": 212,
+   "bindings_entries_same": 212,
+   "bindings_hash_same": 212,
+   "bound_entries": 3388,
+   "cases": 600,
+   "engine_store_changed": 0,
+   "exceptions": 0,
+   "non_git_effects": 0,
+   "ontology_only_writes": 0,
+   "projection_checks": 1882,
+   "projection_mismatches": 0,
+   "refused_actions": 973,
+   "refused_moved_branch": 0,
+   "steps": 1882
+  },
+  "bindings": {
+   "engine": {
+    "bindings": 212,
+    "bindings_entries_same": 212,
+    "bindings_hash_same": 212,
+    "bound_entries": 3388
+   },
+   "store": {
+    "binds": 7341,
+    "binds_pinned": 7341,
+    "binds_with_later_change": 4517,
+    "rebind_accepted": 0,
+    "rebind_attempts": 305
+   }
+  },
+  "class_counts": {
+   "compatible_concurrent": 2316,
+   "conflicting_concurrent": 748,
+   "historical_binding_after_change": 2603,
+   "rebuild_same_commit": 5000,
+   "stale_base": 3745
+  },
+  "direct_write_battery": true,
+  "engine_paths_differing_from_tag": [],
+  "extra_mutants": {
+   "M4_write_without_git_change": true,
+   "M5_pinned_binding_rewritable": true
+  },
+  "harness_dirty_files_at_run": {},
+  "harness_self_check": [],
+  "minimum_per_class": 50,
+  "minimum_unique_scenarios": 5000,
+  "mutant_failing_checks": {
+   "M1_timestamp_dependent_projection": [
+    "binding_pinned",
+    "rebuild_hash_equal"
+   ],
+   "M2_missing_base_version_check": [
+    "binding_pinned",
+    "no_lost_update",
+    "oracle_outcome_agreement",
+    "rebuild_hash_equal"
+   ],
+   "M3_history_rebinding": [
+    "binding_pinned"
+   ],
+   "M4_write_without_git_change": [
+    "canonical_change_traced"
+   ],
+   "M5_pinned_binding_rewritable": [
+    "binding_pinned",
+    "no_lost_update",
+    "no_rebinding_accepted",
+    "oracle_outcome_agreement"
+   ]
+  },
+  "mutation_controls_clean": [
+   true,
+   true
+  ],
+  "mutation_exceptions": 0,
+  "oracle_import_audit": {
+   "allowed_imports": [
+    "__future__",
+    "copy",
+    "hashlib",
+    "json"
+   ],
+   "files": {
+    "__init__.py": [],
+    "model.py": [
+     "__future__",
+     "copy",
+     "hashlib",
+     "json"
+    ]
+   },
+   "forbidden": [],
+   "independent": true
+  },
+  "oracle_import_audit_now": {
+   "allowed_imports": [
+    "__future__",
+    "copy",
+    "hashlib",
+    "json"
+   ],
+   "files": {
+    "__init__.py": [],
+    "model.py": [
+     "__future__",
+     "copy",
+     "hashlib",
+     "json"
+    ]
+   },
+   "forbidden": [],
+   "independent": true
+  },
+  "rebuild": {
+   "engine": {
+    "distinct_states": 1380,
+    "equal_commits": 1510,
+    "fsck": true,
+    "hash_bijection_violations": 0,
+    "histories": 600,
+    "mismatches": [],
+    "note": "Engine-level histories have no oracle DAG prediction (the oracle is domain-blind); they are rebuilt, bijection-checked and projection-checked.",
+    "oracle_state_checked": false,
+    "passes": 3,
+    "rebuilds_per_commit": 3,
+    "unequal_commits": 0,
+    "unique_commits": 1510
+   },
+   "store": {
+    "distinct_states": 13114,
+    "equal_commits": 17590,
+    "fsck_all_ok": true,
+    "hash_bijection_violations": 0,
+    "histories": 5000,
+    "mismatches": [],
+    "passes": 3,
+    "rebuilds_per_commit": 3,
+    "repositories": 20,
+    "unequal_commits": 0,
+    "unique_commits": 17590
+   }
+  },
+  "store_tally": {
+   "binds": 7341,
+   "binds_pinned": 7341,
+   "binds_with_later_change": 4517,
+   "classes": {
+    "compatible_concurrent": 2316,
+    "conflicting_concurrent": 748,
+    "historical_binding_after_change": 2603,
+    "rebuild_same_commit": 5000,
+    "stale_base": 3745,
+    "stale_refused": 1017
+   },
+   "conflict": 2589,
+   "digest_unstable": 0,
+   "exceptions": 0,
+   "false_conflicts": 0,
+   "lost_updates": 0,
+   "ok": 17570,
+   "outcome_disagreements": 0,
+   "rebind_accepted": 0,
+   "rebind_attempts": 305,
+   "ref_moved_on_refusal": 0,
+   "rejected": 2379,
+   "replays": 2589,
+   "replays_equal": 2589,
+   "scenarios": 5000,
+   "silent_wrong_accept": 0,
+   "stale_writes": 7388,
+   "writes": 22538
+  },
+  "target_mutants": {
+   "M1_timestamp_dependent_projection": true,
+   "M2_missing_base_version_check": true,
+   "M3_history_rebinding": true
+  },
+  "thresholds": {
+   "max_canonical_ontology_only_writes": 0,
+   "max_silent_lost_updates": 0,
+   "required_historical_binding_preservation": 1.0,
+   "required_mutation_kill_rate": 1.0,
+   "required_rebuild_hash_equality": 1.0
+  },
+  "unique_scenarios": 5000
+ },
+ "predicates": {
+  "inconclusive_if": [
+   {
+    "clause": "Concurrency corpus smaller than the contract minimum, or lacking stale-base / conflicting-change (or any registered) class, or no rebuild/audit/binding population",
+    "id": "I",
+    "value": false
+   }
+  ],
+  "invalid_if": [
+   {
+    "clause": "Evidence records carry a protocol-freeze / ENGINE_PREREG hash different from the files now",
+    "id": "V1",
+    "value": false
+   },
+   {
+    "clause": "Evidence records disagree on commit / seed / corpus hash, or do not name the current Engine version",
+    "id": "V2",
+    "value": false
+   },
+   {
+    "clause": "The Engine or Git store (src/eoo_engine, src/eoo_engine_git) differs from tag r2-engine-v1.2",
+    "id": "V3",
+    "value": false
+   },
+   {
+    "clause": "The oracle is not independent of runtime storage (imports / I/O in oracles/h19, or the run did not record an independent oracle)",
+    "id": "V4",
+    "value": false
+   },
+   {
+    "clause": "Harness files were dirty at run time",
+    "id": "V5",
+    "value": false
+   },
+   {
+    "clause": "Harness self-check failed (mutation control not clean, harness error rows, summaries disagree with rows, harness files changed since the run)",
+    "id": "V6",
+    "value": false
+   }
+  ],
+  "reject_if": [
+   {
+    "clause": "Any split-brain, nondeterministic rebuild, silent lost update or history rebinding is observed",
+    "id": "R",
+    "value": false
+   }
+  ],
+  "support_if": [
+   {
+    "clause": "100% rebuild hash equality for identical Git commits (>= 2 fresh rebuilds each, every commit of every generated history, store and Engine histories)",
+    "id": "S1",
+    "value": true
+   },
+   {
+    "clause": "0 canonical ontology-only writes (Engine-level audit from raw Git; every accepted Action = exactly one traced commit; projection == Git)",
+    "id": "S2",
+    "value": true
+   },
+   {
+    "clause": "0 silent lost updates in the generated concurrency corpus (raw-Git definition) and no stale/conflicting write accepted that the oracle refuses",
+    "id": "S3",
+    "value": true
+   },
+   {
+    "clause": "(stricter than the contract) every write outcome equals the oracle's, every conflict replays identically, refusals leave the branch untouched",
+    "id": "S3b",
+    "value": true
+   },
+   {
+    "clause": "100% historical bindings remain pinned (store-level pins and Engine-level Evidence/Verdict bindings; 0 rebinding attempts accepted)",
+    "id": "S4",
+    "value": true
+   },
+   {
+    "clause": "all target mutations detected (timestamp-dependent projection, missing base-version check, history rebinding), controls clean",
+    "id": "S5",
+    "value": true
+   }
+  ]
+ },
+ "problems": [],
+ "protocol": {
+  "freeze_sha256": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2"
+ },
+ "protocol_mismatches": {
+  "disagreeing_provenance": false,
+  "records_not_naming_current_engine_version": [],
+  "records_with_wrong_hashes": []
+ },
+ "verdict": "SUPPORTED"
+}

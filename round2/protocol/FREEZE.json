@@ -1,0 +1,59 @@
+{
+  "frozen_at": "2026-10-01T14:51:30.246571+00:00",
+  "protocol_sha256": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2",
+  "files": [
+    {
+      "path": "ontology/ir.schema.json",
+      "sha256": "0e9bfa3380327d4b1f2e3e0ba3cf065968846c2c88b8071007c408fe965d0e2d"
+    },
+    {
+      "path": "protocol/thresholds.json",
+      "sha256": "ed86321f80362afaba782e024da5fc64b088567a97e84c9685d16b35d081a93c"
+    },
+    {
+      "path": "docs/08_evidence_and_fairness.md",
+      "sha256": "08e4bfaaf6d038b67e3406302ee121511574cfc5812c7aa0799ad87964afb936"
+    },
+    {
+      "path": "ontology/semantic-equivalence.md",
+      "sha256": "084f84c87739f3c23da556c1c9842c947cdb44881ee1e8db1669c05ff01fc8ff"
+    },
+    {
+      "path": "ontology/direct_dsl_baseline.md",
+      "sha256": "d840ee94f1d9658804caba9bcc5f0f7b53cc6731524dcd5ca2f7be7f65a89660"
+    },
+    {
+      "path": "hypotheses/h15/contract.json",
+      "sha256": "694740d32ccc4a4726bf48a4b88550682040ac9cd7d5aebed153206dfbea7472"
+    },
+    {
+      "path": "hypotheses/h16/contract.json",
+      "sha256": "5fcc8eefbc2f38c226fe8e381086aaf1984b44818073242fbf2dba4bae2282a2"
+    },
+    {
+      "path": "hypotheses/h17/contract.json",
+      "sha256": "b7b383fff97f67acf0289913c964af0f69727e0d8fcad7b0db59b69859ade8db"
+    },
+    {
+      "path": "hypotheses/h18/contract.json",
+      "sha256": "c9d078a84b26d0218d399d1120306fda19faf3bd2d908a1ae69f62dcbccb3d2a"
+    },
+    {
+      "path": "hypotheses/h19/contract.json",
+      "sha256": "3a3b66ff0a9b76c4bf367a6e65caf308ed9ea7fc3d6a4d2d056c0b933d41bcb0"
+    },
+    {
+      "path": "hypotheses/h20/contract.json",
+      "sha256": "95fe28602967517b4f5b707efc0b0d3b89e8299200aa67886284f20bcb2d4c9d"
+    },
+    {
+      "path": "hypotheses/h21/contract.json",
+      "sha256": "1ac5008c18d920be3b29c5928bad009b98de191178713f5f78679d22b4329b4b"
+    },
+    {
+      "path": "hypotheses/h22/contract.json",
+      "sha256": "2df3c5538e0760688b958f04e4ee43229a26750a777668f4ffee63f341dcad7a"
+    }
+  ],
+  "warning": "Any material post-reveal change requires a new experiment version and refreeze."
+}

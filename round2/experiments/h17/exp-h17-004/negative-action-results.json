@@ -1,0 +1,2645 @@
+{
+ "created_at": "2026-10-03T20:14:13+00:00",
+ "engine_prereg_sha256": "03d2d56919b2f003766e54c89fdbfb47a7780577534f4d797ab2ecd9b6f3aefe",
+ "environment": {
+  "hypothesis": "6.168.3",
+  "jsonschema": "4.26.0",
+  "machine": "arm64",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "pytest": "9.1.1",
+  "python": "3.14.6"
+ },
+ "evidence_kind": "negative-action-results",
+ "experiment_id": "exp-h17-004",
+ "git_commit": "a31944699e87f50fb6627de6f4dde255cf2efcf4",
+ "harness_dirty": false,
+ "harness_dirty_paths": [],
+ "harness_sha256": {
+  "oracles/h17/__init__.py": "6bb9cb60308dd4b0a963446c7434bd2bb32b042561e2bd27a1db97e0dc0044cb",
+  "oracles/h17/model.py": "223e343b544b942138008ef516325a0631dc2cd315d49592ba9e3c3c32b54f97",
+  "scripts/evaluate_h17.py": "84078f7341b4c35b3b478585b7394a34df36175e2c7f5a8ab38b809d455e150a",
+  "scripts/run_h17.py": "6f617141080e30dca5900c81e1ad9fcbfd1057627136e459253ae93ffa21fec4",
+  "src/eoo_exp/__init__.py": "16754d2e26eb56fb0469b74cbb88351b20265ac3ae07ecc51ada09167199a90a",
+  "src/eoo_exp/outdir.py": "6997fdfe23a5bbd5fb3c80aa024f172940167d24c55770f3b83f163d9c86fd00",
+  "src/eoo_exp/provenance.py": "9076be346293debdd361cae3c24c781d3d463716d6be1c398ee4474b3201bb5e",
+  "src/eoo_exp/scaffold.py": "b7686662f08994431881ee411fb3b1f913ba63b6327cc6dce8e180e45496a765",
+  "src/eoo_exp/util.py": "64765edd82c60fa3e393878199331db360f14bbbe31c72f5bb8d4079ac6acd86",
+  "src/eoo_h17/__init__.py": "5d2b59965660e36a944b09ca43ddc126b543c42d0aa636cfde420d0448f8e4c3",
+  "src/eoo_h17/agents.py": "6febb70cb814663920f4a73b28c93ea251973d0f1874212342441665896f2c87",
+  "src/eoo_h17/audits.py": "12d91c8e199c8da97228520cc76077fadc82fa09fad4a725c02e3f45b3d0d364",
+  "src/eoo_h17/baseline.py": "ba3359b99c7f68a9e852524c4ba1d33ad5cede5cd34f24e23f2ddb5bb5e2b100",
+  "src/eoo_h17/calls.py": "36c360c3c3232efbe476e0293012b65409909f5a7486e50e3d9552f88904b81a",
+  "src/eoo_h17/drivers.py": "99f7064c73525ffaf3da471c9ef36aa028d2bff3f3774d91ed6cf13d82553479",
+  "src/eoo_h17/evaluate.py": "d856cca2a641a48c0bb6ea1cce460af0e4afa369e5322ab11abb587c6aed6ec6",
+  "src/eoo_h17/machine.py": "3c4669e4d1feb5546f1df4a6e7c55a1c60934f3194fa5a350589601c6410df93",
+  "src/eoo_h17/machine_core.py": "97c41ef9daaef0defa76068bd0fd55988f94eeac980cdf15781378c66b24c7dc",
+  "src/eoo_h17/mutants.py": "49accaa960020d6fd6a98d8335d3d14e646bfa4e78dbc93005034d9cbcc9edf4",
+  "src/eoo_h17/run.py": "a5c3bd347add5c356eab3a28893b6c7ff4f18b4263904b1b2f58a027e4b67ef5",
+  "src/eoo_h17/runlib.py": "af790063e25e994b675255209678d3afe58e55a74ef0eea43e549ab86ebf3806",
+  "src/eoo_h17/scenarios.py": "dfa4a78af24c576f3ec84d082803f9351315d23b60255aef25f4448d0ac856e7",
+  "src/eoo_h17/tamper.py": "3ccf2bc4e1323cdce3460bf3b1128223b0a2c90673dc9bcb8df3e6d251b73998"
+ },
+ "hypothesis_id": "H17",
+ "input_corpus_hash": "bcf0a2a92368bb06d511d11334193f6deac6e278f73cfd7fd84cad63b24de44c",
+ "payload": {
+  "agent_attacks": [
+   {
+    "attack": "request_forbidden_kinds",
+    "category": "raw_write",
+    "detail": "9/9 forbidden request kinds refused; accepted=[]",
+    "domain": "manufacturing",
+    "exception": null,
+    "expected_change": false,
+    "refused": false,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   },
+   {
+    "attack": "tool_surface_is_only_function_and_action",
+    "category": "raw_write",
+    "detail": "tool=['call_function', 'propose_action', 'request', 'view']; view=['call', 'cardinality_report', 'follow', 'follow_one', 'get', 'implementers', 'interface_query', 'links', 'list', 'state_hash']; write-like attributes found=[]",
+    "domain": "manufacturing",
+    "exception": null,
+    "expected_change": false,
+    "refused": false,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   },
+   {
+    "attack": "reachability_walk",
+    "category": "raw_write",
+    "detail": "walked 2 non-callable objects from the tool through public attributes; Engine/Store/Minter/grant/adapter objects reached=[]",
+    "domain": "manufacturing",
+    "exception": null,
+    "expected_change": false,
+    "refused": false,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   },
+   {
+    "attack": "setattr_delattr_on_tool_and_view",
+    "category": "raw_write",
+    "detail": "6 attribute set/delete attempts on tool and view; succeeded=0",
+    "domain": "manufacturing",
+    "exception": null,
+    "expected_change": false,
+    "refused": false,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   },
+   {
+    "attack": "forged_or_foreign_write_grants",
+    "category": "raw_write",
+    "detail": "{'construct': 'refused', 'object_new': 'refused', 'not_a_grant': 'refused', 'wrong_execution': 'refused', 'revoked': 'refused'}",
+    "domain": "manufacturing",
+    "exception": null,
+    "expected_change": false,
+    "refused": false,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   },
+   {
+    "attack": "unknown_action_function_smuggled_args",
+    "category": "raw_write",
+    "detail": "{'unknown_action': 'refused', 'unknown_function': 'refused', 'smuggled_args': 'refused'}",
+    "domain": "manufacturing",
+    "exception": null,
+    "expected_change": false,
+    "refused": false,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   },
+   {
+    "attack": "unauthorized_propose_via_tool",
+    "category": "raw_write",
+    "detail": "m_unauth_stranger: DENIED",
+    "domain": "manufacturing",
+    "exception": null,
+    "expected_change": false,
+    "refused": true,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   },
+   {
+    "attack": "malicious_function_implementation",
+    "category": "raw_write",
+    "detail": "malicious available_quantity implementation tried 20 routes; succeeded=[]",
+    "domain": "manufacturing",
+    "exception": null,
+    "expected_change": false,
+    "refused": false,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   },
+   {
+    "attack": "control_state_no_tamper_then_recover",
+    "category": "tamper",
+    "detail": "control (no tamper): recover() after a DENIED request: effects=(0, 0), final=DENIED",
+    "domain": "manufacturing",
+    "exception": null,
+    "expected_change": false,
+    "refused": false,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   },
+   {
+    "attack": "tamper_returned_state_denied_to_approved_then_recover",
+    "category": "tamper",
+    "detail": "",
+    "domain": "manufacturing",
+    "exception": "CapabilityError",
+    "expected_change": false,
+    "refused": true,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   },
+   {
+    "attack": "control_inputs_no_tamper",
+    "category": "tamper",
+    "detail": "control (no tamper): approval of the pending request -> RECONCILED_SUCCESS, effects=1 (a legitimate approval DOES execute; the gated inputs are what executes)",
+    "domain": "manufacturing",
+    "exception": null,
+    "expected_change": true,
+    "refused": false,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": true
+   },
+   {
+    "attack": "tamper_returned_inputs_then_approve",
+    "category": "tamper",
+    "detail": "",
+    "domain": "manufacturing",
+    "exception": "CapabilityError",
+    "expected_change": false,
+    "refused": true,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   },
+   {
+    "attack": "tamper_returned_state_denied_to_pending_then_approve",
+    "category": "tamper",
+    "detail": "",
+    "domain": "manufacturing",
+    "exception": "CapabilityError",
+    "expected_change": false,
+    "refused": true,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   },
+   {
+    "attack": "interpreter_introspection_probe",
+    "category": "disclosed_limit",
+    "detail": "view.state_hash.__closure__ cell types: ['function'] (an attacker with closure introspection reaches the state accessor; not counted)",
+    "domain": "manufacturing",
+    "exception": null,
+    "expected_change": false,
+    "refused": false,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   },
+   {
+    "attack": "request_forbidden_kinds",
+    "category": "raw_write",
+    "detail": "9/9 forbidden request kinds refused; accepted=[]",
+    "domain": "project",
+    "exception": null,
+    "expected_change": false,
+    "refused": false,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   },
+   {
+    "attack": "tool_surface_is_only_function_and_action",
+    "category": "raw_write",
+    "detail": "tool=['call_function', 'propose_action', 'request', 'view']; view=['call', 'cardinality_report', 'follow', 'follow_one', 'get', 'implementers', 'interface_query', 'links', 'list', 'state_hash']; write-like attributes found=[]",
+    "domain": "project",
+    "exception": null,
+    "expected_change": false,
+    "refused": false,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   },
+   {
+    "attack": "reachability_walk",
+    "category": "raw_write",
+    "detail": "walked 2 non-callable objects from the tool through public attributes; Engine/Store/Minter/grant/adapter objects reached=[]",
+    "domain": "project",
+    "exception": null,
+    "expected_change": false,
+    "refused": false,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   },
+   {
+    "attack": "setattr_delattr_on_tool_and_view",
+    "category": "raw_write",
+    "detail": "6 attribute set/delete attempts on tool and view; succeeded=0",
+    "domain": "project",
+    "exception": null,
+    "expected_change": false,
+    "refused": false,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   },
+   {
+    "attack": "forged_or_foreign_write_grants",
+    "category": "raw_write",
+    "detail": "{'construct': 'refused', 'object_new': 'refused', 'not_a_grant': 'refused', 'wrong_execution': 'refused', 'revoked': 'refused'}",
+    "domain": "project",
+    "exception": null,
+    "expected_change": false,
+    "refused": false,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   },
+   {
+    "attack": "unknown_action_function_smuggled_args",
+    "category": "raw_write",
+    "detail": "{'unknown_action': 'refused', 'unknown_function': 'refused', 'smuggled_args': 'refused'}",
+    "domain": "project",
+    "exception": null,
+    "expected_change": false,
+    "refused": false,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   },
+   {
+    "attack": "unauthorized_propose_via_tool",
+    "category": "raw_write",
+    "detail": "p_unauth_viewer: DENIED",
+    "domain": "project",
+    "exception": null,
+    "expected_change": false,
+    "refused": true,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   },
+   {
+    "attack": "malicious_function_implementation",
+    "category": "raw_write",
+    "detail": "malicious evidence_count implementation tried 20 routes; succeeded=[]",
+    "domain": "project",
+    "exception": null,
+    "expected_change": false,
+    "refused": false,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   },
+   {
+    "attack": "control_state_no_tamper_then_recover",
+    "category": "tamper",
+    "detail": "control (no tamper): recover() after a DENIED request: effects=(0, 0), final=DENIED",
+    "domain": "project",
+    "exception": null,
+    "expected_change": false,
+    "refused": false,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   },
+   {
+    "attack": "tamper_returned_state_denied_to_approved_then_recover",
+    "category": "tamper",
+    "detail": "",
+    "domain": "project",
+    "exception": "CapabilityError",
+    "expected_change": false,
+    "refused": true,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   },
+   {
+    "attack": "interpreter_introspection_probe",
+    "category": "disclosed_limit",
+    "detail": "view.state_hash.__closure__ cell types: ['function'] (an attacker with closure introspection reaches the state accessor; not counted)",
+    "domain": "project",
+    "exception": null,
+    "expected_change": false,
+    "refused": false,
+    "unexpected_exception": false,
+    "violation": false,
+    "world_changed": false
+   }
+  ],
+  "baseline_contextual": {
+   "attacks": [
+    {
+     "attack": "unknown_raw_write_operation",
+     "attack_class": "raw_write",
+     "exception": "KeyError",
+     "refused": true,
+     "violation": false,
+     "world_changed": false
+    },
+    {
+     "attack": "unauthorized_effectful_operation",
+     "attack_class": "unauthorized",
+     "exception": "Denied",
+     "refused": true,
+     "violation": false,
+     "world_changed": false
+    },
+    {
+     "attack": "read_labelled_operation_that_writes",
+     "attack_class": "function_writes",
+     "exception": null,
+     "refused": false,
+     "violation": true,
+     "world_changed": true
+    },
+    {
+     "attack": "effect_flag_flipped_by_registrant",
+     "attack_class": "gate_bypass",
+     "exception": null,
+     "refused": false,
+     "violation": true,
+     "world_changed": true
+    }
+   ],
+   "model": "one generic operation type; every operation receives the same context (read + write); an 'effects' flag is metadata",
+   "reading": "The attack classes that depend on metadata honesty succeed against the single-operation model by construction; this shows the attacks are not vacuous, it does not show the Engine is safe against them (see agent_attacks).",
+   "status": "CONTEXTUAL reference implementation written for this experiment, not measured industrial software, not a support condition",
+   "violations": 2
+  },
+  "negative_cases": [
+   {
+    "adapter_mode": "ok",
+    "case": "denied:unauthorized",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "authority",
+    "external_delta": 0,
+    "failed_gates": [
+     "authority"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "std",
+    "scenario": "m_unauth_stranger",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:unauthorized",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "authority",
+    "external_delta": 0,
+    "failed_gates": [
+     "authority"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "std",
+    "scenario": "m_unauth_stranger",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:unauthorized",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "authority",
+    "external_delta": 0,
+    "failed_gates": [
+     "authority"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "std",
+    "scenario": "m_unauth_stranger",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:unauthorized",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "authority",
+    "external_delta": 0,
+    "failed_gates": [
+     "authority"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "std",
+    "scenario": "m_unauth_stranger",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:unauthorized",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "authority",
+    "external_delta": 0,
+    "failed_gates": [
+     "authority"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "std",
+    "scenario": "m_unauth_orphan",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:unauthorized",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "authority",
+    "external_delta": 0,
+    "failed_gates": [
+     "authority"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "std",
+    "scenario": "m_unauth_orphan",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:unauthorized",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "authority",
+    "external_delta": 0,
+    "failed_gates": [
+     "authority"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "std",
+    "scenario": "m_unauth_orphan",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:unauthorized",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "authority",
+    "external_delta": 0,
+    "failed_gates": [
+     "authority"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "std",
+    "scenario": "m_unauth_orphan",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:unauthorized",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "identity",
+    "external_delta": 0,
+    "failed_gates": [
+     "identity"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "std",
+    "scenario": "m_unauth_ghost",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:unauthorized",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "identity",
+    "external_delta": 0,
+    "failed_gates": [
+     "identity"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "std",
+    "scenario": "m_unauth_ghost",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:unauthorized",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "identity",
+    "external_delta": 0,
+    "failed_gates": [
+     "identity"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "std",
+    "scenario": "m_unauth_ghost",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:unauthorized",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "identity",
+    "external_delta": 0,
+    "failed_gates": [
+     "identity"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "std",
+    "scenario": "m_unauth_ghost",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "inputs",
+    "external_delta": 0,
+    "failed_gates": [
+     "inputs"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_unknown_part",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "inputs",
+    "external_delta": 0,
+    "failed_gates": [
+     "inputs"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_unknown_part",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "inputs",
+    "external_delta": 0,
+    "failed_gates": [
+     "inputs"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_unknown_part",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "inputs",
+    "external_delta": 0,
+    "failed_gates": [
+     "inputs"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_unknown_part",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "preconditions",
+    "external_delta": 0,
+    "failed_gates": [
+     "preconditions"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_qty_zero",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "preconditions",
+    "external_delta": 0,
+    "failed_gates": [
+     "preconditions"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_qty_zero",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "preconditions",
+    "external_delta": 0,
+    "failed_gates": [
+     "preconditions"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_qty_zero",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "preconditions",
+    "external_delta": 0,
+    "failed_gates": [
+     "preconditions"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_qty_zero",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "preconditions",
+    "external_delta": 0,
+    "failed_gates": [
+     "preconditions"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_same_wh",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "preconditions",
+    "external_delta": 0,
+    "failed_gates": [
+     "preconditions"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_same_wh",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "preconditions",
+    "external_delta": 0,
+    "failed_gates": [
+     "preconditions"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_same_wh",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "preconditions",
+    "external_delta": 0,
+    "failed_gates": [
+     "preconditions"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_same_wh",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "preconditions",
+    "external_delta": 0,
+    "failed_gates": [
+     "preconditions"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_over_available",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "preconditions",
+    "external_delta": 0,
+    "failed_gates": [
+     "preconditions"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_over_available",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "preconditions",
+    "external_delta": 0,
+    "failed_gates": [
+     "preconditions"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_over_available",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "preconditions",
+    "external_delta": 0,
+    "failed_gates": [
+     "preconditions"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_over_available",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "policy",
+    "external_delta": 0,
+    "failed_gates": [
+     "policy"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_pol_quarantine",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "policy",
+    "external_delta": 0,
+    "failed_gates": [
+     "policy"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_pol_quarantine",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "policy",
+    "external_delta": 0,
+    "failed_gates": [
+     "policy"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_pol_quarantine",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "policy",
+    "external_delta": 0,
+    "failed_gates": [
+     "policy"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_pol_quarantine",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "policy",
+    "external_delta": 0,
+    "failed_gates": [
+     "policy"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_pol_safety_stock",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "policy",
+    "external_delta": 0,
+    "failed_gates": [
+     "policy"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_pol_safety_stock",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "policy",
+    "external_delta": 0,
+    "failed_gates": [
+     "policy"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_pol_safety_stock",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "policy",
+    "external_delta": 0,
+    "failed_gates": [
+     "policy"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_pol_safety_stock",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "policy",
+    "external_delta": 0,
+    "failed_gates": [
+     "policy"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_pol_highprio_junior",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "policy",
+    "external_delta": 0,
+    "failed_gates": [
+     "policy"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_pol_highprio_junior",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "policy",
+    "external_delta": 0,
+    "failed_gates": [
+     "policy"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_pol_highprio_junior",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "policy",
+    "external_delta": 0,
+    "failed_gates": [
+     "policy"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_pol_highprio_junior",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "policy",
+    "external_delta": 0,
+    "failed_gates": [
+     "policy"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_pol_stale_evidence",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "policy",
+    "external_delta": 0,
+    "failed_gates": [
+     "policy"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_pol_stale_evidence",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "policy",
+    "external_delta": 0,
+    "failed_gates": [
+     "policy"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_pol_stale_evidence",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "policy",
+    "external_delta": 0,
+    "failed_gates": [
+     "policy"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_pol_stale_evidence",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "request",
+    "external_delta": 0,
+    "failed_gates": [
+     "request"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_no_key",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "request",
+    "external_delta": 0,
+    "failed_gates": [
+     "request"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_no_key",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "request",
+    "external_delta": 0,
+    "failed_gates": [
+     "request"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_no_key",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "request",
+    "external_delta": 0,
+    "failed_gates": [
+     "request"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_no_key",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "stale",
+    "external_delta": 0,
+    "failed_gates": [
+     "stale"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_stale_version",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "stale",
+    "external_delta": 0,
+    "failed_gates": [
+     "stale"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_stale_version",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "stale",
+    "external_delta": 0,
+    "failed_gates": [
+     "stale"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_stale_version",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "stale",
+    "external_delta": 0,
+    "failed_gates": [
+     "stale"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "m_inv_stale_version",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:key_reuse_different_intent",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "idempotency",
+    "external_delta": 0,
+    "failed_gates": [
+     "idempotency"
+    ],
+    "final_state": "DENIED",
+    "kind": "ok",
+    "profile": "std",
+    "scenario": "m_ok_planner",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "approver": "supervisor-1",
+    "case": "unapproved:approve_bad",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "approval",
+    "external_delta": 0,
+    "failed_gates": [],
+    "final_state": "PENDING_APPROVAL",
+    "kind": "approval",
+    "outcome": "CapabilityError",
+    "profile": "std",
+    "scenario": "m_approval",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "approver": "junior-1",
+    "case": "unapproved:approve_bad",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "approval",
+    "external_delta": 0,
+    "failed_gates": [],
+    "final_state": "PENDING_APPROVAL",
+    "kind": "approval",
+    "outcome": "CapabilityError",
+    "profile": "std",
+    "scenario": "m_approval",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "approver": "ghost",
+    "case": "unapproved:approve_bad",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "approval",
+    "external_delta": 0,
+    "failed_gates": [],
+    "final_state": "PENDING_APPROVAL",
+    "kind": "approval",
+    "outcome": "CapabilityError",
+    "profile": "std",
+    "scenario": "m_approval",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "approver": "senior-1",
+    "case": "unapproved:reject_ok",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": "approval",
+    "external_delta": 0,
+    "failed_gates": [
+     "approval"
+    ],
+    "final_state": "DENIED",
+    "kind": "approval",
+    "outcome": "returned",
+    "profile": "std",
+    "scenario": "m_approval",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "unapproved:execute_while_pending",
+    "domain": "manufacturing",
+    "effect_log_delta": 0,
+    "expected_gate": null,
+    "external_delta": 0,
+    "failed_gates": [],
+    "final_state": "PENDING_APPROVAL",
+    "kind": "approval",
+    "outcome": "InvalidRequest",
+    "profile": "std",
+    "scenario": "m_approval",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "authority",
+    "external_delta": 0,
+    "failed_gates": [
+     "authority"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "std",
+    "scenario": "p_unauth_viewer",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "authority",
+    "external_delta": 0,
+    "failed_gates": [
+     "authority"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "std",
+    "scenario": "p_unauth_viewer",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "authority",
+    "external_delta": 0,
+    "failed_gates": [
+     "authority"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "std",
+    "scenario": "p_unauth_viewer",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "authority",
+    "external_delta": 0,
+    "failed_gates": [
+     "authority"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "std",
+    "scenario": "p_unauth_viewer",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "identity",
+    "external_delta": 0,
+    "failed_gates": [
+     "identity"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "std",
+    "scenario": "p_unauth_ghost",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "identity",
+    "external_delta": 0,
+    "failed_gates": [
+     "identity"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "std",
+    "scenario": "p_unauth_ghost",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "identity",
+    "external_delta": 0,
+    "failed_gates": [
+     "identity"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "std",
+    "scenario": "p_unauth_ghost",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "identity",
+    "external_delta": 0,
+    "failed_gates": [
+     "identity"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "std",
+    "scenario": "p_unauth_ghost",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "inputs",
+    "external_delta": 0,
+    "failed_gates": [
+     "inputs"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "p_inv_unknown_hyp",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "inputs",
+    "external_delta": 0,
+    "failed_gates": [
+     "inputs"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "p_inv_unknown_hyp",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "inputs",
+    "external_delta": 0,
+    "failed_gates": [
+     "inputs"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "p_inv_unknown_hyp",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "inputs",
+    "external_delta": 0,
+    "failed_gates": [
+     "inputs"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "p_inv_unknown_hyp",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "preconditions",
+    "external_delta": 0,
+    "failed_gates": [
+     "preconditions"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "p_inv_not_preregistered",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "preconditions",
+    "external_delta": 0,
+    "failed_gates": [
+     "preconditions"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "p_inv_not_preregistered",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "preconditions",
+    "external_delta": 0,
+    "failed_gates": [
+     "preconditions"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "p_inv_not_preregistered",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "preconditions",
+    "external_delta": 0,
+    "failed_gates": [
+     "preconditions"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "p_inv_not_preregistered",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "preconditions",
+    "external_delta": 0,
+    "failed_gates": [
+     "preconditions"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "p_inv_not_running",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "preconditions",
+    "external_delta": 0,
+    "failed_gates": [
+     "preconditions"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "p_inv_not_running",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "preconditions",
+    "external_delta": 0,
+    "failed_gates": [
+     "preconditions"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "p_inv_not_running",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "preconditions",
+    "external_delta": 0,
+    "failed_gates": [
+     "preconditions"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "p_inv_not_running",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "request",
+    "external_delta": 0,
+    "failed_gates": [
+     "request"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "p_inv_no_key",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "request",
+    "external_delta": 0,
+    "failed_gates": [
+     "request"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "p_inv_no_key",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "request",
+    "external_delta": 0,
+    "failed_gates": [
+     "request"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "p_inv_no_key",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "request",
+    "external_delta": 0,
+    "failed_gates": [
+     "request"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "p_inv_no_key",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "stale",
+    "external_delta": 0,
+    "failed_gates": [
+     "stale"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "p_inv_stale_version",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "stale",
+    "external_delta": 0,
+    "failed_gates": [
+     "stale"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "p_inv_stale_version",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "stale",
+    "external_delta": 0,
+    "failed_gates": [
+     "stale"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "p_inv_stale_version",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "stale",
+    "external_delta": 0,
+    "failed_gates": [
+     "stale"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "std",
+    "scenario": "p_inv_stale_version",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:key_reuse_different_intent",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "idempotency",
+    "external_delta": 0,
+    "failed_gates": [
+     "idempotency"
+    ],
+    "final_state": "DENIED",
+    "kind": "ok",
+    "profile": "std",
+    "scenario": "p_ok_create",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "authority",
+    "external_delta": 0,
+    "failed_gates": [
+     "authority"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "nopre",
+    "scenario": "p_unauth_viewer",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "authority",
+    "external_delta": 0,
+    "failed_gates": [
+     "authority"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "nopre",
+    "scenario": "p_unauth_viewer",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "authority",
+    "external_delta": 0,
+    "failed_gates": [
+     "authority"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "nopre",
+    "scenario": "p_unauth_viewer",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "authority",
+    "external_delta": 0,
+    "failed_gates": [
+     "authority"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "nopre",
+    "scenario": "p_unauth_viewer",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "identity",
+    "external_delta": 0,
+    "failed_gates": [
+     "identity"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "nopre",
+    "scenario": "p_unauth_ghost",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "identity",
+    "external_delta": 0,
+    "failed_gates": [
+     "identity"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "nopre",
+    "scenario": "p_unauth_ghost",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "identity",
+    "external_delta": 0,
+    "failed_gates": [
+     "identity"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "nopre",
+    "scenario": "p_unauth_ghost",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "identity",
+    "external_delta": 0,
+    "failed_gates": [
+     "identity"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "nopre",
+    "scenario": "p_unauth_ghost",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "policy",
+    "external_delta": 0,
+    "failed_gates": [
+     "policy"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "nopre",
+    "scenario": "p_pol_no_freeze_hash",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "policy",
+    "external_delta": 0,
+    "failed_gates": [
+     "policy"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "nopre",
+    "scenario": "p_pol_no_freeze_hash",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "policy",
+    "external_delta": 0,
+    "failed_gates": [
+     "policy"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "nopre",
+    "scenario": "p_pol_no_freeze_hash",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "policy",
+    "external_delta": 0,
+    "failed_gates": [
+     "policy"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "nopre",
+    "scenario": "p_pol_no_freeze_hash",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "request",
+    "external_delta": 0,
+    "failed_gates": [
+     "request"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "nopre",
+    "scenario": "p_inv_no_key",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "request",
+    "external_delta": 0,
+    "failed_gates": [
+     "request"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "nopre",
+    "scenario": "p_inv_no_key",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "request",
+    "external_delta": 0,
+    "failed_gates": [
+     "request"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "nopre",
+    "scenario": "p_inv_no_key",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "request",
+    "external_delta": 0,
+    "failed_gates": [
+     "request"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "nopre",
+    "scenario": "p_inv_no_key",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:key_reuse_different_intent",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "idempotency",
+    "external_delta": 0,
+    "failed_gates": [
+     "idempotency"
+    ],
+    "final_state": "DENIED",
+    "kind": "ok",
+    "profile": "nopre",
+    "scenario": "p_ok_create",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "authority",
+    "external_delta": 0,
+    "failed_gates": [
+     "authority"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "running",
+    "scenario": "p_unauth_viewer",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "authority",
+    "external_delta": 0,
+    "failed_gates": [
+     "authority"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "running",
+    "scenario": "p_unauth_viewer",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "authority",
+    "external_delta": 0,
+    "failed_gates": [
+     "authority"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "running",
+    "scenario": "p_unauth_viewer",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "authority",
+    "external_delta": 0,
+    "failed_gates": [
+     "authority"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "running",
+    "scenario": "p_unauth_viewer",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "identity",
+    "external_delta": 0,
+    "failed_gates": [
+     "identity"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "running",
+    "scenario": "p_unauth_ghost",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "identity",
+    "external_delta": 0,
+    "failed_gates": [
+     "identity"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "running",
+    "scenario": "p_unauth_ghost",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "identity",
+    "external_delta": 0,
+    "failed_gates": [
+     "identity"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "running",
+    "scenario": "p_unauth_ghost",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:unauthorized",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "identity",
+    "external_delta": 0,
+    "failed_gates": [
+     "identity"
+    ],
+    "final_state": "DENIED",
+    "kind": "unauthorized",
+    "profile": "running",
+    "scenario": "p_unauth_ghost",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "inputs",
+    "external_delta": 0,
+    "failed_gates": [
+     "inputs"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "running",
+    "scenario": "p_inv_unknown_hyp",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "inputs",
+    "external_delta": 0,
+    "failed_gates": [
+     "inputs"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "running",
+    "scenario": "p_inv_unknown_hyp",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "inputs",
+    "external_delta": 0,
+    "failed_gates": [
+     "inputs"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "running",
+    "scenario": "p_inv_unknown_hyp",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "inputs",
+    "external_delta": 0,
+    "failed_gates": [
+     "inputs"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "running",
+    "scenario": "p_inv_unknown_hyp",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "request",
+    "external_delta": 0,
+    "failed_gates": [
+     "request"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "running",
+    "scenario": "p_inv_no_key",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "request",
+    "external_delta": 0,
+    "failed_gates": [
+     "request"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "running",
+    "scenario": "p_inv_no_key",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "request",
+    "external_delta": 0,
+    "failed_gates": [
+     "request"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "running",
+    "scenario": "p_inv_no_key",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "request",
+    "external_delta": 0,
+    "failed_gates": [
+     "request"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "running",
+    "scenario": "p_inv_no_key",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "stale",
+    "external_delta": 0,
+    "failed_gates": [
+     "stale"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "running",
+    "scenario": "p_inv_stale_version",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "stale",
+    "external_delta": 0,
+    "failed_gates": [
+     "stale"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "running",
+    "scenario": "p_inv_stale_version",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "stale",
+    "external_delta": 0,
+    "failed_gates": [
+     "stale"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "running",
+    "scenario": "p_inv_stale_version",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "timeout",
+    "case": "denied:invalid",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "stale",
+    "external_delta": 0,
+    "failed_gates": [
+     "stale"
+    ],
+    "final_state": "DENIED",
+    "kind": "invalid",
+    "profile": "running",
+    "scenario": "p_inv_stale_version",
+    "store_equal": true,
+    "via": "tool",
+    "zero_effects": true
+   },
+   {
+    "adapter_mode": "ok",
+    "case": "denied:key_reuse_different_intent",
+    "domain": "project",
+    "effect_log_delta": 0,
+    "expected_gate": "idempotency",
+    "external_delta": 0,
+    "failed_gates": [
+     "idempotency"
+    ],
+    "final_state": "DENIED",
+    "kind": "ok",
+    "profile": "running",
+    "scenario": "p_ok_create",
+    "store_equal": true,
+    "via": "engine",
+    "zero_effects": true
+   }
+  ]
+ },
+ "payload_hash": "48f57503bf91ac1dfe04a011f68ce04f8279bbbab9aa18d888a2db0217a80997",
+ "payload_path": null,
+ "protocol_freeze_hash": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2",
+ "seed": 17
+}

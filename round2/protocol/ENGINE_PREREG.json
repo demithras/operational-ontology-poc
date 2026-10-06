@@ -1,0 +1,52 @@
+{
+  "purpose": "Pre-reveal registration of the experiment details H16-H22 leave open. Written 2026-10-02 by the orchestrator BEFORE any Engine code or H16-H22 evidence exists. Refines, never changes, FREEZE.json thresholds.",
+  "protocol_freeze_sha256": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2",
+  "engine_scope": {
+    "decision": "A new in-process generic Engine (round2/src/eoo_engine) executes both domains from their Gate-0 IR files (domains/*/ir.json, unchanged). The Docker-based v1 POC stack is NOT re-platformed; manufacturing external effects go through an in-process fake WMS adapter. Every verdict must disclose this.",
+    "action_must_enforce": ["identity", "authority", "policy", "preconditions", "governed write/effect", "idempotency where idempotency=required", "observed outcome + reconciliation", "provenance + version"]
+  },
+  "kernel_snapshot": {
+    "kernel_resource_kinds": ["object_types", "link_types", "interfaces", "functions", "actions", "policies", "authority_rules", "observation_types", "constraints"],
+    "source": "ontology/ir.schema.json (frozen); package-level fields package_id/domain_id/version/imports/metadata",
+    "note": "H16 'kernel-before' = this list + the Engine dispatch table as first committed; Project Ontology IR was authored after the freeze (commit 9789f48 after 6292715) against the frozen schema."
+  },
+  "logic_bindings": {
+    "rule": "Functions, policy expressions, preconditions, outcome predicates and constraint expressions are domain LOGIC registered by their IR ref (implementation_ref / expression_ref / predicate text) in round2/domains/<d>/logic/. The Engine owns WHEN and HOW they are evaluated and how their results combine; logic code receives a read-only view and returns values only."
+  },
+  "H17": {
+    "gate_tokens": ["identity", "authority", "policy", "preconditions"],
+    "required_sequence_classes": ["read", "function_call", "propose", "approve", "deny", "retry", "crash_restart", "execute", "observe_outcome", "unauthorized", "stale_or_invalid"],
+    "oracle_independence": "The reference transition model lives in round2/oracles/h17/ and must not import eoo_engine or domains/*/logic."
+  },
+  "H18": {
+    "task_classes": [
+      {"id": "TC1_lifecycle_enforcement", "description": "Enforce the six docs/04 hard rules (preregistration completeness, post-freeze threshold immutability, RUNNING requires freeze hash, evidence binds version+commit+environment, verdict machine-derived, orphan flagged not deleted)."},
+      {"id": "TC2_forensic_queries", "description": "Answer three fixed queries over real H15 artifacts: (q1) which evidence files and commit support H15's verdict; (q2) which components have no link to an active hypothesis; (q3) which hypotheses are blocked by a non-SUPPORTED upstream dependency."},
+      {"id": "TC3_model_change", "description": "Add object type Replication (props: id, experiment_ref, outcome) + link REPLICATES Replication->Experiment + governed action register_replication (git_change) + function count_replications, with lifecycle rule: a replication may be registered only for an EVALUATED experiment."}
+    ],
+    "bespoke_surface_metric": "Per task class and variant: handwritten Python LOC (non-blank, non-comment) + handwritten declarative config lines (IR JSON / JSON Schema / YAML / CI config), each reported separately and as a total. Generated files are excluded only if produced by a tool that both variants may use. EOO's shared Engine/Toolchain code is NOT counted per task (it is the recurring tax, reported separately as recurring_complexity_loc); the baseline's shared scripts likewise. Support needs total <= 0.75 x baseline total in >=1 class with no correctness loss.",
+    "baseline": "Git + JSON files + JSON Schema + Python CI scripts in round2/baselines/h18_fileonly/, implementing the SAME invariants, verified against the SAME independent lifecycle oracle (src/hdd/project_lifecycle_reference.py) and the same task queries.",
+    "git_rule": "Experiments mutate only temporary repositories (git init under a temp dir) seeded from the real round2 artifacts read via git show; the real repository is never written by Engine actions."
+  },
+  "H19": {
+    "concurrency_classes": ["compatible_concurrent", "conflicting_concurrent", "stale_base", "rebuild_same_commit", "historical_binding_after_change"],
+    "oracle": "round2/oracles/h19/: pure immutable commit-DAG + deterministic projection, no Engine imports, never reads the Engine's store."
+  },
+  "H20": {
+    "engine_core_paths": ["round2/src/eoo_engine/"],
+    "adapter_allowed": ["translate an approved effect into an external/system call", "return the raw external response", "emit observations from the external system"],
+    "adapter_forbidden": ["authority checks", "policy evaluation", "precondition evaluation", "idempotency decisions", "provenance writing", "action lifecycle state changes"],
+    "forbidden_core_tokens": "any domain id, package id, object/link/action/function/policy id from domains/*/ir.json appearing in Engine core code or as a branch condition",
+    "synthetic_resource": "Hypothesis-generated object type + action + function using existing kinds, executed with zero Engine edits."
+  },
+  "H21": {
+    "ordinary_domain2_resources_to_add": ["object type Replication", "link REPLICATES", "action register_replication", "function count_replications"],
+    "interface_case": "VersionedResearchObject (6 implementers in project IR) and Statused (4 in manufacturing): one generic interface tool must serve all implementers with no per-type code.",
+    "authority_oracle": "round2/oracles/h21/: independent capability reference model; the Toolchain must not import it.",
+    "baseline": "Generic OpenAPI generation over the same IR treated as a conventional schema, with hand-written authorization glue; contextual, reported, not a support condition."
+  },
+  "H22": {
+    "real_domains_now": ["manufacturing (D1)", "operational-ontology-poc project (D2)"],
+    "decision": "Only 2 real domains exist. Per the preregistered gate (min_real_domains_for_verdict=3) the evaluator must return INCONCLUSIVE; no synthetic third domain may be counted as real."
+  }
+}

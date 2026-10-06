@@ -1,0 +1,26 @@
+{
+  "id": "h15-ambiguity-classes",
+  "version": "1",
+  "declared": "H15 Phase 1 (Gate 0), before any candidate-language encoding exists",
+  "purpose": "Classes of under-specified / ambiguous inputs that every candidate surface must reject or leave unresolved. Each surface instantiates every applicable class with >=2 concrete cases; a case 'fails closed' when compilation raises (expected 'error') or reports the address as unresolved (expected 'unresolved') instead of inventing semantics.",
+  "classes": [
+    {"id": "missing_type", "description": "A property, parameter or function output without a type, or with a type that is neither a primitive nor a ref/list/optional constructor.", "expected": "error"},
+    {"id": "missing_cardinality", "description": "A link type without a from/to cardinality, or a cardinality missing its min or max (including an empty/null bound).", "expected": "error"},
+    {"id": "missing_resource_kind", "description": "A resource whose kind is not stated or is mixed up, in particular a Function/Action distinction left unstated (no kind marker, or fields of both kinds, or the fields that decide the kind removed).", "expected": "error"},
+    {"id": "missing_authority_effect", "description": "An authority rule with no allow/deny effect.", "expected": "error"},
+    {"id": "missing_policy_decision", "description": "A policy with no decision (allow/deny/require_approval/classify).", "expected": "error"},
+    {"id": "missing_version", "description": "A package, action or policy with no version.", "expected": "error"},
+    {"id": "missing_required_flag", "description": "A property with no required flag (or a null one). Defaults exist only for flags the IR schema defaults (immutable, directed, delegation_allowed, parameter required).", "expected": "error"},
+    {"id": "ambiguous_binding", "description": "A reference address that matches more than one resource (same id in two kinds where either is legal, or a duplicated id).", "expected": "error"},
+    {"id": "unresolved_binding", "description": "A reference address that matches no resource in the package or its imports.", "expected": "unresolved"},
+    {"id": "dangling_atom", "description": "A value (record atom / key / list item) that fills no slot the surface declares.", "expected": "error"},
+    {"id": "surface_parse_ambiguous", "description": "Text whose structure admits more than one reading: duplicate keys, aliases/anchors/tags, several documents, scalars that could be string or number or bool, indentation the grammar cannot place.", "expected": "error"},
+    {"id": "unknown_token_or_key", "description": "A token or key outside the surface vocabulary: unknown enum member, unknown primitive, unknown key, unknown type-constructor key.", "expected": "error"}
+  ],
+  "fail_closed_property": "for any valid encoding E and any deletion mutant M of E: compile(M) raises/returns unresolved, OR render(compile(M)) == canonical(M)  (the compiler may accept M only if M fully determines what it compiles to)",
+  "fail_closed_property_notes": "canonical(M) is the surface's own canonical text of the IR that M literally states (absent fields stay absent, nothing defaulted into the IR). A compiler that accepts M and returns an IR containing anything M does not state has invented semantics and is a falsifier hit for H15.",
+  "applicability": {
+    "direct_dsl_baseline": "all 12 classes (instantiated in tests/h15/dsl_ambiguity_cases.jsonl)",
+    "candidate_surfaces": "to be instantiated by the later candidate-language phase against the same class list; a class with no analogue on that surface must be listed as such with a reason, not dropped"
+  }
+}

@@ -1,0 +1,6 @@
+{
+ "type": "object",
+ "required": ["id", "experiment_ref", "outcome"],
+ "properties": {"id": {"type": "string"}, "experiment_ref": {"type": "string"}, "outcome": {"type": "string"}},
+ "additionalProperties": false
+}

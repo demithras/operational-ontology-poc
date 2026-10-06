@@ -1,0 +1,432 @@
+{
+ "candidate": {
+  "engine_tag": "r2-engine-v1.1",
+  "engine_tag_commit": "6005ff1d5c73ee564d1e789284fc465692ca4222",
+  "engine_version": "1.1",
+  "head": "675da43538c766cf580c53cc2672a4afb4b7f7f7",
+  "includes": [
+   "src/eoo_engine",
+   "src/eoo_engine_git (Git-backed store, Engine-participating by import closure)",
+   "src/eoo_ir (loaded by the Engine)",
+   "domains/manufacturing",
+   "domains/project (ir.v2.json, the default contract)"
+  ]
+ },
+ "common": {
+  "protocol_valid": true,
+  "reject_hit": false,
+  "required_evidence_complete": true,
+  "sample_sufficient": true,
+  "support_hit": true
+ },
+ "evaluator_sha256": "ff6952afa682a8d9d19ad3e9842a5dd13589da773d57f59a1ba104e392511a2f",
+ "evidence_payload_hashes": {
+  "adapter-responsibility-audit.json": "147aed7e94558abba70b7320557a935588087f741f5e63974e507b627f2b2acd",
+  "dispatch-traces.json": "dd83e1ead70ca2d00de5bd71a64d9751c00513923487a576e70af8ac07f637f9",
+  "engine-static-audit.json": "585f7d912c5d01c5f59c4d5087cd3323b7309e16930f8684a8994b570b730759",
+  "mutation-results.json": "4552e065ef9064a63eefa2a3df9e2b5bd2d34e2e1a4aa47a4daeaddfc4961b66",
+  "synthetic-resource-results.json": "cee6f6e8370af8a17a4ed1049a8cc813f879aa32bb88ff8faedbeff5b6f77f4d"
+ },
+ "experiment_id": "exp-h20-dev",
+ "hypothesis_id": "H20",
+ "interpretation_notes": [
+  "DEVELOPMENT RUN unless the experiment id is exp-h20-001 produced by the orchestrator in an isolated worktree.",
+  "S2 reads '100% registered domain operations' as: every registered ACTION of both domains was executed through the generic lifecycle with a conformant history (real domain logic in the suites and the H17 machine; generated bindings in the generic sweep), every execution of every workload conforms to the frozen state machine, and every dispatched (kind, op) belongs to the frozen kind-keyed set. Registered Functions / policies / reads are reported as dispatched-or-not (numbers.not_dispatched_registered), not required.",
+  "S3 includes one declared exception (store.py GitStore._msg, commit-message trailers); numbers.adapter_strict_count_without_exceptions is the count when it is not accepted.",
+  "The alias-invariance probe (neutral vs real domain identifiers for the same synthetic definition) is the dynamic twin of the static token scan; a domain-name-keyed behaviour that avoids every literal would still show up there.",
+  "Baseline is CONTEXTUAL only (numbers.baseline_contextual): it supports no clause."
+ ],
+ "numbers": {
+  "action_coverage": {
+   "manufacturing": 1.0,
+   "project": 1.0
+  },
+  "actions_unexecuted": {
+   "manufacturing": [],
+   "project": []
+  },
+  "adapter_calls": 865,
+  "adapter_declared_exception_hits": 1,
+  "adapter_disclosed": 12,
+  "adapter_files": 10,
+  "adapter_static_violations": 0,
+  "adapter_strict_count_without_exceptions": 1,
+  "adapter_taint_known_negative": true,
+  "adapter_taint_violations": 0,
+  "alias_definitions": 400,
+  "alias_disagreements": 0,
+  "baseline_contextual": {
+   "manufacturing": {
+    "bound_callables_the_generic_engine_needs": 46,
+    "domain_adapters": {
+     "files": 3,
+     "loc": 85
+    },
+    "domain_logic": {
+     "files": 7,
+     "loc": 351
+    },
+    "plugin_handlers_the_rival_needs": 44,
+    "registered_by_kind": {
+     "actions": 3,
+     "authority_rules": 7,
+     "constraints": 19,
+     "functions": 6,
+     "interfaces": 6,
+     "link_types": 28,
+     "object_types": 26,
+     "observation_types": 7,
+     "policies": 9
+    },
+    "rival_lifecycle_copies_loc_if_each_action_owns_its_gates": 1893
+   },
+   "project": {
+    "bound_callables_the_generic_engine_needs": 76,
+    "domain_adapters": {
+     "files": 2,
+     "loc": 46
+    },
+    "domain_logic": {
+     "files": 11,
+     "loc": 550
+    },
+    "plugin_handlers_the_rival_needs": 59,
+    "registered_by_kind": {
+     "actions": 10,
+     "authority_rules": 13,
+     "constraints": 18,
+     "functions": 6,
+     "interfaces": 2,
+     "link_types": 15,
+     "object_types": 15,
+     "observation_types": 2,
+     "policies": 12
+    },
+    "rival_lifecycle_copies_loc_if_each_action_owns_its_gates": 6310
+   }
+  },
+  "closure_domain_files": [],
+  "closure_dynamic_import_sites": {},
+  "completed_actions": {
+   "manufacturing": 81,
+   "project": 231
+  },
+  "cross_domain": {
+   "handler_classes": {
+    "actions": [
+     "ActionHandler"
+    ],
+    "authority_rules": [
+     "AuthorityRuleHandler"
+    ],
+    "constraints": [
+     "ConstraintHandler"
+    ],
+    "functions": [
+     "FunctionHandler"
+    ],
+    "interfaces": [
+     "InterfaceHandler"
+    ],
+    "link_types": [
+     "LinkTypeHandler"
+    ],
+    "object_types": [
+     "ObjectTypeHandler"
+    ],
+    "observation_types": [
+     "ObservationTypeHandler"
+    ],
+    "policies": [
+     "PolicyHandler"
+    ]
+   },
+   "handler_object_per_kind_is_single": true,
+   "other_packages_traced": [],
+   "provenance_key_sets_equal": true,
+   "state_sets_equal_or_subset_of_frozen": true
+  },
+  "dispatch_outside_generic_set": {
+   "manufacturing": [],
+   "project": []
+  },
+  "distinct_histories": {
+   "manufacturing": 14,
+   "project": 9
+  },
+  "engine_files_clean": true,
+  "engine_owns_idempotency": true,
+  "executions": {
+   "manufacturing": 559,
+   "project": 537
+  },
+  "forbidden_core_branches": 0,
+  "forbidden_core_literals": 0,
+  "lifecycle_conformity": 1.0,
+  "minimum_runs": 3000,
+  "mutation_classes": [
+   "domain_branch_in_engine",
+   "governance_in_adapter"
+  ],
+  "mutation_controls_clean": true,
+  "mutation_detected_by": {
+   "A1_policy_in_wms_adapter": [
+    "adapter_static_audit",
+    "ok_mode_adapter_probe"
+   ],
+   "A1b_unnamed_policy_in_wms_adapter": [
+    "ok_mode_adapter_probe"
+   ],
+   "A2_authority_in_git_adapter": [
+    "adapter_static_audit",
+    "ok_mode_adapter_probe"
+   ],
+   "A3_precondition_in_engine_git_adapter": [
+    "adapter_static_audit"
+   ],
+   "E1_package_id_literal_branch": [
+    "static_token_or_identity_scan",
+    "alias_invariance_probe"
+   ],
+   "E2_action_id_branch": [
+    "static_token_or_identity_scan",
+    "alias_invariance_probe"
+   ],
+   "E3_identity_prefix_branch": [
+    "static_token_or_identity_scan",
+    "alias_invariance_probe"
+   ],
+   "E4_object_type_branch": [
+    "static_token_or_identity_scan",
+    "alias_invariance_probe"
+   ]
+  },
+  "mutation_kill_rate": 1.0,
+  "mutation_killed": 8,
+  "mutation_static_blind_spots": [
+   "A1b_unnamed_policy_in_wms_adapter"
+  ],
+  "mutation_survivors": [],
+  "mutation_total": 8,
+  "nonconforming_executions": 0,
+  "nonconforming_histories": {
+   "manufacturing": [],
+   "project": []
+  },
+  "not_dispatched_registered": {
+   "manufacturing": {
+    "authority_rules": 4,
+    "link_types": 6,
+    "observation_types": 4
+   },
+   "project": {
+    "authority_rules": 3,
+    "link_types": 2,
+    "observation_types": 1
+   }
+  },
+  "ok_mode_refusals": [],
+  "oracle_forbidden_imports": [],
+  "oracle_sha_matches": true,
+  "participants_binding_side": 25,
+  "participants_harness_side": 7,
+  "participants_scanned": 24,
+  "participants_unscanned": [],
+  "paths": {
+   "manufacturing": {
+    "function_dispatches": 85,
+    "governed_action_executions": 559,
+    "policy_evaluations": 852,
+    "provenance_records": 559,
+    "provenance_required_fields_present": 559,
+    "read_dispatches": 316,
+    "security_authority_decisions": 440,
+    "security_authority_denials": 85,
+    "security_executions_with_authority_gate": 410
+   },
+   "project": {
+    "function_dispatches": 290,
+    "governed_action_executions": 537,
+    "policy_evaluations": 959,
+    "provenance_records": 537,
+    "provenance_required_fields_present": 537,
+    "read_dispatches": 983,
+    "security_authority_decisions": 402,
+    "security_authority_denials": 8,
+    "security_executions_with_authority_gate": 410
+   }
+  },
+  "provenance_complete": true,
+  "scanned_equals_closure": true,
+  "static_files_scanned": 33,
+  "static_identity_branch_hits": 0,
+  "static_token_branch_hits": 0,
+  "static_token_literal_hits": 0,
+  "static_tokens_checked": 207,
+  "string_constants_scanned": 1833,
+  "suite_failures": false,
+  "suites": {
+   "generic_sweep": {
+    "manufacturing": {
+     "actions_proposed": [
+      "expedite_purchase_order",
+      "reschedule_work_order",
+      "transfer_inventory"
+     ],
+     "all_in_known_states": true,
+     "proposals": 36
+    },
+    "project": {
+     "actions_proposed": [
+      "attach_evidence",
+      "create_hypothesis",
+      "edit_threshold",
+      "evaluate_hypothesis",
+      "flag_orphan_component",
+      "new_experiment_version",
+      "preregister_hypothesis",
+      "record_decision",
+      "start_run",
+      "supersede_hypothesis"
+     ],
+     "all_in_known_states": true,
+     "proposals": 120
+    }
+   },
+   "pytest": {
+    "error": 0,
+    "exit_code": 0,
+    "failed": 0,
+    "passed": 89
+   },
+   "read_sweep": {
+    "manufacturing": {
+     "completed": 73,
+     "refused": 0
+    },
+    "project": {
+     "completed": 56,
+     "refused": 0
+    }
+   },
+   "state_machine_sample": {
+    "manufacturing": {
+     "examples": 108,
+     "failures": 0
+    },
+    "project": {
+     "examples": 112,
+     "failures": 0
+    }
+   }
+  },
+  "synthetic_dispatch_changed": false,
+  "synthetic_engine_edited": false,
+  "synthetic_engine_version": "1.1",
+  "synthetic_id_clash": [],
+  "synthetic_mismatches": 0,
+  "synthetic_replays_identical": true,
+  "synthetic_retries_ok": true,
+  "synthetic_states": {
+   "DENIED": 2377,
+   "OUTCOME_UNKNOWN": 203,
+   "PENDING_APPROVAL": 150,
+   "RECONCILED_FAILED": 161,
+   "RECONCILED_SUCCESS": 1303
+  },
+  "synthetic_structures": 1571,
+  "synthetic_unique": 4194,
+  "synthetic_unknown_kinds": [],
+  "thresholds": {
+   "max_domain_specific_core_branches": 0,
+   "max_governance_semantics_in_adapters": 0,
+   "required_generic_lifecycle_coverage": 1.0,
+   "required_mutation_kill_rate": 1.0
+  }
+ },
+ "predicates": {
+  "inconclusive_if": [
+   {
+    "clause": "Either domain does not exercise read, Function, governed Action, security and provenance paths",
+    "id": "I1",
+    "value": false
+   },
+   {
+    "clause": "Fewer unique synthetic definitions than the frozen minimum_runs",
+    "id": "I2",
+    "value": false
+   },
+   {
+    "clause": "Harness cannot answer: a workload suite failed, the Engine disagreed with the oracle on a synthetic case, an execution broke the frozen lifecycle, or a known-negative went undetected",
+    "id": "I3",
+    "value": false
+   }
+  ],
+  "invalid_if": [
+   {
+    "clause": "The static audit excludes files that actually participate in Engine semantic dispatch (or the closure contains a dynamic import site)",
+    "id": "V1",
+    "value": false
+   },
+   {
+    "clause": "Evidence records carry a protocol-freeze / ENGINE_PREREG hash different from the files now",
+    "id": "V2",
+    "value": false
+   },
+   {
+    "clause": "Evidence records disagree on commit / seed / corpus hash",
+    "id": "V3",
+    "value": false
+   },
+   {
+    "clause": "Oracle shares implementation code with the Engine (imports eoo_engine / eoo_toolchain / domains) or its file changed",
+    "id": "V4",
+    "value": false
+   },
+   {
+    "clause": "Harness self-check failed (mutation controls not clean, Engine / domain / protocol files differ from HEAD)",
+    "id": "V5",
+    "value": false
+   }
+  ],
+  "reject_if": [
+   {
+    "clause": "A domain-specific Engine branch (token, identity, or alias-dependent behaviour) or an undeclared governance-in-adapter behaviour was found",
+    "id": "R1",
+    "value": false
+   }
+  ],
+  "support_if": [
+   {
+    "clause": "0 forbidden domain-specific core branches (token scan + identity-in-branch scan over the whole import closure)",
+    "id": "S1",
+    "value": true
+   },
+   {
+    "clause": "100% registered domain operations use generic lifecycle states (all executions conform; every registered Action executed; dispatch is kind-keyed)",
+    "id": "S2",
+    "value": true
+   },
+   {
+    "clause": "0 governance semantics found in adapters beyond declared external binding responsibilities (static, in-adapter taint, ok-mode, Engine-owned idempotency)",
+    "id": "S3",
+    "value": true
+   },
+   {
+    "clause": "Generated synthetic resource/action executes without Engine edit (>= 3,000 unique, oracle-equal, Engine bytes + dispatch table unchanged, alias-invariant)",
+    "id": "S4",
+    "value": true
+   },
+   {
+    "clause": "All target mutations detected (controls clean)",
+    "id": "S5",
+    "value": true
+   }
+  ]
+ },
+ "problems": [],
+ "protocol": {
+  "freeze_sha256": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2"
+ },
+ "verdict": "SUPPORTED"
+}

@@ -1,0 +1,77 @@
+{
+  "id": "H22",
+  "title": "Semantic-variety reuse eventually repays ontology-specific tax",
+  "claim": "Across at least three independently useful real domains, the shared Ontology Language/Engine/Toolchain reduces marginal adaptation effort for blind semantic changes/tasks enough to create a stable advantage over a strong conventional typed relational/event baseline without correctness or security regression.",
+  "null_hypothesis": "Any local reuse is too small or rare to repay ontology-specific infrastructure, compiler, governance and cognitive tax; a conventional typed architecture scales equally well or better.",
+  "rivals": [
+    "Apparent advantage comes from an unfairly weak baseline.",
+    "The advantage appears only in synthetic high-semantic-complexity tasks not representative of real project work.",
+    "Reuse benefits come from ordinary schema/code generation rather than ontology-specific semantics."
+  ],
+  "mechanism": "A bounded meta-model plus reusable Engine/Toolchain should amortize common integration/governance/query/action machinery as semantic variety rises, flattening marginal domain/change cost.",
+  "scope": "D1 Manufacturing, D2 Project Ontology and at least one later real D3+ project; blind change/query/policy/action/source-churn task corpus.",
+  "predictions": [
+    "Marginal task-specific change effort grows more slowly for EOO than baseline as real domain count/semantic variety rises.",
+    "At least two independent task classes show material adaptation savings without lower correctness/security.",
+    "Ontology-specific recurring tax is measured explicitly and does not erase all adaptation gains in the supported region.",
+    "Benefits persist on real tasks, not only generated stress cases."
+  ],
+  "falsifiers": [
+    "With N>=3 real domains, adaptation-cost slopes remain equivalent or favor baseline across preregistered task classes.",
+    "Savings disappear when equivalent code generation/caching/security tooling is provided to baseline.",
+    "Any material savings require sacrificing correctness, replay, security or maintainability.",
+    "Benefits occur only in synthetic benchmark cases outside declared realistic workload tiers."
+  ],
+  "experiment": {
+    "summary": "Blind cross-domain adaptation experiment extending Round 2 H15-H22 dimensions, gated until at least three real domains exist.",
+    "steps": [
+      "Freeze both variants and task corpus generator before reveal.",
+      "Collect real D3+ domain(s) and preregister semantic-variety metrics.",
+      "Reveal blind tasks covering source churn, new relation/query, policy composition, action addition and interface reuse.",
+      "Measure files/LOC/components/migrations/bespoke tools/time-to-green/regressions plus runtime/maintenance tax.",
+      "Run correctness/security/replay oracles equally on both variants.",
+      "Fit marginal adaptation trends and report a trade-off frontier, not a weighted winner score."
+    ],
+    "minimum_runs": 30
+  },
+  "oracle": "Per-task independent correctness/security oracle plus Git-derived adaptation metrics and frozen measurement scripts.",
+  "baseline": "Strong conventional typed relational/event architecture with equivalent schema generation, security, replay/audit requirements and competent optimization.",
+  "required_evidence": [
+    "domain-manifest.json",
+    "blind-task-results.json",
+    "adaptation-costs.json",
+    "correctness-security.json",
+    "runtime-tax.json",
+    "trend-analysis.json",
+    "tradeoff-frontier.md"
+  ],
+  "evaluator": {
+    "support_if": [
+      "At least 3 independently useful real domains are included.",
+      "For at least 2 independent preregistered task classes, median normalized task-specific adaptation effort is <=75% of baseline while correctness/security are non-inferior.",
+      "Overall marginal adaptation-cost slope across real domains is <=75% of baseline slope with confidence/uncertainty reported.",
+      "A realistic workload tier exists where measured gains are not dominated by recurring ontology tax."
+    ],
+    "reject_if": [
+      "With >=3 real domains, all preregistered task classes have adaptation ratio >=0.90 or favor baseline, or baseline has equal/lower marginal slope.",
+      "Any apparent supported savings disappear under fair baseline tooling or require correctness/security regression."
+    ],
+    "inconclusive_if": [
+      "Fewer than 3 real domains exist, fewer than 30 blind tasks complete, or uncertainty spans both support and reject regions."
+    ],
+    "invalid_if": [
+      "Task corpus, cost metric or baseline capability is changed after reveal to favor either variant without a new experiment version."
+    ]
+  },
+  "python_hypothesis_role": {
+    "level": "LIMITED",
+    "strategy": "Generate adversarial variants of declared task shapes and source/schema mutations to broaden coverage; do not use synthetic property tests as the final real-domain trend evidence.",
+    "mutation_proof": "Perturb cost accounting to ignore one variant's equivalent glue and verify fairness tests/reporting detect the asymmetry."
+  },
+  "upstream_dependencies": [
+    "H21"
+  ],
+  "stop_conditions": [
+    "Do not issue SUPPORTED/REJECTED trend verdict with fewer than three real domains; emit INCONCLUSIVE and wait for genuine domain evidence."
+  ]
+}

@@ -1,0 +1,266 @@
+{
+ "common": {
+  "protocol_valid": false,
+  "reject_hit": false,
+  "required_evidence_complete": true,
+  "sample_sufficient": true,
+  "support_hit": true
+ },
+ "evaluator_sha256": "d856cca2a641a48c0bb6ea1cce460af0e4afa369e5322ab11abb587c6aed6ec6",
+ "evidence_payload_hashes": {
+  "effect-log-audit.json": "f5596fabef3ae85ee613fb56b75bad16715cc924915fca063e5a0e2558e9a2bf",
+  "mutation-results.json": "df9020eaa0332f5ab5dfd3e4c35f156dc9e46ada5b094a4649952d7d4245e087",
+  "negative-action-results.json": "48f57503bf91ac1dfe04a011f68ce04f8279bbbab9aa18d888a2db0217a80997",
+  "state-machine-results.json": "35d285485332404504bb9a8a9feb28064616c633d9a99c0037441d8d186ea2cd"
+ },
+ "experiment_id": "exp-h17-002",
+ "hypothesis_id": "H17",
+ "interpretation_notes": [
+  "R2 counts the agent-surface record-tampering attacks: tool.propose_action returns the Engine's live execution record (an ordinary return value, no introspection needed), and editing it lets a legitimate approval or a restart-time recover() execute a request whose gates denied it (controls without the edit produce no effect).",
+  "The interpreter-introspection probe is a DISCLOSED LIMIT (docs/engine_semantics.md section 4) and is not counted.",
+  "S4/I1 thresholds: the frozen minimum is 5,000 unique traces in total; the per-class minimum (50) and the function-only trace minimum (1,000 per domain) are evaluator-local readings of the inconclusive clause. Project has no approval-requiring action, so approve/deny classes are required only for manufacturing.",
+  "Neither registered domain declares a local (canonical-store) Action effect, so 'canonical store unchanged' is asserted on every step but only the Function-write MUTANTS exercise a store write.",
+  "The oracle consumes scenario-declared gate tokens; it never derives authority/policy from domain logic. A mis-declared token would show up as a gate_mismatch and is separately unit-tested per scenario.",
+  "Manufacturing expedite/reschedule are unauthorizable on the frozen IR (P4b finding F1): the manufacturing Action surface exercised here is transfer_inventory only; the 7 project actions other than create_hypothesis/start_run/attach_evidence are not driven by this state machine."
+ ],
+ "numbers": {
+  "agent_attack_controls_clean": true,
+  "agent_attack_details_tamper": [
+   {
+    "attack": "control_state_no_tamper_then_recover",
+    "detail": "control (no tamper): recover() after a DENIED request: effects=(0, 0), final=DENIED",
+    "domain": "manufacturing",
+    "violation": false
+   },
+   {
+    "attack": "tamper_returned_state_denied_to_approved_then_recover",
+    "detail": "",
+    "domain": "manufacturing",
+    "violation": false
+   },
+   {
+    "attack": "control_inputs_no_tamper",
+    "detail": "control (no tamper): approval of the pending request -> RECONCILED_SUCCESS, effects=1 (a legitimate approval DOES execute; the gated inputs are what executes)",
+    "domain": "manufacturing",
+    "violation": false
+   },
+   {
+    "attack": "tamper_returned_inputs_then_approve",
+    "detail": "",
+    "domain": "manufacturing",
+    "violation": false
+   },
+   {
+    "attack": "tamper_returned_state_denied_to_pending_then_approve",
+    "detail": "",
+    "domain": "manufacturing",
+    "violation": false
+   },
+   {
+    "attack": "control_state_no_tamper_then_recover",
+    "detail": "control (no tamper): recover() after a DENIED request: effects=(0, 0), final=DENIED",
+    "domain": "project",
+    "violation": false
+   },
+   {
+    "attack": "tamper_returned_state_denied_to_approved_then_recover",
+    "detail": "",
+    "domain": "project",
+    "violation": false
+   }
+  ],
+  "agent_attack_disclosed_limit_rows": [
+   {
+    "attack": "interpreter_introspection_probe",
+    "detail": "view.state_hash.__closure__ cell types: ['function'] (an attacker with closure introspection reaches the state accessor; not counted)",
+    "domain": "manufacturing"
+   },
+   {
+    "attack": "interpreter_introspection_probe",
+    "detail": "view.state_hash.__closure__ cell types: ['function'] (an attacker with closure introspection reaches the state accessor; not counted)",
+    "domain": "project"
+   }
+  ],
+  "agent_attack_unexpected_exceptions": [],
+  "agent_attack_violations_raw_write": [],
+  "agent_attack_violations_tamper": [],
+  "agent_attacks_counted": 23,
+  "baseline_contextual_violations": 2,
+  "engine_files_clean": false,
+  "function_only_effect_delta_total": 0,
+  "function_only_traces_by_domain": {
+   "manufacturing": 1730,
+   "project": 1726
+  },
+  "function_only_traces_not_identical": 0,
+  "function_only_with_calls": 3257,
+  "mutation_classes_present": [
+   "function_write",
+   "gate_bypass"
+  ],
+  "mutation_controls_clean": [
+   true,
+   true
+  ],
+  "mutation_counterexample_lengths": {
+   "MF1_function_appends_effect_log": 1,
+   "MF2_function_writes_canonical_store": 1,
+   "MG1_bypass_authority_gate": 1,
+   "MG2_bypass_preconditions_gate": 1,
+   "MG3_bypass_policy_gate": 1,
+   "MG4_bypass_approval_requirement": 1
+  },
+  "mutation_counterexamples_recorded": true,
+  "mutation_kill_rate": 1.0,
+  "mutation_survivors": [],
+  "mutation_target_killed": 6,
+  "mutation_target_total": 6,
+  "negative_cases": 125,
+  "negative_cases_by_kind": {
+   "denied:invalid": 80,
+   "denied:key_reuse_different_intent": 4,
+   "denied:unauthorized": 36,
+   "unapproved:approve_bad": 3,
+   "unapproved:execute_while_pending": 1,
+   "unapproved:reject_ok": 1
+  },
+  "negative_gate_mismatch": [],
+  "negative_with_effect": [],
+  "oracle_forbidden_imports": [],
+  "oracle_imports": [
+   "dataclasses"
+  ],
+  "oracle_sha256_matches_file": true,
+  "state_machine_class_counts": {
+   "manufacturing": {
+    "approve": 477,
+    "crash_restart": 1134,
+    "deny": 454,
+    "execute": 2004,
+    "function_call": 1297,
+    "observe_outcome": 868,
+    "propose": 2615,
+    "read": 1163,
+    "retry": 931,
+    "stale_or_invalid": 1123,
+    "unauthorized": 1239
+   },
+   "project": {
+    "approve": 0,
+    "crash_restart": 1454,
+    "deny": 0,
+    "execute": 2170,
+    "function_call": 1300,
+    "observe_outcome": 1112,
+    "propose": 2413,
+    "read": 1355,
+    "retry": 1039,
+    "stale_or_invalid": 1319,
+    "unauthorized": 1308
+   }
+  },
+  "state_machine_examples_executed": {
+   "manufacturing": 4666,
+   "project": 4553
+  },
+  "state_machine_failure_kinds": [],
+  "state_machine_failures": 0,
+  "state_machine_function_only_traces": 394,
+  "state_machine_unique": 6120,
+  "state_machine_unique_by_domain": {
+   "manufacturing": 3033,
+   "project": 3087
+  },
+  "thresholds": {
+   "max_forbidden_action_effects": 0,
+   "max_function_committed_effects": 0,
+   "min_state_machine_examples": 5000,
+   "required_mutation_kill_rate": 1.0
+  }
+ },
+ "predicates": {
+  "inconclusive_if": [
+   {
+    "clause": "State-machine corpus lacks a domain or an adversarial class (>= 50 traces per required class per domain)",
+    "id": "I1",
+    "value": false
+   },
+   {
+    "clause": "Fewer unique state-machine traces than the frozen minimum",
+    "id": "I2",
+    "value": false
+   },
+   {
+    "clause": "Oracle/Engine disagreement outside the boundary, an unexpected exception, a dirty attack control, or too few function-only traces (harness cannot answer)",
+    "id": "I3",
+    "value": false
+   }
+  ],
+  "invalid_if": [
+   {
+    "clause": "Evidence records carry a protocol-freeze / ENGINE_PREREG hash different from the files now",
+    "id": "V1",
+    "value": false
+   },
+   {
+    "clause": "Evidence records disagree on commit / seed / corpus hash",
+    "id": "V2",
+    "value": false
+   },
+   {
+    "clause": "Oracle shares implementation code with the Engine (imports eoo_engine / eoo_toolchain / domains) or its file changed",
+    "id": "V3",
+    "value": false
+   },
+   {
+    "clause": "Harness self-check failed (mutation control not clean, Engine/domain files differ from HEAD)",
+    "id": "V4",
+    "value": true
+   }
+  ],
+  "reject_if": [
+   {
+    "clause": "A standard Function path commits an effect (function-only audit or state-machine function/read step)",
+    "id": "R1",
+    "value": false
+   },
+   {
+    "clause": "A governed Action effect occurs without the required gates (enumerated cases, state machine, or agent-surface attack)",
+    "id": "R2",
+    "value": false
+   },
+   {
+    "clause": "Function and Action are not distinguishable capabilities: the agent tool surface or a Function implementation reaches a write",
+    "id": "R3",
+    "value": false
+   }
+  ],
+  "support_if": [
+   {
+    "clause": "0 committed business/project effects in all Function-only traces",
+    "id": "S1",
+    "value": true
+   },
+   {
+    "clause": "0 forbidden effects from denied/invalid/unauthorized/stale/unapproved Actions (enumerated cases and agent attacks)",
+    "id": "S2",
+    "value": true
+   },
+   {
+    "clause": "100% target mutations detected (controls clean, shrunk counterexample recorded for each)",
+    "id": "S3",
+    "value": true
+   },
+   {
+    "clause": ">= min_state_machine_examples unique state-machine traces over both domains with 0 oracle disagreements",
+    "id": "S4",
+    "value": true
+   }
+  ]
+ },
+ "problems": [],
+ "protocol": {
+  "freeze_sha256": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2"
+ },
+ "verdict": "INVALID"
+}

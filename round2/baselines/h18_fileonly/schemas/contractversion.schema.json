@@ -1,0 +1,23 @@
+{
+ "type": "object",
+ "required": [
+  "id",
+  "sha256",
+  "git_commit"
+ ],
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "sha256": {
+   "type": "string"
+  },
+  "git_commit": {
+   "type": "string"
+  },
+  "frozen_at": {
+   "type": "string"
+  }
+ },
+ "additionalProperties": false
+}

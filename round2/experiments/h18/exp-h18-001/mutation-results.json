@@ -1,0 +1,192 @@
+{
+ "created_at": "2026-10-02T16:45:38+00:00",
+ "engine_prereg_sha256": "03d2d56919b2f003766e54c89fdbfb47a7780577534f4d797ab2ecd9b6f3aefe",
+ "engine_version": "1.1",
+ "environment": {
+  "hypothesis": "6.168.3",
+  "jsonschema": "4.26.0",
+  "machine": "arm64",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "pytest": "9.1.1",
+  "python": "3.14.6"
+ },
+ "evidence_kind": "mutation-results",
+ "experiment_id": "exp-h18-001",
+ "git_commit": "d2ed01a0066d17689f99ec47838447a1c856c860",
+ "harness_dirty": true,
+ "harness_dirty_paths": [
+  "round2/baselines/",
+  "round2/domains/project/logic/actions.py",
+  "round2/domains/project/pack.py",
+  "round2/oracles/h18/",
+  "round2/scripts/evaluate_h18.py",
+  "round2/scripts/run_h18.py",
+  "round2/scripts/verify_h18.sh",
+  "round2/src/eoo_engine_git/",
+  "round2/src/eoo_h18/",
+  "round2/tests/h18/"
+ ],
+ "harness_sha256": {
+  "baselines/h18_fileonly/__init__.py": "0ef7a490acf6bc8d17899582eec5ff91ca0bf2a6f219e20f229aa5eb318d2c14",
+  "baselines/h18_fileonly/actions.py": "b1c5cc2cb0988a860de582f7b316b457dd3bf6180324572ea8411ec153fe4d0c",
+  "baselines/h18_fileonly/ci.py": "5cb977f76ade0ca7047d2ad39447893381cc4feaa097cecfabb0ffb8fea1e660",
+  "baselines/h18_fileonly/derive.py": "2616056b99670dd3606027adccd2216eeeb02d262b5b324e00aa12e701e657dc",
+  "baselines/h18_fileonly/queries.py": "587b7157c8b6ed8370a51499193bfdce464e1e6f42347f3e1435fc02ee690c8f",
+  "baselines/h18_fileonly/replication.py": "f64c95459e4b75d6f0acd804f07941141ccbee5d57ba302c338142ae356b7e0f",
+  "baselines/h18_fileonly/repo.py": "8b0530ce297c330bd98c6722cc37f5542135d5f686c97323540a4d9ccc10148f",
+  "baselines/h18_fileonly/rules.py": "c5554dac0621251c6b638099ac0b333ed91a803cf354fcdce9d88ef7f4bfc61b",
+  "baselines/h18_fileonly/schemas/component.schema.json": "317db3f61303ac97c0537a987815f22feafffa985cbf4107c05243da2c390d60",
+  "baselines/h18_fileonly/schemas/contractversion.schema.json": "dc426f23abe2b0a97564f9c5f39d9bbaa2f9ece0d8d115c1f83475e29f4f2104",
+  "baselines/h18_fileonly/schemas/decision.schema.json": "14284ff86d250cae82cd7836e73bb711a4eae1ad5ccde3eda3ce96004e6d181c",
+  "baselines/h18_fileonly/schemas/evidence.schema.json": "d1ca7149a50fa8a671e2c672f2fc5b0d1504b12e52fa066e5c5b5c9315059931",
+  "baselines/h18_fileonly/schemas/experiment.schema.json": "44b09c6533b10aeb7834428f944b1362398fb181a4f7ac5a25f43ec06dba9ec6",
+  "baselines/h18_fileonly/schemas/hypothesis.schema.json": "f283b6e065dcaf499fee848430272fbe1715c2d3e827ac39bf40a4bf92dca93a",
+  "baselines/h18_fileonly/schemas/replication.schema.json": "338edabc36c7c06149dd91d7c005957cd00321754a4657b9505e6e9c7b678136",
+  "baselines/h18_fileonly/schemas/threshold.schema.json": "95bffdf7acbffb70ddec6eb0b224ed55aeb6a313e95122f66cb79a53f8200574",
+  "baselines/h18_fileonly/schemas/verdict.schema.json": "2f0b44da3ae9b38a193a7d63ade4bb572713507b51e5a9abd3c0570a40d27e5c",
+  "domains/project/logic/actions.py": "7ca68ee6f9907423cbc3d5cdc60d71efb2904bc3df6681a168ea5f28b4caf277",
+  "domains/project/pack.py": "396f7ff2451660ce406a75cb7b91f6c6d760f276916e4a961ab5f0575299812a",
+  "oracles/h18/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "oracles/h18/queries.py": "3aa388b37ff25211e17e628fda0f84106b29fa47c7579bbc27a7e8c260ec67e6",
+  "oracles/h18/world.py": "0c994debdbe3f2eaa16372b1087f1b6a9f634edfe5b114c98c4d8782b542f46c",
+  "scripts/evaluate_h18.py": "4742e9b09a06af8dbec42c1cb8276cedb699b6ec806bb01088572f378dc85b7f",
+  "scripts/run_h18.py": "46e9e242b9e9e66232ddc7e7d7a4c9801ca5feaf4f2bdd39cb94c7b51b1a4887",
+  "src/eoo_engine_git/__init__.py": "687ffc6e09a23bbf10e05454f2b261c9af6013f951f7caf032b58ae489c63879",
+  "src/eoo_engine_git/adapter.py": "4165c1d852eec6ab1ee2f0d60ec9ae28b67fb41910f1426ab944fdff73ce7e96",
+  "src/eoo_engine_git/errors.py": "b197e61ecc2be75322c2ae1da0e5b0669ea04711ff2f11ea525a5d0dc3a0b794",
+  "src/eoo_engine_git/layout.py": "afd2c584cd7903f6b0931b61c24733d8629da8817c16b096669210771be6a079",
+  "src/eoo_engine_git/merge.py": "e82d795915aa8557e2377b548a20aa0551c665e9c37d16baba0d3ccca1400bbf",
+  "src/eoo_engine_git/objects.py": "81e18de9e43fc26130649a840cf29aa0233de26ef2d50e7f370e5676f09e0a40",
+  "src/eoo_engine_git/store.py": "be90d64f4924a7c2e3f7e92a182556c727b3a3e131fca4fdee596b73eb076043",
+  "src/eoo_exp/__init__.py": "16754d2e26eb56fb0469b74cbb88351b20265ac3ae07ecc51ada09167199a90a",
+  "src/eoo_exp/outdir.py": "6997fdfe23a5bbd5fb3c80aa024f172940167d24c55770f3b83f163d9c86fd00",
+  "src/eoo_exp/provenance.py": "9076be346293debdd361cae3c24c781d3d463716d6be1c398ee4474b3201bb5e",
+  "src/eoo_exp/scaffold.py": "b7686662f08994431881ee411fb3b1f913ba63b6327cc6dce8e180e45496a765",
+  "src/eoo_exp/util.py": "64765edd82c60fa3e393878199331db360f14bbbe31c72f5bb8d4079ac6acd86",
+  "src/eoo_h18/__init__.py": "658c25db50cecab93274e74e0d53dd0bb25bd0dd29b74971e794b5b53f2a93e0",
+  "src/eoo_h18/audit.py": "bb77e30d34289e05155e5cf61bd4d263f25b5f967c8fa6560fe8153fcafc6c91",
+  "src/eoo_h18/base_run.py": "9b6ccb6e31874d8e7739f8051e7934cc16509b19e01bfd19e33a2525d213f125",
+  "src/eoo_h18/corpus.py": "cdcbd0c5b6d374b46511683c2ba29cb31ba06bf21b82726af0275c212541c261",
+  "src/eoo_h18/dogfood.py": "559dc77be22ca41457c47e05b477d1f7d9f8a919f2fef9c1647725bd2135748b",
+  "src/eoo_h18/evaluate.py": "3e21d31d43d02df9efdde95be5c18af8c453cbd9924175043efde3f88252df05",
+  "src/eoo_h18/evaluators.py": "c8d088eaf771901f29d187b302e2847263295edbb05fc7d5ed6826678339f292",
+  "src/eoo_h18/extras.py": "36453e23bf0e466eb0f367d7e025d5114b68a94875d52919e1c0e066c3b13703",
+  "src/eoo_h18/fixture.py": "6de0ab5ec031d360344a1847f02ee1b003d632d7911a541ed3e7d92bba51e658",
+  "src/eoo_h18/gen.py": "b0c0c4bcfda6d4d5622cba42f2366659802ae4fe09e9311383f7290cad82082d",
+  "src/eoo_h18/loc.py": "609ab0a755eea73fcb7e96e1f2ce6ecaeb29ea307b6c1bffdbed69204f951807",
+  "src/eoo_h18/manifest.py": "f006151882200b4d37c0a05b1d90a26ee77c40ba39c00b1b58ad9c2cbc651c86",
+  "src/eoo_h18/metrics.py": "b6d2e4007a03c7b808d9ec65c356a2ec1eba1ab14293a5c7aae016efbc16d94b",
+  "src/eoo_h18/mutants.py": "f7db0771fafb95e44918ea02c03af3d4073e42f2974fc705a04aaed9b06c54b8",
+  "src/eoo_h18/mutation_run.py": "7f9a258dcbd2b2f52594589279956555b20881737a775dd9184d171dea6e1ad2",
+  "src/eoo_h18/ops.py": "e39eb4f8948f54cd140f2a3eb0062487a923cc0662f966b981dcf37eb3cbec81",
+  "src/eoo_h18/rig.py": "2f036ebfa42ef8708b04bcf5b1d61c39d4bd797b620d52b30b9bd49c0101045e",
+  "src/eoo_h18/run.py": "a9c7f057db4203f258e0cb8da16e2e3d9df1fd73dfd81d3f0f795b433457e543",
+  "src/eoo_h18/summary.py": "2ecdb5ca5b30cdbd557c45e103240c4d0be3e28b572cba32e9d31a442e7af576",
+  "src/eoo_h18/tc_eoo.py": "347f2b4d26bdbe851900eb13116bc30fe6ff85b6404d621b8f29d197785fca22",
+  "src/eoo_h18/tc_patch.json": "b06e2a3a4af6ac1ecdf3471929c27c86f26fd6966d22d64191f4cb723e85878c",
+  "src/eoo_h18/tc_run.py": "32975d59c4794498f212681fa643826bc807c48985f5744c44115fbfcadef757"
+ },
+ "hypothesis_id": "H18",
+ "input_corpus_hash": "2122565a96e87866610bfb3b47f503a955ba799cd88b49035a664e4c0ea45721",
+ "payload": {
+  "controls": {
+   "clean": true,
+   "clean_after": true,
+   "signals_after": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "signals_before": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  "corpus_cases": 200,
+  "engine_version": "1.1",
+  "mutants": [
+   {
+    "class": "lifecycle_rule",
+    "control_signal_count": 0,
+    "exceptions": 0,
+    "expected_signal": {
+     "kind": "illegal_accepted",
+     "op": "edit_threshold"
+    },
+    "id": "M1_allow_post_freeze_threshold_edit",
+    "killed": true,
+    "signal_count": 19,
+    "steps": 1074,
+    "target": true
+   },
+   {
+    "class": "lifecycle_rule",
+    "control_signal_count": 0,
+    "exceptions": 0,
+    "expected_signal": {
+     "field": "verdicts",
+     "kind": "summary_mismatch",
+     "op": "evaluate"
+    },
+    "id": "M2_allow_verdict_without_evidence",
+    "killed": true,
+    "signal_count": 55,
+    "steps": 1009,
+    "target": true
+   },
+   {
+    "class": "git_traceability",
+    "control_signal_count": 0,
+    "exceptions": 0,
+    "expected_signal": {
+     "kind": "trace_failure"
+    },
+    "id": "M3_detach_commit_provenance",
+    "killed": true,
+    "signal_count": 596,
+    "steps": 1145,
+    "target": true
+   },
+   {
+    "class": "lifecycle_rule",
+    "control_signal_count": 0,
+    "exceptions": 0,
+    "expected_signal": {
+     "kind": "illegal_accepted",
+     "op": "attach"
+    },
+    "id": "M4_allow_unpinned_evidence",
+    "killed": true,
+    "signal_count": 42,
+    "steps": 984,
+    "target": false
+   },
+   {
+    "class": "lifecycle_rule",
+    "control_signal_count": 0,
+    "exceptions": 0,
+    "expected_signal": {
+     "class_tag": "supersede_non_evaluated",
+     "kind": "illegal_accepted",
+     "op": "supersede"
+    },
+    "id": "M5_allow_supersede_out_of_order",
+    "killed": true,
+    "signal_count": 13,
+    "steps": 1056,
+    "target": false
+   }
+  ],
+  "seed": 1801
+ },
+ "payload_hash": "3ed30bafc6d60172c78a0df35e85c2dc2f15871a072eb1134f1797d5417f4817",
+ "payload_path": null,
+ "protocol_freeze_hash": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2",
+ "real_repo_pinned_commit": "d2ed01a0066d17689f99ec47838447a1c856c860",
+ "seed": 18
+}

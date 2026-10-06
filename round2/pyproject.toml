@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eoo-round2-hdd"
+version = "0.1.0"
+description = "Executable hypothesis contracts for Palantir-class open-source EOO research"
+requires-python = ">=3.11"
+dependencies = ["jsonschema>=4.22"]
+
+[project.optional-dependencies]
+test = ["pytest>=8", "hypothesis>=6"]
+h15 = ["pyyaml>=6", "openpona-language-corpus @ git+https://github.com/demithras/openpona-language-corpus@97a9b9e8ca8800fda0a22f51ea59fccb6f60f35b"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

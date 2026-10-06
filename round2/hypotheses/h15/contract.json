@@ -1,0 +1,109 @@
+{
+  "id": "H15",
+  "title": "OpenPona can serve as a lossless Ontology Language surface",
+  "claim": "OpenPona can encode every required backend-neutral EOO IR construct for the registered domains and generated valid IR corpus, compile to the independent IR without operational semantic loss, and do so without adding primitive tokens or indispensable semantic sidecars.",
+  "null_hypothesis": "OpenPona is useful human/agent notation but is not a sufficient typed Ontology Language; a separate typed DSL or sidecar must carry essential ontology semantics.",
+  "rivals": [
+    "A conventional typed JSON/YAML DSL can express the IR directly with less ambiguity and similar or lower authoring cost.",
+    "OpenPona can express only a human-readable projection while types, cardinality, authority, versioning or Function/Action distinctions live elsewhere."
+  ],
+  "mechanism": "If the 42-token compositional grammar is sufficiently expressive, contextual composition plus explicit grouping/structure should encode the typed distinctions needed by the IR and a compiler should recover them deterministically.",
+  "scope": "The frozen EOO IR schema, Manufacturing domain, Project Ontology domain, and generated valid IR packages restricted to the frozen kernel resource kinds.",
+  "predictions": [
+    "Every frozen real-domain IR contract has an OpenPona representation that compiles to semantically equivalent IR.",
+    "At least 10,000 generated valid IR fragments/packages round-trip with zero semantic-equivalence failures.",
+    "Function and Action remain distinguishable after round-trip, including permissions and effect semantics.",
+    "No new OpenPona primitive token is required for either domain.",
+    "No external sidecar contains type/cardinality/authority/version information indispensable to recover the IR.",
+    "Ambiguous/underspecified OpenPona inputs are rejected or marked unresolved instead of receiving guessed types."
+  ],
+  "falsifiers": [
+    "Any required frozen IR construct cannot be represented without adding a new primitive token.",
+    "Any required frozen IR construct is recoverable only because indispensable semantics are stored in a non-OpenPona sidecar.",
+    "A valid frozen real-domain contract round-trips to non-equivalent IR.",
+    "Generated counterexample shows Function and Action or authority/cardinality/version semantics collapse under the language.",
+    "The compiler resolves an ambiguous generated input by silently inventing semantics."
+  ],
+  "experiment": {
+    "summary": "Differential language experiment against an independent typed IR and a direct typed-DSL baseline.",
+    "steps": [
+      "Freeze IR schema, semantic-equivalence function, OpenPona token inventory/grammar version, direct typed baseline and generated corpus strategy.",
+      "Encode Manufacturing and Project Ontology contracts in both OpenPona and direct typed DSL.",
+      "Implement OpenPona->IR and direct-DSL->IR compilers plus an IR semantic normalizer independent of both syntaxes.",
+      "Generate valid and invalid IR structures with Python Hypothesis; render/encode valid structures to candidate surfaces and round-trip.",
+      "Run ambiguity, mutation and missing-type attacks.",
+      "Record any required sidecar field and classify whether it is transport metadata or indispensable semantics."
+    ],
+    "minimum_runs": 10000,
+    "openpona_pin": {
+      "repository": "https://github.com/demithras/openpona-language-corpus",
+      "commit": "97a9b9e",
+      "version": "0.2.0",
+      "tokens_csv_sha256": "eb91ae649ba8bc35b46e9a00047a063807eeb80aa4ef91c94f9ff7907a66e7d0",
+      "grammar_lark_sha256": "37228468d80e7f5a90fcd8bca6ef8208fe813728f4f5d358936177b1a6310d69",
+      "rule": "The token inventory and grammar are frozen at this commit. Any change to tokens, grammar or parser semantics needed to encode a frozen IR kind during the experiment is recorded as an adaptation event and counts toward the 'new primitive' falsifier."
+    },
+    "sidecar_classification": {
+      "decision": "Option 1 (author decision 2026-10-01, before freeze): names and literals are binding data, not semantics.",
+      "record_may_hold_atoms_only": [
+        "identifier spellings: package_id, domain_id, and the id/name of every object type, property, link type, interface, parameter, function, action, policy, authority rule, observation type and constraint",
+        "opaque expression/reference strings: implementation_ref, expression_ref, outcome_predicate, preconditions[], source_binding, principal_selector, resource_selector, capability and interface capabilities[] strings, property constraints[] strings, description",
+        "literal values filling a slot the line declares: version strings, import version identifiers, numeric cardinality bounds"
+      ],
+      "line_must_carry_structure": [
+        "resource kind of every resource (object type / property / link type / interface / function / action / policy / authority rule / observation type / constraint)",
+        "every enumerated or boolean choice: primitive type (string|integer|number|boolean|datetime|date|json|bytes), list/optional/ref type constructors, required, immutable, directed, delegation_allowed, function purity and determinism, action idempotency, effect operation, policy decision, authority effect, constraint severity, observation truth_status",
+        "the reference graph: link from/to, implements, interface required_links, function reads, action authority_refs/policy_refs/effects targets/effect fields/compensation_action, observation subject_type, typeExpr ref targets, primary_key choice, imports",
+        "the slot each literal fills (e.g. that a cardinality has a lower and an upper bound, that a resource carries a version, that an upper bound is unbounded '*')",
+        "Function vs Action distinction"
+      ],
+      "audit_procedure": [
+        "Record schema: the record is a map from line addresses to atom values; any record key that is not an atom slot above is an indispensable sidecar field.",
+        "Alpha-renaming test: replace every record atom with a fresh opaque string; compile(line, renamed_record) must equal rename(IR) under the semantic-equivalence oracle.",
+        "Line-only shape test: compile(line, record with every atom replaced by a placeholder) must recover the full IR shape (all kinds, enums, booleans, types, reference graph) up to atom values.",
+        "Any structural item recoverable only from the record is an indispensable semantic sidecar field and hits the falsifier."
+      ]
+    }
+  },
+  "oracle": "Frozen backend-neutral IR schema plus an independent semantic-normalization/equivalence checker that contains no OpenPona token logic.",
+  "baseline": "Direct typed JSON/YAML-style DSL that maps one-to-one to the same IR without OpenPona compression.",
+  "required_evidence": [
+    "real-domain-roundtrip.json",
+    "generated-roundtrip.json",
+    "ambiguity-corpus.json",
+    "sidecar-audit.json",
+    "mutation-results.json",
+    "compiler-diff-metrics.json"
+  ],
+  "evaluator": {
+    "support_if": [
+      "100% of frozen real-domain contracts are semantically equivalent after OpenPona round-trip.",
+      "0 semantic-equivalence failures across at least 10,000 generated valid cases.",
+      "0 required new primitive tokens.",
+      "0 indispensable semantic sidecar fields.",
+      "100% of predeclared ambiguity/missing-type cases fail closed or remain unresolved.",
+      "All target mutation classes are detected."
+    ],
+    "reject_if": [
+      "Any falsifier is observed in a frozen real-domain contract.",
+      "Any generated minimal counterexample demonstrates irreversible semantic loss in a required IR kind.",
+      "A new primitive token or indispensable semantic sidecar is required."
+    ],
+    "inconclusive_if": [
+      "Generated coverage is below 10,000 valid cases or either registered domain is not encoded completely."
+    ],
+    "invalid_if": [
+      "IR/equivalence rules or support thresholds materially change after result reveal without a new experiment version."
+    ]
+  },
+  "python_hypothesis_role": {
+    "level": "PRIMARY",
+    "strategy": "Recursive strategies generate typed IR packages, cardinalities, interfaces, policies, authority rules, Functions and Actions; round-trip and ambiguity properties search for minimal counterexamples.",
+    "mutation_proof": "Inject compiler mutations that drop cardinality, swap Function/Action kind, drop authority/version, or accept ambiguous binding; the suite must kill every registered mutation."
+  },
+  "upstream_dependencies": [],
+  "stop_conditions": [
+    "Reject OpenPona as the core Ontology Language candidate if a frozen required IR kind needs external semantic metadata or a new primitive; continue EOO research with the direct typed DSL rather than rescuing H15 by expanding scope."
+  ],
+  "notes": "Failure does not reject OpenPona as a human/agent operational language. Sidecar boundary fixed before freeze in experiment.sidecar_classification (option 1)."
+}

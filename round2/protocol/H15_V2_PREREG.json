@@ -1,0 +1,25 @@
+{
+  "purpose": "H15 version 2: same claim, contract thresholds, oracle, Gate-0 inputs and DSL baseline as H15 v1; amended sidecar boundary per protocol/AUTHOR_DECISIONS_2026-10-03.md decision 1. Frozen BEFORE any v2 encoding exists.",
+  "unchanged": ["hypotheses/h15/contract.json predictions, falsifiers, evaluator clauses", "protocol/thresholds.json H15", "protocol/FREEZE.json", "protocol/H15_GATE0.json (oracle, generators, domains/*/ir.json v1, DSL baseline, ambiguity classes)", "OpenPona pin 97a9b9e (tokens, grammar, parser unmodified)"],
+  "amended_sidecar_boundary": {
+    "record_may_hold": ["identifier spellings, INCLUDING the id that a reference points to (ids are metadata outside the language)", "opaque expression/reference strings as in v1", "literal values as in v1"],
+    "line_must_carry": ["resource kind", "every enum/boolean/type choice", "the ROLE of every reference slot (what kind of thing it points to and in which relation)", "which slot each atom fills", "Function vs Action"],
+    "record_keys": "neutral positional keys L<line>.a<slot>, slots numbered left to right; no structural key names"
+  },
+  "meaning_rule": {
+    "text": "Every combination of OpenPona words must have a meaning. Labels without meaning must not exist.",
+    "operational": [
+      "Every line instantiates a rule from a frozen phrase table; every phrase in the table has a canon-gloss justification (as in v1 openpona_encoding.md).",
+      "No phrase may exist only to distinguish one resource from another (no enumerated 'pi X Y' labels or any other numbering scheme).",
+      "Bounded-vocabulary test (machine check of the rule): over generated packages grouped by size (resource count), the number of DISTINCT surface phrases (lines with atoms masked) must not grow with package size beyond the phrase-table size; growth with size = enumeration = rule violated -> H15 v2 REJECTED (reject_if R3 'indispensable sidecar' or cipher).",
+      "References use canon binding (e.g. '<head> ni' = 'this <head>, bound in the record'); coreference between lines is equality of record atoms (ids), which is metadata."
+    ]
+  },
+  "audit_procedure_v2": [
+    "Alpha-renaming: bijective renaming of record atom VALUES (same value -> same new value); compile must equal the renamed IR.",
+    "Line-only shape: replace atoms by value-consistent kind-valid placeholders; the compiled IR must equal the original IR under the same substitution.",
+    "Record-key vocabulary check as in v1.",
+    "Bounded-vocabulary test as above, reported with the per-size counts."
+  ],
+  "experiment": {"candidate_package": "src/eoo_openpona2 (v1 src/eoo_openpona stays unchanged)", "authoritative_exp_id": "exp-h15-v2-001 (run by the orchestrator in an isolated worktree)", "minimum_unique_generated_valid_cases": 10000}
+}

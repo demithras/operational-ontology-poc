@@ -1,0 +1,30 @@
+{
+ "type": "object",
+ "required": [
+  "id",
+  "claim",
+  "phase"
+ ],
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "claim": {
+   "type": "string",
+   "pattern": "\\S"
+  },
+  "phase": {
+   "enum": [
+    "DRAFT",
+    "PREREGISTERED",
+    "RUNNING",
+    "EVALUATED",
+    "SUPERSEDED"
+   ]
+  },
+  "freeze_hash": {
+   "type": "string"
+  }
+ },
+ "additionalProperties": false
+}

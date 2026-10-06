@@ -1,0 +1,405 @@
+{
+ "created_at": "2026-10-02T16:14:04+00:00",
+ "engine_prereg_sha256": "03d2d56919b2f003766e54c89fdbfb47a7780577534f4d797ab2ecd9b6f3aefe",
+ "environment": {
+  "hypothesis": "6.168.3",
+  "jsonschema": "4.26.0",
+  "machine": "arm64",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "pytest": "9.1.1",
+  "python": "3.14.6"
+ },
+ "evidence_kind": "mutation-results",
+ "experiment_id": "exp-h17-003",
+ "git_commit": "6005ff1d5c73ee564d1e789284fc465692ca4222",
+ "harness_dirty": false,
+ "harness_dirty_paths": [],
+ "harness_sha256": {
+  "oracles/h17/__init__.py": "6bb9cb60308dd4b0a963446c7434bd2bb32b042561e2bd27a1db97e0dc0044cb",
+  "oracles/h17/model.py": "223e343b544b942138008ef516325a0631dc2cd315d49592ba9e3c3c32b54f97",
+  "scripts/evaluate_h17.py": "84078f7341b4c35b3b478585b7394a34df36175e2c7f5a8ab38b809d455e150a",
+  "scripts/run_h17.py": "6f617141080e30dca5900c81e1ad9fcbfd1057627136e459253ae93ffa21fec4",
+  "src/eoo_exp/__init__.py": "16754d2e26eb56fb0469b74cbb88351b20265ac3ae07ecc51ada09167199a90a",
+  "src/eoo_exp/outdir.py": "6997fdfe23a5bbd5fb3c80aa024f172940167d24c55770f3b83f163d9c86fd00",
+  "src/eoo_exp/provenance.py": "9076be346293debdd361cae3c24c781d3d463716d6be1c398ee4474b3201bb5e",
+  "src/eoo_exp/scaffold.py": "b7686662f08994431881ee411fb3b1f913ba63b6327cc6dce8e180e45496a765",
+  "src/eoo_exp/util.py": "64765edd82c60fa3e393878199331db360f14bbbe31c72f5bb8d4079ac6acd86",
+  "src/eoo_h17/__init__.py": "5d2b59965660e36a944b09ca43ddc126b543c42d0aa636cfde420d0448f8e4c3",
+  "src/eoo_h17/agents.py": "6febb70cb814663920f4a73b28c93ea251973d0f1874212342441665896f2c87",
+  "src/eoo_h17/audits.py": "12d91c8e199c8da97228520cc76077fadc82fa09fad4a725c02e3f45b3d0d364",
+  "src/eoo_h17/baseline.py": "ba3359b99c7f68a9e852524c4ba1d33ad5cede5cd34f24e23f2ddb5bb5e2b100",
+  "src/eoo_h17/calls.py": "36c360c3c3232efbe476e0293012b65409909f5a7486e50e3d9552f88904b81a",
+  "src/eoo_h17/drivers.py": "99f7064c73525ffaf3da471c9ef36aa028d2bff3f3774d91ed6cf13d82553479",
+  "src/eoo_h17/evaluate.py": "d856cca2a641a48c0bb6ea1cce460af0e4afa369e5322ab11abb587c6aed6ec6",
+  "src/eoo_h17/machine.py": "3c4669e4d1feb5546f1df4a6e7c55a1c60934f3194fa5a350589601c6410df93",
+  "src/eoo_h17/machine_core.py": "97c41ef9daaef0defa76068bd0fd55988f94eeac980cdf15781378c66b24c7dc",
+  "src/eoo_h17/mutants.py": "49accaa960020d6fd6a98d8335d3d14e646bfa4e78dbc93005034d9cbcc9edf4",
+  "src/eoo_h17/run.py": "a5c3bd347add5c356eab3a28893b6c7ff4f18b4263904b1b2f58a027e4b67ef5",
+  "src/eoo_h17/runlib.py": "af790063e25e994b675255209678d3afe58e55a74ef0eea43e549ab86ebf3806",
+  "src/eoo_h17/scenarios.py": "dfa4a78af24c576f3ec84d082803f9351315d23b60255aef25f4448d0ac856e7",
+  "src/eoo_h17/tamper.py": "3ccf2bc4e1323cdce3460bf3b1128223b0a2c90673dc9bcb8df3e6d251b73998"
+ },
+ "hypothesis_id": "H17",
+ "input_corpus_hash": "bcf0a2a92368bb06d511d11334193f6deac6e278f73cfd7fd84cad63b24de44c",
+ "payload": {
+  "controls": {
+   "after": {
+    "clean": true,
+    "examples": {
+     "manufacturing": 175,
+     "project": 169
+    },
+    "failures": 0,
+    "unique": {
+     "manufacturing": 121,
+     "project": 122
+    }
+   },
+   "before": {
+    "clean": true,
+    "examples": {
+     "manufacturing": 175,
+     "project": 169
+    },
+    "failures": 0,
+    "unique": {
+     "manufacturing": 121,
+     "project": 122
+    }
+   },
+   "clean": true,
+   "clean_after_restore": true
+  },
+  "mutants": [
+   {
+    "class": "function_write",
+    "counterexample": {
+     "detail": "function available_quantity(valid): the world changed during a read-only transition",
+     "domain": "manufacturing",
+     "failures_recorded": 11,
+     "hypothesis_note": [
+      "Failing test case:",
+      "state = H17Machine_manufacturing()",
+      "state.setup(pick=0)",
+      "state.function_call(pick=0, variant=0, via_tool=False)",
+      "state.teardown()"
+     ],
+     "kind": "function_effect",
+     "n_steps": 1,
+     "profile": "std",
+     "steps": [
+      [
+       "init",
+       "std"
+      ],
+      [
+       "function_call",
+       "available_quantity",
+       {
+        "lot": "LOT-A-PX17"
+       },
+       false,
+       "valid"
+      ]
+     ]
+    },
+    "examples_run": {
+     "manufacturing": 48,
+     "project": 49
+    },
+    "expected_kinds": [
+     "function_effect"
+    ],
+    "id": "MF1_function_appends_effect_log",
+    "killed": true,
+    "killed_by_expected_signal": true,
+    "killed_in_domains": {
+     "manufacturing": {
+      "kind": "function_effect",
+      "n_steps": 1
+     },
+     "project": {
+      "kind": "effect_log",
+      "n_steps": 1
+     }
+    },
+    "target": true
+   },
+   {
+    "class": "function_write",
+    "counterexample": {
+     "detail": "function available_quantity(valid): the world changed during a read-only transition",
+     "domain": "manufacturing",
+     "failures_recorded": 11,
+     "hypothesis_note": [
+      "Failing test case:",
+      "state = H17Machine_manufacturing()",
+      "state.setup(pick=0)",
+      "state.function_call(pick=0, variant=0, via_tool=False)",
+      "state.teardown()"
+     ],
+     "kind": "function_effect",
+     "n_steps": 1,
+     "profile": "std",
+     "steps": [
+      [
+       "init",
+       "std"
+      ],
+      [
+       "function_call",
+       "available_quantity",
+       {
+        "lot": "LOT-A-PX17"
+       },
+       false,
+       "valid"
+      ]
+     ]
+    },
+    "examples_run": {
+     "manufacturing": 48,
+     "project": 49
+    },
+    "expected_kinds": [
+     "function_effect"
+    ],
+    "id": "MF2_function_writes_canonical_store",
+    "killed": true,
+    "killed_by_expected_signal": true,
+    "killed_in_domains": {
+     "manufacturing": {
+      "kind": "function_effect",
+      "n_steps": 1
+     },
+     "project": {
+      "kind": "canonical_changed",
+      "n_steps": 1
+     }
+    },
+    "target": true
+   },
+   {
+    "class": "gate_bypass",
+    "counterexample": {
+     "detail": "m_unauth_stranger: failed gates [], oracle denies at 'authority'",
+     "domain": "manufacturing",
+     "failures_recorded": 70,
+     "hypothesis_note": [
+      "Failing test case:",
+      "state = H17Machine_manufacturing()",
+      "state.setup(pick=0)",
+      "state.unauthorized(pick=0, via_tool=False)",
+      "state.teardown()"
+     ],
+     "kind": "gate_mismatch",
+     "n_steps": 1,
+     "profile": "std",
+     "steps": [
+      [
+       "init",
+       "std"
+      ],
+      [
+       "unauthorized",
+       "m_unauth_stranger",
+       false
+      ]
+     ]
+    },
+    "examples_run": {
+     "manufacturing": 584,
+     "project": 48
+    },
+    "expected_kinds": [
+     "gate_mismatch",
+     "effect_log",
+     "external_effects",
+     "execution_class"
+    ],
+    "id": "MG1_bypass_authority_gate",
+    "killed": true,
+    "killed_by_expected_signal": true,
+    "killed_in_domains": {
+     "manufacturing": {
+      "kind": "gate_mismatch",
+      "n_steps": 1
+     },
+     "project": {
+      "kind": "gate_mismatch",
+      "n_steps": 1
+     }
+    },
+    "target": true
+   },
+   {
+    "class": "gate_bypass",
+    "counterexample": {
+     "detail": "m_inv_qty_zero: failed gates [], oracle denies at 'preconditions'",
+     "domain": "manufacturing",
+     "failures_recorded": 40,
+     "hypothesis_note": [
+      "Failing test case:",
+      "state = H17Machine_manufacturing()",
+      "state.setup(pick=0)",
+      "state.stale_or_invalid(pick=1, via_tool=False)",
+      "state.teardown()"
+     ],
+     "kind": "gate_mismatch",
+     "n_steps": 1,
+     "profile": "std",
+     "steps": [
+      [
+       "init",
+       "std"
+      ],
+      [
+       "stale_or_invalid",
+       "m_inv_qty_zero",
+       false
+      ]
+     ]
+    },
+    "examples_run": {
+     "manufacturing": 260,
+     "project": 159
+    },
+    "expected_kinds": [
+     "gate_mismatch",
+     "effect_log",
+     "external_effects",
+     "execution_class"
+    ],
+    "id": "MG2_bypass_preconditions_gate",
+    "killed": true,
+    "killed_by_expected_signal": true,
+    "killed_in_domains": {
+     "manufacturing": {
+      "kind": "gate_mismatch",
+      "n_steps": 1
+     },
+     "project": {
+      "kind": "gate_mismatch",
+      "n_steps": 1
+     }
+    },
+    "target": true
+   },
+   {
+    "class": "gate_bypass",
+    "counterexample": {
+     "detail": "propose m_approval: EffectLog entries engine=1 oracle=0",
+     "domain": "manufacturing",
+     "failures_recorded": 42,
+     "hypothesis_note": [
+      "Failing test case:",
+      "state = H17Machine_manufacturing()",
+      "state.setup(pick=0)",
+      "state.propose(pick=3, via_tool=False)",
+      "state.teardown()"
+     ],
+     "kind": "effect_log",
+     "n_steps": 1,
+     "profile": "std",
+     "steps": [
+      [
+       "init",
+       "std"
+      ],
+      [
+       "propose",
+       "m_approval",
+       false
+      ]
+     ]
+    },
+    "examples_run": {
+     "manufacturing": 115,
+     "project": 143
+    },
+    "expected_kinds": [
+     "gate_mismatch",
+     "effect_log",
+     "external_effects",
+     "execution_class"
+    ],
+    "id": "MG3_bypass_policy_gate",
+    "killed": true,
+    "killed_by_expected_signal": true,
+    "killed_in_domains": {
+     "manufacturing": {
+      "kind": "effect_log",
+      "n_steps": 1
+     },
+     "project": {
+      "kind": "gate_mismatch",
+      "n_steps": 1
+     }
+    },
+    "target": true
+   },
+   {
+    "class": "gate_bypass",
+    "counterexample": {
+     "detail": "propose m_approval: EffectLog entries engine=1 oracle=0",
+     "domain": "manufacturing",
+     "failures_recorded": 39,
+     "hypothesis_note": [
+      "Failing test case:",
+      "state = H17Machine_manufacturing()",
+      "state.setup(pick=0)",
+      "state.propose(pick=3, via_tool=False)",
+      "state.teardown()"
+     ],
+     "kind": "effect_log",
+     "n_steps": 1,
+     "profile": "std",
+     "steps": [
+      [
+       "init",
+       "std"
+      ],
+      [
+       "propose",
+       "m_approval",
+       false
+      ]
+     ]
+    },
+    "examples_run": {
+     "manufacturing": 115,
+     "project": 354
+    },
+    "expected_kinds": [
+     "gate_mismatch",
+     "effect_log",
+     "external_effects",
+     "execution_class"
+    ],
+    "id": "MG4_bypass_approval_requirement",
+    "killed": true,
+    "killed_by_expected_signal": true,
+    "killed_in_domains": {
+     "manufacturing": {
+      "kind": "effect_log",
+      "n_steps": 1
+     }
+    },
+    "target": true
+   }
+  ],
+  "summary": {
+   "classes_present": [
+    "function_write",
+    "gate_bypass"
+   ],
+   "kill_rate": 1.0,
+   "target_killed": 6,
+   "target_total": 6
+  }
+ },
+ "payload_hash": "df9020eaa0332f5ab5dfd3e4c35f156dc9e46ada5b094a4649952d7d4245e087",
+ "payload_path": null,
+ "protocol_freeze_hash": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2",
+ "seed": 17
+}

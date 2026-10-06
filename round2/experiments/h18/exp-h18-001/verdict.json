@@ -1,0 +1,348 @@
+{
+ "common": {
+  "protocol_valid": true,
+  "reject_hit": true,
+  "required_evidence_complete": true,
+  "sample_sufficient": true,
+  "support_hit": false
+ },
+ "engine_version": "1.1",
+ "evaluator_sha256": "e44f9dfd0e9ca47743848737bb7365a77f729614be3f81d839264e4a4978f561",
+ "evidence_payload_hashes": {
+  "baseline-comparison.json": "745edcfb8f23ca876ee9ecaba9bb57a835bc7b6606cf153d78e1342b9bb6ab71",
+  "bespoke-change-metrics.json": "143bb4c603ad7ca3c788e92e1d6884176038c5e0f567a7ddf2bd673e20a3346f",
+  "git-traceability.json": "5bdef298fbad32b840f73277ca77d0ee9a46dd9b07a7688f435fca6d5dc46508",
+  "mutation-results.json": "3ed30bafc6d60172c78a0df35e85c2dc2f15871a072eb1134f1797d5417f4817",
+  "project-state-machine.json": "dd3a704344d6a2de24390b68f32c67faddf641590e24591ce17434f05e4e4d9d",
+  "verdict-reproducibility.json": "1c592363dec86c58471d60ffb02834375fa1d0af35bfb224438613b7d2391423"
+ },
+ "experiment_id": "exp-h18-001",
+ "harness_dirty_at_run": {
+  "baseline-comparison.json": true,
+  "bespoke-change-metrics.json": true,
+  "git-traceability.json": true,
+  "mutation-results.json": true,
+  "project-state-machine.json": true,
+  "verdict-reproducibility.json": true
+ },
+ "hypothesis_id": "H18",
+ "interpretation_notes": [
+  "R1 counts only CORE classes (docs/04 hard rules + lifecycle order: post_freeze_threshold_edit, evidence_wrong_version, evidence_unpinned, verdict_without_evidence, forced_verdict, incomplete_preregistration, blank_freeze, flag_non_orphan, start_out_of_order, supersede_non_evaluated); an illegal op accepted in an EXTENSION class (supersede_self, new_version_overwrite, decision_blank_rationale) blocks S1 but is not by itself a reject.",
+  "R2 reads 'parity/worse' as EOO total >= baseline total in every class; headline totals count mandatory EOO surface (authority rules, outcome predicates) conservatively; the sensitivity without them is in numbers.sensitivity_without_mandatory_extras.",
+  "R3 maps falsifier 1 to the static audit; the contract names no reject clause for it.",
+  "S6 is the thresholds.json required_mutation_kill_rate; the contract support_if does not list it.",
+  "legal ops the Engine refused (legal_rejected) are reported, not graded: the contract has no clause for false refusals."
+ ],
+ "numbers": {
+  "authoritative_reproducible": true,
+  "baseline_divergent_classes": {},
+  "baseline_exceptions": 0,
+  "baseline_illegal_accepted": 0,
+  "baseline_legal_rejected": 0,
+  "baseline_state_mismatches": 0,
+  "class_counts": {
+   "blank_freeze": 54,
+   "decision_blank_rationale": 116,
+   "decision_ok": 139,
+   "evaluate_with_evidence": 161,
+   "evidence_pinned_ok": 413,
+   "evidence_unpinned": 1854,
+   "evidence_wrong_version": 706,
+   "flag_non_orphan": 471,
+   "flag_orphan": 119,
+   "forced_verdict": 228,
+   "incomplete_preregistration": 640,
+   "new_version_overwrite": 65,
+   "post_freeze_threshold_edit": 230,
+   "preregister": 690,
+   "start_out_of_order": 160,
+   "supersede_non_evaluated": 103,
+   "supersede_ok": 500,
+   "supersede_self": 59,
+   "verdict_without_evidence": 205
+  },
+  "dogfood_cli": {
+   "accepted_actions": 11,
+   "accepted_with_matching_commit_trailers": 11,
+   "cli_commits_on_branch": 13,
+   "expected_commits": 13,
+   "fsck": true,
+   "history_agrees": true
+  },
+  "dogfood_hostile_accepted": [],
+  "dogfood_phase": "SUPERSEDED",
+  "domain_blind_store_roundtrip": true,
+  "engine_audit": {
+   "domain_identity_branches": 0,
+   "project_domain_branches": 0
+  },
+  "engine_audit_probes_found": {
+   "engine_core": true,
+   "git_store": true
+  },
+  "engine_audit_scopes": {
+   "engine_core": {
+    "branch_hits": 0,
+    "files_scanned": 21,
+    "literal_hits": 0,
+    "string_constants_scanned": 1198
+   },
+   "git_store": {
+    "branch_hits": 0,
+    "files_scanned": 7,
+    "literal_hits": 0,
+    "string_constants_scanned": 328
+   }
+  },
+  "engine_version_in_evidence": "1.1",
+  "eoo_exceptions": 0,
+  "eoo_illegal_accepted": 7,
+  "eoo_illegal_accepted_core": 0,
+  "eoo_legal_rejected": 61,
+  "eoo_only_battery": {
+   "denied_attempts_left_git_unchanged_until_the_one_allowed_action": true,
+   "direct_store_write_refused": true,
+   "idempotent_retry_writes_nothing_twice": true,
+   "unauthorized_principal_denied": true,
+   "unknown_principal_denied": true
+  },
+  "eoo_state_mismatches": 7,
+  "evaluations": {
+   "accepted_evaluations": 744,
+   "verdict_matches_oracle": 744,
+   "verdicts": {
+    "INCONCLUSIVE": 707,
+    "REJECTED": 23,
+    "SUPPORTED": 14
+   }
+  },
+  "excluded_not_counted": {
+   "EXCL:freeze_hash_computation": {
+    "config_lines": 49,
+    "python_loc": 43,
+    "total": 92
+   },
+   "EXCL:h19_git_authority": {
+    "config_lines": 60,
+    "python_loc": 100,
+    "total": 160
+   },
+   "EXCL:harness_plumbing": {
+    "config_lines": 0,
+    "python_loc": 13,
+    "total": 13
+   },
+   "EXCL:legacy_p4b_fake_git": {
+    "config_lines": 0,
+    "python_loc": 79,
+    "total": 79
+   },
+   "EXCL:shared_evaluator_adapter": {
+    "config_lines": 0,
+    "python_loc": 27,
+    "total": 27
+   },
+   "EXCL:shared_seed_loader": {
+    "config_lines": 0,
+    "python_loc": 108,
+    "total": 108
+   },
+   "EXCL:unused_observation_type": {
+    "config_lines": 29,
+    "python_loc": 0,
+    "total": 29
+   }
+  },
+  "illegal_accepted_by_class": {
+   "supersede:illegal": 7,
+   "supersede_self": 7
+  },
+  "legal_rejected_by_class": {
+   "new_version:legal": 61,
+   "new_version_chain": 61
+  },
+  "metrics": {
+   "TC1": {
+    "baseline": 374,
+    "correct_baseline": true,
+    "correct_eoo": false,
+    "eoo": 1967,
+    "reduction": -4.2594
+   },
+   "TC2": {
+    "baseline": 21,
+    "correct_baseline": true,
+    "correct_eoo": true,
+    "eoo": 78,
+    "reduction": -2.7143
+   },
+   "TC3": {
+    "baseline": 35,
+    "correct_baseline": true,
+    "correct_eoo": true,
+    "eoo": 139,
+    "reduction": -2.9714
+   }
+  },
+  "minimum_runs": 3000,
+  "mutation_classes_present": [
+   "git_traceability",
+   "lifecycle_rule"
+  ],
+  "mutation_controls_clean": [
+   true,
+   true
+  ],
+  "mutation_exceptions": 0,
+  "mutation_kill_rate": 1.0,
+  "mutation_survivors": [],
+  "mutation_target_killed": 3,
+  "mutation_target_total": 3,
+  "oracle_imports": {
+   "__init__.py": [],
+   "queries.py": [
+    "__future__",
+    "json"
+   ],
+   "world.py": [
+    "__future__",
+    "hdd"
+   ]
+  },
+  "oracle_independent": true,
+  "python_unassigned": {
+   "baseline": {},
+   "eoo": {}
+  },
+  "recurring_complexity_loc": {
+   "baseline": 39,
+   "eoo": 2191
+  },
+  "sensitivity_without_mandatory_extras": {
+   "TC1": -3.872,
+   "TC2": -2.714,
+   "TC3": -2.457
+  },
+  "steps": 10226,
+  "tc2_correct": {
+   "q1": true,
+   "q2": true,
+   "q3": true
+  },
+  "tc3_correct": true,
+  "thresholds": {
+   "max_canonical_changes_without_git": 0,
+   "max_illegal_lifecycle_transitions": 0,
+   "min_bespoke_surface_reduction_in_one_task_class": 0.25,
+   "required_mutation_kill_rate": 1.0,
+   "required_verdict_reproducibility": 1.0
+  },
+  "trace": {
+   "accepted_actions": 4746,
+   "commits_without_acceptance": 0,
+   "non_git_effects": 0,
+   "one_commit_each": 4746,
+   "ontology_only_writes": 0,
+   "refused_with_commit": 0,
+   "trace_ok": 4746
+  },
+  "unique_cases": 3000,
+  "variants_disagree_on_steps": 68
+ },
+ "predicates": {
+  "inconclusive_if": [
+   {
+    "clause": "The baseline is not implemented to equivalent invariant strength (it disagrees with the oracle) or a task class has no correct baseline",
+    "id": "I1",
+    "value": false
+   },
+   {
+    "clause": "The task corpus is incomplete (fewer unique sequences than the minimum, or a required hostile/lifecycle class never generated)",
+    "id": "I2",
+    "value": false
+   }
+  ],
+  "invalid_if": [
+   {
+    "clause": "Evidence records carry a protocol-freeze / ENGINE_PREREG hash different from the files now",
+    "id": "V1",
+    "value": false
+   },
+   {
+    "clause": "Evidence records disagree on commit / seed / corpus hash or do not name the current Engine version",
+    "id": "V2",
+    "value": false
+   },
+   {
+    "clause": "Harness self-check failed (mutation control not clean, harness error rows, harness files changed since the run)",
+    "id": "V3",
+    "value": false
+   },
+   {
+    "clause": "Project Ontology graded its own hypothesis: the independent oracle imports runtime code or was not consulted on every step",
+    "id": "V4",
+    "value": false
+   }
+  ],
+  "reject_if": [
+   {
+    "clause": "A core governance invariant (docs/04 hard rule or lifecycle order) can be bypassed",
+    "id": "R1",
+    "value": false
+   },
+   {
+    "clause": "All preregistered task classes show parity/worse bespoke change surface while EOO adds recurring complexity",
+    "id": "R2",
+    "value": true
+   },
+   {
+    "clause": "Project lifecycle enforcement requires a bespoke (domain-identity) branch in the generic Engine",
+    "id": "R3",
+    "value": false
+   }
+  ],
+  "support_if": [
+   {
+    "clause": "0 illegal lifecycle transitions accepted across the generated corpus (>= the contract minimum of unique sequences)",
+    "id": "S1",
+    "value": false
+   },
+   {
+    "clause": "100% authoritative verdicts reproducible from frozen evidence/evaluator",
+    "id": "S2",
+    "value": true
+   },
+   {
+    "clause": "0 canonical ontology-only changes lacking Git trace",
+    "id": "S3",
+    "value": true
+   },
+   {
+    "clause": "0 Project-domain branches in the generic Engine (static audit incl. the Git store, with planted known-positives found)",
+    "id": "S4",
+    "value": true
+   },
+   {
+    "clause": ">= 25% lower bespoke surface than the equally strong file-only baseline in >= 1 task class with no correctness loss",
+    "id": "S5",
+    "value": false
+   },
+   {
+    "clause": "All target mutations killed, controls clean (frozen required_mutation_kill_rate)",
+    "id": "S6",
+    "value": true
+   }
+  ]
+ },
+ "problems": [],
+ "protocol": {
+  "freeze_sha256": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2"
+ },
+ "protocol_mismatches": {
+  "disagreeing_provenance": false,
+  "harness_self_check": [],
+  "records_not_naming_current_engine_version": [],
+  "records_with_wrong_hashes": []
+ },
+ "verdict": "REJECTED"
+}

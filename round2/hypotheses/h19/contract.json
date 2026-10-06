@@ -1,0 +1,75 @@
+{
+  "id": "H19",
+  "title": "Git authority and executable ontology can coexist without split brain",
+  "claim": "With Git as canonical authority, Project Ontology can rebuild deterministically, execute governed changes through versioned Git mutations, detect stale/conflicting writes and preserve historical bindings without becoming a competing source of truth.",
+  "null_hypothesis": "Making the ontology executable creates a second mutable truth store whose state can diverge from Git or lose concurrency/history semantics.",
+  "rivals": [
+    "A Git-native workflow without an ontology projection is sufficient and safer.",
+    "Rebuild determinism holds only on happy paths, not concurrent/stale histories."
+  ],
+  "mechanism": "Treat ontology state as a deterministic projection of versioned Git artifacts and require every canonical mutation to carry a base version and produce a Git commit/change record.",
+  "scope": "Project Ontology canonical state, H15-H22 contracts/evidence and generated commit/action interleavings.",
+  "predictions": [
+    "Clean rebuild from the same Git commit produces identical canonical ontology state hash.",
+    "Every durable Project Action that changes canonical state produces a Git-visible versioned artifact.",
+    "Stale writes never silently overwrite newer canonical state.",
+    "Conflicts are explicit and replayable.",
+    "Historical evidence/verdict bindings remain associated with original commit/version after later changes."
+  ],
+  "falsifiers": [
+    "Same Git commit rebuilds to different canonical state.",
+    "Canonical ontology state changes without a Git-visible change.",
+    "Generated stale write causes a lost update.",
+    "Historical evidence silently rebinds to a later contract/version."
+  ],
+  "experiment": {
+    "summary": "Property/state-machine test of Git commits, ontology rebuilds, governed changes, stale bases, merges and conflicts.",
+    "steps": [
+      "Define deterministic canonical-state hashing.",
+      "Generate repository histories and Project Actions from random valid bases.",
+      "Rebuild projection repeatedly and compare hashes.",
+      "Generate concurrent compatible and conflicting changes.",
+      "Verify optimistic concurrency/conflict behavior and historical references.",
+      "Inject nondeterministic rebuild and stale-write bugs."
+    ],
+    "minimum_runs": 5000
+  },
+  "oracle": "Simplified immutable Git DAG/reference model plus deterministic projection function defined independently of runtime storage.",
+  "baseline": "Direct Git-native mutation workflow with no executable ontology store.",
+  "required_evidence": [
+    "rebuild-hashes.json",
+    "concurrency-state-machine.json",
+    "canonical-change-audit.json",
+    "historical-binding-results.json",
+    "mutation-results.json"
+  ],
+  "evaluator": {
+    "support_if": [
+      "100% rebuild hash equality for identical Git commits.",
+      "0 canonical ontology-only writes.",
+      "0 silent lost updates in generated concurrency corpus.",
+      "100% historical bindings remain pinned.",
+      "All target mutations detected."
+    ],
+    "reject_if": [
+      "Any split-brain, nondeterministic rebuild, silent lost update or history rebinding is observed."
+    ],
+    "inconclusive_if": [
+      "Concurrency corpus lacks stale-base and conflicting-change classes."
+    ],
+    "invalid_if": [
+      "Runtime database is used as the oracle for Git canonical state."
+    ]
+  },
+  "python_hypothesis_role": {
+    "level": "PRIMARY",
+    "strategy": "State machine generates commit DAG operations, base revisions, Project Actions, rebuilds, merges and conflicts.",
+    "mutation_proof": "Inject timestamp-dependent projection, missing base-version check and history-rebinding bug; suite must shrink/detect them."
+  },
+  "upstream_dependencies": [
+    "H18"
+  ],
+  "stop_conditions": [
+    "If Git and ontology cannot maintain one-way canonical authority without special manual reconciliation, reject before adding more self-hosted actions."
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "id": "H16",
+  "title": "A bounded ontology kernel survives two semantically different real domains",
+  "claim": "Manufacturing and Project Ontology can both be expressed using the same frozen meta-model/resource kinds without adding kernel primitive kinds, domain-name compiler special cases, or domain-specific semantic operators.",
+  "null_hypothesis": "The apparent kernel is only manufacturing-shaped; adding a research-project domain requires new primitive kinds or special-case semantics.",
+  "rivals": [
+    "A conventional typed schema framework is equally bounded and the ontology kernel offers no special compositional advantage.",
+    "The kernel remains bounded only by moving domain semantics into opaque code that cannot be inspected as ontology resources."
+  ],
+  "mechanism": "A genuinely general operational ontology should separate a small set of resource kinds/capabilities from unbounded domain vocabulary, allowing new domains to add declarations rather than new meta-level machinery.",
+  "scope": "Frozen IR kernel and the complete Manufacturing + Project Ontology domain contracts.",
+  "predictions": [
+    "Project Ontology adds only ordinary domain declarations: types, links, interfaces, functions, actions, policies, authorities, observations, constraints and adapters.",
+    "Kernel resource-kind count is unchanged after Domain 2.",
+    "Compiler/runtime core contains no condition keyed to manufacturing or project domain identity.",
+    "Cross-domain links can be declared without a new kernel primitive."
+  ],
+  "falsifiers": [
+    "A Project Ontology requirement cannot be represented without adding a new kernel resource kind.",
+    "A compiler semantic branch keyed to the domain is required.",
+    "A concept claimed to be domain configuration actually changes generic runtime semantics."
+  ],
+  "experiment": {
+    "summary": "Freeze the kernel after Manufacturing, add the strong Project Ontology domain blind to kernel changes, and audit the semantic/runtime diff.",
+    "steps": [
+      "Snapshot/freeze kernel schema and compiler dispatch table.",
+      "Implement Project Ontology only through allowed extension points.",
+      "Run static diff/audit for new kernel kinds and domain-keyed branches.",
+      "Generate mixed-domain legal definitions and compile/validate them.",
+      "Inject a fake domain-specific branch and prove the audit catches it."
+    ],
+    "minimum_runs": 2000
+  },
+  "oracle": "Frozen list of kernel resource kinds plus static/dynamic dispatch audit and schema validation.",
+  "baseline": "A conventional typed schema/plugin architecture subjected to the same Domain 2 requirements, used to contextualize whether boundedness is ontology-specific.",
+  "required_evidence": [
+    "kernel-before.json",
+    "kernel-after.json",
+    "core-diff.json",
+    "domain-branch-audit.json",
+    "mixed-domain-generated.json",
+    "mutation-results.json"
+  ],
+  "evaluator": {
+    "support_if": [
+      "0 new kernel primitive kinds after Project Ontology.",
+      "0 domain-identity branches in compiler/core runtime.",
+      "100% of registered Domain 2 requirements compile through allowed generic resource kinds.",
+      "Registered branch-detection mutation is caught."
+    ],
+    "reject_if": [
+      "Any necessary new kernel primitive kind or domain-identity semantic branch is introduced."
+    ],
+    "inconclusive_if": [
+      "Project Ontology implementation omits any required strong-model object/action/governance requirement."
+    ],
+    "invalid_if": [
+      "Kernel freeze snapshot is changed after Domain 2 adaptation begins without a new experiment version."
+    ]
+  },
+  "python_hypothesis_role": {
+    "level": "SUPPORTING",
+    "strategy": "Generate legal resource combinations from both domains and mixed cross-domain references to search generic compiler/validation assumptions.",
+    "mutation_proof": "Inject a domain-name special case and a synthetic new primitive kind; static/property checks must fail."
+  },
+  "upstream_dependencies": [],
+  "stop_conditions": [
+    "If a new primitive is genuinely required, reject/narrow bounded-kernel claim before adding it; record the proposed primitive for a new hypothesis version."
+  ]
+}

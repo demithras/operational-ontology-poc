@@ -1,0 +1,261 @@
+{
+ "candidate_surface": "openpona2",
+ "common": {
+  "protocol_valid": true,
+  "reject_hit": false,
+  "required_evidence_complete": true,
+  "sample_sufficient": true,
+  "support_hit": true
+ },
+ "evaluator_sha256": "2600801de27adaa5d901a764ece0a90bd9c75eca569d93778b8acea5046d7827",
+ "evaluator_v2_sha256": "ae186d11cc5834a116a72f6022232b93fb4ba68ce5464a7df032b16ed39c4159",
+ "evidence_payload_hashes": {
+  "ambiguity-corpus.json": "5710d098cf7adae1819d122f36e0651cddcea9186df0001e67d885269e1d5cd9",
+  "compiler-diff-metrics.json": "67adc9f8295887343949609cbacf4e7a7c536f5681febfc4c7e18464d84b790f",
+  "generated-roundtrip.json": "8f36e2dc17beff5da07885076da474be8715471cc43e6d5240a035fa4ec3b4b7",
+  "mutation-results.json": "8566358a56fe1e9faebe2c1aba28f5e01f140d3d7151f9a3147c32a5ab992121",
+  "real-domain-roundtrip.json": "e07266e6b8bc5618dfaa09bdaf6c5590cbeef0d2f070e86ddfc342cf0c70d35a",
+  "sidecar-audit.json": "6770f63f696b18d0109f3e8b3d84f0f3db8348ddb123430cdf636910db4b2223"
+ },
+ "experiment_id": "exp-h15-v2-001",
+ "hypothesis_id": "H15",
+ "interpretation_notes": [
+  "R4 maps falsifier 5 (silent invention of semantics) to reject; the contract's reject_if list names only R1-R3.",
+  "Mutation kill rate is judged on target classes for BOTH compilers; extra mutants are informational.",
+  "The DSL baseline numbers are reported but only OpenPona enters S1-S5.",
+  "H15 v2 (protocol/H15_V2_PREREG.json): V1 checks the v2 candidate pin and the v2 prereg hash.",
+  "Meaning rule (bounded vocabulary) enters R3 (reject) and S4 (support); unknown meaning-rule result keeps R3/S4 unknown."
+ ],
+ "numbers": {
+  "ambiguity_classes_covered": [
+   "ambiguous_binding",
+   "dangling_atom",
+   "missing_authority_effect",
+   "missing_cardinality",
+   "missing_policy_decision",
+   "missing_required_flag",
+   "missing_resource_kind",
+   "missing_type",
+   "missing_version",
+   "surface_parse_ambiguous",
+   "unknown_token_or_key",
+   "unresolved_binding"
+  ],
+  "ambiguity_classes_declared": [
+   "ambiguous_binding",
+   "dangling_atom",
+   "missing_authority_effect",
+   "missing_cardinality",
+   "missing_policy_decision",
+   "missing_required_flag",
+   "missing_resource_kind",
+   "missing_type",
+   "missing_version",
+   "surface_parse_ambiguous",
+   "unknown_token_or_key",
+   "unresolved_binding"
+  ],
+  "ambiguity_dsl_baseline": {
+   "declared_accepted": 0,
+   "declared_crashed": 0,
+   "declared_fail_closed": 39,
+   "declared_total": 39,
+   "deletion_accepted_exact": 249,
+   "deletion_raised": 651,
+   "deletion_total": 900,
+   "deletion_violations": 0
+  },
+  "ambiguity_openpona": {
+   "declared_accepted": 0,
+   "declared_crashed": 0,
+   "declared_fail_closed": 49,
+   "declared_total": 49,
+   "deletion_accepted_exact": 899,
+   "deletion_raised": 2299,
+   "deletion_total": 3198,
+   "deletion_violations": 0
+  },
+  "dsl_baseline_failed": 0,
+  "extra_mutation_survivors_info_only": [
+   "openpona:accept_parse_ambiguity"
+  ],
+  "gap_constructs": 0,
+  "generated_total_consistent": true,
+  "generated_unique_packages": 10175,
+  "generated_valid_cases": 10400,
+  "indispensable_sidecar_count": 0,
+  "meaning_rule": {
+   "distinct_phrases_total": 259,
+   "ok": true,
+   "packages": 2002,
+   "phrase_table_size": 259,
+   "sizes": 26,
+   "sizes_over_bound": [],
+   "verdict": "bounded"
+  },
+  "mutation": {
+   "dsl": {
+    "kill_rate": 1.0,
+    "killed": 6,
+    "target_mutants": 6
+   },
+   "openpona": {
+    "kill_rate": 1.0,
+    "killed": 6,
+    "target_mutants": 6
+   }
+  },
+  "mutation_classes_present": {
+   "dsl": [
+    "accept_ambiguous_binding",
+    "default_missing_type",
+    "drop_authority_ref",
+    "drop_cardinality",
+    "drop_version",
+    "swap_function_action"
+   ],
+   "openpona": [
+    "accept_ambiguous_binding",
+    "default_missing_type",
+    "drop_authority_ref",
+    "drop_cardinality",
+    "drop_version",
+    "swap_function_action"
+   ]
+  },
+  "mutation_survivors": [],
+  "new_primitive_tokens_required": 0,
+  "openpona_failed": 0,
+  "openpona_harness_errors": 0,
+  "openpona_ok": 10400,
+  "openpona_unrepresentable": 0,
+  "real_domains_present": [
+   "manufacturing",
+   "project"
+  ],
+  "real_dsl_non_equivalent_baseline": [],
+  "real_openpona_non_equivalent": [],
+  "real_openpona_not_encoded_completely": [],
+  "reference_slots_total_domains": {
+   "manufacturing": 181,
+   "project": 204
+  },
+  "reference_slots_via_coreference_labels_domains": {
+   "manufacturing": 0,
+   "project": 0
+  },
+  "thresholds": {
+   "max_generated_semantic_failures": 0,
+   "max_indispensable_semantic_sidecars": 0,
+   "max_new_openpona_primitives": 0,
+   "max_real_domain_roundtrip_failures": 0,
+   "min_generated_valid_cases": 10000,
+   "required_mutation_kill_rate": 1.0
+  }
+ },
+ "predicates": {
+  "inconclusive_if": [
+   {
+    "clause": "Generated coverage is below 10,000 valid cases",
+    "id": "I1",
+    "value": false
+   },
+   {
+    "clause": "Either registered domain is not encoded completely",
+    "id": "I2",
+    "value": false
+   }
+  ],
+  "invalid_if": [
+   {
+    "clause": "Evidence records carry a protocol / Gate-0 / candidate hash different from the frozen files",
+    "id": "V1",
+    "value": false
+   },
+   {
+    "clause": "Evidence records disagree on commit / seed / corpus hash",
+    "id": "V2",
+    "value": false
+   },
+   {
+    "clause": "Harness self-check failed (mutation control not clean, oracle known-negative missed, patches leaked)",
+    "id": "V3",
+    "value": false
+   }
+  ],
+  "reject_if": [
+   {
+    "clause": "Any falsifier is observed in a frozen real-domain contract",
+    "id": "R1",
+    "value": false
+   },
+   {
+    "clause": "Any generated minimal counterexample demonstrates irreversible semantic loss in a required IR kind",
+    "id": "R2",
+    "value": false
+   },
+   {
+    "clause": "A new primitive token or indispensable semantic sidecar is required",
+    "id": "R3",
+    "value": false
+   },
+   {
+    "clause": "The compiler resolves an ambiguous input by silently inventing semantics (falsifier 5; mapped to reject)",
+    "id": "R4",
+    "value": false
+   }
+  ],
+  "support_if": [
+   {
+    "clause": "100% of frozen real-domain contracts are semantically equivalent after OpenPona round-trip",
+    "id": "S1",
+    "value": true
+   },
+   {
+    "clause": "0 semantic-equivalence failures across at least 10,000 generated valid cases",
+    "id": "S2",
+    "value": true
+   },
+   {
+    "clause": "0 required new primitive tokens",
+    "id": "S3",
+    "value": true
+   },
+   {
+    "clause": "0 indispensable semantic sidecar fields",
+    "id": "S4",
+    "value": true
+   },
+   {
+    "clause": "100% of predeclared ambiguity/missing-type cases fail closed or remain unresolved",
+    "id": "S5",
+    "value": true
+   },
+   {
+    "clause": "All target mutation classes are detected",
+    "id": "S6",
+    "value": true
+   }
+  ]
+ },
+ "problems": [],
+ "protocol": {
+  "candidate_combined_sha256": "e9b057c1b9366b2737a4e76dcdf765d5be16e971b8c9dae4fae76ffd55a297e0",
+  "candidate_pin_path": "/private/tmp/claude-501/-Users-d-surchis-work-operational-ontology-poc/83ecb957-a4bb-430b-84f3-5b83562a7f31/scratchpad/wt-r15v2/round2/protocol/H15_V2_CANDIDATE.json",
+  "freeze_sha256": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2",
+  "gate0_combined_sha256": "2b632c47bb56e285d74b52cb04c079e439117bed5bc879268cefc1658b125f19",
+  "h15_v2_prereg_sha256": "1822dad087651d81da3dfd4749021dbaf9d9e83d44536c9c76f9d1698fbc932b"
+ },
+ "protocol_mismatches": {
+  "disagreeing_provenance": false,
+  "harness_self_check": [],
+  "records_with_wrong_hashes": [],
+  "v2_candidate_pin": {
+   "combined_sha256": "e9b057c1b9366b2737a4e76dcdf765d5be16e971b8c9dae4fae76ffd55a297e0",
+   "h15_v2_prereg_sha256": "1822dad087651d81da3dfd4749021dbaf9d9e83d44536c9c76f9d1698fbc932b",
+   "path": "/private/tmp/claude-501/-Users-d-surchis-work-operational-ontology-poc/83ecb957-a4bb-430b-84f3-5b83562a7f31/scratchpad/wt-r15v2/round2/protocol/H15_V2_CANDIDATE.json",
+   "present": true
+  }
+ },
+ "verdict": "SUPPORTED"
+}

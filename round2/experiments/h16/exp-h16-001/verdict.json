@@ -1,0 +1,248 @@
+{
+ "common": {
+  "protocol_valid": true,
+  "reject_hit": false,
+  "required_evidence_complete": true,
+  "sample_sufficient": true,
+  "support_hit": true
+ },
+ "evaluator_sha256": "66a678afbf473909e5f6147a7d30fc017bc6889db152fe1bec62c7da946989ba",
+ "evidence_payload_hashes": {
+  "core-diff.json": "9e728cd44c599d3701843a987524b99d4c7a8f56a9f0ea99fa3cea4b45934064",
+  "domain-branch-audit.json": "f6768fc16cfdc4d1c06332ad0a14bacf4dfb098bb9b1eb68da3e84cc5347d5f8",
+  "kernel-after.json": "a773f144723ff3f7a2955cc9bd567db966389a0d5e946e1b14d1b58becb33b40",
+  "kernel-before.json": "4791f5bff9b29ceb9d9e414eecb78812361b0c4be2a486404574faac1b1fc77c",
+  "mixed-domain-generated.json": "21cd4804a3e73ccae5b94b4daedb1699e14cdccd6655fb48e4f86105e51bb32d",
+  "mutation-results.json": "484bf3ed98611a1afd79c10e85eaa8e58640df3bf4493ec423c77ce64dd5c4d9"
+ },
+ "experiment_id": "exp-h16-001",
+ "hypothesis_id": "H16",
+ "interpretation_notes": [
+  "R3 and I3 are extensions: the contract names no clause for a generic-runtime-semantics dependence found by rename-invariance (falsifier 3 mapped to reject) nor for generated-package load failures (mapped to inconclusive).",
+  "S2 also requires 0 string-literal domain-identity hits in scanned core code (stricter than 0 branches).",
+  "Requirement coverage is a registry-presence check: each carrier must exist in the IR, be a kernel kind and compile; it does not prove the carrier's logic is right (see H17-H21).",
+  "Generated packages bind inert stub logic: the cases test generic validate/compile/load/dispatch, not domain logic."
+ ],
+ "numbers": {
+  "audit_branch_hits": 0,
+  "audit_files_scanned": {
+   "dsl_compiler": 6,
+   "engine_core": 19,
+   "ir_core": 14,
+   "openpona_compiler": 13
+  },
+  "audit_info_scopes_hits": {
+   "dsl_compiler": 0,
+   "openpona_compiler": 0
+  },
+  "audit_literal_hits": 0,
+  "audit_string_constants_scanned": 2599,
+  "baseline_contextual": {
+   "conventional_typed_schema_plus_plugin_registry_would_need": {
+    "assumptions": "one table per object type and per link type, one class per object type and interface, one plugin handler per function/action/policy/authority rule/constraint, one adapter per observation type",
+    "new_model_classes": 17,
+    "new_observation_adapters": 2,
+    "new_rule_or_action_handlers": 59,
+    "new_tables": 30
+   },
+   "ontology_path": {
+    "new_declared_resources": 93,
+    "new_engine_core_files": 0,
+    "new_kernel_kinds": 0,
+    "project_domain_python_loc_non_blank": 937
+   },
+   "reading": "Both approaches add Domain 2 declarations/logic; neither is shown to need a different kernel. The ontology path's bounded-kernel property is the 0 new kinds measured above; this table does not show that a conventional framework is worse.",
+   "status": "CONTEXTUAL ESTIMATE, not measured, not a support condition"
+  },
+  "dispatch_kinds_equal_schema_arrays_after": true,
+  "domains_arrays_not_kernel_kinds": {
+   "manufacturing": [],
+   "project-v1": [],
+   "project-v2": []
+  },
+  "domains_engine_compiled_every_resource": {
+   "manufacturing": true,
+   "project-v1": true,
+   "project-v2": true
+  },
+  "domains_keys_not_in_schema": {
+   "manufacturing": [],
+   "project-v1": [],
+   "project-v2": []
+  },
+  "generated_by_variant": {
+   "import_manufacturing": 582,
+   "import_project": 573,
+   "merged_local": 852
+  },
+  "generated_cross_link_cases": 2007,
+  "generated_failures_recomputed": 0,
+  "generated_failures_recorded": 0,
+  "generated_harness_errors": 0,
+  "generated_import_cases": 1155,
+  "generated_rename_broken": 0,
+  "generated_rename_checked": 502,
+  "generated_rows": 2007,
+  "generated_unique_cases": 2007,
+  "generated_valid_loaded_mixed": 2007,
+  "handlers_changed": [],
+  "mutation_classes_present": [
+   "domain_special_case",
+   "new_primitive_kind"
+  ],
+  "mutation_controls_clean": [
+   true,
+   true
+  ],
+  "mutation_failing_signal_by_mutant": {
+   "M1_static_domain_id_compare_in_registry": [
+    "audit_branch",
+    "audit_literal"
+   ],
+   "M2_runtime_domain_branch_in_loader": [
+    "rename_invariance_broken"
+   ],
+   "M3_new_dispatch_kind": [
+    "kernel_new_kind"
+   ],
+   "M4_new_schema_resource_array": [
+    "kernel_new_kind"
+   ],
+   "M5_removed_dispatch_kind": [
+    "kernel_removed_kind",
+    "rename_invariance_broken"
+   ],
+   "M6_swapped_handler": [
+    "kernel_handler_changed",
+    "rename_invariance_broken"
+   ],
+   "M7_static_domain_dict_key_in_validator": [
+    "audit_branch",
+    "audit_literal"
+   ],
+   "M8_static_resource_id_branch_in_pipeline": [
+    "audit_branch",
+    "audit_literal"
+   ]
+  },
+  "mutation_kill_rate": 1.0,
+  "mutation_survivors": [],
+  "mutation_target_killed": 4,
+  "mutation_target_total": 4,
+  "new_kernel_primitive_kind_count": 0,
+  "new_kernel_primitive_kinds": [],
+  "real_domain_rename_broken": [],
+  "real_domain_rename_checked": 3,
+  "removed_kinds": [],
+  "requirements_failed": [],
+  "requirements_ok": 57,
+  "requirements_total": 57,
+  "schema_defs_added": [],
+  "schema_unchanged": true,
+  "thresholds": {
+   "max_domain_identity_core_branches": 0,
+   "max_new_kernel_primitive_kinds": 0,
+   "min_generated_mixed_cases": 2000,
+   "required_mutation_kill_rate": 1.0
+  },
+  "unwired_policy_or_authority_carriers": [
+   "policies:conflicting_change_denied_with_conflict"
+  ]
+ },
+ "predicates": {
+  "inconclusive_if": [
+   {
+    "clause": "Project Ontology omits a required strong-model object/link/lifecycle/rule/governance requirement",
+    "id": "I1",
+    "value": false
+   },
+   {
+    "clause": "Fewer unique mixed-domain valid+loaded cases than the frozen minimum",
+    "id": "I2",
+    "value": false
+   },
+   {
+    "clause": "Generated mixed-domain packages failed to validate/load, or the harness errored (extension, see notes)",
+    "id": "I3",
+    "value": false
+   }
+  ],
+  "invalid_if": [
+   {
+    "clause": "Evidence records carry a protocol-freeze / ENGINE_PREREG hash different from the files now",
+    "id": "V1",
+    "value": false
+   },
+   {
+    "clause": "Evidence records disagree on commit / seed / corpus hash",
+    "id": "V2",
+    "value": false
+   },
+   {
+    "clause": "Harness self-check failed (mutation control not clean, working tree differs from HEAD, snapshot not from the registered rev)",
+    "id": "V3",
+    "value": false
+   },
+   {
+    "clause": "Kernel freeze snapshot differs from the frozen files (kernel kinds, schema hash)",
+    "id": "V4",
+    "value": false
+   }
+  ],
+  "reject_if": [
+   {
+    "clause": "A new kernel primitive kind is present after Domain 2 (kernel diff)",
+    "id": "R1",
+    "value": false
+   },
+   {
+    "clause": "A domain-identity semantic branch exists in compiler/core runtime (static audit)",
+    "id": "R2",
+    "value": false
+   },
+   {
+    "clause": "Generic runtime behaviour depends on domain identity (rename-invariance broken on a real or generated package)",
+    "id": "R3",
+    "value": false
+   }
+  ],
+  "support_if": [
+   {
+    "clause": "0 new kernel primitive kinds after Project Ontology",
+    "id": "S1",
+    "value": true
+   },
+   {
+    "clause": "0 domain-identity branches in compiler/core runtime (static audit and rename-invariance)",
+    "id": "S2",
+    "value": true
+   },
+   {
+    "clause": "100% of registered Domain 2 requirements compile through allowed generic resource kinds",
+    "id": "S3",
+    "value": true
+   },
+   {
+    "clause": "Registered branch-detection mutation is caught (all registered mutants killed, controls clean)",
+    "id": "S4",
+    "value": true
+   },
+   {
+    "clause": ">= 2,000 unique mixed-domain generated packages validate and load through generic dispatch with 0 failures",
+    "id": "S5",
+    "value": true
+   }
+  ]
+ },
+ "problems": [],
+ "protocol": {
+  "freeze_sha256": "1b70e38939b91c8ad28e9c358c17a614f9880d4ed9370b111a5915f526df3bb2"
+ },
+ "protocol_mismatches": {
+  "disagreeing_provenance": false,
+  "harness_self_check": [],
+  "kernel_freeze": [],
+  "records_with_wrong_hashes": []
+ },
+ "verdict": "SUPPORTED"
+}
