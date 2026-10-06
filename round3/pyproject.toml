@@ -5,9 +5,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "eoo-round3-paladin-hdd"
 version = "0.1.0"
-description = "Research-contract pack for Paladin-class adversarial EOO hypotheses H23-H30"
+description = "Research-contract pack and dual-track build for Paladin-class adversarial EOO hypotheses H23-H30"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = ["jsonschema>=4.20"]
 
 [project.optional-dependencies]
 test = [
@@ -15,3 +15,11 @@ test = [
   "hypothesis>=6.100",
   "pytest>=8"
 ]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["r3_shared", "r3_oracle", "r3_harness", "paladin", "conventional"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
