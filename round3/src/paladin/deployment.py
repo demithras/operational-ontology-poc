@@ -74,6 +74,8 @@ class PaladinDeployment:
             return CallResult("DENIED", {"gate": "identity", "reason": "invalid token"})
         if not isinstance(name, str) or name not in self._c.ops:
             return CallResult("UNKNOWN", {"reason": "no such tool"})
+        if not isinstance(args, dict):
+            return CallResult("INVALID", {"gate": "inputs", "reason": "args must be an object"})
         who = self._c.principal(sub, on_behalf_of, name)
         if isinstance(who, CallResult):
             return who
@@ -92,7 +94,7 @@ class PaladinDeployment:
         if name not in self._surfaces.granted_operations(surf):
             return CallResult("UNKNOWN", {"reason": "no such tool"})  # absent from this principal's surface
         try:
-            surf.call(tool, idempotency_key=request_id, **(args if isinstance(args, dict) else {}))
+            surf.call(tool, idempotency_key=request_id, **args)
         except UnknownTool:
             return CallResult("UNKNOWN", {"reason": "no such tool"})
         except TypeError as exc:

@@ -37,3 +37,36 @@ Tests: `tests/` (`fakes/fake_variant.py` is test-only and never registered).
 - P2 (variants): consume `ops_spec`/`auth_spec` dicts passed to `Variant.deploy`; write only through the supplied `WorldHandle` factory; implement `tools/call_tool/direct/read`, return `CallResult`; Paladin must build IR/pack from the neutral spec only where it chooses to, but may not edit the spec. Seed the world from `ops_spec["seed"]` (helper for seeding is intentionally left to the harness).
 - P3 (oracles/harness): read specs via `load_ops_spec/load_auth_spec`; measure effects with `WorldReader.snapshot()` + `diff`; never trust `CallResult`; use `evaluate_common`/`DualVerdict` and `evidence.write_envelope`.
 - Not provided in P1 (by design): world seeding helper, oracle logic, token issuing policy for principals (harness issues tokens with `IdentityProvider`; audience convention left to the harness/variants, fake uses "fake").
+
+## P2a - Paladin variant v0 with H23 protections (tag r3-p2a-paladin)
+
+### Module map (`round3/src/paladin/`)
+| Module | Purpose |
+|---|---|
+| `engine/`, `toolchain/`, `ir/`, `domains/{_support,_hdd,manufacturing,project}` | VENDORED Round 2 code at pin 8f9ff26 (`VENDORED.json`: original/vendored/current sha256 + patch ids; `scripts/paladin_vendor_manifest.py` refreshes it; `tests/paladin/test_p2a_vendored.py` enforces it) |
+| `authcompile.py` | neutral `spec/authority/<d>.json` -> Engine `authority_rules`, per-action `authority_refs`, static `Principal`s, delegation table (no domain branches) |
+| `worldbridge.py` | Engine State rebuilt from the world per request; `WorldExternalAdapter` (WMS/ERP/MES -> `external_write`), `WorldGitAdapter` (project `git_change` -> canonical writes) |
+| `boot.py` | builds one Engine per domain (IR + compiled authority + logic bindings + adapters); `neutral:evidence-present-v1` evaluator |
+| `core.py` | identity -> delegation -> shape -> ledger/pending -> Engine pipeline in one world transaction -> `CallResult` mapping; mutant switches live here |
+| `surface.py`, `deployment.py` | generated Toolchain surface (`tools`, `call_tool`), `direct`, `read`, `approve`, `set_authority`, `authority_version` |
+| `variant.py`, `mutants.py` | `PaladinVariant` (registry: `paladin.variant:PaladinVariant`), H23 switches |
+
+### Conventions the harness must know
+- Token audience is `"paladin"` (`paladin.core.AUDIENCE`, also `deployment.audience`). Tokens are issued by the harness with `IdentityProvider.issue(sub, "paladin", ttl, clock)`.
+- Deploy on an ALREADY SEEDED world (seeding is the harness's job); the Engine rebuilds its State from the world on every request. The service writer name is `paladin-service`; adapters write as `WMS`/`ERP`/`MES`.
+- `tools()` lists operation names (= ops-spec names) of mutating operations only; reads go through `read(token, name, args)` (ops-spec `reads` that are IR functions, plus generic `get {type,key}` / `list {type}`); prose-only helpers are UNKNOWN reads.
+- Statuses: DENIED = identity/delegation/authority/approval gate; INVALID = args shape, unknown/identity-like args, missing/reused request id, precondition/policy/constraint refusals; UNAVAILABLE = adapter failure (rolled back); UNKNOWN = unknown operation or a tool absent from the caller's surface. A request that needs approval returns OK with `body.state == "PENDING_APPROVAL"` and ZERO effects; `approve(token, request_id)` (extra, not in the Variant protocol) commits it for a second principal. Replays of a committed request id return OK with `body.replayed == True` and no new effect.
+- Mutants: `PaladinVariant(mutants={...})`, `.with_mutants(...)` or env `PALADIN_MUTANTS=a,b` (names `mutants.H23`). `r3_shared.mutants` did not exist in P1, so the switch mechanism is local to Paladin.
+- `set_authority(auth_spec) -> new version` rebuilds the Engine (its in-memory journal and pending approvals are dropped; the committed-request ledger is kept). `crash()/restart()` raise NotImplementedError (H29).
+
+### Design decisions / ambiguities (flag for the orchestrator)
+- PROT-H23 says that without `on_behalf_of` the subject is evaluated "as itself". Paladin follows that literally: the static `delegated_by` of an agent in the auth fixture is NOT applied unless `on_behalf_of` is given (so `agent-orphan` may call `transfer_inventory` as itself via its own `agent_grant`; the shared `authspec.allowed_operations` applies the chain and would say no). Tests use an as-itself bound. If the oracle disagrees, only `Core.principal` changes.
+- Business-rule/policy refusals (stale evidence, quarantine, safety stock, protected route, lifecycle) are INVALID, not DENIED (R7: DENIED = authority).
+- Delegated requests: `actor_holds` (transfer-protected-route) is true if the subject or any delegator holds the relation (patch D5).
+- The spec's `write:*`/`update:*` deny grants are not compiled into Engine rules (they never match an `action:*` capability); they hold structurally (see H23-paladin.md).
+- Manufacturing external effects are single atomic adapter writes through each system's own handle (SQLite cannot write from a second connection inside the service transaction); project canonical writes share ONE world transaction, rolled back on any failure.
+- ERP/MES observations are synthesised by the adapter from the authorized inputs (ERP reports expectedAt-1; MES reports the requested plannedStart), the same fake-system role Round 2's `ErpFake/MesFake` played; the WORLD effect record is the effect payload.
+- Modified a P1 test: `tests/test_variant_protocol.py::test_registry_lazy_and_never_contains_fake` asserted that both variants raise "not implemented yet"; it now accepts a built variant (Variant instance with matching name). The conventional builder will need the identical relaxation.
+
+### Tests (`round3/tests/paladin/`)
+`test_p2a_functional.py` (every operation of both domains, reads, approval), `test_h23_r1_r4.py`, `test_h23_r5_r8.py` (zero-effect negatives measured by world-snapshot diff), `test_h23_mutants.py` (each switch changes behaviour), `test_h23_property.py` / `test_h23_property_project.py` (Hypothesis, independent authority oracle; effect-visible mutants killed, tool_overexposure killed by the surface audit), `test_p2a_vendored.py`.

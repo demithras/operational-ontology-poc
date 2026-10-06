@@ -148,3 +148,11 @@ def test_r8_authorized_requests_commit_including_delegated_and_admin(mfg, proj):
                           ("agent-draft-1", "create_hypothesis", {"claim": "draft agent"})):
         res, eff = proj.effects_of(lambda: proj.dep.direct(proj.token(who), op, args, request_id=proj.rid()))
         assert res.status == "OK" and eff, (who, op, res)
+
+
+def test_malformed_calls_have_no_effect(mfg):
+    t = mfg.token("planner-1")
+    for args in (None, [], "x", 5, {"quantity": object()}):
+        for f in (mfg.dep.direct, mfg.dep.call_tool):
+            assert zero(mfg, lambda: f(t, "transfer_inventory", args, request_id=mfg.rid())).status == "INVALID"
+    assert zero(mfg, lambda: mfg.dep.direct(t, "transfer_inventory", TR, on_behalf_of=["planner-1"], request_id="x")).status == "DENIED"
