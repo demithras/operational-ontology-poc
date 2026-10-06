@@ -147,7 +147,7 @@ class FakeVariant:
         self.mode, self.name = mode, f"fake-{mode}"
         self.mutants = mutants_mod.validate(mutants)
 
-    def deploy(self, domain, factory, verifier, ops_spec, auth_spec, clock):
+    def deploy(self, domain, factory, verifier, ops_spec, auth_spec, clock, state_dir=None):
         return FakeDep(self.mode, domain, factory, verifier, ops_spec, auth_spec, clock, self.mutants)
 
 

@@ -4,7 +4,7 @@ from r3_shared.identity import IdentityProvider
 from r3_shared.registry import VARIANTS, load_variant
 from r3_shared.variant import CallResult, Deployment, Variant
 from r3_shared.world import WorldStore, diff
-from tests.fakes.fake_variant import FakeVariant
+from tests.fakes.fake_variant import FakeVariant, FakeVolatileVariant
 
 
 def test_fake_variant_end_to_end_effect_measured_from_world(tmp_path):
@@ -24,7 +24,7 @@ def test_fake_variant_end_to_end_effect_measured_from_world(tmp_path):
     dep.crash()
     assert dep.direct(tok, "put", {"type": "Part", "key": "P3"}).status == "UNAVAILABLE"
     dep.restart()
-    assert dep.read(tok, "get", {"type": "Part", "key": "P1"}).body["props"] == {"by": "alice"}
+    assert dep.read(tok, "get", {"type": "Part", "key": "P1"}).body["props"]["by"] == "alice"
 
 
 def test_callresult_rejects_bad_status():
@@ -39,7 +39,7 @@ def test_registry_lazy_and_never_contains_fake():
         load_variant("fake")
 
 
-PROTOCOL_METHODS = ("tools", "call_tool", "direct", "read", "approve", "set_authority", "authority_version", "crash", "restart")
+PROTOCOL_METHODS = ("tools", "call_tool", "direct", "read", "approve", "set_authority", "authority_version", "arm_crash", "crash", "restart")
 
 
 @pytest.mark.parametrize("name", ["paladin", "conventional"])

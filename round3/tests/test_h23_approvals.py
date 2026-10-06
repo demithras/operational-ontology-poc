@@ -75,7 +75,7 @@ class LaxApprovals(FakeDep):
 
 
 class LaxVariant(FakeVariant):
-    def deploy(self, domain, factory, verifier, ops_spec, auth_spec, clock):
+    def deploy(self, domain, factory, verifier, ops_spec, auth_spec, clock, state_dir=None):
         return LaxApprovals(self.mode, domain, factory, verifier, ops_spec, auth_spec, clock)
 
 

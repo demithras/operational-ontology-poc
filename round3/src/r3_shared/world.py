@@ -59,7 +59,7 @@ class WorldHandle:
         if not writer:
             raise ValueError("writer name required")
         self.writer = writer
-        self._con = sqlite3.connect(path, isolation_level=None)
+        self._con = sqlite3.connect(path, isolation_level=None, check_same_thread=False)  # PROT-H23-A8: callers may be threads; serialisation is the variant's job
         self._in_tx = False
 
     def close(self) -> None:

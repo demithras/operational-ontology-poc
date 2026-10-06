@@ -30,7 +30,7 @@ class _FakeDiffering(FakeVariant):
     def __init__(self, mutants=()):
         super().__init__("correct", mutants)
 
-    def deploy(self, domain, factory, verifier, ops_spec, auth_spec, clock):
+    def deploy(self, domain, factory, verifier, ops_spec, auth_spec, clock, state_dir=None):
         return _DropTransfer("correct", domain, factory, verifier, ops_spec, auth_spec, clock, self.mutants)
 
 

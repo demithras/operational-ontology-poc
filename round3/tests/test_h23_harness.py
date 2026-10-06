@@ -170,7 +170,7 @@ class StaleAuthDep(FakeDep):
 
 
 class StaleAuthVariant(FakeVariant):
-    def deploy(self, domain, factory, verifier, ops_spec, auth_spec, clock):
+    def deploy(self, domain, factory, verifier, ops_spec, auth_spec, clock, state_dir=None):
         return StaleAuthDep(self.mode, domain, factory, verifier, ops_spec, auth_spec, clock)
 
 
@@ -194,7 +194,7 @@ def test_set_authority_has_no_fallback_path_and_logs_versions():
             raise TypeError("signature differs")
 
     class BrokenVariant(FakeVariant):
-        def deploy(self, domain, factory, verifier, ops_spec, auth_spec, clock):
+        def deploy(self, domain, factory, verifier, ops_spec, auth_spec, clock, state_dir=None):
             return Broken(self.mode, domain, factory, verifier, ops_spec, auth_spec, clock)
 
     env = Env(BrokenVariant("correct"), "project", *SPECS["project"], "t")
@@ -234,7 +234,7 @@ def test_a_mutant_that_is_unknown_to_the_variant_is_rejected_and_one_never_consu
     from r3_harness.h23 import mutation
 
     class Ignores(FakeVariant):  # accepts the mutant but never consults it anywhere
-        def deploy(self, domain, factory, verifier, ops_spec, auth_spec, clock):
+        def deploy(self, domain, factory, verifier, ops_spec, auth_spec, clock, state_dir=None):
             return FakeDep(self.mode, domain, factory, verifier, ops_spec, auth_spec, clock, frozenset())
 
     res = mutation.prove(lambda m: Ignores("correct", m), SPECS, 20)

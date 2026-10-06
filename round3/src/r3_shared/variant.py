@@ -37,6 +37,10 @@ WorldHandleFactory = Callable[[str], WorldHandle]
 
 @runtime_checkable
 class Deployment(Protocol):
+    """Thread safety (PROT-H23-A8): call_tool/direct/approve/read may be called concurrently from threads.
+    Concurrent callers never create a forbidden effect and never commit the same request_id twice; refusing a
+    concurrent legitimate request with UNAVAILABLE is safe but counted as lost progress."""
+
     def tools(self, token: str) -> list[ToolDescriptor]:
         """The agent-facing surface visible to this token's subject."""
 
@@ -63,11 +67,18 @@ class Deployment(Protocol):
     def authority_version(self) -> str:
         """sha256 hex of the canonical JSON (sorted keys, compact separators) of the spec in force."""
 
+    def arm_crash(self, point: Literal["before_commit", "after_commit"]) -> None:
+        """PROT-H23-A8: the NEXT mutating request (call_tool, direct, approve) crashes at `point`.
+        before_commit = after authorization/validation, before any world write.
+        after_commit = after the world commit, before the result is returned or any post-commit bookkeeping.
+        That call returns CallResult("UNKNOWN", {"reason": "crashed"}); afterwards every call returns
+        CallResult("UNAVAILABLE", {"reason": "crashed"}) until restart()."""
+
     def crash(self) -> None:
-        """Simulate process crash (may raise NotImplementedError until H29)."""
+        """Crash immediately (between requests). Everything in memory is lost; the world store and state_dir survive."""
 
     def restart(self) -> None:
-        """Recover from crash (may raise NotImplementedError until H29)."""
+        """Rebuild from the world store + state_dir ONLY. A committed request_id never produces a second effect."""
 
 
 @runtime_checkable
@@ -78,4 +89,7 @@ class Variant(Protocol):
         """Mutants (r3_shared.mutants) are activated only here, validated with mutants.validate; no global state."""
 
     def deploy(self, domain: str, world_handle_factory: WorldHandleFactory, verifier: TokenVerifier,
-               ops_spec: dict, auth_spec: dict, clock: LogicalClock) -> Deployment: ...
+               ops_spec: dict, auth_spec: dict, clock: LogicalClock,
+               state_dir: str | None = None) -> Deployment:
+        """state_dir: a private directory that survives crash()/restart() (the world store survives too);
+        everything held in memory is lost on crash."""

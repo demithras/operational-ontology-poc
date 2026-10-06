@@ -202,3 +202,9 @@ Single shared definition both variants adapt to (the P2 builders had invented in
 - R-1/R-2 pinned by tests (tests/paladin/test_p5b_rulings.py). Zero vendored-code changes.
 - Dev3 "new_experiment_version 0/6, evaluate_hypothesis 0/3": Paladin returned OK on all 6 and 3 calls and wrote the effects; the "misses" were
   scoring mismatches (extra `id` prop = R-3, and oracle head_commit = R-1). Fresh-world reproduction on all experiment/contract-version pairs commits. No R8 fix needed.
+
+## P1c - protocol for A8 crash, restart and concurrency
+- Added PROT-H23-A8 (spec/protections), `Variant.deploy(..., state_dir)`, `Deployment.arm_crash`, thread-safety note, two H23 mutants.
+- `WorldHandle` now opens sqlite with `check_same_thread=False` so threaded callers are possible; serialising authorize->commit is the variant's job (mutant `unsynchronized_commit` removes it).
+- Fakes: `FakeDeployment` (durable ledger in state_dir) and `FakeVolatileLedger` (broken). h23 test fakes accept `state_dir` but do not implement crash yet.
+- Expected red until later phases: variants lack `arm_crash`; r3_harness mutation map (`h23/mutation.py`) has no entries for the new mutants; paladin/conventional mutant-name tests pin the old four.
