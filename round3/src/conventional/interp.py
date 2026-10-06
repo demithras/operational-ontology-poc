@@ -133,8 +133,8 @@ def ev_pred(n: dict, ctx: Ctx) -> Any:  # noqa: C901
         return _isint(vs[0])
     if k == "nonblank":
         return vs[0] is not None and str(ref_key(vs[0])).strip() != ""
-    if k == "exists":
-        return vs[0] is not None
+    if k == "exists":  # a resource reference exists only if the object is in the canonical world
+        return vs[0] is not None and (not isinstance(vs[0], tuple) or ctx.view.props(vs[0][0], vs[0][1]) is not None)
     if k == "in":
         return isinstance(vs[1], (list, tuple)) and vs[0] in vs[1]
     if k == "eq":
