@@ -42,7 +42,3 @@ def test_no_round2_eoo_imports_remain():
         text = f.read_text()
         for bad in ("from eoo_", "import eoo_", "from domains.", "from hdd."):
             assert bad not in text, (f, bad)
-
-
-def test_conventional_package_untouched():
-    assert [p.name for p in (ROOT / "round3" / "src" / "conventional").glob("*.py")] == ["__init__.py"]

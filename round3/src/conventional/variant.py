@@ -52,6 +52,7 @@ class ConventionalDeployment:
 
 class ConventionalVariant:
     name = "conventional"
+    audience = AUDIENCE
 
     deployment_class = ConventionalDeployment
 
