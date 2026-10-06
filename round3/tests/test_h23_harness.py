@@ -156,7 +156,7 @@ def test_mapping_with_none_and_missing_keys_is_never_supported():
 
 
 def test_state_machine_passes_on_correct_fake_and_shrinks_a_failure_on_allow_all():
-    cfg = settings(max_examples=8, stateful_step_count=5, deadline=None, database=None,
+    cfg = settings(max_examples=25, stateful_step_count=6, deadline=None, database=None, derandomize=True,
                    suppress_health_check=list(HealthCheck))
     run_state_machine_as_test(make_machine(VARIANTS["fake-correct"], "project", SPECS), settings=cfg)
     with pytest.raises(AssertionError, match="effect outside the oracle"):
