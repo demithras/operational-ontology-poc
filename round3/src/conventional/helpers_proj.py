@@ -198,6 +198,8 @@ def is_legal_transition(ctx: Ctx, hypothesis, target_phase) -> bool:
     return cur in PHASES and target_phase in PHASES and PHASES.index(target_phase) == PHASES.index(cur) + 1
 
 
+ID_READS = {"new_experiment_id": "Experiment"}
+
 HELPERS = {f.__name__: f for f in (
     hypothesis_id_for_claim, hypotheses_of_experiment, hypotheses_of_threshold, contract_complete,
     new_experiment_version_number, new_experiment_id, new_contract_version_id, existing_contract_version,

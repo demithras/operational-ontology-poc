@@ -5,7 +5,7 @@ registered per domain (helpers_mfg.py, helpers_proj.py). Comparisons fail closed
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from .worldview import WorldView, key_of
@@ -25,6 +25,7 @@ class Ctx:
     helpers: dict[str, Callable]
     holds: Callable[[str, str, str], bool]  # (type, key, relation) of the acting principal
     resources_all: tuple = ()  # every resource type name of the domain
+    id_reads: dict = field(default_factory=dict)  # id-returning helper -> type whose existence `exists` tests
 
 
 def _isint(v: Any) -> bool:
@@ -62,6 +63,8 @@ def _ev_unique(n: dict, ctx: Ctx) -> Any:
 
 
 def ev(n: dict, ctx: Ctx) -> Any:  # noqa: C901 - one flat dispatch over a closed vocabulary
+    if "op" in n:  # predicates first: an `in_read` node carries a nested `read` key of its own
+        return ev_pred(n, ctx)
     if "input" in n:
         return input_value(ctx, n["input"])
     if "lit" in n:
@@ -84,7 +87,7 @@ def ev(n: dict, ctx: Ctx) -> Any:  # noqa: C901 - one flat dispatch over a close
         return vs[0] - vs[1] if "sub" in n else sum(vs)
     if "read" in n:
         return call_read(n, ctx)
-    return ev_pred(n, ctx)
+    raise HelperError(f"unsupported expression {sorted(n)}")
 
 
 def call_read(n: dict, ctx: Ctx) -> Any:
@@ -121,6 +124,10 @@ def ev_pred(n: dict, ctx: Ctx) -> Any:  # noqa: C901
         return any(key_of(s) != ref_key(exc) for s in ctx.view.sources(n["link"], dst[0], dst[1]))
     if k == "in_read":
         return ref_key(ev(n["value"], ctx)) in _as_keys(call_read(n["read"], ctx))
+    if k == "exists" and "read" in a[0] and a[0]["read"] in ctx.id_reads:
+        # prose: "an Experiment with the new id already exists" - the helper yields an id, existence is a world fact
+        v = ev(a[0], ctx)
+        return v is not None and ctx.view.props(ctx.id_reads[a[0]["read"]], v) is not None
     vs = [ev(x, ctx) for x in a]
     if k == "is_int":
         return _isint(vs[0])
