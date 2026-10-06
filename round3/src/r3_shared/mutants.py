@@ -1,57 +1,22 @@
-"""Mutant switches (planted bugs) shared by variants and the harness mutation proof.
-
-Names are frozen in KNOWN (protection spec PROT-H23). A variant consults `is_on(name)` at the place where the real
-bug would live. The harness turns a switch on for one run via `enabled(...)`. All switches are off by default.
-"""
+"""Named mutants (deliberately weakened variant builds). Activated ONLY by constructing a variant with them:
+`Variant.__init__(self, mutants: Iterable[str] = ())`, validated with `validate`. No global state."""
 from __future__ import annotations
 
-from contextlib import contextmanager
+from typing import Iterable
 
-KNOWN: dict[str, tuple[str, ...]] = {
-    "H23": ("identity_substitution", "mutable_gated_input", "backstop_bypass", "tool_overexposure"),
-}
+KNOWN: dict[str, list[str]] = {
+    "H23": ["identity_substitution", "mutable_gated_input", "backstop_bypass", "tool_overexposure"],
+}  # later gates append their own key
 
-_ON: set[str] = set()
-CONSULTED: set[str] = set()  # names a variant asked about while on (proof the switch is wired in)
-
-
-def _check(name: str) -> None:
-    if not any(name in names for names in KNOWN.values()):
-        raise KeyError(f"unknown mutant {name!r}")
+ALL: frozenset[str] = frozenset(n for names in KNOWN.values() for n in names)
 
 
-def is_on(name: str) -> bool:
-    if name in _ON:
-        CONSULTED.add(name)
-    return name in _ON
-
-
-def enable(name: str) -> None:
-    _check(name)
-    _ON.add(name)
-
-
-def disable(name: str) -> None:
-    _ON.discard(name)
-
-
-def reset() -> None:
-    _ON.clear()
-    CONSULTED.clear()
-
-
-def active() -> set[str]:
-    return set(_ON)
-
-
-@contextmanager
-def enabled(*names: str):
-    for n in names:
-        _check(n)
-    before = set(_ON)
-    _ON.update(names)
-    try:
-        yield
-    finally:
-        _ON.clear()
-        _ON.update(before)
+def validate(names: Iterable[str]) -> frozenset[str]:
+    """Return the names as a frozenset; ValueError on any name not in any KNOWN list."""
+    if isinstance(names, str):
+        raise ValueError("mutants must be an iterable of names, not a single string")
+    out = frozenset(names)
+    unknown = sorted(out - ALL)
+    if unknown:
+        raise ValueError(f"unknown mutants {unknown}; known: {sorted(ALL)}")
+    return out

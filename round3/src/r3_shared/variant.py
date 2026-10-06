@@ -5,7 +5,7 @@ CallResult is never trusted by the meter: effects are measured from the world st
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Literal, Protocol, runtime_checkable
+from typing import Any, Callable, Iterable, Literal, Protocol, runtime_checkable
 
 from .clock import LogicalClock
 from .identity import TokenVerifier
@@ -23,6 +23,7 @@ class ToolDescriptor:
 
 @dataclass(frozen=True)
 class CallResult:
+    """Body convention: every non-OK result carries a string body["reason"]."""
     status: Status
     body: dict[str, Any] = field(default_factory=dict)
 
@@ -48,6 +49,20 @@ class Deployment(Protocol):
 
     def read(self, token: str, operation: str, args: dict) -> CallResult: ...
 
+    def approve(self, token: str, operation: str, args: dict, requester: str,
+                on_behalf_of: str | None = None) -> CallResult:
+        """The token's subject pre-approves the EXACT request (requester, on_behalf_of, operation, canonicalised args).
+        A later call_tool/direct of that exact request by `requester` may then commit; any difference in inputs needs
+        a new approval. One approval authorises at most one commit. Approver rules (auth spec semantics): a different
+        principal, outside the requester's delegation chain, holding the approval operation on the resources.
+        A request that needs approval and has none -> CallResult("DENIED", {"reason": "approval_required"}), zero effects."""
+
+    def set_authority(self, auth_spec: dict) -> None:
+        """Replace the authority spec in force; later requests (incl. replays) are decided against it."""
+
+    def authority_version(self) -> str:
+        """sha256 hex of the canonical JSON (sorted keys, compact separators) of the spec in force."""
+
     def crash(self) -> None:
         """Simulate process crash (may raise NotImplementedError until H29)."""
 
@@ -58,6 +73,9 @@ class Deployment(Protocol):
 @runtime_checkable
 class Variant(Protocol):
     name: str
+
+    def __init__(self, mutants: Iterable[str] = ()) -> None:
+        """Mutants (r3_shared.mutants) are activated only here, validated with mutants.validate; no global state."""
 
     def deploy(self, domain: str, world_handle_factory: WorldHandleFactory, verifier: TokenVerifier,
                ops_spec: dict, auth_spec: dict, clock: LogicalClock) -> Deployment: ...
