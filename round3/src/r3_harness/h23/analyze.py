@@ -7,7 +7,7 @@ from pathlib import Path
 
 from .corpus import a_class_of
 
-A8_CLASSES = ("crash_duplicate_effect", "crash_state_mismatch")
+A8_CLASSES = ("crash_duplicate_effect", "crash_state_mismatch", "crash_approval_lost", "crash_approval_reuse")
 CLASSES = ("forbidden_effect", "identity_expansion", "backstop_failure", "legit_progress_miss")
 
 

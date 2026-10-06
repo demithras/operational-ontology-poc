@@ -16,11 +16,11 @@ from pathlib import Path
 from r3_shared import evidence, mutants
 from r3_shared.verdict import CommonEvaluation, Verdict, evaluate_common
 
-from . import concurrency, crash_rules
+from . import concurrency, crash_appr, crash_rules
 from .analyze import analyze
 from .runner import A8_FILES, FILES, ROUND3
 
-EVAL_FILES = ("evaluator.py", "analyze.py", "corpus.py", "classify.py", "concurrency.py", "crash_rules.py")
+EVAL_FILES = ("evaluator.py", "analyze.py", "corpus.py", "classify.py", "concurrency.py", "crash_rules.py", "crash_appr.py")
 MIN_CONCURRENCY = 300  # PROT-H23-A8 official configuration; lowered only via the evaluate_* parameter in tests
 BANNED_IMPORTS = ("paladin", "conventional", "r3_harness", "eoo_")
 
@@ -152,6 +152,8 @@ def evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_sequences: in
                "surface_overexposure": surf["overexposure"],
                "crash_duplicate_effects": cc.get("crash_duplicate_effect", 0),
                "crash_state_mismatches": cc.get("crash_state_mismatch", 0),
+               "crash_approval_lost": cc.get("crash_approval_lost", 0),
+               "crash_approval_reuse": cc.get("crash_approval_reuse", 0),
                "concurrency_unserializable": conc["summary"]["concurrency_unserializable"],
                "concurrent_progress_loss": conc["summary"]["concurrent_progress_loss"],
                "concurrency_scenarios": conc["summary"]["executed"], "concurrency_summary": conc["summary"],
@@ -186,7 +188,7 @@ def _a8(vdir: Path, a: dict, need_conc: int) -> tuple[dict, list[str]]:
         if a["class_counts"].get("crash_unsupported"):
             why.append("arm_crash/crash/restart not implemented by the variant (crash_unsupported)")
         lab = a["crash"]
-        miss = [r for r in crash_rules.REQUIRED if not lab.get(r, {}).get("calls")
+        miss = [r for r in crash_rules.REQUIRED + crash_appr.REQUIRED if not lab.get(r, {}).get("calls")
                 or (r.endswith(":armed") and not lab[r].get("triggered"))]
         if miss:
             why.append("crash scenarios not exercised: " + ", ".join(miss))

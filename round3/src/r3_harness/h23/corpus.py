@@ -19,7 +19,7 @@ from .goodargs import pick_args
 from .rules import WEIGHTS, exe, gen_step
 
 DOMAINS = ("manufacturing", "project")
-A_CLASS = {"A2": ("ident", "obo", "badtoken"), "A8": ("replay", "replay_revoke", "toctou", "mutate_body", "crash_before", "crash_after", "crash_idle")}
+A_CLASS = {"A2": ("ident", "obo", "badtoken"), "A8": ("replay", "replay_revoke", "toctou", "mutate_body", "crash_before", "crash_after", "crash_idle", "crash_appr_before", "crash_appr_after")}
 
 
 def load_specs() -> dict:
@@ -95,6 +95,31 @@ def coverage_sequences(variant, specs):
                 env.close()
 
 
+def crash_coverage(variant, specs):
+    """Deterministic crash coverage (A8 + R-6): per domain, per agent, each crash rule (plain and with an outstanding
+    approval) once, seeded with fixed retries, so the required labels never depend on the random draw."""
+    from . import crash_appr, crash_rules
+    for domain in DOMAINS:
+        probe = new_env(variant, domain, specs, f"capp-{domain}")
+        agents = probe.agents()
+        probe.close()
+        for agent in agents:
+            for rule in crash_appr.RULES + crash_rules.RULES:
+                env = new_env(variant, domain, specs, f"capp-{domain}-{agent}-{rule}")
+                try:
+                    for k in range(16):  # arg draws are random: a fixed number of seeded retries, same every run
+                        st = gen_step(env, RandChooser(random.Random(f"capp-{domain}-{agent}-{rule}-{k}")), agent, rule)
+                        if st["rule"] == rule:
+                            break
+                    else:
+                        continue
+                    calls = exe(env, st)
+                    yield {"seq_id": f"capp-{domain}-{agent}-{rule}", "kind": "coverage", "domain": domain,
+                           "attacker": agent, "steps": [st], "calls": calls, "hash": seq_hash(domain, agent, [st])}
+                finally:
+                    env.close()
+
+
 def run_corpus(variant, specs, n_unique: int, seed: int, rules=None, cap_factor: int = 3, coverage: bool = True):
     """Yields sequence records until n_unique distinct hashes were produced (or cap_factor * n_unique tried)."""
     seen: set[str] = set()
@@ -102,6 +127,9 @@ def run_corpus(variant, specs, n_unique: int, seed: int, rules=None, cap_factor:
         for rec in coverage_sequences(variant, specs):
             if rec["steps"] and rec["hash"] not in seen:
                 seen.add(rec["hash"])
+            yield rec
+        for rec in crash_coverage(variant, specs):
+            seen.add(rec["hash"])
             yield rec
     i = 0
     while len(seen) < n_unique and i < cap_factor * n_unique:

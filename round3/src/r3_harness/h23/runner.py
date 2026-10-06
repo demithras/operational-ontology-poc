@@ -11,7 +11,7 @@ from pathlib import Path
 from r3_oracle import authority  # noqa: F401  (oracle version fingerprint below)
 from r3_shared import evidence
 
-from . import approval_rules, concurrency, crash_rules, mutation, surface
+from . import approval_rules, concurrency, crash_appr, crash_rules, mutation, surface
 from .analyze import analyze
 from .corpus import DOMAINS, load_specs, new_env, run_corpus
 
@@ -71,9 +71,11 @@ def run_variant(factory, vname: str, out: Path, exp_id: str, seed: int, sequence
                            "backstop_failures": cc.get("backstop_failure", 0)})
     _dump(out / FILES[5], {"rows": rows, "overexposure": surface.overexposure_count(rows)})
     _dump(out / FILES[4], mutation.prove(factory, specs, mutation_sequences))
-    _dump(out / A8_FILES[0], {"labels": a["crash"], "required": list(crash_rules.REQUIRED),
+    _dump(out / A8_FILES[0], {"labels": a["crash"], "required": list(crash_rules.REQUIRED + crash_appr.REQUIRED),
                               "crash_duplicate_effect": cc.get("crash_duplicate_effect", 0),
                               "crash_state_mismatch": cc.get("crash_state_mismatch", 0),
+                              "crash_approval_lost": cc.get("crash_approval_lost", 0),
+                              "crash_approval_reuse": cc.get("crash_approval_reuse", 0),
                               "crash_unsupported": cc.get("crash_unsupported", 0)})
     rows = list(concurrency.run(variant, specs, concurrency_scenarios, seed))
     _dump(out / A8_FILES[1], {"seed": seed, "summary": concurrency.summarise(rows), "scenarios": rows})

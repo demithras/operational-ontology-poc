@@ -50,6 +50,19 @@ class FakeDep:
         led[rid] = True
         p.write_text(json.dumps(led))
 
+    def _appr_file(self):
+        return Path(self.state_dir) / "approvals.json" if self.state_dir else None
+
+    def _persist_approvals(self):
+        p = self._appr_file()
+        if p is not None and not getattr(self, "approvals_volatile", False):
+            p.write_text(json.dumps(self.approved))
+
+    def _consume(self, akey):
+        self.approved[akey] -= 1
+        if not getattr(self, "approvals_volatile", False):
+            self._persist_approvals()
+
     def _m(self, name):
         return name in self.mutants
 
@@ -112,8 +125,6 @@ class FakeDep:
                                  approved=skip or self.approved.get(akey, 0) > 0)
         if self._m("unsynchronized_commit"):
             time.sleep(0.003)  # authorize->consume window the missing lock leaves open
-        if out.used_approval and out.kind == ops_model.COMMIT and not skip:
-            self.approved[akey] -= 1
         if out.kind != ops_model.COMMIT:
             return CallResult({"DENIED_AUTHORITY": "DENIED", "DENIED_RULE": "DENIED", "INVALID": "INVALID",
                                "NEEDS_APPROVAL": "INVALID", "UNKNOWN_OP": "UNKNOWN"}[out.kind], {"why": out.detail})
@@ -123,6 +134,8 @@ class FakeDep:
         armed, self._armed = self._armed, None
         if armed == "before_commit":
             return self._die()
+        if out.used_approval and not skip:  # R-6: consumed durably, at commit time (never by a crashed-before-commit call)
+            self._consume(akey)
         if rid is not None and not self._m("ledger_after_commit_volatile"):
             self._store_ledger(rid)  # durable BEFORE the world write; a before_commit crash leaves it unrecorded
         self._apply(out.effects)
@@ -183,6 +196,7 @@ class FakeDep:
                 return CallResult("DENIED", {"reason": why})
         k = oracle_approvals.key(requester, on_behalf_of, operation, args)
         self.approved[k] = self.approved.get(k, 0) + 1
+        self._persist_approvals()
         return CallResult("OK", {})
 
     def read(self, token, operation, args):
@@ -198,7 +212,8 @@ class FakeDep:
 
     def restart(self):
         self.crashed, self._armed, self.done = False, None, {}
-        self.approved = {}  # pre-approvals lived in memory (the oracle forgets nothing: see harness note)
+        p = self._appr_file()  # R-6: approvals are durable; the volatile fake (test negative) loses them
+        self.approved = json.loads(p.read_text()) if p is not None and p.exists() and not getattr(self, "approvals_volatile", False) else {}
 
 
 

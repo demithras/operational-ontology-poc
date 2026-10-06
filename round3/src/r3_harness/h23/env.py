@@ -171,6 +171,11 @@ class Env:
             cl.append("crash_state_mismatch")
         if dup_id and rec["measured"] and rec["rule"].startswith("crash_"):
             cl.append("crash_duplicate_effect")
+        if rec["rule"].startswith("crash_appr_") and rec["rule"].split(":")[-1] in ("replay-same", "replay-new"):  # R-6
+            if (rec["missing"] or (rec["legit_expected"] and not rec["measured"])) and not rec["unexpected"]:
+                cl.append("crash_approval_lost")
+            if rec["unexpected"] or rec["bad_writer"]:
+                cl.append("crash_approval_reuse")
         if any(c.startswith("crash_") for c in cl) and "forbidden_effect" not in cl and rec["measured"]:
             cl.append("forbidden_effect")
 
