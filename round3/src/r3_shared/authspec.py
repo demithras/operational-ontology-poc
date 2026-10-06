@@ -76,3 +76,44 @@ def allowed_operations(spec: dict, pid: str, operations: list[str], _depth: int 
             elif g["delegable"] and op in allowed_operations(spec, p["delegated_by"], [op], _depth + 1):
                 allowed.add(op)
     return allowed
+
+
+def _approver_operations(ops_spec: dict) -> set[str]:
+    return {o["approval"]["approver_operation"] for o in ops_spec["operations"] if o.get("approval")}
+
+
+def validate_strict(spec: dict, ops_spec: dict | None = None, root: Path = ROUND3) -> dict:
+    """Strict shared control (ruling R-4), called by BOTH variants on deploy/set_authority and by the harness.
+
+    schema + unique principal ids + unique grant ids + no dangling delegation/principal/grant references +
+    delegated_by names a known principal + no duplicate delegation pairs; with `ops_spec` additionally: non-round2
+    allow grants and delegations may only name operations the ops spec defines (or its approver operations).
+    Any violation raises ValueError (schema violations are re-raised as ValueError); returns the spec unchanged.
+    """
+    try:
+        validate_auth_spec(spec, root)
+    except jsonschema.ValidationError as exc:
+        raise ValueError(f"authority spec violates the schema: {exc.message}") from exc
+    gids = [g["id"] for g in spec["grants"]]
+    dup = sorted({i for i in gids if gids.count(i) > 1})
+    if dup:
+        raise ValueError(f"duplicate grant ids: {dup}")
+    pids = {p["id"] for p in spec["principals"]}
+    for g in spec["grants"]:
+        sel = g["principal"]
+        if "id" in sel and sel["id"] not in pids:
+            raise ValueError(f"grant {g['id']} names unknown principal {sel['id']}")
+    pairs = [(d["agent"], d["on_behalf_of"]) for d in spec["delegations"]]
+    if len(set(pairs)) != len(pairs):
+        raise ValueError("duplicate delegation (agent, on_behalf_of) pairs")
+    if ops_spec is not None:
+        names = {o["name"] for o in ops_spec["operations"]}
+        known = names | _approver_operations(ops_spec)
+        for g in spec["grants"]:
+            if g["origin"] != "round2" and g["effect"] == "allow" and "*" not in g["operation"] and g["operation"] not in known:
+                raise ValueError(f"grant {g['id']}: operation {g['operation']!r} is not in the ops spec")
+        for d in spec["delegations"]:
+            for o in d["operations"]:
+                if o not in names:
+                    raise ValueError(f"delegation {d['agent']}->{d['on_behalf_of']}: operation {o!r} is not in the ops spec")
+    return spec

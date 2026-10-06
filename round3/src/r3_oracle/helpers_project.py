@@ -76,7 +76,12 @@ def existing_contract_version(v: View, experiment: Ref, contract_version: Ref):
 
 
 def head_commit(v: View) -> str:
-    commits = [(str(v.field(c, "committed_at")), c[1]) for c in v.refs_of("Commit")]
+    commits = []
+    for c in v.refs_of("Commit"):
+        t = v.field(c, "committed_at")  # logical-clock ticks (ruling R-1): numeric ordering, never string
+        if isinstance(t, bool) or not isinstance(t, (int, float)):
+            raise HelperError(f"Commit {c[1]} committed_at is not a logical time: {t!r}")
+        commits.append((t, c[1]))
     if not commits:
         raise HelperError("no Commit")
     return max(commits)[1]

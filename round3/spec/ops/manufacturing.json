@@ -1857,8 +1857,9 @@
     {
      "immutable": false,
      "name": "createdAtMapping",
+     "note": "logical ticks (r3_shared.clock); numeric ordering",
      "required": false,
-     "type": "datetime"
+     "type": "logical_time"
     }
    ],
    "key_field": "iri",

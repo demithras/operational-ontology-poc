@@ -2521,8 +2521,9 @@
     {
      "immutable": false,
      "name": "frozen_at",
+     "note": "logical ticks (r3_shared.clock); numeric ordering",
      "required": false,
-     "type": "datetime"
+     "type": "logical_time"
     }
    ],
    "key_field": "id",
@@ -2545,8 +2546,9 @@
     {
      "immutable": false,
      "name": "committed_at",
+     "note": "logical ticks (r3_shared.clock); numeric ordering",
      "required": false,
-     "type": "datetime"
+     "type": "logical_time"
     }
    ],
    "key_field": "sha",
@@ -2598,8 +2600,9 @@
     {
      "immutable": false,
      "name": "decided_at",
+     "note": "logical ticks (r3_shared.clock); numeric ordering",
      "required": false,
-     "type": "datetime"
+     "type": "logical_time"
     }
    ],
    "key_field": "id",

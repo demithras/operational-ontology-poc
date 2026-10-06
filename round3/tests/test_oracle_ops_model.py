@@ -155,3 +155,21 @@ def test_blank_resource_id_is_invalid_and_oracle_failure_is_visible(monkeypatch)
     monkeypatch.setattr(om, "expected_diff", lambda *a, **k: 1 / 0)
     broken = ev("manufacturing", "planner-1", "transfer_inventory", T)
     assert broken.error and broken.kind != M.COMMIT  # fails closed, flagged, never counted as a clean pass
+
+
+def test_r2_supplied_optional_resource_ref_must_exist():
+    bad = ev("manufacturing", "planner-1", "transfer_inventory", {**T, "work_order": "NOPE"})
+    assert bad.kind == M.INVALID and bad.effects == [] and "target-existence" in bad.detail
+    assert ev("manufacturing", "planner-1", "transfer_inventory", {**T, "work_order": "WO-43"}).kind == M.COMMIT
+    assert ev("manufacturing", "planner-1", "transfer_inventory", T).kind == M.COMMIT
+
+
+def test_r1_head_commit_on_seed_is_numeric_latest():
+    from r3_oracle import helpers_project as H
+    from r3_oracle.view import View
+    assert H.head_commit(View(seed("project"), 1)) == "c0ffee0001"  # 100 > 50 (string order would pick c0ffee0000)
+
+
+def test_r1_time_fields_are_logical_time_in_specs():
+    types = {f["type"] for d in OPS.values() for t in d["resource_types"] for f in t["fields"]}
+    assert "logical_time" in types and "datetime" not in types

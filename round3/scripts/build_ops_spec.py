@@ -38,6 +38,10 @@ def resource_types(ir: dict, excluded: dict) -> list[dict]:
                 if f["name"] == "snapshotObservedAt":
                     f["type"] = "integer"
                     f["note"] = "logical ticks (Round 2 used an ISO datetime); 1 tick = 1 second"
+        for f in fields:
+            if f["type"] == "datetime":  # ruling R-1: time fields hold logical-clock integer ticks, ordered numerically
+                f["type"] = "logical_time"
+                f.setdefault("note", "logical ticks (r3_shared.clock); numeric ordering")
         out.append({"name": t["id"], "key_field": t["primary_key"], "fields": fields})
     return out
 

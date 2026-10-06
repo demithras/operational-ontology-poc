@@ -133,6 +133,10 @@ def evaluate(ops_spec: dict, auth_spec: dict, subject: str, on_behalf_of: str | 
         for r in op["business_rules"]:
             if r["decision"] == "deny" and ev(r["when"], ctx):
                 return Outcome(DENIED_RULE, detail=r["id"], extras=extras)
+        optional = {i["name"] for i in op["inputs"] if not i["required"]}
+        for t, key in resources_of({**op, "inputs": [i for i in op["inputs"] if i["name"] in optional]}, args):
+            if not view.exists((t, key)):  # R-2 (PROT-H23 R6 target existence): supplied optional refs must resolve
+                return Outcome(INVALID, detail=f"precondition target-existence: {t}:{key}", extras=extras)
         for p in op["preconditions"]:
             if not ev(p["predicate"], ctx):
                 return Outcome(INVALID, detail=f"precondition {p['id']}", extras=extras)

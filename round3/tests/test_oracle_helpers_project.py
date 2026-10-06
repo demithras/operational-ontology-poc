@@ -26,8 +26,8 @@ def world():
         "Evidence:EV1": {"payload_hash": "h", "git_commit": "g", "experiment_version": "2", "environment": "e"},
         "Evidence:EV2": {"payload_hash": "h", "git_commit": "", "experiment_version": "2", "environment": "e"},
         "Evidence:EV3": {"payload_hash": "h", "git_commit": "g", "experiment_version": "1", "environment": "e"},
-        "Commit:c1": {"committed_at": "2026-01-01"}, "Commit:c2": {"committed_at": "2026-02-01"},
-        "Commit:c3": {"committed_at": "2026-02-01"},
+        "Commit:c1": {"committed_at": 10}, "Commit:c2": {"committed_at": 200},
+        "Commit:c3": {"committed_at": 200},
         "ContractVersion:CV1": {}, "ContractVersion:CV1+2": {},
         "Component:K1": {}, "Component:K2": {}, "Component:K3": {},
         "Verdict:v-1": {},
@@ -172,3 +172,10 @@ def test_canonical_state_hash_changes_with_state():
     h = H.canonical_state_hash(v)
     v.objects["Hypothesis:H1"]["phase"] = "EVALUATED"
     assert H.canonical_state_hash(v) != h and len(h) == 64
+
+
+def test_head_commit_orders_numerically_not_as_strings():
+    w = view({"Commit:a": {"committed_at": 50}, "Commit:b": {"committed_at": 100}})
+    assert H.head_commit(w) == "b"
+    with pytest.raises(HelperError):
+        H.head_commit(view({"Commit:a": {"committed_at": "2026-01-01"}}))

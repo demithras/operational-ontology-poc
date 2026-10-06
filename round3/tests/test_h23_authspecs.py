@@ -180,3 +180,17 @@ def test_random_interleaved_authority_rules_always_pass_the_strict_check(monkeyp
         authspecs.checked(spec, ops)
         multi += sum(g["id"].startswith("h23-chain-") for g in spec["grants"]) > 1
     assert multi > 0, "never reached a spec holding two harness-added grants"
+
+
+def test_shared_validate_strict_is_the_one_control_and_raises_valueerror():
+    from r3_shared.authspec import validate_strict
+    auth = _base()
+    assert validate_strict(copy.deepcopy(auth), OPS["manufacturing"]) == auth
+    bad = copy.deepcopy(auth)
+    bad["grants"][0]["origin"] = "h23-harness"  # schema violation surfaces as ValueError, not jsonschema's error
+    with pytest.raises(ValueError):
+        validate_strict(bad)
+    dup = copy.deepcopy(auth)
+    dup["principals"].append(copy.deepcopy(dup["principals"][0]))
+    with pytest.raises(ValueError, match="duplicate principal"):
+        validate_strict(dup)
