@@ -69,3 +69,114 @@ def test_helper_rejects_the_old_harness_origin():
         authspecs.with_grant(auth, {**grant, "origin": "h23-harness"})
     with pytest.raises(Exception):
         authspecs.checked({**copy.deepcopy(auth), "grants": [{**grant, "origin": "h23-harness"}]})
+
+
+# ---- P4d: unique ids and strict-loader checks ---------------------------------------------------------------------
+import json
+import random
+
+from r3_shared.authspec import ROUND3
+
+OPS = {d: json.loads((ROUND3 / "spec" / "ops" / f"{d}.json").read_text()) for d in ("manufacturing", "project")}
+
+
+def _base(domain="manufacturing"):
+    return copy.deepcopy(SPECS[domain][1])
+
+
+def _g(**kw):
+    return {"id": "x1", "effect": "allow", "operation": "transfer_inventory", "principal": {"id": "planner-1"},
+            "resource": {"any": True}, "delegable": False, **kw}
+
+
+def test_base_specs_pass_the_strict_check():
+    for d, (_, auth) in SPECS.items():
+        authspecs.checked(copy.deepcopy(auth), OPS[d])
+
+
+def test_with_grant_assigns_unique_ids_when_repeated():
+    auth = _base()
+    for _ in range(4):
+        auth = authspecs.with_grant(auth, _g(), OPS["manufacturing"])
+    ids = [g["id"] for g in auth["grants"]]
+    assert len(set(ids)) == len(ids) and {"x1", "x1#2", "x1#3", "x1#4"} <= set(ids)
+
+
+def test_checked_rejects_duplicate_grant_ids():
+    auth = _base()
+    auth["grants"] += [_g(origin="neutral-extension"), _g(origin="neutral-extension")]
+    with pytest.raises(ValueError, match="duplicate grant ids"):
+        authspecs.checked(auth)
+
+
+def test_checked_rejects_duplicate_principal_ids():
+    auth = _base()
+    auth["principals"].append(copy.deepcopy(auth["principals"][0]))
+    with pytest.raises(ValueError, match="duplicate principal"):
+        authspecs.checked(auth)
+
+
+def test_checked_rejects_dangling_delegation_principals():
+    auth = _base()
+    auth["delegations"].append({"agent": "ghost", "on_behalf_of": "planner-1", "operations": ["transfer_inventory"]})
+    with pytest.raises(ValueError, match="unknown principal"):
+        authspecs.checked(auth)
+    auth = _base()
+    auth["delegations"].append({"agent": "agent-1", "on_behalf_of": "ghost", "operations": ["transfer_inventory"]})
+    with pytest.raises(ValueError, match="unknown principal"):
+        authspecs.checked(auth)
+
+
+def test_checked_rejects_delegated_by_unknown_principal():
+    auth = _base()
+    auth["principals"][0]["delegated_by"] = "ghost"
+    with pytest.raises(ValueError, match="delegated_by"):
+        authspecs.checked(auth)
+
+
+def test_checked_rejects_grant_for_unknown_principal_id():
+    auth = _base()
+    auth["grants"].append(_g(principal={"id": "ghost"}, origin="neutral-extension"))
+    with pytest.raises(ValueError, match="unknown principal"):
+        authspecs.checked(auth)
+
+
+def test_checked_rejects_approval_operation_missing_from_ops_spec():
+    auth = _base()
+    auth["grants"].append(_g(operation="approval:nonexistent", origin="neutral-extension"))
+    authspecs.checked(copy.deepcopy(auth))  # fine without an ops spec to compare with
+    with pytest.raises(ValueError, match="not in the ops spec"):
+        authspecs.checked(auth, OPS["manufacturing"])
+
+
+def test_checked_rejects_delegation_of_unknown_operation_and_duplicate_pairs():
+    auth = _base()
+    auth["delegations"][0]["operations"].append("no_such_operation")
+    with pytest.raises(ValueError, match="not in the ops spec"):
+        authspecs.checked(auth, OPS["manufacturing"])
+    auth = _base()
+    auth["delegations"].append(copy.deepcopy(auth["delegations"][0]))
+    with pytest.raises(ValueError, match="duplicate delegation"):
+        authspecs.checked(auth)
+
+
+def test_random_interleaved_authority_rules_always_pass_the_strict_check(monkeypatch):
+    seen: list[tuple[dict, dict]] = []
+    orig = Env.set_authority
+
+    def spy(self, new_auth):
+        seen.append((copy.deepcopy(new_auth), self.ops))
+        return orig(self, new_auth)
+
+    monkeypatch.setattr(Env, "set_authority", spy)
+    targets = sorted(rules_calling_set_authority())
+    rng = random.Random(4)
+    for i in range(80):
+        pool = [rng.choice(targets) for _ in range(rng.randint(2, 5))]  # repeated and interleaved
+        attack_sequence(FakeVariant("correct"), SPECS, 8, i, pool)
+    assert len(seen) > 100, "property test would be vacuous"
+    multi = 0
+    for spec, ops in seen:
+        authspecs.checked(spec, ops)
+        multi += sum(g["id"].startswith("h23-chain-") for g in spec["grants"]) > 1
+    assert multi > 0, "never reached a spec holding two harness-added grants"

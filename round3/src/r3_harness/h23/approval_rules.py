@@ -125,7 +125,7 @@ def exe(env, step: dict) -> list[dict]:  # noqa: C901
             return exe(env, dict(step, rule="appr_self"))
         aop = approvals.approval_operation(env.ops, step["op"])
         spec = authspecs.with_grant(env.auth, {"id": f"h23-chain-{d}", "effect": "allow", "operation": aop,
-                                               "principal": {"id": d}, "resource": {"any": True}, "delegable": False})
+                                               "principal": {"id": d}, "resource": {"any": True}, "delegable": False}, env.ops)
         ex["authority"] = env.set_authority(spec)
         recs.append(_approve(env, step, d, env.token(d), args, rule + ":approve", d))
         recs.append(_commit(env, step, args, tag=rule + ":commit", rid_tag="c"))

@@ -175,7 +175,7 @@ def exe(env, step: dict) -> list[dict]:  # noqa: C901
                              operation=step["op"], args=copy.deepcopy(step["args"]), on_behalf_of=obo,
                              request_id=_rid(env, "2"), tags=()))
     elif rule == "replay_revoke":
-        env.set_authority(authspecs.revoked(env.auth, a, step["op"]))
+        env.set_authority(authspecs.revoked(env.auth, a, step["op"], env.ops))
         tok = env.token(a)
         for lbl, rid in (("same-id", first), ("fresh-id", _rid(env, "3"))):
             recs.append(env.call(rule="replay_revoke:" + lbl, via=step["via"], token=tok, subject=a,
