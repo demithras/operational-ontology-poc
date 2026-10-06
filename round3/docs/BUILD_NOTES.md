@@ -197,3 +197,8 @@ Single shared definition both variants adapt to (the P2 builders had invented in
 - R-2: `Service._txn` checks every supplied optional resource input against the commit-time WorldView before preconditions; missing -> INVALID `target_not_found`, zero effects. Note: the oracle evaluates deny business rules before this check, conventional runs preconditions/this check first (only differs when a deny rule and a bad optional ref coincide).
 - R-4: `r3_shared.authspec.validate_strict(spec, ops_spec)` runs in `Service.__init__` (deploy) and `Service.set_authority` before any state changes; invalid -> ValueError, authority version unchanged.
 - Tests: `tests/conventional/test_p5c_rulings.py` (8 of 10 fail with the src changes stashed, all pass with them).
+## P5b Paladin - rulings R-3/R-4 (tag r3-p5b-paladin)
+- R-3: creates persist exactly the ops-spec fields (worldbridge.py + boot.py); R-4: `validate_strict` on deploy and every `set_authority` (core.py).
+- R-1/R-2 pinned by tests (tests/paladin/test_p5b_rulings.py). Zero vendored-code changes.
+- Dev3 "new_experiment_version 0/6, evaluate_hypothesis 0/3": Paladin returned OK on all 6 and 3 calls and wrote the effects; the "misses" were
+  scoring mismatches (extra `id` prop = R-3, and oracle head_commit = R-1). Fresh-world reproduction on all experiment/contract-version pairs commits. No R8 fix needed.

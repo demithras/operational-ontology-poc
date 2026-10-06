@@ -88,8 +88,8 @@ class WorldExternalAdapter:
 class WorldGitAdapter:
     """Project canonical writes (`git_change` effects in the Round 2 IR) applied to the world through the service handle."""
 
-    def __init__(self, handle):
-        self._h, self._model = handle, None  # model attached after the Engine loads (`attach`)
+    def __init__(self, handle, spec_fields: dict | None = None):
+        self._h, self._model, self._fields = handle, None, spec_fields or {}  # model attached after the Engine loads (`attach`)
         self._obs: list[dict] = []
         self._n = 0
 
@@ -116,6 +116,8 @@ class WorldGitAdapter:
         else:
             key = row.get("$key", row.get("id"))
             props = {k: v for k, v in row.items() if not k.startswith("$")}
+            if target in self._fields:  # R-3: the key is the object key, not a property; only spec-listed fields persist
+                props = {k: v for k, v in props.items() if k in self._fields[target]}
             cur = self._h.get(target, key)
             if cur is None:
                 self._h.create(target, key, props)
