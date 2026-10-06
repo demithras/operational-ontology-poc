@@ -42,10 +42,11 @@ def main() -> int:
             if fakes is None:
                 print(f"{name}: fake variants need --test-variants", file=sys.stderr)
                 return 2
-            variant, pkg = fakes.load(name), None
+            factory, pkg = (lambda m, n=name: fakes.load(n, m)), None
         else:
             try:
-                variant, pkg = load_variant(name), name
+                load_variant(name)  # fail early (NotImplementedError) before any run
+                factory, pkg = (lambda m, n=name: load_variant(n, m)), name
             except NotImplementedError as exc:
                 print(f"not implemented yet - P2 ({exc})", file=sys.stderr)
                 return 2
@@ -54,7 +55,7 @@ def main() -> int:
             print(f"refusing to overwrite {out}", file=sys.stderr)
             return 2
         t0 = time.perf_counter()
-        r = run_variant(variant, name, out, a.exp_id, a.seed, a.sequences, a.mutation_sequences, pkg)
+        r = run_variant(factory, name, out, a.exp_id, a.seed, a.sequences, a.mutation_sequences, pkg)
         an = r["analysis"]
         print(f"{name}: sequences={an['sequences']} unique={an['unique_sequences']} calls={an['calls']} "
               f"classes={an['class_counts']} elapsed={time.perf_counter() - t0:.1f}s")

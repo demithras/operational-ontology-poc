@@ -8,6 +8,7 @@ from __future__ import annotations
 from hypothesis import strategies as st
 from hypothesis.stateful import RuleBasedStateMachine, initialize, invariant, rule
 
+from . import approval_rules
 from .chooser import HypChooser
 from .corpus import new_env
 from .rules import WEIGHTS, exe, gen_step
@@ -71,6 +72,11 @@ def make_machine(variant, domain: str, specs: dict, fail_on=FAIL):
         def toctou_args(self, data):
             self._do(data, "toctou")
 
+        @rule(data=st.data())
+        def approval_attack(self, data):
+            from .approval_rules import RULES
+            self._do(data, HypChooser(data).choice(RULES))
+
         @invariant()
         def no_forbidden_effects(self):
             bad = [(c["rule"], c["operation"], c["classes"]) for c in self.last
@@ -81,5 +87,5 @@ def make_machine(variant, domain: str, specs: dict, fail_on=FAIL):
             self.env.close()
 
     assert set(WEIGHTS) == {"legit", "hidden", "ident", "obo", "retarget", "mutate_body", "replay",
-                            "replay_revoke", "badtoken", "toctou"}
+                            "replay_revoke", "badtoken", "toctou", *approval_rules.RULES}
     return Machine

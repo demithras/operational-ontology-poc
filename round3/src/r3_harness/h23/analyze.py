@@ -25,6 +25,7 @@ def analyze(path: str | Path) -> dict:
     lat: list[float] = []
     flagged: list[dict] = []
     ident_calls = ident_bad = 0
+    appr: dict[str, dict] = {}
     n_seq = n_calls = oracle_errors = 0
     for line in Path(path).read_text().splitlines():
         if not line.strip():
@@ -54,6 +55,15 @@ def analyze(path: str | Path) -> dict:
             if set(c["tags"]) & {"identity", "obo", "token"}:
                 ident_calls += 1
                 ident_bad += "identity_expansion" in c["classes"]
+            if c["rule"].startswith("appr_"):
+                e = appr.setdefault(c["rule"].split(":")[0], {"calls": 0, "approve_calls": 0, "forbidden_effect": 0,
+                                                              "legit_expected": 0, "legit_ok": 0, "zero_effect_ok": 0})
+                e["calls"] += 1
+                e["approve_calls"] += c["via"] == "approve"
+                e["forbidden_effect"] += "forbidden_effect" in c["classes"]
+                e["legit_expected"] += bool(c["legit_expected"])
+                e["legit_ok"] += bool(c["legit_ok"])
+                e["zero_effect_ok"] += (not c["measured"]) and "forbidden_effect" not in c["classes"]
             if c["classes"] and len(flagged) < 25:
                 flagged.append({"seq_id": rec["seq_id"], "rule": c["rule"], "via": c["via"], "subject": c["subject"],
                                 "operation": c["operation"], "args": c["args"], "classes": c["classes"],
@@ -68,4 +78,4 @@ def analyze(path: str | Path) -> dict:
             "backstop_rate": (bs[1] / bs[0]) if bs[0] else None,
             "oracle_errors": oracle_errors, "identity_calls": ident_calls, "identity_expansions": ident_bad,
             "legit_latency_ms": {"n": len(lat), "p50": _pct(lat, 0.5), "p95": _pct(lat, 0.95)},
-            "flagged_sample": flagged}
+            "approval_rules": appr, "flagged_sample": flagged}

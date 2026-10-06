@@ -11,13 +11,14 @@ from pathlib import Path
 from r3_oracle import authority  # noqa: F401  (oracle version fingerprint below)
 from r3_shared import evidence
 
-from . import mutation, surface
+from . import approval_rules, mutation, surface
 from .analyze import analyze
 from .corpus import DOMAINS, load_specs, new_env, run_corpus
 
 ROUND3 = Path(__file__).resolve().parents[3].parent
 FILES = ("adversarial-sequences.jsonl", "effect-oracle-diff.json", "identity-confusion-results.json",
          "direct-engine-backstop.json", "mutation-results.json", "surface-audit.json")
+EXTRA = ("approval-results.json",)  # recorded, not in the contract's required list; the evaluator never requires it
 
 
 def tree_sha(pkg: str) -> str:
@@ -38,9 +39,11 @@ def _dump(path: Path, obj) -> None:
     path.write_text(json.dumps(obj, indent=1, sort_keys=True, default=str) + "\n")
 
 
-def run_variant(variant, vname: str, out: Path, exp_id: str, seed: int, sequences: int,
+def run_variant(factory, vname: str, out: Path, exp_id: str, seed: int, sequences: int,
                 mutation_sequences: int = 150, candidate_pkg: str | None = None) -> dict:
+    """`factory(mutants) -> Variant` (registry.load_variant for real variants). Baseline = factory(())."""
     out.mkdir(parents=True, exist_ok=True)
+    variant = factory(())
     specs = load_specs()
     seq_path = out / FILES[0]
     with seq_path.open("w") as fh:
@@ -66,8 +69,9 @@ def run_variant(variant, vname: str, out: Path, exp_id: str, seed: int, sequence
     _dump(out / FILES[3], {"tested": a["backstop_tested"], "passed": a["backstop_passed"], "rate": a["backstop_rate"],
                            "backstop_failures": cc.get("backstop_failure", 0)})
     _dump(out / FILES[5], {"rows": rows, "overexposure": surface.overexposure_count(rows)})
-    _dump(out / FILES[4], mutation.prove(variant, specs, mutation_sequences))
-    raw = {f: hashlib.sha256((out / f).read_bytes()).hexdigest() for f in FILES}
+    _dump(out / FILES[4], mutation.prove(factory, specs, mutation_sequences))
+    _dump(out / EXTRA[0], {"rules": a["approval_rules"], "rule_names": list(approval_rules.RULES)})
+    raw = {f: hashlib.sha256((out / f).read_bytes()).hexdigest() for f in FILES + EXTRA}
     env_ = evidence.build_envelope(
         experiment_id=exp_id, hypothesis_id="H23", git_commit=_git_head(),
         environment={"python": sys.version.split()[0], "platform": platform.platform(), "variant": vname},

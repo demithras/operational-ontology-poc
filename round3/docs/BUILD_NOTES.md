@@ -96,6 +96,28 @@ The evaluator recomputes everything from the raw jsonl; summaries are only cross
 ### Runtime estimate (fakes; real variants add their own per-call cost)
 ~21 s per 1,000 unique sequences incl. mutation proof (150 x 4 x 2) and surface audit; ~28 s per 3,000 sequences without the
 mutation proof (~9 ms/sequence, ~1 ms/call, ~9 calls/sequence incl. backstop probes). 10,000 sequences ~ 2-3 min per variant on fakes.
+### P3 rework (harness on protocol P1b)
+- Mutants: only `registry.load_variant(name, mutants=[m])` (fakes: `FakeVariant(mode, [m])`). `run_variant(factory, ...)` takes
+  `factory(mutants) -> Variant`; baseline = `factory(())`. No module-global switch; the `consulted` field is gone: a mutant whose
+  site is never consulted gains nothing and is SURVIVED (tested with a variant that accepts but ignores mutants).
+- Authority changes: only `Deployment.set_authority`; the redeploy fallback is deleted (a variant whose `set_authority`
+  raises fails the run). Each attack sequence logs `authority_version: {initial, final, changes:[{before, after}]}`.
+- Audience: `type(variant).audience` (class attribute); missing -> `RuntimeError` naming the variant. No auto-detection.
+- Delegate semantics in `r3_oracle/authority.py` (PROT-H23): delegates are evaluated with their delegator on every request;
+  obo != delegated_by or obo with `delegated_by: null` -> DENY; `actor_for_rules` = delegator; `could_ever_allow` for a delegate
+  also needs a delegation entry and a delegator that could be allowed (agent-orphan no longer exposes transfer_inventory).
+- Approvals: `r3_oracle/approvals.py` (valid iff token verifies, op has an `approval` block, approver != requester and outside its
+  chain, approver holds `approval.approver_operation` on the resources; key = requester+obo+op+canonical args; single use, consumed
+  in `Env.call` when the oracle commits with `used_approval`). `ops_model.evaluate(..., approved=)`; no approval ->
+  NEEDS_APPROVAL (`approval_required`), zero effects. Approvals change nothing in the canonical world (any diff = forbidden effect).
+  Rules in `h23/approval_rules.py`: appr_ok (approve+commit positive control, then reuse), appr_missing, appr_self, appr_chain
+  (chain member legitimately granted the approval op via set_authority, still refused), appr_unauth, appr_forged, appr_swap
+  (approve A, commit B), appr_by_attacker (hostile agent as approver with its own token). Honest counterparties (approvers, the
+  honest requester of appr_by_attacker) use harness-issued tokens. Only manufacturing has approval operations
+  (transfer_inventory, expedite_purchase_order, reschedule_work_order); in project the rules degrade to a legit step.
+- Evidence: `approval-results.json` per variant (counts per approval rule); recorded and hashed in the envelope, NOT required by the evaluator.
+- Runtime on fakes (fake-correct, seed 2, incl. mutation proof of 150x4x2 and surface audit): 1,000 unique sequences = 22.1 s (8,586 calls); 200 sequences = 14 s.
+
 ## P1b - Variant protocol amendment (tag r3-p1b-protocol)
 Single shared definition both variants adapt to (the P2 builders had invented incompatible versions).
 - `r3_shared/mutants.py`: `KNOWN` (H23: identity_substitution, mutable_gated_input, backstop_bypass, tool_overexposure; later gates append), `ALL`, `validate(names) -> frozenset` (ValueError on unknown). Mutants are activated ONLY via `Variant.__init__(mutants=())`; `registry.load_variant(name, mutants=())` passes them through. No global state.

@@ -64,13 +64,16 @@ def attack_sequence(variant, specs, seed: int, i: int, rules: list[str] | None =
         agents = env.agents()
         attacker = agents[(i // len(DOMAINS)) % len(agents)]
         steps, calls = [], []
+        v0 = env.dep.authority_version()
         for _ in range(ch.randint(3, 8)):
             rule = ch.choice([r for r, w in WEIGHTS.items() for _ in range(w)]) if rules is None else ch.choice(rules)
             st = gen_step(env, ch, attacker, rule)
             steps.append(st)
             calls += exe(env, st)
         return {"seq_id": f"{seed}-{i}", "kind": "attack", "domain": domain, "attacker": attacker, "steps": steps,
-                "calls": calls, "hash": seq_hash(domain, attacker, steps)}
+                "calls": calls, "hash": seq_hash(domain, attacker, steps),
+                "authority_version": {"initial": v0, "final": env.dep.authority_version(),
+                                      "changes": env.authority_log}}
     finally:
         env.close()
 

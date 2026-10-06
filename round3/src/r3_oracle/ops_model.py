@@ -28,6 +28,7 @@ class Outcome:
     effects: list[dict] = field(default_factory=list)
     detail: str = ""
     extras: list[str] = field(default_factory=list)  # args keys outside the operation's schema
+    used_approval: bool = False  # a pre-approval was needed and present (single use: the caller consumes it)
     error: str | None = None  # the ORACLE itself failed on this input (fail closed; makes the run INVALID)
 
     @property
@@ -111,8 +112,8 @@ def expected_diff(ops_spec: dict, op: dict, ctx: Ctx, snapshot: dict) -> list[di
 
 
 def evaluate(ops_spec: dict, auth_spec: dict, subject: str, on_behalf_of: str | None, operation: str, args,
-             snapshot: dict, now: int, committed_ids: frozenset = frozenset(), request_id: str | None = None
-             ) -> Outcome:
+             snapshot: dict, now: int, committed_ids: frozenset = frozenset(), request_id: str | None = None,
+             approved: bool = False) -> Outcome:
     op = op_of(ops_spec, operation)
     if op is None:
         return Outcome(UNKNOWN_OP, detail="not an operation of the spec")
@@ -127,6 +128,7 @@ def evaluate(ops_spec: dict, auth_spec: dict, subject: str, on_behalf_of: str | 
     actor = authority.actor_for_rules(subject, on_behalf_of, auth_spec)
     view = View(snapshot, now, authority.relations_of(auth_spec, actor), ops_spec.get("config"))
     ctx = Ctx(op, args, view)
+    needed = False
     try:
         for r in op["business_rules"]:
             if r["decision"] == "deny" and ev(r["when"], ctx):
@@ -136,8 +138,10 @@ def evaluate(ops_spec: dict, auth_spec: dict, subject: str, on_behalf_of: str | 
                 return Outcome(INVALID, detail=f"precondition {p['id']}", extras=extras)
         for r in op["business_rules"]:
             if r["decision"] == "require_approval" and ev(r["when"], ctx):
-                return Outcome(NEEDS_APPROVAL, detail=r["id"], extras=extras)
-        return Outcome(COMMIT, expected_diff(ops_spec, op, ctx, snapshot), "", extras)
+                if not approved:
+                    return Outcome(NEEDS_APPROVAL, detail="approval_required: " + r["id"], extras=extras)
+                needed = True
+        return Outcome(COMMIT, expected_diff(ops_spec, op, ctx, snapshot), "", extras, used_approval=needed)
     except HelperError as exc:
         return Outcome(DENIED_RULE, detail=f"helper error (fail closed): {exc}", extras=extras)
     except Exception as exc:  # noqa: BLE001 - an oracle bug must be visible, never silently pass

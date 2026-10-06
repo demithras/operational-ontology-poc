@@ -9,7 +9,7 @@ import os
 import tempfile
 import time
 
-from r3_oracle import authority, ops_model
+from r3_oracle import approvals, authority, ops_model
 from r3_oracle.effect_meter import EffectMeter
 from r3_shared.clock import LogicalClock
 from r3_shared.identity import IdentityProvider
@@ -18,7 +18,6 @@ from r3_shared.world import WorldStore
 
 from .classify import classify
 
-AUD_CANDIDATES = ("r3", "r3-deployment", "paladin", "conventional", "fake", "agent-api", "api")
 TTL = 10 ** 6
 
 
@@ -43,10 +42,12 @@ class Env:
         self.meter = EffectMeter(self.reader)
         self.writers = {w for a in auth_spec["service_accounts"] for w in a["world_writers"]}
         self.dep = self._deploy()
-        self.aud = self._detect_aud()
+        self.aud = self._declared_aud()
         self._tokens: dict[str, str] = {}
         self._tools: dict[str, list[str]] = {}
         self.committed: set[str] = set()
+        self.authority_log: list[dict] = []
+        self.approvals: dict[str, int] = {}
         self.n = 0
 
     # -- deployment / audience -------------------------------------------------------------------
@@ -54,15 +55,13 @@ class Env:
         return self.variant.deploy(self.domain, self.store.handle_factory(), self.verifier, self.ops, self.auth,
                                    self.clock)
 
-    def _detect_aud(self) -> str:
-        declared = getattr(self.dep, "audience", None) or getattr(self.variant, "audience", None)
-        if declared:
-            return declared
-        admin = next(p["id"] for p in self.auth["principals"] if "admin" in p["roles"])
-        for aud in (getattr(self.variant, "name", None), self.domain, *AUD_CANDIDATES):
-            if aud and self.safe_tools(self.idp.issue(admin, aud, TTL, self.clock)):
-                return aud
-        return AUD_CANDIDATES[0]
+    def _declared_aud(self) -> str:
+        """Token audience = class attribute `audience` of the variant (protocol P1b). No auto-detection."""
+        aud = getattr(type(self.variant), "audience", None)
+        if not isinstance(aud, str) or not aud:
+            raise RuntimeError(f"variant {type(self.variant).__name__} defines no class attribute `audience`; "
+                               "the harness does not guess token audiences")
+        return aud
 
     def safe_tools(self, token) -> list:
         """tools() for any token; a variant that raises on a token it rejects is treated as listing nothing."""
@@ -92,18 +91,16 @@ class Env:
         return self.meter.snapshot()
 
     # -- authority changes -----------------------------------------------------------------------
-    def set_authority(self, new_auth: dict) -> str:
+    def set_authority(self, new_auth: dict) -> dict:
+        """Authority changes go ONLY through Deployment.set_authority (no fallback). Returns the version log."""
+        before = self.dep.authority_version()
+        self.dep.set_authority(copy.deepcopy(new_auth))
         self.auth = copy.deepcopy(new_auth)
         self._tools.clear()
-        fn = getattr(self.dep, "set_authority", None)
-        if fn is not None:
-            try:
-                fn(copy.deepcopy(new_auth))
-                return "set_authority"
-            except (TypeError, NotImplementedError):
-                pass
-        self.dep = self._deploy()
-        return "redeploy"
+        after = self.dep.authority_version()
+        entry = {"before": before, "after": after}
+        self.authority_log.append(entry)
+        return entry
 
     # -- the one way a call is made --------------------------------------------------------------
     def call(self, *, rule: str, via: str, token: str, subject: str | None, operation: str, args,
@@ -117,8 +114,12 @@ class Env:
         if subject is None:
             outcome = ops_model.Outcome(ops_model.DENIED_AUTHORITY, detail="token does not verify")
         else:
+            akey = approvals.key(subject, on_behalf_of, operation, oargs)
             outcome = ops_model.evaluate(self.ops, self.auth, subject, on_behalf_of, operation, oargs, snap,
-                                         self.clock.now(), frozenset(self.committed), request_id)
+                                         self.clock.now(), frozenset(self.committed), request_id,
+                                         approved=self.approvals.get(akey, 0) > 0)
+            if outcome.used_approval and outcome.effects:
+                self.approvals[akey] -= 1  # single use: the oracle consumes it when a correct system commits
         fn = self.dep.call_tool if via == "call_tool" else self.dep.direct
         t0 = time.perf_counter()
         res: CallResult | None = None
@@ -140,6 +141,35 @@ class Env:
                     "on_behalf_of": on_behalf_of, "request_id": request_id, "status": status, "error": err,
                     "latency_ms": dt, "oracle": outcome.kind, "oracle_detail": outcome.detail,
                     "in_tools": operation in self.tools(subject) if subject else None})
+        return rec
+
+    def approve(self, *, rule: str, token: str, approver: str | None, requester: str | None, operation: str, args,
+                on_behalf_of: str | None = None, tags=()) -> dict:
+        """Pre-approve the exact request via Deployment.approve. Oracle: valid approvals enter the ledger. An
+        approval must change nothing in the canonical world (any diff is a forbidden effect); whether a bad approval
+        was wrongly honoured shows when the request is committed."""
+        self.n += 1
+        valid, why = approvals.validate(self.ops, self.auth, approver, requester, operation, args)
+        outcome = ops_model.Outcome(ops_model.COMMIT if valid else ops_model.DENIED_AUTHORITY, detail=why)
+        res, err = None, None
+        t0 = time.perf_counter()
+        self.meter.begin()
+        try:
+            res = self.dep.approve(token, operation, copy.deepcopy(args), requester or "?", on_behalf_of)
+        except Exception as exc:  # noqa: BLE001
+            err = f"{type(exc).__name__}: {exc}"
+        measured = self.meter.end()
+        dt = (time.perf_counter() - t0) * 1000.0
+        if valid:
+            k = approvals.key(requester, on_behalf_of, operation, args)
+            self.approvals[k] = self.approvals.get(k, 0) + 1
+        status = "EXCEPTION" if res is None else res.status
+        rec = classify(outcome, measured, status, writers=self.writers, via="approve", tags=set(tags), clean=False,
+                       backstop_probe=False)
+        rec.update({"rule": rule, "via": "approve", "subject": approver, "operation": operation,
+                    "args": _plain(args), "on_behalf_of": on_behalf_of, "request_id": None, "status": status,
+                    "error": err, "latency_ms": dt, "oracle": "APPROVAL_VALID" if valid else "APPROVAL_INVALID",
+                    "oracle_detail": why, "in_tools": None, "requester": requester})
         return rec
 
     def close(self) -> None:

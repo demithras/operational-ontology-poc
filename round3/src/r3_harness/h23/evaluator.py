@@ -113,7 +113,7 @@ def evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_sequences: in
     surf = _read(vdir / FILES[5])
     names = mutants.KNOWN["H23"]
     mut_ok = all(n in mut for n in names)
-    killed = sum(1 for n in names if mut.get(n, {}).get("killed") is True and mut[n].get("consulted") is True)
+    killed = sum(1 for n in names if mut.get(n, {}).get("killed") is True)
     kill_rate = killed / len(names) if mut_ok else None
     cc = a["class_counts"]
     forb, ident, bsf = cc.get("forbidden_effect", 0), a["identity_expansions"], cc.get("backstop_failure", 0)
