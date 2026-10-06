@@ -208,3 +208,9 @@ Single shared definition both variants adapt to (the P2 builders had invented in
 - `WorldHandle` now opens sqlite with `check_same_thread=False` so threaded callers are possible; serialising authorize->commit is the variant's job (mutant `unsynchronized_commit` removes it).
 - Fakes: `FakeDeployment` (durable ledger in state_dir) and `FakeVolatileLedger` (broken). h23 test fakes accept `state_dir` but do not implement crash yet.
 - Expected red until later phases: variants lack `arm_crash`; r3_harness mutation map (`h23/mutation.py`) has no entries for the new mutants; paladin/conventional mutant-name tests pin the old four.
+
+## P7b Conventional - A8 crash/restart/concurrency (tag r3-p7b-conventional, branch r3-conv)
+- Durable state stays in the world DB (effects, idempotency ledger, approvals, and now the authority in force: `conv_authority`), all in the request transaction; `state_dir` accepted, unused. Details and test map: spec/protections/H23-conventional.md, section P7b.
+- `arm_crash/crash/restart` on Service + deployment; thread safety by RLock + BEGIN IMMEDIATE; mutants `ledger_after_commit_volatile`, `unsynchronized_commit` (the latter has a mutant-only 50 ms sleep to make the race deterministic).
+- Audit (a) fixed: delegate tool exposure honours the delegation operation list. Audit (b): request_id=None documented, unchanged.
+- Pinned mutant-list test in tests/conventional/test_conv_mutants.py updated to the six-name set.

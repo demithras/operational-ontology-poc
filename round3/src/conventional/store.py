@@ -10,6 +10,7 @@ DDL = """
 CREATE TABLE IF NOT EXISTS conv_idempotency(request_id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, result_json TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS conv_approvals(
   id INTEGER PRIMARY KEY AUTOINCREMENT, fingerprint TEXT NOT NULL, approver TEXT NOT NULL, consumed INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS conv_authority(id INTEGER PRIMARY KEY CHECK(id=1), version INTEGER NOT NULL, spec_json TEXT NOT NULL);
 """
 
 
@@ -43,3 +44,13 @@ def approvals_open(handle, fp: str) -> list[tuple[int, str]]:
 
 def approval_consume(handle, approval_id: int) -> None:
     handle._con.execute("UPDATE conv_approvals SET consumed=1 WHERE id=?", (approval_id,))
+
+
+def authority_put(handle, version: int, spec: dict) -> None:
+    """The authority spec in force is durable (PROT-H23-A8): restart() rebuilds the policy from here, not from memory."""
+    handle._con.execute("INSERT OR REPLACE INTO conv_authority VALUES(1,?,?)", (version, json.dumps(spec, sort_keys=True)))
+
+
+def authority_get(handle):
+    r = handle._con.execute("SELECT version, spec_json FROM conv_authority WHERE id=1").fetchone()
+    return None if r is None else (r[0], json.loads(r[1]))

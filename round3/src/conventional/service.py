@@ -6,9 +6,11 @@ transaction, which rolls back (world effects AND idempotency/approval rows).
 """
 from __future__ import annotations
 
+import contextlib
 import copy
 import sqlite3
 import threading
+import time
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any, Callable
@@ -64,11 +66,48 @@ class Service:
         self._policy = PolicyEngine(auth_spec, 1)
         self._lock = threading.RLock()
         self.unavailable: set[str] = set()
+        self.crashed = False
+        self._armed: str | None = None
+        self._mem_ledger: dict = {}  # used ONLY by the ledger_after_commit_volatile mutant
         h = factory(WRITER)
         try:
             store.init(h)
+            with h.transaction():
+                store.authority_put(h, 1, auth_spec)
         finally:
             h.close()
+
+    # -- crash / restart (PROT-H23-A8). Durable state = world DB (effects, idempotency ledger, approvals, authority). --
+    def arm_crash(self, point: str) -> None:
+        if point not in ("before_commit", "after_commit"):
+            raise ValueError(f"bad crash point {point!r}")
+        with self._lock:
+            self._armed = point
+
+    def crash(self) -> None:
+        with self._lock:
+            self.crashed, self._armed = True, None
+            self._mem_ledger = {}
+            self._policy = None  # in-memory policy is lost
+
+    def restart(self) -> None:
+        with self._lock:
+            h = self._factory(WRITER)
+            try:
+                version, spec = store.authority_get(h)
+            finally:
+                h.close()
+            self._policy = PolicyEngine(spec, version)
+            self._mem_ledger, self.unavailable = {}, set()
+            self.crashed, self._armed = False, None
+
+    def _crash_now(self) -> _Abort:
+        self.crashed, self._armed, self._mem_ledger = True, None, {}
+        return _Abort("UNKNOWN", {"reason": "crashed"})
+
+    def _guarded(self):
+        """The lock that serialises the authorize->commit section; the unsynchronized_commit mutant has none."""
+        return contextlib.nullcontext() if self.mutant("unsynchronized_commit") else self._lock
 
     # -- configuration -------------------------------------------------------------------------
     def mutant(self, name: str) -> bool:
@@ -77,8 +116,17 @@ class Service:
     def set_authority(self, auth_spec: dict) -> int:
         validate_strict(auth_spec, self._spec)  # R-4: raise before anything changes
         with self._lock:
-            self._policy = PolicyEngine(auth_spec, self._policy.version + 1)
-            return self._policy.version
+            if self.crashed:
+                raise RuntimeError("deployment is crashed; restart() first")
+            version = self._policy.version + 1
+            h = self._factory(WRITER)
+            try:
+                with h.transaction():
+                    store.authority_put(h, version, auth_spec)  # durable first, then swapped in
+            finally:
+                h.close()
+            self._policy = PolicyEngine(auth_spec, version)
+            return version
 
     @property
     def policy(self) -> PolicyEngine:
@@ -105,7 +153,9 @@ class Service:
     # -- the write path ------------------------------------------------------------------------
     def execute(self, token: str, operation: str, args: dict, on_behalf_of: str | None = None,
                 request_id: str | None = None, *, _enforce: bool = True) -> CallResult:
-        with self._lock:
+        with self._guarded():
+            if self.crashed:
+                return CallResult("UNAVAILABLE", {"reason": "crashed"})
             try:
                 return self._execute(token, operation, args, on_behalf_of, request_id, _enforce)
             except _Abort as a:
@@ -141,8 +191,15 @@ class Service:
                              store.fingerprint(sub, self._policy.canonical_obo(sub, obo), operation, inputs))
         h = self._factory(WRITER)
         try:
-            with h.transaction():
+            # unsynchronized_commit BUG: no lock above and no world transaction here, so check-then-act interleaves
+            with (contextlib.nullcontext() if self.mutant("unsynchronized_commit") else h.transaction()):
                 result = self._txn(h, op, model, bound, args, enforce)
+            fresh = result.status == "OK" and not result.body.get("replayed")
+            if fresh and self._armed == "after_commit":  # world + durable ledger committed; the reply is lost
+                raise self._crash_now()
+            if fresh and self.mutant("ledger_after_commit_volatile") and bound.request_id is not None:
+                # BUG: the committed-request record lives in memory and is written only after acknowledging
+                self._mem_ledger[bound.request_id] = (bound.fingerprint, {"status": "OK", "body": result.body})
             return result
         finally:
             h.close()
@@ -153,7 +210,8 @@ class Service:
             if not d.allowed or d.authority_version != self._policy.version:
                 raise _Abort("DENIED", {"reason": d.reason})
         if b.request_id is not None:
-            prior = store.idem_get(h, b.request_id)
+            prior = self._mem_ledger.get(b.request_id) if self.mutant("ledger_after_commit_volatile") \
+                else store.idem_get(h, b.request_id)
             if prior is not None:
                 if prior[0] != b.fingerprint:
                     raise _Abort("INVALID", {"reason": "idempotency_key_reuse"})
@@ -188,6 +246,10 @@ class Service:
             raise _Abort("INVALID", {"reason": "helper_error", "detail": str(exc)}) from exc
         except effects.EffectRejected as exc:
             raise _Abort("INVALID", {"reason": "effect_rejected", "detail": str(exc)}) from exc
+        if self._armed == "before_commit":  # authorized and validated, nothing written yet: the open transaction is lost
+            raise self._crash_now()
+        if self.mutant("unsynchronized_commit"):
+            time.sleep(0.05)  # the unprotected window between the precondition read and the write
         try:
             n = effects.apply(h, planned, b.request_id, self.unavailable)
         except effects.EffectRejected as exc:
@@ -195,7 +257,8 @@ class Service:
         except ConnectionError as exc:
             raise _Abort("UNAVAILABLE", {"reason": "dependency_unavailable", "detail": str(exc)}) from exc
         body = {"operation": b.operation, "effects": n, "request_id": b.request_id, "authority_version": b.authority_version}
-        if b.request_id is not None:
+        if b.request_id is not None and not self.mutant("ledger_after_commit_volatile"):
+            # request_id=None is accepted but has NO replay protection (documented, PROT-H23-A8 audit item b)
             store.idem_put(h, b.request_id, b.fingerprint, {"status": "OK", "body": body})
         return CallResult("OK", body)
 
@@ -211,6 +274,8 @@ class Service:
     def approve(self, token: str, operation: str, args: dict, requester: str, on_behalf_of: str | None = None) -> CallResult:
         """An approver binds an approval to the EXACT pending inputs; any change needs a fresh approval."""
         with self._lock:
+            if self.crashed:
+                return CallResult("UNAVAILABLE", {"reason": "crashed"})
             try:
                 approver = self.authenticate(token)
                 op = self._ops.get(operation) if isinstance(operation, str) else None
@@ -229,9 +294,13 @@ class Service:
                 h = self._factory(WRITER)
                 try:
                     with h.transaction():
+                        if self._armed == "before_commit":
+                            raise self._crash_now()
                         store.approval_add(h, store.fingerprint(requester, self._policy.canonical_obo(requester, on_behalf_of), operation, inputs), approver)
                 finally:
                     h.close()
+                if self._armed == "after_commit":
+                    raise self._crash_now()
                 return CallResult("OK", {"approved_by": approver})
             except _Abort as a:
                 return a.result
@@ -241,6 +310,8 @@ class Service:
     # -- reads ---------------------------------------------------------------------------------
     def read(self, token: str, operation: str, args: dict) -> CallResult:
         with self._lock:
+            if self.crashed:
+                return CallResult("UNAVAILABLE", {"reason": "crashed"})
             sub = self.authenticate(token)
             if sub is None or not self._policy.known(sub):
                 return CallResult("DENIED", {"reason": "invalid_token" if sub is None else "unknown_principal"})

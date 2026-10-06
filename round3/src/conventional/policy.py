@@ -144,8 +144,11 @@ class PolicyEngine:
             allows = self._matching(subject, op, None, "allow")
             if not allows or self._matching(subject, op, None, "deny"):
                 continue
-            if delegator is not None and not (any(g.get("delegable") for g in allows)
-                                              and self.exposed_operations(delegator, [op], _depth + 1)):
+            if delegator is not None and not (  # a delegate sees only what its delegation entry lists (same as decide())
+                    any(x["agent"] == subject and x["on_behalf_of"] == delegator and op in x["operations"]
+                        for x in self._delegations)
+                    and any(g.get("delegable") for g in allows)
+                    and self.exposed_operations(delegator, [op], _depth + 1)):
                 continue
             out.append(op)
         return out
