@@ -16,7 +16,8 @@ def _effects(rig, fn):
 
 
 def test_switch_names_are_the_frozen_set():
-    assert set(mutants.KNOWN["H23"]) == {"identity_substitution", "mutable_gated_input", "backstop_bypass", "tool_overexposure"}
+    assert set(mutants.KNOWN["H23"]) == {"identity_substitution", "mutable_gated_input", "backstop_bypass", "tool_overexposure",
+                                         "ledger_after_commit_volatile", "unsynchronized_commit"}
     with pytest.raises(ValueError):
         mutants.validate(["no_such_switch"])
 

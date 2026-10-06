@@ -246,3 +246,8 @@ Binding spec: spec/protections/PROT-H23-A8.md. Everything below is variant-neutr
   surface (`put`), so the volatile-ledger proof uses the oracle-driven correct fake with the mutant switched on.
 - Cost: sequences ~ same as before plus ~5% for crash rules; concurrency ~0.05-0.1 s/scenario on fakes
   (300 scenarios ~ 20-30 s); the fakes' unsynchronized mutant sleeps 3 ms to open the race window.
+## P7b Conventional - A8 crash/restart/concurrency (tag r3-p7b-conventional, branch r3-conv)
+- Durable state stays in the world DB (effects, idempotency ledger, approvals, and now the authority in force: `conv_authority`), all in the request transaction; `state_dir` accepted, unused. Details and test map: spec/protections/H23-conventional.md, section P7b.
+- `arm_crash/crash/restart` on Service + deployment; thread safety by RLock + BEGIN IMMEDIATE; mutants `ledger_after_commit_volatile`, `unsynchronized_commit` (the latter has a mutant-only 50 ms sleep to make the race deterministic).
+- Audit (a) fixed: delegate tool exposure honours the delegation operation list. Audit (b): request_id=None documented, unchanged.
+- Pinned mutant-list test in tests/conventional/test_conv_mutants.py updated to the six-name set.

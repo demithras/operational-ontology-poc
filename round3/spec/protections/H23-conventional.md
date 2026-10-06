@@ -39,3 +39,21 @@ authenticates, binds, authorizes, then commits inside ONE world transaction) -> 
 | R-1 numeric logical time | `helpers_proj.head_commit` compares integer ticks; non-integer -> helper_error INVALID | `test_p5c_rulings.py::test_r1_*` |
 | R-2 optional ref existence (R6 target existence) | `service.py` `_txn`: supplied optional resource input must exist at commit, else INVALID `target_not_found`, zero effects | `test_r2_*` incl. sweep over every optional resource input of both domains |
 | R-4 strict authority validation | `authspec.validate_strict(spec, ops)` on deploy and every `set_authority`; ValueError, version unchanged | `test_r4_*` (duplicate grant id, schema-invalid origin, dangling principal) |
+
+## P7b - A8 crash, restart and concurrency (PROT-H23-A8)
+
+| Req | Conventional mechanism | Test |
+|---|---|---|
+| R9 crash safety | Effects, the idempotency ledger row and approvals commit in ONE world transaction (`service.py` `_execute`), so a `before_commit` crash (raised inside the open transaction, after authorization/validation, before `effects.apply`) rolls back to zero effects, and an `after_commit` crash (after the transaction closes, before the reply) leaves exactly that request's effects AND its durable ledger row. `restart()` rebuilds the policy from the durable `conv_authority` row (`store.authority_put/get`); nothing else is held in memory. A same-`request_id` replay after restart returns the stored result (`replayed: true`), zero new effects; a new `request_id` is decided afresh against current authority and preconditions. | `tests/conventional/test_a8_crash.py` |
+| R10 concurrency safety | One `RLock` serialises authorize -> commit across `execute/approve/read/set_authority`; the commit also runs in `BEGIN IMMEDIATE`, with preconditions read inside it. | `tests/conventional/test_a8_concurrency.py` (8 threads: same request_id -> one effect set; conflicting `supersede_hypothesis` races -> final world equals one of the two hand-written serial outcomes) |
+
+Design notes: `state_dir` is accepted but unused (all durable state lives in the world DB, atomic with the effects). The armed crash is
+consumed only by a request that reaches the commit point (a denied/invalid request does not trigger it). While crashed, `tools()` is
+empty and every other call returns `UNAVAILABLE {"reason": "crashed"}`. A crashed `set_authority` raises RuntimeError.
+
+New mutant switches (`r3_shared.mutants`):
+- `ledger_after_commit_volatile`: the committed-request record is kept in a memory dict written only after the after_commit crash point; a crash + replay double-commits (`test_mutant_ledger_after_commit_volatile_double_commits_on_replay`; control: without a crash it still replays).
+- `unsynchronized_commit`: no lock and no world transaction around the authorize -> commit section, plus a 50 ms window between the precondition read and the write (mutant-only sleep, makes the race deterministic). Same-id races double-commit; conflicting supersedes commit non-serial states (`test_mutant_unsynchronized_commit_*`).
+
+Audit items (P6): (a) FIXED - `PolicyEngine.exposed_operations` now requires the delegation entry to list the operation, matching `decide()`
+(`test_a8_audit.py`). (b) `request_id=None` is still accepted and has NO replay protection (documented in `service.py`; unchanged by decision).

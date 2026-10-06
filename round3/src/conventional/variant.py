@@ -43,11 +43,14 @@ class ConventionalDeployment:
     def set_dependency_down(self, adapter: str, down: bool = True) -> None:
         (self.service.unavailable.add if down else self.service.unavailable.discard)(adapter)
 
+    def arm_crash(self, point) -> None:
+        self.service.arm_crash(point)
+
     def crash(self) -> None:
-        raise NotImplementedError("crash/restart arrive with H29")
+        self.service.crash()
 
     def restart(self) -> None:
-        raise NotImplementedError("crash/restart arrive with H29")
+        self.service.restart()
 
 
 class ConventionalVariant:
@@ -59,6 +62,8 @@ class ConventionalVariant:
     def __init__(self, mutants=()):
         self.mutant_switches = shared_mutants.validate(mutants)
 
-    def deploy(self, domain, world_handle_factory, verifier, ops_spec, auth_spec, clock) -> ConventionalDeployment:
+    def deploy(self, domain, world_handle_factory, verifier, ops_spec, auth_spec, clock, state_dir=None) -> ConventionalDeployment:
+        # state_dir is accepted but unused: all durable state (effects, idempotency ledger, approvals, the authority in
+        # force) lives in the world DB, in the same transaction as the effects - atomic by construction.
         return ConventionalDeployment(Service(domain, world_handle_factory, verifier, ops_spec, auth_spec, clock,
                                               AUDIENCE, self.mutant_switches))

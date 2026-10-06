@@ -24,7 +24,7 @@ class ToolSurface:
 
     def visible(self, token: str) -> list[str]:
         sub = self._svc.authenticate(token)
-        if sub is None:
+        if sub is None or self._svc.crashed:
             return []
         if self._svc.mutant("tool_overexposure"):  # BUG: lists everything regardless of grants (service still enforces)
             return self._svc.operations
@@ -35,6 +35,8 @@ class ToolSurface:
 
     def call_tool(self, token: str, name: str, args: dict, on_behalf_of: str | None = None,
                   request_id: str | None = None) -> CallResult:
+        if self._svc.crashed:
+            return CallResult("UNAVAILABLE", {"reason": "crashed"})
         if self._svc.authenticate(token) is None:
             return CallResult("DENIED", {"reason": "invalid_token"})
         if name not in self.visible(token):
