@@ -16,6 +16,7 @@ from r3_shared.identity import IdentityProvider
 from r3_shared.variant import CallResult
 from r3_shared.world import WorldStore
 
+from . import authspecs
 from .classify import classify
 
 TTL = 10 ** 6
@@ -93,6 +94,7 @@ class Env:
     # -- authority changes -----------------------------------------------------------------------
     def set_authority(self, new_auth: dict) -> dict:
         """Authority changes go ONLY through Deployment.set_authority (no fallback). Returns the version log."""
+        authspecs.checked(new_auth)  # a harness that hands a variant an invalid spec measures nothing
         before = self.dep.authority_version()
         self.dep.set_authority(copy.deepcopy(new_auth))
         self.auth = copy.deepcopy(new_auth)
