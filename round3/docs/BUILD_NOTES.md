@@ -118,6 +118,30 @@ mutation proof (~9 ms/sequence, ~1 ms/call, ~9 calls/sequence incl. backstop pro
 - Evidence: `approval-results.json` per variant (counts per approval rule); recorded and hashed in the envelope, NOT required by the evaluator.
 - Runtime on fakes (fake-correct, seed 2, incl. mutation proof of 150x4x2 and surface audit): 1,000 unique sequences = 22.1 s (8,586 calls); 200 sequences = 14 s.
 
+
+## P2b Conventional (tag r3-p2b-conventional, branch r3-conv)
+
+Builder worked only from neutral inputs (ops/authority specs, PROT-H23, FAIRNESS, DUAL_TRACK, `r3_shared`); no round2 or paladin source read.
+
+### Module map (`round3/src/conventional/`)
+| Module | Purpose |
+|---|---|
+| `codegen.py` -> `models_gen.py` | typed frozen request model per operation, generated from `spec/ops/*.json`; `python -m conventional.codegen [--check]` |
+| `validation.py` | strict schema checks (unknown fields rejected, bool is not int, JSON deep copy, single read of caller keys) |
+| `policy.py` | policy decision point (ABAC/ReBAC over the authority spec; deny overrides; on-behalf-of; approver independence; static exposure) |
+| `worldview.py`, `interp.py`, `helpers_mfg.py`, `helpers_proj.py` | commit-time interpretation of preconditions/business rules; prose helpers implemented from the spec text |
+| `effects.py`, `store.py` | declarative effects applied through `WorldHandle("conventional-service")`; idempotency/approval tables in the world file |
+| `service.py`, `tools.py`, `variant.py` | service API (one transaction per request), tool surface, `ConventionalVariant` (audience `conventional`) |
+| `mutants.py` | the four H23 switches (names as in PROT-H23; `r3_shared.mutants` does not exist in P1, so they live here) |
+
+Tests: `tests/conventional/` (functional per operation, R1-R8 negatives with zero-effect diffs, mutants, codegen/policy, stateful sequences with known-negative mutant kills). Protection mapping: `spec/protections/H23-conventional.md`.
+
+### Findings / notes for the orchestrator
+- `r3_shared.world.WorldHandle` has no auxiliary-table API; `store.py` uses `handle._con` for `conv_idempotency` / `conv_approvals` in the same SQLite file (atomic with effects; invisible to `WorldReader.snapshot`). Suggest a public hook in P1 if Paladin needs the same.
+- Spec ambiguity: `exists` over a resource input means the object exists in the world (otherwise `expedite-closed-po` / `reschedule-closed-wo` never fire for absent targets); `exists(new_experiment_id)` tests Experiment existence (helper yields an id).
+- `agent-orphan` is allowed without `on_behalf_of` under the frozen rule (see H23-conventional.md); `authspec.allowed_operations` disagrees for delegated principals.
+- A `tests/test_variant_protocol.py` P1 test asserted both variants raise NotImplementedError; relaxed to "built or not-implemented" so it holds on both branches.
+- Business rules defend in depth: on `PX-17 WH-B->WH-A` the protected-route rule masks a missing authorization check, so mutant tests use an unprotected route (WH-B->WH-C).
 ## P1b - Variant protocol amendment (tag r3-p1b-protocol)
 Single shared definition both variants adapt to (the P2 builders had invented incompatible versions).
 - `r3_shared/mutants.py`: `KNOWN` (H23: identity_substitution, mutable_gated_input, backstop_bypass, tool_overexposure; later gates append), `ALL`, `validate(names) -> frozenset` (ValueError on unknown). Mutants are activated ONLY via `Variant.__init__(mutants=())`; `registry.load_variant(name, mutants=())` passes them through. No global state.
@@ -125,3 +149,9 @@ Single shared definition both variants adapt to (the P2 builders had invented in
 - Approval flow: the approver's token subject pre-approves the EXACT request (requester, on_behalf_of, operation, canonicalised args). The requester's later call_tool/direct of that exact request may commit; any input difference needs a new approval; one approval authorises at most one commit. Approver must differ from the requester, lie outside the requester's delegation chain and hold the approval operation. A request needing approval without one -> DENIED `{"reason": "approval_required"}`, zero effects.
 - Delegate semantics (PROT-H23.md): a principal with `delegated_by: P` is evaluated under the on-behalf-of rule with delegator P on EVERY request; on_behalf_of != P is DENIED; `delegated_by: null` with on_behalf_of is DENIED. `authspec.allowed_operations` already agreed (delegated_by is intrinsic); tests added: agent-orphan -> none, agent-1 -> transfer_inventory. agent-hostile-1's WH-B/WH-C restriction is per-resource, outside the static bound.
 - `tests/test_variant_protocol.py`: each registered variant is importable and protocol-conformant, or load_variant raises NotImplementedError.
+
+### P2b rework (adopt P1b)
+- Deleted `conventional/mutants.py`; `ConventionalVariant(mutants=())` validates via `r3_shared.mutants.validate`; the frozen set lives on the Service instance (no global switch); `ConventionalVariant.deployment_class` exposed; `load_variant("conventional", mutants=[...])` works.
+- Deployment: `set_authority` returns None, `authority_version()` = sha256 of canonical JSON of the spec in force (`policy.digest`), `approve` matches the protocol (single-use, exact-request, `approval_required` otherwise).
+- Delegate semantics: `PolicyEngine.decide` evaluates any principal with `delegated_by` as its delegator's delegate; business rules use `effective_principal` (the delegator). `exposed_operations` now equals `authspec.allowed_operations` for delegates. Regression tests: agent-orphan x3 transfers -> DENIED, 0 effects; agent-1 WH-A->WH-B OK; agent-hostile-1 WH-B->WH-A DENIED.
+- Tests: `test_mutants.py` renamed `test_conv_mutants.py` (basename collision). `request_id=None` still accepted (documented). Still uses `handle._con` for the idempotency/approval tables (no public auxiliary-table API in P1b).
