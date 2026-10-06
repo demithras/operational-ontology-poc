@@ -156,3 +156,13 @@ def test_regeneration_is_byte_identical():
     import subprocess, sys
     r = subprocess.run([sys.executable, str(ROOT / "scripts" / "build_ops_spec.py"), "--check"], capture_output=True, text=True)
     assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_delegate_semantics_static_bound():
+    from r3_shared.authspec import allowed_operations, load_auth_spec
+    from r3_shared.opsspec import load_ops_spec
+    spec, ops = load_auth_spec("manufacturing"), [o["name"] for o in load_ops_spec("manufacturing")["operations"]]
+    assert allowed_operations(spec, "agent-orphan", ops) == set()
+    assert "transfer_inventory" in allowed_operations(spec, "agent-1", ops)
+    # agent-hostile-1 is limited to WH-B/WH-C resources: a per-request resource binding, out of scope for this static bound
+    assert "transfer_inventory" in allowed_operations(spec, "agent-hostile-1", ops)

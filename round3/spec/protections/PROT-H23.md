@@ -11,9 +11,12 @@ round3/spec/authority/<domain>.json is authoritative (it follows round2/docs/eng
 - The acting subject is the verified token `sub`, never a value in args.
 - Without on_behalf_of: the subject is evaluated as itself: allowed iff at least one allow grant matches (principal
   selector, resource selector, operation) and no deny grant matches.
-- With on_behalf_of=P: allowed iff ALL of: (a) a `delegations` entry {agent: subject, on_behalf_of: P} exists and lists
-  the operation; (b) an allow grant matching the SUBJECT has `delegable: true`; (c) P would itself be allowed the same
-  request (same operation, same inputs); (d) no deny grant matches the subject or P. Otherwise DENIED.
+- With on_behalf_of=P: a principal whose auth-spec `delegated_by` is P is a delegate of P: EVERY request it makes is
+  evaluated under the on-behalf-of rule with delegator P, whether or not on_behalf_of is supplied; supplying
+  on_behalf_of different from P is DENIED. A principal with `delegated_by: null` that supplies on_behalf_of is DENIED.
+  Rule (a)-(d) otherwise unchanged: allowed iff ALL of: (a) a `delegations` entry {agent: subject, on_behalf_of: P}
+  exists and lists the operation; (b) an allow grant matching the SUBJECT has `delegable: true`; (c) P would itself be
+  allowed the same request (same operation, same inputs); (d) no deny grant matches the subject or P. Otherwise DENIED.
 - Approvals: an approver must differ from the requester and lie outside the requester's delegation chain.
 - Deny grants on pseudo-operations (`write:canonical-state`, `write:<Type>.<field>`, `update:<Type>` with a state
   condition) forbid those world changes by any path other than the governed operation semantics in the ops spec.
