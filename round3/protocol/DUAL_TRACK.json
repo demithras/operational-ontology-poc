@@ -1,0 +1,42 @@
+{
+  "version": "r3-dual-track-1",
+  "decided": "2026-10-06",
+  "source": "protocol/AUTHOR_DECISIONS_2026-10-06.md decision 1",
+  "rule": "A strong conventional implementation is built in parallel with Paladin throughout Round 3. Both variants satisfy the same operational requirements, attack corpora, oracles, effect meters and quality bar. Every Paladin protection is paired with the strongest reasonable conventional equivalent before the gate that measures it. Paladin-specific value counts only where a measurable advantage survives this comparison. If Paladin fails, the conventional implementation is the product path.",
+  "variants": {
+    "paladin": "EOO control plane building on the Round 2 Engine/Toolchain (upstream pin 8f9ff26).",
+    "conventional": "Typed service/API architecture with server-side policy authorization, short-lived scoped credentials, append-only content-addressed audit log, idempotent workflows and reconciliation; no ontology, IR or generated control plane. Product quality, not a test fixture."
+  },
+  "shared_and_variant_neutral": [
+    "operational requirements specification (the same legitimate workload for both variants)",
+    "domain fixtures for both public Round 2 domains",
+    "attack corpus generators and frozen corpora",
+    "oracles and effect meters (may import neither variant)",
+    "independent integrity-anchor service and external effect ledger (same trust class for both variants)",
+    "low-level libraries (crypto, hashing, serialization) where they remove implementation-quality confounds"
+  ],
+  "isolation": [
+    "Paladin and conventional are built by separate builder agents.",
+    "The conventional builder receives the protection specification and operational requirements, never Paladin source.",
+    "The Paladin builder never reads conventional source.",
+    "Oracles, effect meters and corpus generators import neither variant; a test enforces this by import scan."
+  ],
+  "hardening_ledger": {
+    "path": "protocol/HARDENING_LEDGER.jsonl",
+    "rule": "Each Paladin protection gets one ledger row naming its conventional equivalent (or a reasoned 'no conventional equivalent exists' entry reviewed by the equivalence auditor). A gate may not be measured while any protection it exercises lacks a paired, implemented row."
+  },
+  "per_gate_verdicts": {
+    "rule": "Each H23-H29 experiment runs the identical frozen corpus and evaluator against both variants and records two verdicts plus a comparative record.",
+    "verdict_json_fields": ["paladin_verdict", "conventional_verdict", "comparative"],
+    "comparative_fields": ["forbidden_effects", "safe_progress_ratio", "mutation_kill_rate", "p95_latency_ms", "security_specific_loc", "security_specific_components"],
+    "value_attribution": "Gate-level comparisons are descriptive. The value verdict belongs to H30 alone; a gate where both variants pass is recorded as parity, not as Paladin value."
+  },
+  "equivalence_audit": {
+    "rule": "Before each gate's measurement an independent reviewer (not either builder) checks every ledger row for equivalence and checks for an obvious missing conventional control; findings go to experiments/hNN/<exp-id>/equivalence-audit.json. An unresolved missing control blocks the measurement.",
+    "evidence": "equivalence-audit.json"
+  },
+  "publication": {
+    "public": "H23-H29 for both variants, on branch round3.",
+    "private": "H30 blind task corpus (derived from employer material) and its raw evidence live only on branch round3-h30-private, which is never pushed; the public branch receives aggregate results only."
+  }
+}

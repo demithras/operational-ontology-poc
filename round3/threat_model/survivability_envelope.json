@@ -1,0 +1,20 @@
+{
+  "version": "r3-draft-1",
+  "principle": "Paladin does not claim progress under literally any condition. It claims safety always within the tested envelope, safe progress when required trust roots and effect dependencies remain available, and explicit refusal when they do not.",
+  "fault_classes": [
+    "single process crash/restart",
+    "single policy or authority dependency unavailable",
+    "single adapter unavailable or Byzantine",
+    "event duplication/delay/reorder",
+    "bounded network partition",
+    "stale local cache after authority or policy version change",
+    "single compromised agent identity",
+    "single mutable evidence store tamper with independent anchor intact"
+  ],
+  "catastrophic_boundary": [
+    "all authority roots compromised",
+    "all independent provenance anchors compromised",
+    "all observation channels controlled by the same adversary",
+    "permanent loss of canonical history and backups"
+  ]
+}

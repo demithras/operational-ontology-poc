@@ -1,0 +1,75 @@
+{
+  "id": "H27",
+  "title": "Decision provenance is tamper-evident across authority, policy and contract history",
+  "claim": "A Paladin decision/action can be reconstructed from version-pinned evidence, authority, policy and contract lineage such that any post-hoc mutation, deletion, substitution or rebinding inside mutable stores is detected before the altered history can be accepted as the original justification.",
+  "null_hypothesis": "Versioned provenance is only convenient logging; an attacker with write access to a mutable history store can rewrite both the evidence and the story about why an effect was legitimate without reliable detection.",
+  "rivals": [
+    "Git hashes and ordinary append-only audit logs are sufficient; ontology provenance adds no integrity property.",
+    "A cryptographic anchor works only if the same compromised component cannot rewrite the anchor, making the test dependent on an artificial trust split.",
+    "Replay correctness is enough; tamper evidence adds operational cost without changing decisions."
+  ],
+  "mechanism": "Each governed decision binds content-addressed evidence and exact authority/policy/contract versions into a canonical provenance envelope whose integrity root is anchored outside the mutable evidence store; replay refuses or marks unresolved when any bound artifact fails verification.",
+  "scope": "Decision/action provenance for both public domains, mutable evidence-store tamper, Git/artifact substitution, deletion, reordered history and rebinding, with at least one independent integrity anchor remaining uncompromised.",
+  "predictions": [
+    "Every mutation of a bound artifact changes a verified digest/root and is detected.",
+    "Deleting or replacing historical policy/authority/contract artifacts cannot silently fall back to current versions.",
+    "Rebinding evidence to a semantically similar later artifact is detected even if candidate output would otherwise match.",
+    "Untampered histories replay identically and do not produce false tamper alarms."
+  ],
+  "falsifiers": [
+    "A tampered bound artifact is accepted as the original historical justification.",
+    "Missing historical authority/policy silently falls back to current state.",
+    "A later artifact can replace an earlier binding without detection.",
+    "Integrity verification produces material false positives on untampered histories under the frozen canonicalization rules."
+  ],
+  "experiment": {
+    "summary": "Mutation and replay experiment over historical provenance bundles with an independent integrity anchor and immutable expected bindings.",
+    "steps": [
+      "Freeze canonical serialization, binding rules and trust-root placement.",
+      "Generate valid decision histories and anchor their provenance roots.",
+      "Apply single and compound mutations to evidence, authority, policy, contract and ordering.",
+      "Attempt replay, explanation and action continuation from mutated bundles.",
+      "Verify untampered controls reconstruct identically.",
+      "Inject fallback-to-current, digest-omission and rebinding mutants."
+    ],
+    "minimum_runs": 5000
+  },
+  "oracle": "Immutable mapping of decision ids to canonical artifact digests and an independent verification root unavailable to the mutable history store under test.",
+  "baseline": "Strong conventional append-only/event-log plus content-addressed artifacts and equivalent external integrity anchor.",
+  "required_evidence": [
+    "provenance-bundles.jsonl",
+    "tamper-mutation-results.json",
+    "historical-replay.json",
+    "anchor-audit.json",
+    "mutation-results.json"
+  ],
+  "evaluator": {
+    "support_if": [
+      "100% frozen tamper mutations detected before altered history is accepted as original.",
+      "0 silent fallback-to-current for missing historical artifacts.",
+      "100% untampered histories reconstruct without false tamper alarms.",
+      "100% target mutations detected."
+    ],
+    "reject_if": [
+      "Any mutated/rebound history is accepted as the original justification or any missing bound artifact silently falls back to current state."
+    ],
+    "inconclusive_if": [
+      "No independent integrity anchor exists, compound mutation classes are absent, or fewer than 5,000 histories/mutations are exercised."
+    ],
+    "invalid_if": [
+      "The mutable candidate store can rewrite the supposed independent oracle/anchor in the experiment or canonicalization rules change after seeing mutations."
+    ]
+  },
+  "python_hypothesis_role": {
+    "level": "PRIMARY",
+    "strategy": "Generate histories and structured mutations over evidence/policy/authority/contract bindings, shrinking undetected tampering to a minimal altered field.",
+    "mutation_proof": "Omit one digest field, fall back to current policy on missing history, and permit evidence rebinding; all must be killed."
+  },
+  "upstream_dependencies": [
+    "H19",
+    "H23"
+  ],
+  "stop_conditions": [
+    "If integrity depends on the same trust domain as the mutable history, do not claim tamper evidence; redesign the trust split or reject."
+  ]
+}

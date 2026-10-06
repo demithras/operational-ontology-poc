@@ -1,0 +1,77 @@
+{
+  "id": "H28",
+  "title": "Byzantine adapters cannot become hidden authorities or truth oracles",
+  "claim": "An external adapter may be unavailable or malicious, but it cannot mint governance authority, exceed its scoped effect capability, or make the Engine record reconciled success solely by asserting that an external effect occurred.",
+  "null_hypothesis": "Adapters are an unavoidable trusted-computing-base escape hatch: once an integration is compromised it can smuggle policy decisions, alter action targets or lie about outcomes in ways the generic Engine cannot distinguish.",
+  "rivals": [
+    "Conventional service credentials plus independent reconciliation provide identical containment.",
+    "Independent observation is not truly independent because it shares the same source/credential/path as the action adapter.",
+    "The candidate merely detects lies after harmful effects have already escaped its intended scope."
+  ],
+  "mechanism": "Governance stays in the Engine; adapters receive attenuated action-specific credentials and a byte-exact provenance envelope, while outcome truth comes from a separately scoped observation path or remains explicitly UNKNOWN/DIVERGED.",
+  "scope": "Action and observation adapters in both public domains plus generated adapters, attack class A7 with replay, target mutation, false success, omission, duplicated writes and governance-in-adapter attempts.",
+  "predictions": [
+    "A malicious adapter cannot commit effects outside its frozen credential/resource scope.",
+    "Adapter-returned success without corroborating observation never becomes RECONCILED_SUCCESS.",
+    "A governance decision performed only inside an adapter is detected as a contract violation and is not credited to the Engine.",
+    "Duplicate/reordered adapter delivery cannot create extra effects beyond idempotency semantics.",
+    "Divergent external truth is surfaced as DIVERGED/UNKNOWN rather than rewritten to match intent."
+  ],
+  "falsifiers": [
+    "An adapter creates an effect outside its delegated external capability scope.",
+    "An adapter lie alone produces reconciled success.",
+    "Required authority/policy semantics move into adapter code and the Engine accepts the outcome without equivalent generic enforcement.",
+    "Retry/replay causes duplicate external effect beyond the declared action semantics."
+  ],
+  "experiment": {
+    "summary": "Byzantine adapter harness with separate effect and observation truth stores, differential checking against generic Engine expectations.",
+    "steps": [
+      "Freeze adapter credentials, external resource scopes and independent observation topology.",
+      "Run honest controls to prove effects and observations are measurable.",
+      "Inject false success/failure, target substitution, duplicate delivery, omission, delay and governance logic into adapters.",
+      "Measure external ground truth independently from adapter responses.",
+      "Audit adapter code/import closure for authority/policy semantics.",
+      "Inject observation-coupling and idempotency mutants."
+    ],
+    "minimum_runs": 5000
+  },
+  "oracle": "Independent external world/effect ledger plus a separately scoped observation model; neither trusts the action adapter response.",
+  "baseline": "Conventional integration service with scoped credentials, idempotency and independently implemented reconciliation under the same external world.",
+  "required_evidence": [
+    "byzantine-adapter-corpus.json",
+    "external-effect-diff.json",
+    "observation-independence.json",
+    "adapter-governance-audit.json",
+    "mutation-results.json"
+  ],
+  "evaluator": {
+    "support_if": [
+      "0 effects outside frozen adapter capability scope.",
+      "0 false RECONCILED_SUCCESS from adapter assertion alone.",
+      "0 hidden governance semantics accepted exclusively from adapters.",
+      "0 duplicate effects outside declared idempotency semantics.",
+      "100% target mutations detected."
+    ],
+    "reject_if": [
+      "Any adapter exceeds effect scope, becomes the sole truth oracle for success, or bypasses generic governance."
+    ],
+    "inconclusive_if": [
+      "The action and observation paths share the same effective trust root, or honest positive controls never demonstrate observable effects."
+    ],
+    "invalid_if": [
+      "The external effect oracle reads candidate provenance/logs instead of independent world state or adapter attack code is excluded from the frozen supported integration boundary."
+    ]
+  },
+  "python_hypothesis_role": {
+    "level": "PRIMARY",
+    "strategy": "Generate Byzantine adapter behaviors, retries, reordered observations and target substitutions; shrink any false-success or scope-escape trace.",
+    "mutation_proof": "Trust adapter success directly, broaden adapter credential scope, move a policy gate into adapter-only code, and disable idempotency; all must be detected."
+  },
+  "upstream_dependencies": [
+    "H23",
+    "H27"
+  ],
+  "stop_conditions": [
+    "If observation cannot be made meaningfully independent for an effect class, the system must expose that effect as lower-confidence rather than claim closed-loop truth."
+  ]
+}

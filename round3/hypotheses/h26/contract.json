@@ -1,0 +1,74 @@
+{
+  "id": "H26",
+  "title": "Knowledge sovereignty holds across supported observable surfaces",
+  "claim": "For protected ontology, operational and provenance knowledge, principals with identical low-authority views cannot distinguish worlds that differ only in data outside their disclosure authority through supported queries, tools, errors, subscriptions, identifiers or provenance surfaces.",
+  "null_hypothesis": "Write authorization can be strong while the system still leaks protected knowledge through query shape, object existence, error messages, generated tools, subscriptions or provenance relationships.",
+  "rivals": [
+    "Field/row-level authorization in a conventional API gives the same non-disclosure property without ontology semantics.",
+    "Perfect noninterference is impractical; the candidate will need undocumented exceptions that make the claim unfalsifiable.",
+    "The test only proves direct read denial and misses inference through existence or relationship structure."
+  ],
+  "mechanism": "Read/disclosure capability is derived from the same versioned authority contract as Actions; generated surfaces omit unauthorized capabilities and the runtime applies uniform redaction/nonexistence semantics over objects, links, provenance and subscriptions.",
+  "scope": "Supported application-layer surfaces only: object/query/function/tool schemas, errors, subscriptions/events and provenance APIs. Hardware, network-traffic analysis, model memorization and micro-timing side channels are explicitly excluded.",
+  "predictions": [
+    "World pairs differing only in inaccessible protected facts produce identical low-observable outputs for an unauthorized principal.",
+    "Unauthorized object or link existence cannot be learned through identifier probing where the disclosure contract says existence is secret.",
+    "Generated tools and schemas do not reveal hidden resource/action metadata beyond the principal capability set.",
+    "Provenance queries redact protected actors/evidence/links without corrupting the authorized portion of the chain."
+  ],
+  "falsifiers": [
+    "Any protected fact, existence bit or relationship is distinguishable through a frozen supported low-observable channel without disclosure authority.",
+    "A generated schema/tool reveals a hidden capability or protected structural metadata.",
+    "Redaction makes authorized provenance semantically false rather than explicitly partial/redacted."
+  ],
+  "experiment": {
+    "summary": "Differential noninterference experiment over paired worlds that differ only in inaccessible secrets, plus direct exfiltration fuzzing.",
+    "steps": [
+      "Freeze disclosure labels, principals, protected facts and the set of low-observable application channels.",
+      "Generate paired worlds equal on authorized facts and different on protected facts.",
+      "Execute the same query/tool/error/subscription/provenance observations in each world.",
+      "Compare canonicalized low outputs and classify any difference against explicit allowed-disclosure rules.",
+      "Run identifier/existence and schema/tool-discovery attacks.",
+      "Inject existence-leak, error-detail, hidden-tool and provenance-link mutants."
+    ],
+    "minimum_runs": 5000
+  },
+  "oracle": "Frozen disclosure lattice plus a canonical low-observation projection that is independent of candidate query/tool implementation.",
+  "baseline": "Conventional typed service with row/field-level authorization and response/schema redaction under the same disclosure lattice.",
+  "required_evidence": [
+    "noninterference-pairs.json",
+    "exfiltration-fuzz.json",
+    "tool-schema-disclosure.json",
+    "provenance-redaction.json",
+    "mutation-results.json"
+  ],
+  "evaluator": {
+    "support_if": [
+      "0 unauthorized low-observable divergences across at least 5,000 paired worlds.",
+      "0 hidden capability/schema disclosures outside the frozen lattice.",
+      "0 false provenance statements introduced by redaction.",
+      "100% target mutations detected."
+    ],
+    "reject_if": [
+      "Any frozen supported channel leaks a protected fact/existence/relationship or hidden capability outside disclosure authority."
+    ],
+    "inconclusive_if": [
+      "Paired-world corpus omits object/link/provenance/tool-discovery cases or protected facts are not actually varied."
+    ],
+    "invalid_if": [
+      "The candidate controls the canonicalization oracle, or post-reveal exclusions remove a leaking supported channel without a new freeze."
+    ]
+  },
+  "python_hypothesis_role": {
+    "level": "PRIMARY",
+    "strategy": "Generate paired worlds, principals, disclosure labels, graph relationships and observation sequences; shrink any distinguishing protected fact/channel pair.",
+    "mutation_proof": "Return 403 vs 404 for secret existence, leak a hidden tool schema, and retain a protected provenance edge; all must be detected."
+  },
+  "upstream_dependencies": [
+    "H23",
+    "H25"
+  ],
+  "stop_conditions": [
+    "If practical disclosure requires a weaker property than application-layer noninterference, reject this claim and preregister the weaker leakage budget explicitly."
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "id": "H24",
+  "title": "Delegation, revocation and expiry remain authoritative under concurrency",
+  "claim": "The authority subsystem can issue, delegate, attenuate, expire and revoke capabilities so that every effect is evaluated against the currently legitimate authority chain, with no stale-capability window that silently creates an unauthorized effect.",
+  "null_hypothesis": "Delegation is safe only in static examples; revocation, expiry, nested delegation and concurrent in-flight work create unavoidable stale-authority effects or ambiguous ownership.",
+  "rivals": [
+    "Short-lived conventional tokens plus centralized authorization provide the same or better revocation semantics.",
+    "The system achieves zero stale effects only by synchronously blocking all work on a single authority service, destroying continuity.",
+    "Nested delegation is unnecessary complexity and a flatter role model is safer."
+  ],
+  "mechanism": "Capabilities are version-bound, scope-attenuating and non-amplifying; effect eligibility includes an authority freshness rule, and revocation/expiry changes invalidate stale paths before commitment or force explicit unresolved/revalidation state.",
+  "scope": "Delegation chains up to the frozen depth, concurrent revocation/expiry, approval delegation, retries and in-flight Actions across both public domains and generated authority graphs.",
+  "predictions": [
+    "Delegation never increases scope beyond the delegator capability.",
+    "Revoked or expired capability paths create zero post-boundary forbidden effects.",
+    "Concurrent revoke-versus-execute races have a deterministic winner rule and never silently accept a stale authority path.",
+    "Cycles or conflicting delegation paths fail explicitly rather than granting by accident.",
+    "Historical replay can reconstruct the authority version that was legitimately used without treating it as currently valid."
+  ],
+  "falsifiers": [
+    "Any delegated capability is broader than its parent authority.",
+    "Any effect commits after the frozen revocation/expiry boundary using only a stale authority path.",
+    "A concurrency schedule allows both revoke and a conflicting stale commit to be treated as legitimate.",
+    "An authority cycle or ambiguous path grants an effect without an explicit resolution rule."
+  ],
+  "experiment": {
+    "summary": "State-machine experiment over nested delegation, attenuation, expiry, revocation, approvals, concurrent execution and replay.",
+    "steps": [
+      "Freeze authority-clock semantics and the exact commit boundary at which revocation/expiry becomes effective.",
+      "Generate authority DAGs, nested delegations, expirations and action attempts.",
+      "Generate revoke/execute races and crash/retry schedules.",
+      "Compare legitimacy with an immutable reference authority model.",
+      "Measure safe progress separately from safety so global serialization cannot masquerade as a successful security design.",
+      "Inject non-attenuating delegation, stale-cache and revoke-race mutants."
+    ],
+    "minimum_runs": 10000
+  },
+  "oracle": "Immutable reference authority DAG with explicit scope intersection, version, logical clock, revocation boundary, expiry and deterministic conflict semantics.",
+  "baseline": "Conventional short-lived capability/token system backed by a centralized policy/authorization service with the same freshness and availability objectives.",
+  "required_evidence": [
+    "authority-state-machine.json",
+    "revocation-races.json",
+    "delegation-attenuation.json",
+    "safe-progress.json",
+    "mutation-results.json"
+  ],
+  "evaluator": {
+    "support_if": [
+      "0 scope-amplifying delegations.",
+      "0 forbidden effects after effective revocation/expiry.",
+      "100% generated revoke/execute races match the independent authority oracle.",
+      "No authority-cycle case silently grants.",
+      "100% target mutations detected."
+    ],
+    "reject_if": [
+      "Any stale/revoked/expired authority produces a forbidden effect or any child delegation amplifies authority."
+    ],
+    "inconclusive_if": [
+      "The corpus lacks nested delegation, expiry and concurrent revocation, or safety is achieved only by a test harness that prevents races from occurring."
+    ],
+    "invalid_if": [
+      "Candidate wall-clock calls are reused by the oracle without a frozen clock model, or revocation semantics are changed after observing race results."
+    ]
+  },
+  "python_hypothesis_role": {
+    "level": "PRIMARY",
+    "strategy": "Generate authority DAGs and temporal/concurrent action schedules; shrink stale-capability and scope-amplification failures.",
+    "mutation_proof": "Disable attenuation, keep a stale authority cache after revocation, and reorder the revoke/commit boundary; all mutants must be detected."
+  },
+  "upstream_dependencies": [
+    "H23"
+  ],
+  "stop_conditions": [
+    "If deterministic revocation cannot coexist with useful safe progress in the frozen envelope, reject/narrow before adding richer constitutional authority."
+  ]
+}

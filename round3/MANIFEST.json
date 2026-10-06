@@ -1,0 +1,14 @@
+{
+  "name": "eoo-paladin-class-round3-adversarial-hdd-pack",
+  "created_at": "2026-10-06",
+  "protocol_status": "READY_TO_FREEZE_NOT_YET_PREREGISTERED",
+  "round": "3-draft-1",
+  "hypotheses": ["H23", "H24", "H25", "H26", "H27", "H28", "H29", "H30"],
+  "target": "Paladin-class executable operational control plane: authority integrity + effect containment + knowledge sovereignty + provenance integrity + external truth + safe continuity",
+  "upstream_round2_commit": "8f9ff26edfb1dba4528d3c31fe8126bc063b9a11",
+  "central_value_question": "Does the Paladin security/governance premium create material operational-security advantage over an equally capable conventional architecture?",
+  "openpona_role": "Optional language/human-agent surface; Round 3 security claims must not depend on OpenPona superiority.",
+  "ontology_efficiency_thesis": "Not reopened; H22/H22w were rejected.",
+  "baseline_policy": "Strong conventional typed relational/event architecture receives equivalent security engineering and obvious best-practice controls.",
+  "evidence_policy": "Machine-readable evidence is authoritative; Markdown is interpretation only."
+}

@@ -1,0 +1,79 @@
+{
+  "id": "H29",
+  "title": "Paladin preserves safe continuity and deterministic recovery inside a bounded fault envelope",
+  "claim": "Within a frozen survivability envelope, the Paladin machine preserves all safety invariants under bounded component failure or compromise, continues operations whose required trust/effect dependencies remain available, fails explicitly when they do not, and reconstructs a deterministic safe state after recovery.",
+  "null_hypothesis": "The added governance/security layers improve denial safety only by making the system brittle: partial failure either stops unrelated operations, creates ambiguous stale state, or requires manual recovery that can violate the same invariants.",
+  "rivals": [
+    "A conventional resilient workflow engine with circuit breakers, retries and zero-trust services gives equal continuity with less machinery.",
+    "Fail-closed behavior is being mislabeled as resilience even when all useful progress stops.",
+    "Recovery succeeds only from clean snapshots and not from realistic stale/in-flight histories."
+  ],
+  "mechanism": "Capabilities, authority versions, action state, provenance and observations are explicit enough to distinguish safe-to-continue work from dependency-blocked work; durable idempotent execution plus deterministic projection/replay reconstructs in-flight state without inventing authority or outcome.",
+  "scope": "The fault classes in threat_model/survivability_envelope.json; catastrophic global trust-root loss is outside the claim and must fail explicit rather than be hand-waved as supported.",
+  "predictions": [
+    "Every fault sequence in the frozen envelope preserves P1-P5 safety invariants.",
+    "Operations whose complete dependency set remains available continue with at least the frozen safe-progress target.",
+    "Dependency-blocked operations terminate or remain in explicit unavailable/unknown states rather than fabricated denial/success.",
+    "Recovery from crash/partition/restart yields a state observationally equivalent to deterministic replay from canonical history.",
+    "No stale authority or policy cache silently becomes authoritative after recovery."
+  ],
+  "falsifiers": [
+    "Any fault sequence creates a forbidden effect, false success or stale-authority commit.",
+    "An unrelated healthy operation is blocked often enough to violate the frozen safe-progress threshold.",
+    "Recovery produces a canonical state different from replay of the same history.",
+    "A dependency failure is misreported as an ordinary policy denial or success."
+  ],
+  "experiment": {
+    "summary": "Fault/compromise state-machine experiment separating safety, safe progress, explicit unavailability and deterministic recovery.",
+    "steps": [
+      "Freeze the survivability envelope and per-operation dependency graph.",
+      "Generate mixed workloads before, during and after faults/partitions/restarts.",
+      "Track safety invariants and safe-progress eligibility independently.",
+      "Crash/restart Engine, authority/policy dependencies, adapters and observation/event paths according to the envelope.",
+      "Rebuild/recover and compare canonical state and in-flight action status with an independent replay model.",
+      "Inject fail-open, global-stop, stale-cache and nondeterministic-recovery mutants."
+    ],
+    "minimum_runs": 5000
+  },
+  "oracle": "Independent dependency graph + pure lifecycle/replay model that marks each operation SAFE_TO_RUN, BLOCKED_BY_DEPENDENCY or UNRESOLVED and predicts canonical post-recovery state.",
+  "baseline": "Conventional resilient typed/event workflow implementation with equivalent retries, idempotency, circuit breakers, policy/auth dependencies and recovery objectives.",
+  "required_evidence": [
+    "fault-sequences.jsonl",
+    "safety-invariants.json",
+    "safe-progress.json",
+    "explicit-unavailability.json",
+    "recovery-differential.json",
+    "mutation-results.json"
+  ],
+  "evaluator": {
+    "support_if": [
+      "0 P1-P5 safety violations inside the frozen survivability envelope.",
+      "Safe-progress ratio for operations whose dependencies remain available is >=0.95.",
+      "0 dependency failures misclassified as ordinary success/denial.",
+      "100% recovery-state equality with the independent replay model.",
+      "100% target mutations detected."
+    ],
+    "reject_if": [
+      "Any safety invariant fails, deterministic recovery diverges, or safe progress falls below the frozen threshold for dependency-independent operations."
+    ],
+    "inconclusive_if": [
+      "The fault corpus omits any frozen envelope class, fewer than 5,000 mixed sequences run, or the dependency oracle cannot distinguish blocked from healthy operations."
+    ],
+    "invalid_if": [
+      "Fault injection does not affect the real candidate dependency path, recovery uses candidate state as its own oracle, or the survivability envelope is narrowed after failures are observed."
+    ]
+  },
+  "python_hypothesis_role": {
+    "level": "PRIMARY",
+    "strategy": "RuleBasedStateMachine generates workload/fault/restart/partition/recovery schedules and shrinks safety or progress failures.",
+    "mutation_proof": "Add fail-open on authority outage, globally halt unrelated work, retain stale cache after restart, and inject nondeterministic recovery; all must be detected."
+  },
+  "upstream_dependencies": [
+    "H24",
+    "H27",
+    "H28"
+  ],
+  "stop_conditions": [
+    "Do not use the phrase \"under any conditions\" as an experimental claim; if the frozen envelope is insufficient, add a new envelope/version rather than retroactively expanding or shrinking it."
+  ]
+}

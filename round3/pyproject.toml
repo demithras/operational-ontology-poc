@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eoo-round3-paladin-hdd"
+version = "0.1.0"
+description = "Research-contract pack for Paladin-class adversarial EOO hypotheses H23-H30"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+test = [
+  "jsonschema>=4.20",
+  "hypothesis>=6.100",
+  "pytest>=8"
+]
