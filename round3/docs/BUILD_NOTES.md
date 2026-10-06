@@ -208,3 +208,8 @@ Single shared definition both variants adapt to (the P2 builders had invented in
 - `WorldHandle` now opens sqlite with `check_same_thread=False` so threaded callers are possible; serialising authorize->commit is the variant's job (mutant `unsynchronized_commit` removes it).
 - Fakes: `FakeDeployment` (durable ledger in state_dir) and `FakeVolatileLedger` (broken). h23 test fakes accept `state_dir` but do not implement crash yet.
 - Expected red until later phases: variants lack `arm_crash`; r3_harness mutation map (`h23/mutation.py`) has no entries for the new mutants; paladin/conventional mutant-name tests pin the old four.
+
+## P7a Paladin - update-field fix + A8 crash/restart/concurrency (tag r3-p7a-paladin)
+- Regression fixed: the R-3 create whitelist was applied to updates (preregister_hypothesis lost `freeze_hash`). Whitelists are now per `(operation, kind, type)` (boot.py, worldbridge.py); tests/paladin/test_p7a_updates.py covers every project update effect (fails without the fix).
+- A8: `state_dir`, `arm_crash`, `crash`, `restart`, thread safety (src/paladin/{ledger,core,deployment}.py). Design and limits: spec/protections/H23-paladin.md "P7a notes". Tests: tests/paladin/test_p7a_a8.py (R9 both points, both domains; replay same / new request_id; approval single use across crash; authority persistence; R10 with 8-12 threads; both new mutants).
+- Paladin's conventional counterpart finding: the durable ledger needs a world-digest witness because Paladin does not own a transaction spanning the world file and `state_dir` (external effects use separate adapter connections).

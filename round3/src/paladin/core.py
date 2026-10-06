@@ -70,6 +70,7 @@ class Core:
         self.domain, self._factory, self._verifier, self.clock, self.mutants = domain, factory, verifier, clock, mutants
         self.hook = hook  # crash-injection point callback (before_commit fires inside the adapters, after_commit in run)
         self.state_dir = state_dir or tempfile.mkdtemp(prefix="paladin-state-")  # a private dir even when none is given
+        os.makedirs(self.state_dir, exist_ok=True)
         self.lock = threading.RLock()  # the Engine State, the service connection and the ledger are single-writer
         self._svc = factory("paladin-service")
         self.ops_spec = ops_spec
