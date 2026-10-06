@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 from typing import Any, Callable
 
+from paladin.engine.canon import to_plain
 from paladin.engine.state import State
 from r3_shared.world import WorldConflict
 
@@ -51,7 +52,7 @@ class WorldExternalAdapter:
     def apply(self, effect: Any, payload: Any) -> dict:
         spec = self._specs[effect["action"]]  # the ops-spec external effect of this action
         inputs = self._inputs_of(effect["execution"])
-        body = {k: _eval_input(v, inputs) for k, v in spec["payload"].items()}
+        body = to_plain({k: _eval_input(v, inputs) for k, v in spec["payload"].items()})
         self._handle(self.system).external_write(self.system, spec["target"], body, effect.get("idempotency_key"))
         rec = {"actionExecutionId": effect["execution"], "requestedQuantity": body.get("quantity"),
                "actualQuantity": body.get("quantity"), "transferStatus": "COMMITTED"}
@@ -100,7 +101,7 @@ class WorldGitAdapter:
         return f"{hits[0]}:{key}"
 
     def apply(self, effect: Any, payload: Any) -> dict:
-        row, target = dict(payload), effect["target"]
+        row, target = to_plain(dict(payload)), effect["target"]
         if "$src" in row:
             spec = self._model.get("link_types", target)
             src = self._find(self._expand(spec.src), row["$src"])

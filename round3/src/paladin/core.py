@@ -157,8 +157,10 @@ class Core:
             return res
         except _Rollback as r:
             return r.result
-        except (InvalidRequest, CapabilityError) as exc:
-            return CallResult("INVALID", {"gate": "engine", "reason": f"{type(exc).__name__}: {exc}"})
+        except CapabilityError as exc:  # approver identity/capability refused by the Engine
+            return CallResult("DENIED", {"gate": "approval", "reason": str(exc)})
+        except InvalidRequest as exc:
+            return CallResult("INVALID", {"gate": "engine", "reason": str(exc)})
         except Exception as exc:  # noqa: BLE001 - fail closed: the transaction was rolled back
             return CallResult("UNAVAILABLE", {"reason": f"{type(exc).__name__}: {exc}"})
 
