@@ -7,8 +7,9 @@ VARIANTS = {"paladin": "paladin.variant:PaladinVariant",
             "conventional": "conventional.variant:ConventionalVariant"}
 
 
-def load_variant(name: str):
-    """Return a Variant instance. Raises KeyError for unknown names, NotImplementedError if not built yet."""
+def load_variant(name: str, mutants=()):
+    """Return a Variant instance. Raises KeyError for unknown names, NotImplementedError if not built yet.
+    `mutants` is passed to the variant constructor (validated there via r3_shared.mutants.validate)."""
     if name not in VARIANTS:
         raise KeyError(f"unknown variant {name!r}; registered: {sorted(VARIANTS)}")
     mod_name, cls_name = VARIANTS[name].split(":")
@@ -22,4 +23,4 @@ def load_variant(name: str):
         cls = getattr(mod, cls_name)
     except AttributeError as exc:
         raise NotImplementedError(f"variant {name!r} not implemented yet ({mod_name}.{cls_name} missing)") from exc
-    return cls()
+    return cls(mutants)
