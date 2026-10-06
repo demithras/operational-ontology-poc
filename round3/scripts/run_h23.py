@@ -15,7 +15,8 @@ from pathlib import Path
 ROUND3 = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROUND3 / "src"))
 
-from r3_harness.h23.runner import run_variant  # noqa: E402
+from r3_harness.h23 import differential  # noqa: E402
+from r3_harness.h23.runner import FILES, run_variant  # noqa: E402
 from r3_shared.registry import load_variant  # noqa: E402
 
 
@@ -33,10 +34,12 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--sequences", type=int, default=10000)
     ap.add_argument("--mutation-sequences", type=int, default=150)
+    ap.add_argument("--skip-differential", action="store_true", help="do not write variant-differential.json")
     ap.add_argument("--test-variants", action="store_true", help="allow fake-* variants from tests/fakes")
     ap.add_argument("--out-root", default=str(ROUND3 / "experiments" / "h23"))
     a = ap.parse_args()
     fakes = load_fakes() if a.test_variants else None
+    ran: list[tuple[str, object]] = []
     for name in a.variants.split(","):
         if name.startswith("fake-"):
             if fakes is None:
@@ -59,6 +62,17 @@ def main() -> int:
         an = r["analysis"]
         print(f"{name}: sequences={an['sequences']} unique={an['unique_sequences']} calls={an['calls']} "
               f"classes={an['class_counts']} elapsed={time.perf_counter() - t0:.1f}s")
+        ran.append((name, factory))
+    if len(ran) >= 2 and not a.skip_differential:  # R-5: same recorded corpus replayed on every other variant
+        root = Path(a.out_root) / a.exp_id
+        ref_name, ref_factory = ran[0]
+        records = differential.load_records(root / ref_name / FILES[0])
+        pairs = []
+        for name, factory in ran[1:]:
+            replayed = differential.replay(factory(()), records)
+            pairs.append(differential.compare(records, replayed, ref_name, name))
+            print(f"differential {ref_name} vs {name}: {pairs[-1]['differing_calls']} differing of {pairs[-1]['calls_compared']} calls")
+        differential.write_report(root / "variant-differential.json", pairs, a.seed, a.sequences)
     return 0
 
 
