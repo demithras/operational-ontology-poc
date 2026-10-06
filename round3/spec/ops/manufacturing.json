@@ -235,12 +235,18 @@
     "max": 1,
     "min": 1
    },
+   "from_types": [
+    "PurchaseOrder"
+   ],
    "name": "PurchaseOrder_suppliedBy",
    "to": "Supplier",
    "to_cardinality": {
     "max": "*",
     "min": 0
-   }
+   },
+   "to_types": [
+    "Supplier"
+   ]
   },
   {
    "from": "PurchaseOrderLine",
@@ -248,12 +254,38 @@
     "max": 1,
     "min": 1
    },
+   "from_types": [
+    "PurchaseOrderLine"
+   ],
    "name": "PurchaseOrderLine_purchaseOrder",
    "to": "PurchaseOrder",
    "to_cardinality": {
     "max": "*",
     "min": 0
-   }
+   },
+   "to_types": [
+    "PurchaseOrder"
+   ]
+  },
+  {
+   "from": "PartReferencing",
+   "from_cardinality": {
+    "max": 1,
+    "min": 0
+   },
+   "from_types": [
+    "PurchaseOrderLine",
+    "InventoryLot"
+   ],
+   "name": "PartReferencing_part",
+   "to": "Part",
+   "to_cardinality": {
+    "max": "*",
+    "min": 0
+   },
+   "to_types": [
+    "Part"
+   ]
   },
   {
    "from": "PurchaseOrderLine",
@@ -261,12 +293,18 @@
     "max": 1,
     "min": 1
    },
+   "from_types": [
+    "PurchaseOrderLine"
+   ],
    "name": "PurchaseOrderLine_destinationWarehouse",
    "to": "Warehouse",
    "to_cardinality": {
     "max": "*",
     "min": 0
-   }
+   },
+   "to_types": [
+    "Warehouse"
+   ]
   },
   {
    "from": "InventoryLot",
@@ -274,12 +312,18 @@
     "max": 1,
     "min": 0
    },
+   "from_types": [
+    "InventoryLot"
+   ],
    "name": "InventoryLot_warehouse",
    "to": "Warehouse",
    "to_cardinality": {
     "max": "*",
     "min": 0
-   }
+   },
+   "to_types": [
+    "Warehouse"
+   ]
   },
   {
    "from": "WorkOrder",
@@ -287,12 +331,18 @@
     "max": 1,
     "min": 1
    },
+   "from_types": [
+    "WorkOrder"
+   ],
    "name": "WorkOrder_productionLine",
    "to": "ProductionLine",
    "to_cardinality": {
     "max": "*",
     "min": 0
-   }
+   },
+   "to_types": [
+    "ProductionLine"
+   ]
   },
   {
    "from": "WorkOrder",
@@ -300,12 +350,18 @@
     "max": 1,
     "min": 1
    },
+   "from_types": [
+    "WorkOrder"
+   ],
    "name": "WorkOrder_warehouse",
    "to": "Warehouse",
    "to_cardinality": {
     "max": "*",
     "min": 0
-   }
+   },
+   "to_types": [
+    "Warehouse"
+   ]
   },
   {
    "from": "BomRequirement",
@@ -313,12 +369,18 @@
     "max": 1,
     "min": 1
    },
+   "from_types": [
+    "BomRequirement"
+   ],
    "name": "BomRequirement_workOrder",
    "to": "WorkOrder",
    "to_cardinality": {
     "max": "*",
     "min": 0
-   }
+   },
+   "to_types": [
+    "WorkOrder"
+   ]
   },
   {
    "from": "BomRequirement",
@@ -326,12 +388,18 @@
     "max": 1,
     "min": 1
    },
+   "from_types": [
+    "BomRequirement"
+   ],
    "name": "BomRequirement_requiresPart",
    "to": "Part",
    "to_cardinality": {
     "max": "*",
     "min": 0
-   }
+   },
+   "to_types": [
+    "Part"
+   ]
   },
   {
    "from": "IdentityMapping",
@@ -339,12 +407,18 @@
     "max": 1,
     "min": 0
    },
+   "from_types": [
+    "IdentityMapping"
+   ],
    "name": "IdentityMapping_canonicalId",
    "to": "Part",
    "to_cardinality": {
     "max": "*",
     "min": 0
-   }
+   },
+   "to_types": [
+    "Part"
+   ]
   }
  ],
  "operations": [

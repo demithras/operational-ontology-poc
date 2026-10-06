@@ -43,8 +43,18 @@ def resource_types(ir: dict, excluded: dict) -> list[dict]:
 
 
 def link_types(ir: dict, included: set) -> list[dict]:
-    return [{"name": l["id"], "from": l["from"], "to": l["to"], "from_cardinality": l["from_cardinality"],
-             "to_cardinality": l["to_cardinality"]} for l in ir["link_types"] if l["from"] in included and l["to"] in included]
+    """Endpoints that name an IR interface are expanded to the concrete resource types implementing it."""
+    impl = {i["id"]: [o["id"] for o in ir["object_types"] if i["id"] in o.get("implements", [])] for i in ir["interfaces"]}
+    ends = lambda n: [n] if n not in impl else impl[n]  # noqa: E731
+    out = []
+    for l in ir["link_types"]:
+        f, t = ends(l["from"]), ends(l["to"])
+        f, t = [x for x in f if x in included], [x for x in t if x in included]
+        if not f or not t:
+            continue
+        out.append({"name": l["id"], "from": l["from"], "to": l["to"], "from_types": f, "to_types": t,
+                    "from_cardinality": l["from_cardinality"], "to_cardinality": l["to_cardinality"]})
+    return out
 
 
 def mfg_seed(excluded: dict) -> dict:

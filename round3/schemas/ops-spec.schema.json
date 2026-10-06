@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Round 3 neutral operational requirements spec",
+  "type": "object",
+  "required": ["spec", "domain", "config", "resource_types", "link_types", "operations", "reads", "helpers", "unsupported", "invariants", "seed"],
+  "properties": {
+    "spec": {"const": "r3-ops-spec-1"},
+    "domain": {"enum": ["manufacturing", "project"]},
+    "config": {"type": "object"},
+    "resource_types": {"type": "array", "minItems": 1, "items": {
+      "type": "object", "required": ["name", "key_field", "fields"], "additionalProperties": false,
+      "properties": {"name": {"type": "string"}, "key_field": {"type": "string"},
+        "fields": {"type": "array", "items": {"type": "object", "required": ["name", "type", "required", "immutable"],
+          "properties": {"name": {"type": "string"}, "type": {"type": "string"}, "required": {"type": "boolean"},
+            "immutable": {"type": "boolean"}, "enum": {"type": "array", "items": {"type": "string"}}, "note": {"type": "string"}}}}}}},
+    "link_types": {"type": "array", "items": {"type": "object", "required": ["name", "from", "to", "from_types", "to_types"],
+      "properties": {"name": {"type": "string"}, "from": {"type": "string"}, "to": {"type": "string"},
+        "from_types": {"type": "array", "items": {"type": "string"}, "minItems": 1}, "to_types": {"type": "array", "items": {"type": "string"}, "minItems": 1}}}},
+    "operations": {"type": "array", "minItems": 1, "items": {
+      "type": "object",
+      "required": ["name", "summary", "inputs", "preconditions", "business_rules", "effects", "gated_inputs",
+                   "immutable_after_authorization", "idempotency", "approval", "expected_outcome"],
+      "properties": {
+        "name": {"type": "string"}, "summary": {"type": "string"},
+        "inputs": {"type": "array", "items": {"$ref": "#/$defs/input"}},
+        "preconditions": {"type": "array", "items": {"type": "object", "required": ["id", "description", "predicate"]}},
+        "business_rules": {"type": "array", "items": {"type": "object", "required": ["id", "decision", "description", "when"],
+          "properties": {"decision": {"enum": ["deny", "require_approval", "classify"]}}}},
+        "effects": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["kind"],
+          "properties": {"kind": {"enum": ["create", "update", "delete", "link", "unlink", "external"]}}}},
+        "gated_inputs": {"type": "array", "items": {"type": "string"}},
+        "immutable_after_authorization": {"type": "array", "items": {"type": "string"}},
+        "idempotency": {"const": "required"},
+        "approval": {"type": ["object", "null"]}, "expected_outcome": {"type": "string"}}}},
+    "reads": {"type": "array", "items": {"$ref": "#/$defs/read"}},
+    "helpers": {"type": "array", "items": {"$ref": "#/$defs/read"}},
+    "unsupported": {"type": "array", "items": {"type": "object", "required": ["name", "kind", "reason"],
+      "properties": {"kind": {"enum": ["action", "function"]}}}},
+    "excluded_types": {"type": "array", "items": {"type": "object", "required": ["name", "reason"]}},
+    "invariants": {"type": "array", "items": {"type": "object", "required": ["id", "text"]}},
+    "excluded_constraints": {"type": "array", "items": {"type": "object", "required": ["ir", "reason"]}},
+    "seed": {"type": "object", "required": ["objects", "links"], "properties": {
+      "objects": {"type": "array", "items": {"type": "object", "required": ["type", "key", "props"]}},
+      "links": {"type": "array", "items": {"type": "object", "required": ["link_type", "src", "dst"]}}}}
+  },
+  "$defs": {
+    "input": {"type": "object", "required": ["name", "type", "required"],
+      "properties": {"name": {"type": "string"}, "type": {"type": "string"}, "required": {"type": "boolean"},
+        "resource_type": {"type": "string"}}},
+    "read": {"type": "object", "required": ["name", "inputs", "output", "description"],
+      "properties": {"name": {"type": "string"}, "inputs": {"type": "array", "items": {"$ref": "#/$defs/input"}},
+        "output": {"type": "string"}, "description": {"type": "string"}}}
+  }
+}

@@ -321,12 +321,18 @@
     "max": "*",
     "min": 0
    },
+   "from_types": [
+    "Hypothesis"
+   ],
    "name": "HAS_RIVAL",
    "to": "Rival",
    "to_cardinality": {
     "max": 1,
     "min": 1
-   }
+   },
+   "to_types": [
+    "Rival"
+   ]
   },
   {
    "from": "Hypothesis",
@@ -334,12 +340,18 @@
     "max": "*",
     "min": 0
    },
+   "from_types": [
+    "Hypothesis"
+   ],
    "name": "PREDICTS",
    "to": "Prediction",
    "to_cardinality": {
     "max": 1,
     "min": 1
-   }
+   },
+   "to_types": [
+    "Prediction"
+   ]
   },
   {
    "from": "Hypothesis",
@@ -347,12 +359,18 @@
     "max": "*",
     "min": 0
    },
+   "from_types": [
+    "Hypothesis"
+   ],
    "name": "FALSIFIED_BY",
    "to": "Falsifier",
    "to_cardinality": {
     "max": 1,
     "min": 1
-   }
+   },
+   "to_types": [
+    "Falsifier"
+   ]
   },
   {
    "from": "Hypothesis",
@@ -360,12 +378,18 @@
     "max": "*",
     "min": 0
    },
+   "from_types": [
+    "Hypothesis"
+   ],
    "name": "TESTED_BY",
    "to": "Experiment",
    "to_cardinality": {
     "max": 1,
     "min": 1
-   }
+   },
+   "to_types": [
+    "Experiment"
+   ]
   },
   {
    "from": "Experiment",
@@ -373,12 +397,18 @@
     "max": "*",
     "min": 0
    },
+   "from_types": [
+    "Experiment"
+   ],
    "name": "MEASURES",
    "to": "Metric",
    "to_cardinality": {
     "max": "*",
     "min": 0
-   }
+   },
+   "to_types": [
+    "Metric"
+   ]
   },
   {
    "from": "Metric",
@@ -386,12 +416,18 @@
     "max": "*",
     "min": 0
    },
+   "from_types": [
+    "Metric"
+   ],
    "name": "GOVERNED_BY",
    "to": "Threshold",
    "to_cardinality": {
     "max": "*",
     "min": 0
-   }
+   },
+   "to_types": [
+    "Threshold"
+   ]
   },
   {
    "from": "Experiment",
@@ -399,12 +435,18 @@
     "max": "*",
     "min": 0
    },
+   "from_types": [
+    "Experiment"
+   ],
    "name": "PRODUCES",
    "to": "Evidence",
    "to_cardinality": {
     "max": 1,
     "min": 1
-   }
+   },
+   "to_types": [
+    "Evidence"
+   ]
   },
   {
    "from": "Evidence",
@@ -412,12 +454,18 @@
     "max": "*",
     "min": 1
    },
+   "from_types": [
+    "Evidence"
+   ],
    "name": "SUPPORTS_OR_REFUTES",
    "to": "Hypothesis",
    "to_cardinality": {
     "max": "*",
     "min": 0
-   }
+   },
+   "to_types": [
+    "Hypothesis"
+   ]
   },
   {
    "from": "Verdict",
@@ -425,12 +473,18 @@
     "max": 1,
     "min": 1
    },
+   "from_types": [
+    "Verdict"
+   ],
    "name": "EVALUATES",
    "to": "Hypothesis",
    "to_cardinality": {
     "max": "*",
     "min": 0
-   }
+   },
+   "to_types": [
+    "Hypothesis"
+   ]
   },
   {
    "from": "Evidence",
@@ -438,12 +492,18 @@
     "max": 1,
     "min": 1
    },
+   "from_types": [
+    "Evidence"
+   ],
    "name": "CAPTURED_AT",
    "to": "Commit",
    "to_cardinality": {
     "max": "*",
     "min": 0
-   }
+   },
+   "to_types": [
+    "Commit"
+   ]
   },
   {
    "from": "Component",
@@ -451,12 +511,18 @@
     "max": "*",
     "min": 0
    },
+   "from_types": [
+    "Component"
+   ],
    "name": "EXISTS_FOR",
    "to": "Hypothesis",
    "to_cardinality": {
     "max": "*",
     "min": 0
-   }
+   },
+   "to_types": [
+    "Hypothesis"
+   ]
   },
   {
    "from": "Test",
@@ -464,12 +530,18 @@
     "max": "*",
     "min": 0
    },
+   "from_types": [
+    "Test"
+   ],
    "name": "VALIDATES",
    "to": "Component",
    "to_cardinality": {
     "max": "*",
     "min": 0
-   }
+   },
+   "to_types": [
+    "Component"
+   ]
   },
   {
    "from": "Failure",
@@ -477,12 +549,18 @@
     "max": "*",
     "min": 1
    },
+   "from_types": [
+    "Failure"
+   ],
    "name": "DETECTED_BY",
    "to": "Test",
    "to_cardinality": {
     "max": "*",
     "min": 0
-   }
+   },
+   "to_types": [
+    "Test"
+   ]
   },
   {
    "from": "Decision",
@@ -490,12 +568,18 @@
     "max": "*",
     "min": 1
    },
+   "from_types": [
+    "Decision"
+   ],
    "name": "CHANGES",
    "to": "ContractVersion",
    "to_cardinality": {
     "max": "*",
     "min": 0
-   }
+   },
+   "to_types": [
+    "ContractVersion"
+   ]
   },
   {
    "from": "Hypothesis",
@@ -503,12 +587,18 @@
     "max": 1,
     "min": 0
    },
+   "from_types": [
+    "Hypothesis"
+   ],
    "name": "SUPERSEDED_BY",
    "to": "Hypothesis",
    "to_cardinality": {
     "max": 1,
     "min": 0
-   }
+   },
+   "to_types": [
+    "Hypothesis"
+   ]
   },
   {
    "from": "Experiment",
@@ -516,12 +606,18 @@
     "max": 1,
     "min": 0
    },
+   "from_types": [
+    "Experiment"
+   ],
    "name": "NEW_VERSION_OF",
    "to": "Experiment",
    "to_cardinality": {
     "max": 1,
     "min": 0
-   }
+   },
+   "to_types": [
+    "Experiment"
+   ]
   }
  ],
  "operations": [
