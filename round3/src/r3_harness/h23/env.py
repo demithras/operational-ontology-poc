@@ -135,6 +135,13 @@ class Env:
                     "in_tools": operation in self.tools(subject) if subject else None})
         return rec
 
+    def close(self) -> None:
+        import shutil
+        try:
+            self.reader.close()
+        finally:
+            shutil.rmtree(self.dir, ignore_errors=True)
+
     def authorized_ops(self, sub: str) -> list[str]:
         return [o["name"] for o in self.ops["operations"] if authority.could_ever_allow(sub, o["name"], self.auth)]
 
