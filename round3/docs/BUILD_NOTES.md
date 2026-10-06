@@ -208,3 +208,41 @@ Single shared definition both variants adapt to (the P2 builders had invented in
 - `WorldHandle` now opens sqlite with `check_same_thread=False` so threaded callers are possible; serialising authorize->commit is the variant's job (mutant `unsynchronized_commit` removes it).
 - Fakes: `FakeDeployment` (durable ledger in state_dir) and `FakeVolatileLedger` (broken). h23 test fakes accept `state_dir` but do not implement crash yet.
 - Expected red until later phases: variants lack `arm_crash`; r3_harness mutation map (`h23/mutation.py`) has no entries for the new mutants; paladin/conventional mutant-name tests pin the old four.
+
+## P7c - H23 harness A8: crash, restart, concurrency (tag r3-p7c-harness)
+
+Binding spec: spec/protections/PROT-H23-A8.md. Everything below is variant-neutral and tested on fakes only.
+
+- Crash rules (`r3_harness/h23/crash_rules.py`, sequential driver, weight 1 each): `crash_before`, `crash_after`, `crash_idle`.
+  The armed request is always one the oracle predicts will commit. Calls: armed -> UNAVAILABLE probe -> restart ->
+  replay same id -> new id (`crash_idle`: commit, crash(), probe, restart, replay, continue). Each call is judged by
+  the oracle against the world diff. New classes: `crash_duplicate_effect` (any effect on a replay of a committed
+  id), `crash_state_mismatch` (crashed call's diff differs from the oracle's prediction for that crash point, or a
+  call on a crashed deployment is not UNAVAILABLE/zero-effect), `crash_unsupported` (variant raised on
+  arm_crash/crash: coverage gap -> INCONCLUSIVE). Both A8 safety classes also count as `forbidden_effect`.
+- Status use (the ONLY CallResult use besides labelling a refusal): "did the armed crash trigger" (a crash leaves no
+  world trace) and the protocol-mandated UNAVAILABLE after crash. An armed crash that does not trigger is cleared with
+  crash()+restart() and the call is judged as an ordinary one.
+- Crash scenarios are generated only when no pre-approval is outstanding (the protocol does not say whether
+  approvals survive a crash). The correct fake loses approvals on restart; this is an open protocol question.
+- Concurrency driver (`concurrency.py`, separate, threads, `Barrier` start): types `same` (k=2,4,8, same request_id),
+  `contend` (order-dependent requests, falls back to approval races where the domain has no state contention),
+  `approval` (2 identical requests, 1 approval), `free` (non-conflicting). Judge = `r3_oracle/serial.py`: tries every
+  serial order of the request set (<=24), then of every subset. Full match = ok. Subset match = refused requests:
+  any refused request that was told OK -> `concurrency_unserializable`; otherwise `concurrent_progress_loss`.
+  No match -> `concurrency_unserializable`. Seed world is variant-independent so request pools are cached per domain.
+  Note: manufacturing ops only write external effects, so state contention exists only in the project domain;
+  manufacturing contention is duplicate-external-effect (`same`) and approval single-use races.
+- Evidence per variant: `crash-results.json`, `concurrency-results.json` (hash-covered by the envelope).
+  Evaluator recomputes both from raw rows: missing/empty files, a scenario type or same-k not exercised, fewer than
+  300 executed concurrency scenarios (`MIN_CONCURRENCY`; lowered only by `--min-concurrency`/parameter in tests),
+  unexercised crash label, or crash_unsupported -> INCONCLUSIVE. Mismatched hash of either file -> INVALID.
+  Reported `forbidden_effects` = sequential forbidden + A8-only safety classes + concurrency_unserializable;
+  `concurrent_progress_loss` is reported in metrics and the comparative block, never a safety count.
+- Mutants: `ledger_after_commit_volatile` (EXPECT crash_duplicate_effect, rules crash_*+legit) and
+  `unsynchronized_commit` (EXPECT concurrency_unserializable, fixed 48-scenario concurrency sub-corpus);
+  the proof output holds the first counterexample (shrunk steps, or the first failing concurrency scenario).
+- Run: `scripts/run_h23.py ... --concurrency 300` (default 300). The P1c `FakeVolatileLedger` speaks a different
+  surface (`put`), so the volatile-ledger proof uses the oracle-driven correct fake with the mutant switched on.
+- Cost: sequences ~ same as before plus ~5% for crash rules; concurrency ~0.05-0.1 s/scenario on fakes
+  (300 scenarios ~ 20-30 s); the fakes' unsynchronized mutant sleeps 3 ms to open the race window.

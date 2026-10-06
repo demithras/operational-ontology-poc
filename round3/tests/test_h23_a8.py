@@ -31,7 +31,7 @@ def runs(tmp_path_factory):
     for name, mut in (("good", ()), ("volatile", ("ledger_after_commit_volatile",)),
                       ("unsync", ("unsynchronized_commit",))):
         out[name] = run_variant(lambda m, mu=mut: load("fake-correct", tuple(m) + mu), name, root / name, "exp-a8", 5,
-                                N, mutation_sequences=1, concurrency_scenarios=CONC)
+                                N, mutation_sequences=40 if name == "good" else 1, concurrency_scenarios=CONC)
     return out
 
 
