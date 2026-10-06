@@ -13,8 +13,8 @@ from . import facts
 
 def head_commit(view) -> str:
     """The most recent Commit the ontology knows (the Git head it was last synchronised to)."""
-    cs = [(parse_dt(r["props"].get("committed_at")), r["key"]) for r in view.list("Commit")]
-    cs = [c for c in cs if c[0] is not None]
+    cs = [(r["props"].get("committed_at"), r["key"]) for r in view.list("Commit")]  # P2a patch D2: integer ticks
+    cs = [c for c in cs if isinstance(c[0], int) and not isinstance(c[0], bool)]
     if not cs:
         raise LookupError("no Commit with committed_at in the ontology: cannot bind a git_commit")
     return max(cs)[1]

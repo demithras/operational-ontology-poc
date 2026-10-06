@@ -255,6 +255,11 @@
    "original_sha256": "8e254216f087ca6597f52810fdb834cc404c2421a3fd95c83a05dbbc8d4abd7c",
    "vendored_sha256": "8e254216f087ca6597f52810fdb834cc404c2421a3fd95c83a05dbbc8d4abd7c"
   },
+  "ir/ir.schema.json": {
+   "original": "round2/ontology/ir.schema.json",
+   "original_sha256": "0e9bfa3380327d4b1f2e3e0ba3cf065968846c2c88b8071007c408fe965d0e2d",
+   "vendored_sha256": "0e9bfa3380327d4b1f2e3e0ba3cf065968846c2c88b8071007c408fe965d0e2d"
+  },
   "ir/kinds.py": {
    "original": "round2/src/eoo_ir/kinds.py",
    "original_sha256": "7eb0af1a02cd5dcccdaa403cf629b245f8785109d5f54c10604add0b568bead5",

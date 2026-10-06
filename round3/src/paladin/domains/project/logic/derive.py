@@ -40,9 +40,11 @@ class Deriver:
         evaluator = self.evaluators.get(e["evaluator_ref"])
         if evaluator is None:
             raise LookupError(f"no evaluator registered for {e['evaluator_ref']!r}")
-        key = canonical_json([e, sorted((x["id"], x["payload_hash"], x["git_commit"]) for x in ev), h.get("freeze_hash")])
+        key = canonical_json([e, sorted((x["id"], x["payload_hash"], x["git_commit"]) for x in ev), h.get("freeze_hash"),
+                              facts.evidence_count(view, hid)])
         if key not in self._cache:
-            got = evaluator(e, ev, {"id": hid, **h})
+            # P2a patch D4: the neutral evaluator needs evidence_count (SUPPORTS_OR_REFUTES links); passed as a plain value
+            got = evaluator(e, ev, {"id": hid, **h, "_evidence_count": facts.evidence_count(view, hid)})
             if set(got) != set(FIELDS) or not all(isinstance(got[f], bool) for f in FIELDS):
                 raise ValueError(f"evaluator for {e['evaluator_ref']!r} must return exactly {FIELDS} as booleans")
             self._cache[key] = got

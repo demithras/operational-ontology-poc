@@ -43,18 +43,17 @@ def frozen_paths(experiment_props: dict) -> list[str]:
     return paths
 
 
-def compute_freeze_hash(view, eid, reader: BlobReader) -> str:
-    """sha256 over the frozen files of the experiment, then one pseudo-file ``threshold:<id>`` (canonical JSON of the
-    value) for each threshold its metrics are governed by. An experiment with no thresholds hashes exactly like
-    scripts/freeze_protocol.py would hash those files."""
+def compute_freeze_hash(view, eid, reader: BlobReader | None = None) -> str:
+    """P2a patch D3: the NEUTRAL stand-in of spec/ops/project.json (helper compute_freeze_hash): sha256 of the canonical
+    JSON of {evidence_schema_ref, evaluator_ref, thresholds: [[key, value], ...]} (reachable via MEASURES/GOVERNED_BY,
+    sorted by key, de-duplicated). ``reader`` is accepted and ignored (Round 2 hashed committed git blobs)."""
     e = view.get("Experiment", eid)
     if e is None:
         raise KeyError(f"unknown experiment {eid!r}")
-    entries = [(p, reader(p)) for p in frozen_paths(e["props"])]
-    seen = []
+    seen: dict = {}
     for m in view.follow("MEASURES", "Experiment", eid, "out"):
         for t in view.follow("GOVERNED_BY", "Metric", m["key"], "out"):
-            if t["key"] not in seen:
-                seen.append(t["key"])
-                entries.append((f"threshold:{t['key']}", canonical_json(t["props"]["value"]).encode()))
-    return freeze_digest(entries)
+            seen.setdefault(t["key"], t["props"].get("value"))
+    body = {"evidence_schema_ref": e["props"].get("evidence_schema_ref"), "evaluator_ref": e["props"].get("evaluator_ref"),
+            "thresholds": [[k, seen[k]] for k in sorted(seen, key=str)]}
+    return hashlib.sha256(canonical_json(body).encode()).hexdigest()

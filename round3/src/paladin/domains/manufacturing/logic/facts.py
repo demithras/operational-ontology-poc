@@ -6,7 +6,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from paladin.domains._support import parse_dt
 from . import data
 
 
@@ -113,14 +112,19 @@ def protecting_work_orders(view, part: Any, src: Any, dst: Any) -> list:
     return out
 
 
+def _tick(x: Any) -> int | None:
+    """Neutral time is an integer logical tick (P2a patch D1; Round 2 used ISO strings)."""
+    return x if isinstance(x, int) and not isinstance(x, bool) else None
+
+
 def evidence_age_s(view, now: Any) -> float | None:
-    """Seconds between ``now`` and the newest EvidenceSnapshot; None when there is none (fail closed -> STALE)."""
-    times = [parse_dt(r["props"].get("snapshotObservedAt")) for r in view.list("EvidenceSnapshot")]
+    """Ticks (= seconds) between ``now`` and the newest EvidenceSnapshot; None when there is none (fail closed -> STALE)."""
+    times = [_tick(r["props"].get("snapshotObservedAt")) for r in view.list("EvidenceSnapshot")]
     times = [t for t in times if t is not None]
-    n = parse_dt(now)
+    n = _tick(now)
     if not times or n is None:
         return None
-    return (n - max(times)).total_seconds()
+    return n - max(times)
 
 
 def freshness(view, now: Any) -> str:

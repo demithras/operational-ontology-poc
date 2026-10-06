@@ -32,7 +32,7 @@ from jsonschema import Draft202012Validator
 
 from .kinds import AUTH_PREFIX, IMPORT_SEP, POLICY_PREFIX, RESOURCE_ARRAYS
 
-SCHEMA_PATH = Path(__file__).resolve().parents[2] / "ontology" / "ir.schema.json"
+SCHEMA_PATH = Path(__file__).with_name("ir.schema.json")  # P2a patch V0: schema vendored next to the validator
 
 
 @dataclass(frozen=True)
