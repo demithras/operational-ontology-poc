@@ -8,12 +8,12 @@ from __future__ import annotations
 from hypothesis import strategies as st
 from hypothesis.stateful import RuleBasedStateMachine, initialize, invariant, rule
 
-from . import approval_rules
+from . import approval_rules, crash_rules
 from .chooser import HypChooser
 from .corpus import new_env
 from .rules import WEIGHTS, exe, gen_step
 
-FAIL = ("forbidden_effect", "identity_expansion", "backstop_failure")
+FAIL = ("forbidden_effect", "identity_expansion", "backstop_failure", "crash_duplicate_effect", "crash_state_mismatch")
 
 
 def make_machine(variant, domain: str, specs: dict, fail_on=FAIL):
@@ -77,6 +77,18 @@ def make_machine(variant, domain: str, specs: dict, fail_on=FAIL):
             from .approval_rules import RULES
             self._do(data, HypChooser(data).choice(RULES))
 
+        @rule(data=st.data())
+        def crash_before_commit(self, data):
+            self._do(data, "crash_before")
+
+        @rule(data=st.data())
+        def crash_after_commit(self, data):
+            self._do(data, "crash_after")
+
+        @rule(data=st.data())
+        def crash_between_requests(self, data):
+            self._do(data, "crash_idle")
+
         @invariant()
         def no_forbidden_effects(self):
             bad = [(c["rule"], c["operation"], c["classes"]) for c in self.last
@@ -87,5 +99,5 @@ def make_machine(variant, domain: str, specs: dict, fail_on=FAIL):
             self.env.close()
 
     assert set(WEIGHTS) == {"legit", "hidden", "ident", "obo", "retarget", "mutate_body", "replay",
-                            "replay_revoke", "badtoken", "toctou", *approval_rules.RULES}
+                            "replay_revoke", "badtoken", "toctou", *approval_rules.RULES, *crash_rules.RULES}
     return Machine

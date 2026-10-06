@@ -18,11 +18,12 @@ def main() -> int:
     ap.add_argument("exp_id")
     ap.add_argument("--out-root", default=str(ROUND3 / "experiments" / "h23"))
     ap.add_argument("--min-sequences", type=int, default=None, help="TEST ONLY: lowers the minimum; never in thresholds")
+    ap.add_argument("--min-concurrency", type=int, default=None, help="TEST ONLY: lowers the A8 concurrency minimum (300)")
     ap.add_argument("--print-only", action="store_true", help="do not write verdict.json (used by verify)")
     a = ap.parse_args()
     exp = Path(a.out_root) / a.exp_id
     th = json.loads((ROUND3 / "protocol" / "thresholds.json").read_text())
-    res = evaluate_experiment(exp, th, a.min_sequences)
+    res = evaluate_experiment(exp, th, a.min_sequences, a.min_concurrency)
     text = json.dumps(res, indent=1, sort_keys=True) + "\n"
     if a.print_only:
         sys.stdout.write(text)

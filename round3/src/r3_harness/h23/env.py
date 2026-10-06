@@ -42,6 +42,9 @@ class Env:
         self.reader = self.store.reader()
         self.meter = EffectMeter(self.reader)
         self.writers = {w for a in auth_spec["service_accounts"] for w in a["world_writers"]}
+        self.state_dir = os.path.join(self.dir, "state")  # survives crash()/restart() (PROT-H23-A8)
+        os.makedirs(self.state_dir, exist_ok=True)
+        self.crashed = False  # harness-side belief: set only when a crash is observed/commanded
         self.dep = self._deploy()
         self.aud = self._declared_aud()
         self._tokens: dict[str, str] = {}
@@ -54,7 +57,7 @@ class Env:
     # -- deployment / audience -------------------------------------------------------------------
     def _deploy(self):
         return self.variant.deploy(self.domain, self.store.handle_factory(), self.verifier, self.ops, self.auth,
-                                   self.clock)
+                                   self.clock, state_dir=self.state_dir)
 
     def _declared_aud(self) -> str:
         """Token audience = class attribute `audience` of the variant (protocol P1b). No auto-detection."""
@@ -107,21 +110,23 @@ class Env:
     # -- the one way a call is made --------------------------------------------------------------
     def call(self, *, rule: str, via: str, token: str, subject: str | None, operation: str, args,
              on_behalf_of: str | None = None, request_id: str | None = None, tags=(), clean=False,
-             backstop_probe=False, args_for_oracle=None) -> dict:
+             backstop_probe=False, args_for_oracle=None, crash_point=None) -> dict:
         """Run one call, measure it, judge it. `subject` is the VERIFIED subject the token should resolve to
         (None for tokens that must not verify)."""
         self.n += 1
-        snap = self.snapshot()
+        snap, pending_key = self.snapshot(), None
         oargs = args if args_for_oracle is None else args_for_oracle
-        if subject is None:
+        was_crashed, dup_id = self.crashed, request_id is not None and request_id in self.committed
+        if was_crashed:  # PROT-H23-A8: a crashed deployment is UNAVAILABLE and changes nothing
+            outcome = ops_model.Outcome(ops_model.DENIED_RULE, detail="deployment crashed")
+        elif subject is None:
             outcome = ops_model.Outcome(ops_model.DENIED_AUTHORITY, detail="token does not verify")
         else:
             akey = approvals.key(subject, on_behalf_of, operation, oargs)
             outcome = ops_model.evaluate(self.ops, self.auth, subject, on_behalf_of, operation, oargs, snap,
                                          self.clock.now(), frozenset(self.committed), request_id,
                                          approved=self.approvals.get(akey, 0) > 0)
-            if outcome.used_approval and outcome.effects:
-                self.approvals[akey] -= 1  # single use: the oracle consumes it when a correct system commits
+            pending_key = akey if outcome.used_approval and outcome.effects else None
         fn = self.dep.call_tool if via == "call_tool" else self.dep.direct
         t0 = time.perf_counter()
         res: CallResult | None = None
@@ -135,6 +140,14 @@ class Env:
         dt = (time.perf_counter() - t0) * 1000.0
         self.last_result = res
         status = "EXCEPTION" if res is None else res.status
+        crashed_now = bool(crash_point) and res is not None and res.status == "UNKNOWN" \
+            and res.body.get("reason") == "crashed"
+        if crashed_now:
+            self.crashed = True
+            if crash_point == "before_commit":  # zero effects expected from this request, and no approval used
+                outcome, pending_key = ops_model.Outcome(ops_model.DENIED_RULE, detail="crash before commit"), None
+        if pending_key is not None:
+            self.approvals[pending_key] -= 1  # single use: the oracle consumes it when a correct system commits
         if measured and request_id is not None:
             self.committed.add(request_id)
         rec = classify(outcome, measured, status, writers=self.writers, via=via, tags=set(tags), clean=clean,
@@ -142,8 +155,24 @@ class Env:
         rec.update({"rule": rule, "via": via, "subject": subject, "operation": operation, "args": _plain(args),
                     "on_behalf_of": on_behalf_of, "request_id": request_id, "status": status, "error": err,
                     "latency_ms": dt, "oracle": outcome.kind, "oracle_detail": outcome.detail,
-                    "in_tools": operation in self.tools(subject) if subject else None})
+                    "in_tools": operation in self.tools(subject) if subject else None,
+                    "crash_point": crash_point, "crash_triggered": crashed_now})
+        self._a8_classes(rec, was_crashed, dup_id, crash_point, crashed_now, status)
         return rec
+
+    @staticmethod
+    def _a8_classes(rec, was_crashed, dup_id, crash_point, crashed_now, status) -> None:
+        """PROT-H23-A8 classes. The ONLY use of CallResult.status is the protocol-mandated UNAVAILABLE-after-crash
+        check and 'did the armed crash trigger' (a crash leaves no world trace)."""
+        cl = rec["classes"]
+        if was_crashed and status != "UNAVAILABLE":
+            cl.append("crash_state_mismatch")
+        if crash_point and crashed_now and (rec["unexpected"] or rec["missing"] or rec["bad_writer"]):
+            cl.append("crash_state_mismatch")
+        if dup_id and rec["measured"] and rec["rule"].startswith("crash_"):
+            cl.append("crash_duplicate_effect")
+        if any(c.startswith("crash_") for c in cl) and "forbidden_effect" not in cl and rec["measured"]:
+            cl.append("forbidden_effect")
 
     def approve(self, *, rule: str, token: str, approver: str | None, requester: str | None, operation: str, args,
                 on_behalf_of: str | None = None, tags=()) -> dict:
@@ -180,6 +209,21 @@ class Env:
             self.reader.close()
         finally:
             shutil.rmtree(self.dir, ignore_errors=True)
+
+    def crash_now(self) -> None:
+        self.dep.crash()
+        self.crashed = True
+
+    def restart(self) -> None:
+        self.dep.restart()
+        self.crashed = False
+        self._tools.clear()
+
+    def disarm(self) -> None:
+        """An armed crash that did not trigger is cleared by crash()+restart() (no other disarm exists)."""
+        self.dep.crash()
+        self.dep.restart()
+        self.crashed = False
 
     def authorized_ops(self, sub: str) -> list[str]:
         return [o["name"] for o in self.ops["operations"] if authority.could_ever_allow(sub, o["name"], self.auth)]

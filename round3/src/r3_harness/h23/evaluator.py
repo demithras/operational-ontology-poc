@@ -16,10 +16,12 @@ from pathlib import Path
 from r3_shared import evidence, mutants
 from r3_shared.verdict import CommonEvaluation, Verdict, evaluate_common
 
+from . import concurrency, crash_rules
 from .analyze import analyze
-from .runner import FILES, ROUND3
+from .runner import A8_FILES, FILES, ROUND3
 
-EVAL_FILES = ("evaluator.py", "analyze.py", "corpus.py", "classify.py")
+EVAL_FILES = ("evaluator.py", "analyze.py", "corpus.py", "classify.py", "concurrency.py", "crash_rules.py")
+MIN_CONCURRENCY = 300  # PROT-H23-A8 official configuration; lowered only via the evaluate_* parameter in tests
 BANNED_IMPORTS = ("paladin", "conventional", "r3_harness", "eoo_")
 
 
@@ -79,7 +81,8 @@ def _read(p: Path):
     return json.loads(p.read_text())
 
 
-def evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_sequences: int | None = None) -> dict:
+def evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_sequences: int | None = None,
+                     min_concurrency: int | None = None) -> dict:
     t = thresholds["H23"]
     need = t["min_adversarial_sequences"] if min_sequences is None else min_sequences
     reasons: list[str] = []
@@ -94,7 +97,7 @@ def evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_sequences: in
     try:
         evidence.validate_envelope(env)
         hashes = env["raw_observations"]["evidence_sha256"]
-        for f in FILES:
+        for f in FILES + tuple(f for f in A8_FILES if (vdir / f).is_file()):
             if hashlib.sha256((vdir / f).read_bytes()).hexdigest() != hashes.get(f):
                 valid = False
                 reasons.append(f"{f}: sha256 differs from envelope")
@@ -116,11 +119,15 @@ def evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_sequences: in
     killed = sum(1 for n in names if mut.get(n, {}).get("killed") is True)
     kill_rate = killed / len(names) if mut_ok else None
     cc = a["class_counts"]
-    forb, ident, bsf = cc.get("forbidden_effect", 0), a["identity_expansions"], cc.get("backstop_failure", 0)
+    conc, a8_reasons = _a8(vdir, a, MIN_CONCURRENCY if min_concurrency is None else min_concurrency)
+    forb = cc.get("forbidden_effect", 0) + a["a8_only_safety"] + conc["summary"]["concurrency_unserializable"]
+    ident, bsf = a["identity_expansions"], cc.get("backstop_failure", 0)
     ops_total = {f"{d}:{o['name']}" for d in a["domains"] for o in _ops(d)}
     covered = all(a["op_coverage"].get(k, 0) > 0 for k in ops_total) and len(a["domains"]) == 2
     a_ok = all(a["a_class_calls"].get(c, 0) > 0 for c in ("A1", "A2", "A8"))
+    a_ok = a_ok and not a8_reasons
     sample = a["unique_sequences"] >= need and a_ok and covered
+    reasons += a8_reasons
     if a["unique_sequences"] < need:
         reasons.append(f"unique sequences {a['unique_sequences']} < {need}")
     if not a_ok:
@@ -142,10 +149,48 @@ def evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_sequences: in
                "backstop_rate": a["backstop_rate"], "safe_progress_ratio": a["safe_progress_ratio"],
                "mutation_kill_rate": kill_rate, "p50_latency_ms": a["legit_latency_ms"]["p50"],
                "p95_latency_ms": a["legit_latency_ms"]["p95"], "unique_sequences": a["unique_sequences"],
-               "surface_overexposure": surf["overexposure"], "loc": count_loc(vname),
+               "surface_overexposure": surf["overexposure"],
+               "crash_duplicate_effects": cc.get("crash_duplicate_effect", 0),
+               "crash_state_mismatches": cc.get("crash_state_mismatch", 0),
+               "concurrency_unserializable": conc["summary"]["concurrency_unserializable"],
+               "concurrent_progress_loss": conc["summary"]["concurrent_progress_loss"],
+               "concurrency_scenarios": conc["summary"]["executed"], "concurrency_summary": conc["summary"],
+               "crash_labels": a["crash"], "loc": count_loc(vname),
                "payload_sha256": env.get("payload_sha256"), "evidence_sha256": env["raw_observations"].get("evidence_sha256")}
     complete = mut_ok and a["calls"] > 0
     return _finish(vname, valid, complete, sample, reject, support, reasons, metrics)
+
+
+def _a8(vdir: Path, a: dict, need_conc: int) -> tuple[dict, list[str]]:
+    """PROT-H23-A8 coverage, recomputed from raw rows. Anything missing -> reasons (the caller makes it INCONCLUSIVE)."""
+    why: list[str] = []
+    rows, summ = [], concurrency.summarise([])
+    cf = vdir / A8_FILES[1]
+    if not cf.is_file():
+        why.append("attack coverage omits A8: concurrency-results.json missing")
+    else:
+        rows = json.loads(cf.read_text()).get("scenarios") or []
+        summ = concurrency.summarise(rows)
+        if not rows:
+            why.append("attack coverage omits A8: concurrency-results.json is empty")
+        else:
+            if summ["executed"] < need_conc:
+                why.append(f"concurrency scenarios executed {summ['executed']} < {need_conc}")
+            miss = [t for t in concurrency.TYPES if not summ["by_type"].get(t)]
+            miss += [f"same k={k}" for k in map(str, concurrency.KS) if not summ["same_k"].get(k)]
+            if miss:
+                why.append("concurrency scenario types not exercised: " + ", ".join(miss))
+    if not (vdir / A8_FILES[0]).is_file():
+        why.append("attack coverage omits A8: crash-results.json missing")
+    else:
+        if a["class_counts"].get("crash_unsupported"):
+            why.append("arm_crash/crash/restart not implemented by the variant (crash_unsupported)")
+        lab = a["crash"]
+        miss = [r for r in crash_rules.REQUIRED if not lab.get(r, {}).get("calls")
+                or (r.endswith(":armed") and not lab[r].get("triggered"))]
+        if miss:
+            why.append("crash scenarios not exercised: " + ", ".join(miss))
+    return {"summary": summ, "rows": len(rows)}, why
 
 
 def _ops(domain: str):
@@ -159,13 +204,15 @@ def _finish(vname, valid, complete, sample, reject, support, reasons, metrics) -
     return {"variant": vname, "verdict": v.value, "reasons": reasons, "metrics": metrics}
 
 
-def evaluate_experiment(exp_dir: Path, thresholds: dict, min_sequences: int | None = None) -> dict:
-    vs = {d.name: evaluate_variant(d, thresholds, d.name, min_sequences)
+def evaluate_experiment(exp_dir: Path, thresholds: dict, min_sequences: int | None = None,
+                        min_concurrency: int | None = None) -> dict:
+    vs = {d.name: evaluate_variant(d, thresholds, d.name, min_sequences, min_concurrency)
           for d in sorted(p for p in exp_dir.iterdir() if p.is_dir())}
     from r3_shared.verdict import DualVerdict
     comp = {}
     for fld, key in (("forbidden_effects", "forbidden_effects"), ("safe_progress_ratio", "safe_progress_ratio"),
-                     ("mutation_kill_rate", "mutation_kill_rate"), ("p95_latency_ms", "p95_latency_ms")):
+                     ("mutation_kill_rate", "mutation_kill_rate"), ("p95_latency_ms", "p95_latency_ms"),
+                     ("concurrent_progress_loss", "concurrent_progress_loss")):
         comp[fld] = {n: v["metrics"].get(key) for n, v in vs.items()}
     comp["security_specific_loc"] = {n: (v["metrics"].get("loc") or {}).get("security_specific_loc")
                                      for n, v in vs.items()}

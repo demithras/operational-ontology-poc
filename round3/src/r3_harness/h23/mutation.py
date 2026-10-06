@@ -8,21 +8,35 @@ from __future__ import annotations
 
 from r3_shared import mutants
 
-from . import surface
+from . import concurrency, surface
 from .corpus import DOMAINS, attack_sequence, new_env, run_steps
 
-EXPECT = {"identity_substitution": ("forbidden_effect", "identity_expansion"),
+EXPECT = {"ledger_after_commit_volatile": ("crash_duplicate_effect",),
+          "unsynchronized_commit": ("concurrency_unserializable",),
+          "identity_substitution": ("forbidden_effect", "identity_expansion"),
           "mutable_gated_input": ("forbidden_effect",),
           "backstop_bypass": ("backstop_failure",),
           "tool_overexposure": ("surface_overexposure",)}
-RULES = {"identity_substitution": ["ident", "legit", "retarget"], "mutable_gated_input": ["toctou", "legit", "replay"],
+RULES = {"ledger_after_commit_volatile": ["crash_after", "crash_before", "crash_idle", "legit"],
+         "unsynchronized_commit": [],
+         "identity_substitution": ["ident", "legit", "retarget"], "mutable_gated_input": ["toctou", "legit", "replay"],
          "backstop_bypass": ["hidden", "retarget", "obo", "legit"], "tool_overexposure": ["legit", "hidden"]}
 
 
+CONC_N = 48  # fixed seeded concurrency sub-corpus for the unsynchronized_commit mutant
+
+
 def _counts(variant, specs, mutant: str, n: int, seed: int) -> tuple[dict, dict | None]:
-    cnt = {c: 0 for c in ("forbidden_effect", "identity_expansion", "backstop_failure", "surface_overexposure")}
+    cnt = {c: 0 for c in ("forbidden_effect", "identity_expansion", "backstop_failure", "surface_overexposure",
+                          "crash_duplicate_effect", "concurrency_unserializable")}
     first = None
-    for i in range(n):
+    if mutant == "unsynchronized_commit":  # concurrency sub-corpus (threads), not the sequential state machine
+        for rec in concurrency.run(variant, specs, CONC_N, seed):
+            if "concurrency_unserializable" in rec["classes"]:
+                cnt["concurrency_unserializable"] += 1
+                first = first or {"scenario": rec, "domain": rec["domain"], "attacker": "-", "steps": []}
+        return cnt, first
+    for i in range(0 if RULES[mutant] == [] else n):
         rec = attack_sequence(variant, specs, seed, i, RULES[mutant])
         for c in rec["calls"]:
             for k in c["classes"]:
@@ -75,7 +89,9 @@ def prove(factory, specs, n: int = 150, seed: int = 4242) -> dict:
         killed = any(v > 0 for v in gain.values())
         entry = {"killed": killed, "expected_classes": list(EXPECT[m]), "baseline_counts": base,
                  "mutated_counts": mut, "gain": gain, "sequences": n, "seed": seed}
-        if killed and first is not None and "surface_row" in first:
+        if killed and first is not None and "scenario" in first:
+            entry["first_counterexample"] = first["scenario"]
+        elif killed and first is not None and "surface_row" in first:
             entry["first_counterexample"] = first["surface_row"]
         elif killed and first is not None:
             small = shrink(factory, specs, m, first)

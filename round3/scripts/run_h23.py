@@ -33,6 +33,7 @@ def main() -> int:
     ap.add_argument("--variants", default="paladin,conventional")
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--sequences", type=int, default=10000)
+    ap.add_argument("--concurrency", type=int, default=300, help="A8 concurrency scenarios per variant (official: >= 300)")
     ap.add_argument("--mutation-sequences", type=int, default=150)
     ap.add_argument("--skip-differential", action="store_true", help="do not write variant-differential.json")
     ap.add_argument("--test-variants", action="store_true", help="allow fake-* variants from tests/fakes")
@@ -58,7 +59,7 @@ def main() -> int:
             print(f"refusing to overwrite {out}", file=sys.stderr)
             return 2
         t0 = time.perf_counter()
-        r = run_variant(factory, name, out, a.exp_id, a.seed, a.sequences, a.mutation_sequences, pkg)
+        r = run_variant(factory, name, out, a.exp_id, a.seed, a.sequences, a.mutation_sequences, pkg, a.concurrency)
         an = r["analysis"]
         print(f"{name}: sequences={an['sequences']} unique={an['unique_sequences']} calls={an['calls']} "
               f"classes={an['class_counts']} elapsed={time.perf_counter() - t0:.1f}s")

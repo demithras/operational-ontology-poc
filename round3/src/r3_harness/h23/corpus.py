@@ -19,7 +19,7 @@ from .goodargs import pick_args
 from .rules import WEIGHTS, exe, gen_step
 
 DOMAINS = ("manufacturing", "project")
-A_CLASS = {"A2": ("ident", "obo", "badtoken"), "A8": ("replay", "replay_revoke", "toctou", "mutate_body")}
+A_CLASS = {"A2": ("ident", "obo", "badtoken"), "A8": ("replay", "replay_revoke", "toctou", "mutate_body", "crash_before", "crash_after", "crash_idle")}
 
 
 def load_specs() -> dict:

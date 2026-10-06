@@ -10,13 +10,13 @@ import copy
 
 from r3_oracle import authority
 
-from . import approval_rules, authspecs, tokens
+from . import approval_rules, authspecs, crash_rules, tokens
 from .flipdict import FlipDict
 from .goodargs import pick_args
 
 WEIGHTS = {"legit": 3, "hidden": 2, "ident": 2, "obo": 2, "retarget": 3, "mutate_body": 1, "replay": 1,
            "replay_revoke": 1, "badtoken": 2, "toctou": 2,
-           **{r: 1 for r in approval_rules.RULES}}
+           **{r: 1 for r in approval_rules.RULES}, **{r: 1 for r in crash_rules.RULES}}
 IDENT_KEYS = ["principal", "actor", "owner", "requested_by", "user", "subject", "sub", "on_behalf_of", "created_by"]
 
 
@@ -60,6 +60,11 @@ def gen_step(env, ch, attacker: str, rule: str | None = None) -> dict:
         if step is not None:
             return step
         rule = "legit"  # no approval-needing request in this domain/for this attacker
+    if rule in crash_rules.RULES:
+        step = crash_rules.gen_step(env, ch, attacker, rule)
+        if step is not None:
+            return step
+        rule = "legit"  # nothing to crash on (no committing request, or approvals outstanding)
     ops = _ops(env)
     mine = env.authorized_ops(attacker) or list(ops)
     allowed_hidden = [o for o in ops if o not in env.tools(attacker)] or list(ops)
@@ -136,6 +141,8 @@ def exe(env, step: dict) -> list[dict]:  # noqa: C901
     a, rule, tok = step["attacker"], step["rule"], env.token(step["attacker"])
     if rule in approval_rules.RULES:
         return approval_rules.exe(env, step)
+    if rule in crash_rules.RULES:
+        return crash_rules.exe(env, step)
     args, obo = copy.deepcopy(step["args"]), step["obo"]
     if rule == "legit":
         return _both(env, step, args, token=tok, subject=a, tags=(), clean=True, obo=obo)

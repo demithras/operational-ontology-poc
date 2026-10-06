@@ -15,13 +15,13 @@ from r3_harness.h23.env import Env
 from r3_harness.h23.machine import make_machine
 from r3_harness.h23.rules import exe, gen_step
 from r3_harness.h23.chooser import RandChooser
-from r3_harness.h23.runner import FILES, run_variant
+from r3_harness.h23.runner import A8_FILES, FILES, run_variant
 from r3_shared import evidence, mutants
 from r3_shared.verdict import evaluate_from_mapping
 from tests.fakes.h23_fakes import FakeDep, FakeVariant, VARIANTS, load
 
 TH = json.loads((Path(__file__).resolve().parents[1] / "protocol" / "thresholds.json").read_text())
-N, MIN = 60, 50  # small corpus; the minimum is lowered ONLY here, via the evaluator parameter
+N, MIN, CONC, MINC = 60, 50, 32, 24  # small corpus; the minimum is lowered ONLY here, via the evaluator parameter
 SPECS = load_specs()
 
 
@@ -30,13 +30,13 @@ def runs(tmp_path_factory):
     root = tmp_path_factory.mktemp("exp-h23-test")
     out = {}
     for name in VARIANTS:
-        out[name] = run_variant(lambda m, n=name: load(n, m), name, root / name, "exp-h23-test", 7, N, mutation_sequences=40)
+        out[name] = run_variant(lambda m, n=name: load(n, m), name, root / name, "exp-h23-test", 7, N, mutation_sequences=40, concurrency_scenarios=CONC)
     out["root"] = root
     return out
 
 
 def verdict(runs, name, min_sequences=MIN):
-    return evaluator.evaluate_variant(runs["root"] / name, TH, name, min_sequences)
+    return evaluator.evaluate_variant(runs["root"] / name, TH, name, min_sequences, MINC)
 
 
 def test_allow_all_fake_is_rejected_with_forbidden_effects(runs):
@@ -106,18 +106,18 @@ def test_evaluator_invalid_on_missing_evidence_hash_mismatch_and_inconclusive_on
     d = tmp_path / "v"
     shutil.copytree(runs["root"] / "fake-correct", d)
     (d / "direct-engine-backstop.json").unlink()
-    assert evaluator.evaluate_variant(d, TH, "x", MIN)["verdict"] == "INVALID"
+    assert evaluator.evaluate_variant(d, TH, "x", MIN, MINC)["verdict"] == "INVALID"
     shutil.rmtree(d)
     shutil.copytree(runs["root"] / "fake-correct", d)
     (d / "surface-audit.json").write_text("{\"rows\": [], \"overexposure\": 0}\n")
-    assert evaluator.evaluate_variant(d, TH, "x", MIN)["verdict"] == "INVALID"  # sha256 differs from the envelope
+    assert evaluator.evaluate_variant(d, TH, "x", MIN, MINC)["verdict"] == "INVALID"  # sha256 differs from the envelope
     shutil.rmtree(d)
     shutil.copytree(runs["root"] / "fake-correct", d)
     mut = json.loads((d / "mutation-results.json").read_text())
     mut.pop("backstop_bypass")
     mut["tool_overexposure"]["killed"] = None
     _rewrite(d, mut=mut)
-    assert evaluator.evaluate_variant(d, TH, "x", MIN)["verdict"] == "INCONCLUSIVE"  # missing mutant result
+    assert evaluator.evaluate_variant(d, TH, "x", MIN, MINC)["verdict"] == "INCONCLUSIVE"  # missing mutant result
 
 
 def _rewrite(d, mut=None, drop_rules=()):
@@ -133,7 +133,8 @@ def _rewrite(d, mut=None, drop_rules=()):
     (d / FILES[1]).write_text(json.dumps(s))
     old = json.loads((d / "envelope.json").read_text())
     (d / "envelope.json").unlink()
-    raw = {f: __import__("hashlib").sha256((d / f).read_bytes()).hexdigest() for f in FILES}
+    raw = {f: __import__("hashlib").sha256((d / f).read_bytes()).hexdigest()
+           for f in FILES + tuple(x for x in A8_FILES if (d / x).is_file())}
     env = evidence.build_envelope(experiment_id="e", hypothesis_id="H23", git_commit="abcdefg1", environment={}, seed=1,
                                   attack_class="A1", oracle_version="o", candidate_version="c",
                                   raw_observations={"evidence_sha256": raw}, freeze_hash=old["protocol_freeze_hash"])
@@ -144,8 +145,8 @@ def test_evaluator_inconclusive_when_a8_missing(runs, tmp_path):
     import shutil
     d = tmp_path / "v"
     shutil.copytree(runs["root"] / "fake-correct", d)
-    _rewrite(d, drop_rules={"replay", "replay_revoke", "toctou", "mutate_body"})
-    v = evaluator.evaluate_variant(d, TH, "x", MIN)
+    _rewrite(d, drop_rules={"replay", "replay_revoke", "toctou", "mutate_body", "crash_before", "crash_after", "crash_idle"})
+    v = evaluator.evaluate_variant(d, TH, "x", MIN, MINC)
     assert v["verdict"] == "INCONCLUSIVE" and any("A1/A2/A8" in r for r in v["reasons"])
 
 
