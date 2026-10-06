@@ -25,7 +25,7 @@ def test_known_negatives(change, expect):
 def test_supported_only_when_all_good():
     for combo in itertools.product([True, False, None], repeat=5):
         valid, evid, samp, rej, sup = combo
-        want = valid is True and evid is True and samp is True and rej is not True and sup is True
+        want = valid is True and evid is True and samp is True and rej is False and sup is True
         assert (evaluate_common(CommonEvaluation(*combo)) is Verdict.SUPPORTED) == want
 
 

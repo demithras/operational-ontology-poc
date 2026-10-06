@@ -31,10 +31,15 @@ def evaluate_common(x: CommonEvaluation) -> Verdict:
 
     Strict: only the literal True counts as a hit/valid; None or any other value is treated as missing.
     """
-    if x.protocol_valid is not True:
+    def real(v: Any) -> bool:
+        return type(v) is bool
+
+    if not real(x.protocol_valid) or x.protocol_valid is False:
         return Verdict.INVALID
     if x.reject_hit is True:
         return Verdict.REJECTED
+    if not all(real(v) for v in (x.required_evidence_complete, x.sample_sufficient, x.reject_hit, x.support_hit)):
+        return Verdict.INCONCLUSIVE  # a check that did not run is missing evidence, never "no falsifier fired"
     if x.required_evidence_complete is not True or x.sample_sufficient is not True:
         return Verdict.INCONCLUSIVE
     if x.support_hit is True:

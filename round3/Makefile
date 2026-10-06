@@ -1,13 +1,14 @@
+PY ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 .PHONY: check freeze index test
 
 check:
-	python scripts/check_pack.py
+	$(PY) scripts/check_pack.py
 
 freeze: check
-	python scripts/freeze_protocol.py
+	$(PY) scripts/freeze_protocol.py
 
 index:
-	python scripts/build_file_index.py
+	$(PY) scripts/build_file_index.py
 
 test:
-	.venv/bin/python -m pytest -q
+	$(PY) -m pytest -q
