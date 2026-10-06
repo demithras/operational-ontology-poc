@@ -256,3 +256,10 @@ Binding spec: spec/protections/PROT-H23-A8.md. Everything below is variant-neutr
 - A8: `state_dir`, `arm_crash`, `crash`, `restart`, thread safety (src/paladin/{ledger,core,deployment}.py). Design and limits: spec/protections/H23-paladin.md "P7a notes". Tests: tests/paladin/test_p7a_a8.py (R9 both points, both domains; replay same / new request_id; approval single use across crash; authority persistence; R10 with 8-12 threads; both new mutants).
 - Paladin's conventional counterpart finding: the durable ledger needs a world-digest witness because Paladin does not own a transaction spanning the world file and `state_dir` (external effects use separate adapter connections).
 - P7a fix: an armed crash fires only at its point; refused/replayed requests keep the arm and return their normal refusal (deployment.py `_mutating`); approve() never consumes the arm. Tests in tests/paladin/test_p7a_a8.py (both points, refused request keeps the arm, approval single use across crash, digest-unchanged commit).
+
+## P8 - harness R-6 (approvals across crashes) + H23 dev run 5
+
+- New rules `crash_appr_before` / `crash_appr_after` (r3_harness/h23/crash_appr.py): approve -> arm_crash -> commit -> UNAVAILABLE probe -> restart -> replay-same -> replay-new. Oracle expectations come from env.call (approval consumed only by a committed call). New classes `crash_approval_lost` (post-restart commit the oracle expects is missing) and `crash_approval_reuse` (post-restart effect the oracle forbids); both count as forbidden effects.
+- corpus.crash_coverage: deterministic seeded per-domain/agent pass over all crash rules so required labels never depend on the random draw. The project domain has no approval-needing operation, so crash_appr scenarios exist only in manufacturing.
+- Test fakes persist approvals durably; known negatives (tests/test_h23_r6.py) lose or double-consume them.
+- Dev run exp-h23-dev5 (seed 13, 1000 sequences, 300 concurrency): both variants SUPPORTED, zero classes, differential 0/9684. Evidence copied to the scratchpad; experiment directory deleted.
