@@ -95,6 +95,8 @@ def test_reads(mfg, proj):
     assert proj.dep.read(proj.token("viewer-1"), "find_orphan_components", {}).body["value"] == ["cmp-orphan"]
 
 
-def test_crash_restart_not_implemented(mfg):
-    with pytest.raises(NotImplementedError):
-        mfg.dep.crash()
+def test_crash_then_restart_serves_again(mfg):
+    mfg.dep.crash()
+    assert mfg.dep.direct(mfg.token("planner-1"), "transfer_inventory", TR, request_id="r1").status == "UNAVAILABLE"
+    mfg.dep.restart()
+    assert mfg.dep.direct(mfg.token("planner-1"), "transfer_inventory", TR, request_id="r1").status == "OK"

@@ -50,11 +50,14 @@ def _eval_input(node: Any, inputs: dict) -> Any:
 class WorldExternalAdapter:
     """One external system (WMS | ERP | MES). Adapter interface per Engine H20: apply(effect, payload), observations()."""
 
-    def __init__(self, system: str, handle_factory: Callable, effect_specs: dict, inputs_of: Callable[[str], dict]):
+    def __init__(self, system: str, handle_factory: Callable, effect_specs: dict, inputs_of: Callable[[str], dict],
+                 pre_apply: Callable[[], None] = lambda: None):
         self.system, self._handle, self._specs, self._inputs_of = system, handle_factory, effect_specs, inputs_of
+        self._pre = pre_apply  # crash-injection point: fires before the first world write of a request
         self._obs: list[dict] = []
 
     def apply(self, effect: Any, payload: Any) -> dict:
+        self._pre()
         spec = self._specs[effect["action"]]  # the ops-spec external effect of this action
         inputs = self._inputs_of(effect["execution"])
         body = to_plain({k: _eval_input(v, inputs) for k, v in spec["payload"].items()})
@@ -88,7 +91,8 @@ class WorldExternalAdapter:
 class WorldGitAdapter:
     """Project canonical writes (`git_change` effects in the Round 2 IR) applied to the world through the service handle."""
 
-    def __init__(self, handle, spec_fields: dict | None = None):
+    def __init__(self, handle, spec_fields: dict | None = None, pre_apply: Callable[[], None] = lambda: None):
+        self._pre = pre_apply
         self._h, self._model, self._fields = handle, None, spec_fields or {}  # model attached after the Engine loads (`attach`)
         self._obs: list[dict] = []
         self._n = 0
@@ -106,6 +110,7 @@ class WorldGitAdapter:
         return f"{hits[0]}:{key}"
 
     def apply(self, effect: Any, payload: Any) -> dict:
+        self._pre()
         row, target = to_plain(dict(payload)), effect["target"]
         if "$src" in row:
             spec = self._model.get("link_types", target)

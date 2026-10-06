@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import tempfile
+import threading
 
-from paladin.core import AUDIENCE, Core, fingerprint, plain
+from paladin.core import AUDIENCE, Core, Crash, fingerprint, plain
 from paladin.engine import CapabilityError, InvalidRequest, Principal
 from paladin.surface import SurfaceFactory, UnknownTool, who_of
 from paladin.worldbridge import state_from_world
@@ -25,28 +27,104 @@ def _schema(op: dict) -> dict:
 class PaladinDeployment:
     audience = AUDIENCE
 
-    def __init__(self, domain, factory, verifier, ops_spec, auth_spec, clock, mutants=frozenset()):
-        self._c = Core(domain, factory, verifier, ops_spec, auth_spec, clock, mutants)
+    def __init__(self, domain, factory, verifier, ops_spec, auth_spec, clock, mutants=frozenset(), state_dir=None):
+        self._args = (domain, factory, verifier, ops_spec, auth_spec, clock, mutants)
+        self._state_dir = state_dir or tempfile.mkdtemp(prefix="paladin-state-")
+        self._meta = threading.Lock()   # crash flags
+        self._tl = threading.local()    # the armed crash point of THIS thread's request
+        self._armed = None
+        self._crashed = False
+        self._auth_version = None
+        self._build(restart=False)
+
+    # ---- crash / restart (PROT-H23-A8) ------------------------------------------------------
+    def _build(self, restart: bool) -> None:
+        d, f, v, ops, auth, clk, mut = self._args
+        self._c = Core(d, f, v, ops, auth, clk, mut, self._state_dir, self._fire, restart)
         self._surfaces = SurfaceFactory(self._c.booted.ir)
+        self._auth_version = self._digest(self._c.auth)
+
+    def _fire(self, point: str) -> None:
+        if getattr(self._tl, "point", None) == point:
+            self._tl.point = None
+            raise Crash(point)
+
+    def _die(self) -> None:
+        """Process death: wait out in-flight work, then drop everything held in memory (world + state_dir survive)."""
+        core = self._c
+        if core is not None:
+            with core.lock:
+                with self._meta:
+                    self._crashed, self._c = True, None
+
+    _DOWN = CallResult("UNAVAILABLE", {"reason": "crashed"})
+
+    def _mutating(self, fn):
+        with self._meta:
+            if self._crashed:
+                return self._DOWN
+            point, self._armed = self._armed, None
+        self._tl.point = point
+        try:
+            res = fn()
+        except Crash:
+            self._die()
+            return CallResult("UNKNOWN", {"reason": "crashed"})
+        finally:
+            fired = self._tl.point is None
+            self._tl.point = None
+        if point is not None and not fired:  # refused / replayed before reaching the point: the process still dies here
+            self._die()
+            return CallResult("UNKNOWN", {"reason": "crashed"})
+        return res
+
+    def arm_crash(self, point) -> None:
+        if point not in ("before_commit", "after_commit"):
+            raise ValueError(f"unknown crash point {point!r}")
+        with self._meta:
+            self._armed = point
+
+    def crash(self) -> None:
+        self._die()
+
+    def restart(self) -> None:
+        with self._meta:
+            if not self._crashed:
+                return
+            self._armed = None
+        self._build(restart=True)
+        with self._meta:
+            self._crashed = False
+
+    @staticmethod
+    def _digest(spec) -> str:
+        return hashlib.sha256(json.dumps(spec, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
     # ---- authority management ---------------------------------------------------------------
     def set_authority(self, auth_spec: dict) -> None:
-        self._c.set_authority(auth_spec)
-        self._surfaces = SurfaceFactory(self._c.booted.ir)
+        c = self._c
+        if c is None:
+            raise RuntimeError("deployment is crashed; restart() first")
+        with c.lock:
+            c.set_authority(auth_spec)
+            self._surfaces = SurfaceFactory(c.booted.ir)
+            self._auth_version = self._digest(c.auth)
 
     def authority_version(self) -> str:
         """sha256 hex of the canonical JSON of the spec in force (r3_shared protocol)."""
-        return hashlib.sha256(json.dumps(self._c.auth, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        return self._auth_version
 
     # ---- surface (R3) -----------------------------------------------------------------------
     def _surface(self, sub: str, obo, propose):
-        who = self._c.principal(sub, obo, None)
+        c = self._c
+        who = c.principal(sub, obo, None)
         if isinstance(who, CallResult):
             return who
-        self._c.eng.store.current = state_from_world(self._c.eng.model, self._c._svc)
-        types = sorted(self._c.eng.model.all("object_types"))
-        return self._surfaces.surface(self._c.eng, who_of(who, None if who.delegated_by is None else who_of(who.delegated_by)),
-                                      propose, types)
+        with c.lock:
+            c.eng.store.current = state_from_world(c.eng.model, c._svc)
+            types = sorted(c.eng.model.all("object_types"))
+            return self._surfaces.surface(c.eng, who_of(who, None if who.delegated_by is None else who_of(who.delegated_by)),
+                                          propose, types)
 
     def _exposed(self, sub: str, obo) -> set | CallResult:
         s = self._surface(sub, obo, lambda *_a: {})
@@ -59,6 +137,8 @@ class PaladinDeployment:
         return ops
 
     def tools(self, token: str) -> list[ToolDescriptor]:
+        if self._crashed:
+            return []
         sub = self._c.subject(token)
         if sub is None or sub not in self._c.booted.principals:
             return []
@@ -70,6 +150,9 @@ class PaladinDeployment:
 
     # ---- calls ------------------------------------------------------------------------------
     def call_tool(self, token, name, args, on_behalf_of=None, request_id=None) -> CallResult:
+        return self._mutating(lambda: self._call_tool(token, name, args, on_behalf_of, request_id))
+
+    def _call_tool(self, token, name, args, on_behalf_of, request_id) -> CallResult:
         sub = self._c.subject(token, args)
         if sub is None:
             return CallResult("DENIED", {"gate": "identity", "reason": "invalid token"})
@@ -103,12 +186,21 @@ class PaladinDeployment:
         return box.get("r") or CallResult("INVALID", {"reason": "request was not issued"})
 
     def direct(self, token, operation, args, on_behalf_of=None, request_id=None) -> CallResult:
+        return self._mutating(lambda: self._direct(token, operation, args, on_behalf_of, request_id))
+
+    def _direct(self, token, operation, args, on_behalf_of, request_id) -> CallResult:
         sub = self._c.subject(token, args)
         if sub is None:
             return CallResult("DENIED", {"gate": "identity", "reason": "invalid token"})
         return self._c.run(sub, on_behalf_of, operation, args, request_id, "direct")
 
     def read(self, token, operation, args) -> CallResult:
+        if self._crashed:
+            return self._DOWN
+        with self._c.lock:
+            return self._read(token, operation, args)
+
+    def _read(self, token, operation, args) -> CallResult:
         sub = self._c.subject(token)
         if sub is None or sub not in self._c.booted.principals:
             return CallResult("DENIED", {"gate": "identity", "reason": "invalid token or unknown principal"})
@@ -126,6 +218,9 @@ class PaladinDeployment:
         return CallResult("UNKNOWN", {"reason": "unknown read"})
 
     def approve(self, token, operation, args, requester, on_behalf_of=None) -> CallResult:
+        return self._mutating(lambda: self._approve(token, operation, args, requester, on_behalf_of))
+
+    def _approve(self, token, operation, args, requester, on_behalf_of=None) -> CallResult:
         """Pre-approve the EXACT request (requester, delegator, operation, args). The Engine approval gate still decides
         at commit: this records a single-use approval that the later propose consumes (see Core._commit)."""
         c, sub = self._c, self._c.subject(token)
@@ -145,13 +240,8 @@ class PaladinDeployment:
             return clean
         if sub in c.chain_pids(requester):
             return CallResult("DENIED", {"gate": "approval", "reason": "approver is in the requester's delegation chain"})
-        if not c.holds_approval(sub, operation, clean):
-            return CallResult("DENIED", {"gate": "approval", "reason": "approver holds no approval capability for this request"})
-        c.approvals.setdefault(fingerprint(requester, c.delegator.get(requester), operation, clean), []).append(sub)
+        with c.lock:
+            if not c.holds_approval(sub, operation, clean):
+                return CallResult("DENIED", {"gate": "approval", "reason": "approver holds no approval capability for this request"})
+            c.ledger.add_approval(fingerprint(requester, c.delegator.get(requester), operation, clean), sub)
         return CallResult("OK", {"approval": "recorded"})
-
-    def crash(self) -> None:
-        raise NotImplementedError("crash/restart: not implemented yet - H29")
-
-    def restart(self) -> None:
-        raise NotImplementedError("crash/restart: not implemented yet - H29")
