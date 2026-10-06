@@ -76,8 +76,12 @@ def existing_contract_version(ctx: Ctx, experiment, contract_version):
 
 
 def head_commit(ctx: Ctx) -> str:
-    rows = [(str(p.get("committed_at") if p.get("committed_at") is not None else ""), k)
-            for k, p in ctx.view.items("Commit")]
+    rows = []
+    for k, p in ctx.view.items("Commit"):
+        t = p.get("committed_at")  # logical-clock ticks (R-1): numeric order, never string order ("50" > "100")
+        if type(t) is not int:
+            raise HelperError(f"Commit {k} committed_at is not a logical time: {t!r}")
+        rows.append((t, k))
     if not rows:
         raise HelperError("no Commit exists")
     return max(rows)[1]

@@ -32,3 +32,10 @@ authenticates, binds, authorizes, then commits inside ONE world transaction) -> 
 - `request_id=None` is accepted (no idempotency record); the operation spec says idempotency is "required", so a harness that wants replay protection must send ids.
 - Delegate semantics (P1b): a principal with `delegated_by: P` is always evaluated as P's delegate (`policy.py:84-113`, `decide`), with or without `on_behalf_of`; `on_behalf_of != P` or a null delegator with `on_behalf_of` -> DENIED. `agent-orphan` is therefore denied everywhere; `exposed_operations` mirrors `authspec.allowed_operations` for delegates. Requests with and without `on_behalf_of=<delegator>` share one fingerprint (`policy.canonical_obo`).
 - `request_id=None` stays accepted (no idempotency record, so no replay protection); the harness always sends ids.
+
+## P5c rulings (2026-10-06)
+| Ruling | Implementation | Test |
+|---|---|---|
+| R-1 numeric logical time | `helpers_proj.head_commit` compares integer ticks; non-integer -> helper_error INVALID | `test_p5c_rulings.py::test_r1_*` |
+| R-2 optional ref existence (R6 target existence) | `service.py` `_txn`: supplied optional resource input must exist at commit, else INVALID `target_not_found`, zero effects | `test_r2_*` incl. sweep over every optional resource input of both domains |
+| R-4 strict authority validation | `authspec.validate_strict(spec, ops)` on deploy and every `set_authority`; ValueError, version unchanged | `test_r4_*` (duplicate grant id, schema-invalid origin, dangling principal) |

@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any, Callable
 
+from r3_shared.authspec import validate_strict
 from r3_shared.identity import TokenError
 from r3_shared.variant import CallResult
 
@@ -59,6 +60,7 @@ class Service:
         self._link_types = {x["name"]: x for x in self._spec["link_types"]}
         self._helpers = {"manufacturing": MFG, "project": PROJ}[domain]
         self._mutants = shared_mutants.validate(mutant_switches)
+        validate_strict(auth_spec, self._spec)  # R-4: invalid authority spec -> ValueError, nothing deployed
         self._policy = PolicyEngine(auth_spec, 1)
         self._lock = threading.RLock()
         self.unavailable: set[str] = set()
@@ -73,6 +75,7 @@ class Service:
         return name in self._mutants
 
     def set_authority(self, auth_spec: dict) -> int:
+        validate_strict(auth_spec, self._spec)  # R-4: raise before anything changes
         with self._lock:
             self._policy = PolicyEngine(auth_spec, self._policy.version + 1)
             return self._policy.version
@@ -164,6 +167,10 @@ class Service:
         actor = self._policy.effective_principal(b.subject)  # delegate -> its delegator, with or without on_behalf_of
         try:
             ctx = self._ctx(h, inputs, model.RESOURCES, actor)
+            for name, kind, required in model.SCHEMA:  # R-2: a supplied optional ref must resolve at commit
+                if kind == "resource" and not required and name in inputs \
+                        and ctx.view.props(model.RESOURCES[name], inputs[name]) is None:
+                    raise _Abort("INVALID", {"reason": "target_not_found", "input": name})
             for p in op["preconditions"]:
                 if not ev(p["predicate"], ctx):
                     raise _Abort("INVALID", {"reason": "precondition_failed", "rule": p["id"]})
