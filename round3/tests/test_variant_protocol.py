@@ -37,10 +37,30 @@ def test_registry_lazy_and_never_contains_fake():
     assert "fake" not in VARIANTS and not any("fake" in v for v in VARIANTS.values())
     with pytest.raises(KeyError):
         load_variant("fake")
-    for n in ("paladin", "conventional"):
-        try:
-            v = load_variant(n)  # built (P2): a real Variant
-        except NotImplementedError as exc:  # not built yet: must say so honestly
-            assert "not implemented yet" in str(exc)
-        else:
-            assert v.name == n and isinstance(v, Variant)
+
+
+PROTOCOL_METHODS = ("tools", "call_tool", "direct", "read", "approve", "set_authority", "authority_version", "crash", "restart")
+
+
+@pytest.mark.parametrize("name", ["paladin", "conventional"])
+def test_registered_variant_satisfies_protocol_or_not_implemented(name):
+    try:
+        v = load_variant(name)
+    except NotImplementedError as exc:
+        assert "not implemented yet" in str(exc)
+        return
+    assert isinstance(v, Variant) and callable(v.deploy)
+    dep_cls = getattr(v, "deployment_class", None)  # optional hook; otherwise check via deploy in variant tests
+    if dep_cls is not None:
+        for m in PROTOCOL_METHODS:
+            assert callable(getattr(dep_cls, m, None)), m
+
+
+def test_fake_deployment_has_every_protocol_method_and_authority_version(tmp_path):
+    clock, idp, store = LogicalClock(), IdentityProvider("secret-secret"), WorldStore(tmp_path / "w.db")
+    dep = FakeVariant().deploy("manufacturing", store.handle_factory(), idp.verifier(), {}, {"a": 1}, clock)
+    assert all(callable(getattr(dep, m)) for m in PROTOCOL_METHODS)
+    v1 = dep.authority_version()
+    assert len(v1) == 64
+    dep.set_authority({"a": 2})
+    assert dep.authority_version() != v1
