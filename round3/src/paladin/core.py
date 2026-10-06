@@ -21,7 +21,7 @@ from r3_shared.identity import TokenError
 from r3_shared.variant import CallResult
 
 AUDIENCE = "paladin"
-DENY_GATES = ("identity", "authority", "idempotency", "request", "gate_pass", "approval")
+DENY_GATES = ("identity", "authority", "gate_pass", "approval")  # an idempotency-key clash is a request fault: INVALID
 BYPASS = Principal("paladin-bypass", frozenset({"admin"}), frozenset())  # used ONLY by the backstop_bypass / mutable_gated_input mutants
 
 
@@ -115,6 +115,9 @@ class Core:
             return clean
         bypass = via == "direct" and "backstop_bypass" in self.mutants
         fp = fingerprint(sub, obo, op, clean)
+        pend = self.pending.get(rid)
+        if pend is not None and pend["fp"] != fp:  # R4: a pending decision is bound to its exact request
+            return CallResult("INVALID", {"gate": "request", "reason": "request_id already used for a different request"})
         led = self.ledger.get(rid)
         if led is not None:
             return self._replay(led, who, bypass, fp, sub, obo, op, clean, rid)
