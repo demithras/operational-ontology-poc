@@ -164,7 +164,8 @@ def test_r4_caller_mutation_after_return_and_returned_data_are_copies(mfg):
 def test_r4_authority_version_is_bound_to_the_commit(mfg):
     r = mfg.dep.direct(mfg.token("planner-1"), "transfer_inventory", SAFE_TRANSFER, request_id="v1")
     assert r.body["authority_version"] == 1
-    assert mfg.dep.set_authority(mfg.auth) == 2
+    assert mfg.dep.set_authority(mfg.auth) is None
+    assert len(mfg.dep.authority_version()) == 64
     r2 = mfg.dep.direct(mfg.token("planner-1"), "transfer_inventory", {**SAFE_TRANSFER, "quantity": 5}, request_id="v2")
     assert r2.body["authority_version"] == 2
 

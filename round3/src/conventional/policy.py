@@ -6,6 +6,8 @@ Deny overrides allow; no matching allow means deny. The acting subject is always
 from __future__ import annotations
 
 import copy
+import hashlib
+import json
 from dataclasses import dataclass
 from typing import Iterable
 
@@ -30,6 +32,7 @@ class PolicyEngine:
     def __init__(self, auth_spec: dict, version: int = 1):
         spec = copy.deepcopy(auth_spec)  # the engine owns its copy; later mutation of the caller's dict changes nothing
         self.version = version
+        self.digest = hashlib.sha256(json.dumps(spec, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         self._principals = {p["id"]: p for p in spec["principals"]}
         self._grants = list(spec["grants"])
         self._delegations = list(spec["delegations"])
@@ -84,9 +87,14 @@ class PolicyEngine:
 
         if not self.known(subject):
             return d(False, "unknown_principal")
-        if on_behalf_of is None:
+        delegator = self._principals[subject]["delegated_by"]
+        if on_behalf_of is not None and on_behalf_of != delegator:  # also covers delegated_by null + on_behalf_of
+            return d(False, "on_behalf_of_not_delegator")
+        if delegator is None:
             ok, _ = self._self_allowed(subject, op, resources)
             return d(ok, "allowed" if ok else "no_matching_allow_or_denied")
+        # a delegate is ALWAYS evaluated as its delegator's delegate (rules a-d), with or without on_behalf_of
+        on_behalf_of = delegator
         if not self.known(on_behalf_of):
             return d(False, "unknown_delegator")
         if not any(x["agent"] == subject and x["on_behalf_of"] == on_behalf_of and op in x["operations"]
@@ -98,6 +106,16 @@ class PolicyEngine:
             return d(False, "no_delegable_grant")
         ok, _ = self._self_allowed(on_behalf_of, op, resources)
         return d(ok, "allowed" if ok else "delegator_not_allowed")
+
+    def canonical_obo(self, subject: str, on_behalf_of: str | None) -> str | None:
+        """A delegate's request is the same request with or without on_behalf_of=<its delegator>."""
+        p = self._principals.get(subject)
+        return p["delegated_by"] if p and p["delegated_by"] and on_behalf_of in (None, p["delegated_by"]) else on_behalf_of
+
+    def effective_principal(self, subject: str) -> str:
+        """The principal business rules see: the delegator for a delegate, else the subject itself."""
+        p = self._principals.get(subject)
+        return p["delegated_by"] if p and p["delegated_by"] else subject
 
     def chain(self, pid: str) -> set[str]:
         out, cur = set(), pid
@@ -115,9 +133,19 @@ class PolicyEngine:
             return False
         return self._self_allowed(approver, approval_op, resources)[0]
 
-    def exposed_operations(self, subject: str, operations: Iterable[str]) -> list[str]:
-        """Operations the subject could be granted on SOME resource (static upper bound). Not a protection."""
-        if not self.known(subject):
+    def exposed_operations(self, subject: str, operations: Iterable[str], _depth: int = 0) -> list[str]:
+        """Operations the subject (or, for a delegate, its delegator chain) could be granted on SOME resource (static
+        upper bound). Not a protection: the service re-decides every request."""
+        if not self.known(subject) or _depth > 16:
             return []
-        return [op for op in operations
-                if self._matching(subject, op, None, "allow") and not self._matching(subject, op, None, "deny")]
+        delegator = self._principals[subject]["delegated_by"]
+        out = []
+        for op in operations:
+            allows = self._matching(subject, op, None, "allow")
+            if not allows or self._matching(subject, op, None, "deny"):
+                continue
+            if delegator is not None and not (any(g.get("delegable") for g in allows)
+                                              and self.exposed_operations(delegator, [op], _depth + 1)):
+                continue
+            out.append(op)
+        return out

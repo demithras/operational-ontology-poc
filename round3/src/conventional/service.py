@@ -16,7 +16,9 @@ from typing import Any, Callable
 from r3_shared.identity import TokenError
 from r3_shared.variant import CallResult
 
-from . import effects, mutants, store
+from r3_shared import mutants as shared_mutants
+
+from . import effects, store
 from .helpers_mfg import HELPERS as MFG
 from .helpers_proj import HELPERS as PROJ, ID_READS
 from .interp import Ctx, HelperError, ev
@@ -56,7 +58,7 @@ class Service:
         self._ops = {o["name"]: o for o in self._spec["operations"]}
         self._link_types = {x["name"]: x for x in self._spec["link_types"]}
         self._helpers = {"manufacturing": MFG, "project": PROJ}[domain]
-        self._mutants = mutants.validate(mutant_switches)
+        self._mutants = shared_mutants.validate(mutant_switches)
         self._policy = PolicyEngine(auth_spec, 1)
         self._lock = threading.RLock()
         self.unavailable: set[str] = set()
@@ -68,7 +70,7 @@ class Service:
 
     # -- configuration -------------------------------------------------------------------------
     def mutant(self, name: str) -> bool:
-        return mutants.is_on(name, self._mutants)
+        return name in self._mutants
 
     def set_authority(self, auth_spec: dict) -> int:
         with self._lock:
@@ -133,7 +135,7 @@ class Service:
             raise _Abort("INVALID", {"reason": exc.reason, "detail": exc.detail}) from exc
         res = tuple((model.RESOURCES[n], v) for n, v in inputs.items() if n in model.RESOURCES)
         bound = BoundRequest(sub, obo, operation, MappingProxyType(inputs), res, request_id, self._policy.version,
-                             store.fingerprint(sub, obo, operation, inputs))
+                             store.fingerprint(sub, self._policy.canonical_obo(sub, obo), operation, inputs))
         h = self._factory(WRITER)
         try:
             with h.transaction():
@@ -159,7 +161,7 @@ class Service:
                 inputs = model.from_args(raw_args).inputs()
             except RequestInvalid as exc:
                 raise _Abort("INVALID", {"reason": exc.reason}) from exc
-        actor = b.on_behalf_of or b.subject
+        actor = self._policy.effective_principal(b.subject)  # delegate -> its delegator, with or without on_behalf_of
         try:
             ctx = self._ctx(h, inputs, model.RESOURCES, actor)
             for p in op["preconditions"]:
@@ -220,7 +222,7 @@ class Service:
                 h = self._factory(WRITER)
                 try:
                     with h.transaction():
-                        store.approval_add(h, store.fingerprint(requester, on_behalf_of, operation, inputs), approver)
+                        store.approval_add(h, store.fingerprint(requester, self._policy.canonical_obo(requester, on_behalf_of), operation, inputs), approver)
                 finally:
                     h.close()
                 return CallResult("OK", {"approved_by": approver})

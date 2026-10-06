@@ -2,7 +2,7 @@
 import pytest
 
 from conv_helpers import SAFE_TRANSFER as _ST, VALID, FlipDict
-from conventional import mutants
+from r3_shared import mutants
 from r3_shared.world import diff
 
 # an unprotected route: on WH-B -> WH-A the protected-route business rule would mask a missing authorization check
@@ -16,7 +16,7 @@ def _effects(rig, fn):
 
 
 def test_switch_names_are_the_frozen_set():
-    assert set(mutants.KNOWN) == {"identity_substitution", "mutable_gated_input", "backstop_bypass", "tool_overexposure"}
+    assert set(mutants.KNOWN["H23"]) == {"identity_substitution", "mutable_gated_input", "backstop_bypass", "tool_overexposure"}
     with pytest.raises(ValueError):
         mutants.validate(["no_such_switch"])
 
@@ -66,8 +66,15 @@ def test_tool_overexposure_is_a_surface_bug_not_an_effect_bug(make):
     assert r.status == "DENIED" and e == []  # the backstop still refuses: detectable only by the surface audit
 
 
-def test_process_wide_switch_context_manager(make):
-    rig = make("manufacturing")
-    with mutants.enabled("backstop_bypass"):
-        assert rig.dep.direct(rig.token("nobody-1"), "transfer_inventory", SAFE_TRANSFER, request_id="g").status == "OK"
-    assert rig.dep.direct(rig.token("nobody-1"), "transfer_inventory", SAFE_TRANSFER, request_id="g2").status == "DENIED"
+def test_mutants_are_per_instance_not_global(make):
+    bug, clean = make("manufacturing", ["backstop_bypass"]), make("manufacturing")
+    assert bug.dep.direct(bug.token("nobody-1"), "transfer_inventory", SAFE_TRANSFER, request_id="g").status == "OK"
+    assert clean.dep.direct(clean.token("nobody-1"), "transfer_inventory", SAFE_TRANSFER, request_id="g").status == "DENIED"
+
+
+def test_load_variant_accepts_mutants():
+    from r3_shared.registry import load_variant
+    v = load_variant("conventional", mutants=["backstop_bypass"])
+    assert v.mutant_switches == frozenset({"backstop_bypass"})
+    with pytest.raises(ValueError):
+        load_variant("conventional", mutants=["nope"])

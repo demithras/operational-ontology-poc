@@ -46,8 +46,12 @@ def oracle_allowed(auth, sub, obo, op, args):
 
     if sub not in P:
         return False
-    if obo is None:
+    dby = P[sub]["delegated_by"]
+    if obo is not None and obo != dby:   # wrong delegator, or no delegator at all
+        return False
+    if dby is None:
         return bool(grants(sub, "allow")) and not grants(sub, "deny")
+    obo = dby                            # a delegate is always evaluated as its delegator's delegate
     if obo not in P or not any(d["agent"] == sub and d["on_behalf_of"] == obo and op in d["operations"] for d in auth["delegations"]):
         return False
     if grants(sub, "deny") or grants(obo, "deny"):

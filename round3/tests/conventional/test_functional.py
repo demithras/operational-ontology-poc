@@ -87,3 +87,26 @@ def test_reads_return_values_and_missing_is_unknown(mfg):
     assert mfg.dep.read(t, "get", {"type": "Warehouse", "key": "nope"}).status == "UNKNOWN"
     assert mfg.dep.read(t, "resolve_canonical_id", {"source_local_id": "SKU-88429"}).body["value"] == "PX-17"
     assert mfg.dep.read("garbage", "get", {"type": "Warehouse", "key": "WH-A"}).status == "DENIED"
+
+
+# -- P1b delegate semantics: a delegate is ALWAYS evaluated as its delegator's delegate --------------------------
+def _xfer(src, dst):
+    return {"part": "PX-17", "source_warehouse": src, "destination_warehouse": dst, "quantity": 1}
+
+
+@pytest.mark.parametrize("src,dst", [("WH-A", "WH-B"), ("WH-A", "WH-C"), ("WH-B", "WH-C")])
+def test_orphan_agent_denied_with_zero_effects(mfg, src, dst):
+    before = mfg.snap()
+    r = mfg.dep.direct(mfg.token("agent-orphan"), "transfer_inventory", _xfer(src, dst), request_id=f"o-{src}-{dst}")
+    assert r.status == "DENIED"
+    assert diff(before, mfg.snap()) == []
+
+
+def test_delegate_without_on_behalf_of_is_evaluated_as_delegate(mfg):
+    r = mfg.dep.direct(mfg.token("agent-1"), "transfer_inventory", _xfer("WH-A", "WH-B"), request_id="d1")
+    assert r.status == "OK"
+    before = mfg.snap()
+    r = mfg.dep.direct(mfg.token("agent-hostile-1"), "transfer_inventory", _xfer("WH-B", "WH-A"), request_id="d2")
+    assert r.status == "DENIED" and diff(before, mfg.snap()) == []
+    r = mfg.dep.direct(mfg.token("agent-1"), "transfer_inventory", _xfer("WH-A", "WH-C"), on_behalf_of="senior-1", request_id="d3")
+    assert r.status == "DENIED" and diff(before, mfg.snap()) == []  # on_behalf_of != delegator

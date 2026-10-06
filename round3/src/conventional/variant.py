@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from r3_shared.variant import CallResult, ToolDescriptor
 
-from . import mutants
+from r3_shared import mutants as shared_mutants
+
 from .service import Service
 from .tools import ToolSurface
 
@@ -29,9 +30,12 @@ class ConventionalDeployment:
         return self.service.read(token, operation, args)
 
     # -- operations beyond the neutral protocol (used by tests / harness drivers that know this variant) -----
-    def set_authority(self, auth_spec: dict) -> int:
+    def set_authority(self, auth_spec: dict) -> None:
         """Install a new authority version; every later decision (including replays) uses it."""
-        return self.service.set_authority(auth_spec)
+        self.service.set_authority(auth_spec)
+
+    def authority_version(self) -> str:
+        return self.service.policy.digest
 
     def approve(self, token, operation, args, requester, on_behalf_of=None) -> CallResult:
         return self.service.approve(token, operation, args, requester, on_behalf_of)
@@ -49,8 +53,10 @@ class ConventionalDeployment:
 class ConventionalVariant:
     name = "conventional"
 
-    def __init__(self, mutant_switches=()):
-        self.mutant_switches = mutants.validate(mutant_switches)
+    deployment_class = ConventionalDeployment
+
+    def __init__(self, mutants=()):
+        self.mutant_switches = shared_mutants.validate(mutants)
 
     def deploy(self, domain, world_handle_factory, verifier, ops_spec, auth_spec, clock) -> ConventionalDeployment:
         return ConventionalDeployment(Service(domain, world_handle_factory, verifier, ops_spec, auth_spec, clock,

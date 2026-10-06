@@ -51,17 +51,18 @@ def test_policy_static_exposure_matches_shared_reference_for_non_delegated(domai
     spec, ops = load_auth_spec(domain), [o["name"] for o in load_ops_spec(domain)["operations"]]
     eng = PolicyEngine(spec)
     for p in spec["principals"]:
-        if p["delegated_by"] is None:
+        if True:
             assert set(eng.exposed_operations(p["id"], ops)) == allowed_operations(spec, p["id"], ops), p["id"]
 
 
-def test_policy_documented_divergence_from_static_reference_for_orphan_agent():
-    """FINDING (see BUILD_NOTES): the frozen rule evaluates a subject as itself without on_behalf_of, so agent-orphan
-    (agent_grant on all warehouses) is allowed alone; authspec.allowed_operations forces it through delegated_by."""
+def test_policy_orphan_agent_is_a_delegate_of_nobody_and_denied():
+    """P1b: delegated_by is intrinsic; agent-orphan is evaluated as the delegate of nobody-1 on every request."""
     spec = load_auth_spec("manufacturing")
     eng = PolicyEngine(spec)
-    assert eng.decide("agent-orphan", None, "transfer_inventory", [("Warehouse", "WH-A")]).allowed
+    assert not eng.decide("agent-orphan", None, "transfer_inventory", [("Warehouse", "WH-A")]).allowed
     assert not eng.decide("agent-orphan", "nobody-1", "transfer_inventory", [("Warehouse", "WH-A")]).allowed
+    assert not eng.decide("agent-1", "senior-1", "transfer_inventory", [("Warehouse", "WH-A")]).allowed
+    assert not eng.decide("planner-1", "agent-1", "transfer_inventory", [("Warehouse", "WH-A")]).allowed  # null delegator
     assert allowed_operations(spec, "agent-orphan", ["transfer_inventory"]) == set()
 
 
