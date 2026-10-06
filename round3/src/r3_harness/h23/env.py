@@ -60,9 +60,16 @@ class Env:
             return declared
         admin = next(p["id"] for p in self.auth["principals"] if "admin" in p["roles"])
         for aud in (getattr(self.variant, "name", None), self.domain, *AUD_CANDIDATES):
-            if aud and self.dep.tools(self.idp.issue(admin, aud, TTL, self.clock)):
+            if aud and self.safe_tools(self.idp.issue(admin, aud, TTL, self.clock)):
                 return aud
         return AUD_CANDIDATES[0]
+
+    def safe_tools(self, token) -> list:
+        """tools() for any token; a variant that raises on a token it rejects is treated as listing nothing."""
+        try:
+            return list(self.dep.tools(token))
+        except Exception:  # noqa: BLE001
+            return []
 
     # -- tokens ----------------------------------------------------------------------------------
     def token(self, sub: str) -> str:
@@ -72,7 +79,7 @@ class Env:
 
     def tools(self, sub: str) -> list[str]:
         if sub not in self._tools:
-            self._tools[sub] = [t.name for t in self.dep.tools(self.token(sub))]
+            self._tools[sub] = [t.name for t in self.safe_tools(self.token(sub))]
         return self._tools[sub]
 
     def principals(self) -> list[dict]:
@@ -93,7 +100,7 @@ class Env:
             try:
                 fn(copy.deepcopy(new_auth))
                 return "set_authority"
-            except TypeError:
+            except (TypeError, NotImplementedError):
                 pass
         self.dep = self._deploy()
         return "redeploy"

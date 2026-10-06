@@ -21,8 +21,8 @@ def audit(env) -> list[dict]:
     for kind in tokens.KINDS:
         if kind in ("ghost", "expired"):
             continue
-        tok, _ = tokens.make(env, kind, p["id"])
-        seen = [t.name for t in env.dep.tools(tok)]
+        tok, _ = tokens.make(env, kind, env.principals()[0]["id"])
+        seen = [t.name for t in env.safe_tools(tok)]
         rows.append({"domain": env.domain, "principal": f"<invalid-token:{kind}>", "listed": sorted(seen),
                      "could_ever_allow": [], "overexposed": sorted(set(seen) & spec_ops),
                      "unknown_tools": sorted(set(seen) - spec_ops), "underexposed": []})
