@@ -52,6 +52,7 @@ class Core:
         self.pending: dict[str, dict] = {}  # request_id -> pending-approval request
         self.authority_version = 0
         self._mut_n = 0
+        self._attempts = 0
         self.set_authority(auth_spec)
 
     # ---- authority --------------------------------------------------------------------------
@@ -116,12 +117,15 @@ class Core:
         bypass = via == "direct" and "backstop_bypass" in self.mutants
         fp = fingerprint(sub, obo, op, clean)
         pend = self.pending.get(rid)
-        if pend is not None and pend["fp"] != fp:  # R4: a pending decision is bound to its exact request
-            return CallResult("INVALID", {"gate": "request", "reason": "request_id already used for a different request"})
+        if pend is not None:  # R4: a pending decision is bound to its exact request; a re-send never re-decides or mutates it
+            if pend["fp"] != fp:
+                return CallResult("INVALID", {"gate": "request", "reason": "request_id already used for a different request"})
+            return CallResult("OK", {**plain(pend["body"]), "replayed": True})
         led = self.ledger.get(rid)
         if led is not None:
             return self._replay(led, who, bypass, fp, sub, obo, op, clean, rid)
-        res = self._commit(BYPASS if bypass else who, op, clean, rid)
+        self._attempts += 1  # the Engine's own idempotency map is per attempt; request-id idempotency is the ledger's job
+        res = self._commit(BYPASS if bypass else who, op, clean, f"{rid}~{self._attempts}")
         self._remember(res, rid, fp, sub, obo, op)
         return res
 
@@ -132,12 +136,13 @@ class Core:
             return CallResult(led["status"], {**plain(led["body"]), "replayed": True})
         if "mutable_gated_input" in self.mutants and (led["sub"], led["obo"], led["op"]) == (sub, obo, op):
             self._mut_n += 1  # MUTANT: decision reuse keyed by request_id only - changed gated inputs commit undecided
-            return self._commit(BYPASS, op, clean, f"{rid}#m{self._mut_n}")
+            return self._commit(BYPASS, op, clean, f"{rid}~m{self._mut_n}")
         return CallResult("INVALID", {"gate": "request", "reason": "request_id already used for a different request"})
 
     def _remember(self, res: CallResult, rid, fp, sub, obo, op) -> None:
         if res.status == "OK" and res.body.get("state") == "PENDING_APPROVAL":
-            self.pending[rid] = {"fp": fp, "sub": sub, "obo": obo, "op": op, "execution": res.body["execution"]}
+            self.pending[rid] = {"fp": fp, "sub": sub, "obo": obo, "op": op, "execution": res.body["execution"],
+                                 "body": plain(res.body)}
         elif res.status == "OK":
             self.ledger[rid] = {"fp": fp, "status": res.status, "body": plain(res.body), "sub": sub, "obo": obo, "op": op}
 

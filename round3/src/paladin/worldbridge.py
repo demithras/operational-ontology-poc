@@ -17,6 +17,11 @@ from paladin.engine.state import State
 from r3_shared.world import WorldConflict
 
 
+def request_id_of(engine_key: str | None) -> str | None:
+    """The Engine idempotency key is `<request_id>~<attempt>` (core.py); external systems dedupe on the request id."""
+    return None if engine_key is None else engine_key.rsplit("~", 1)[0]
+
+
 def split_ref(ref: str) -> tuple[str, str]:
     t, k = ref.split(":", 1)
     return t, k
@@ -53,7 +58,7 @@ class WorldExternalAdapter:
         spec = self._specs[effect["action"]]  # the ops-spec external effect of this action
         inputs = self._inputs_of(effect["execution"])
         body = to_plain({k: _eval_input(v, inputs) for k, v in spec["payload"].items()})
-        self._handle(self.system).external_write(self.system, spec["target"], body, effect.get("idempotency_key"))
+        self._handle(self.system).external_write(self.system, spec["target"], body, request_id_of(effect.get("idempotency_key")))
         rec = {"actionExecutionId": effect["execution"], "requestedQuantity": body.get("quantity"),
                "actualQuantity": body.get("quantity"), "transferStatus": "COMMITTED"}
         self._obs.append({"observation_type": self._otype(), "execution": effect["execution"], "data": self._data(rec, body)})
