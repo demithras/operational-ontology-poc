@@ -12,6 +12,7 @@ KNOWN: dict[str, tuple[str, ...]] = {
 }
 
 _ON: set[str] = set()
+CONSULTED: set[str] = set()  # names a variant asked about while on (proof the switch is wired in)
 
 
 def _check(name: str) -> None:
@@ -20,6 +21,8 @@ def _check(name: str) -> None:
 
 
 def is_on(name: str) -> bool:
+    if name in _ON:
+        CONSULTED.add(name)
     return name in _ON
 
 
@@ -34,6 +37,7 @@ def disable(name: str) -> None:
 
 def reset() -> None:
     _ON.clear()
+    CONSULTED.clear()
 
 
 def active() -> set[str]:

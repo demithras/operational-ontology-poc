@@ -142,3 +142,23 @@ def could_ever_allow(subject: str, operation: str, auth_spec: dict) -> bool:
 
     # delegation needs the agent's OWN delegable allow grant, so it never widens the upper bound.
     return bool(own(subject))
+
+
+def revoke(auth_spec: dict, subject: str, operation: str) -> dict:
+    """Copy of auth_spec with every allow grant that can match `subject` for `operation` removed, and the subject's
+    delegation entries for it dropped (used by the replay-after-revocation attack)."""
+    import copy
+    new = copy.deepcopy(auth_spec)
+    p = _principal(new, subject)
+    keep = []
+    for g in new["grants"]:
+        s = g["principal"]
+        hit = g["effect"] == "allow" and _op_match(g["operation"], operation) and p is not None and (
+            s.get("any") or ("role" in s and s["role"] in p["roles"]) or ("id" in s and s["id"] == p["id"])
+            or ("relation" in s and any(r["relation"] == s["relation"] and r["type"] == s["on_type"]
+                                        for r in p["relations"])))
+        if not hit:
+            keep.append(g)
+    new["grants"] = keep
+    new["delegations"] = [d for d in new["delegations"] if not (d["agent"] == subject and operation in d["operations"])]
+    return new
