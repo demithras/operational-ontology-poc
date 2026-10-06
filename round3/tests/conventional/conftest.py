@@ -57,4 +57,10 @@ def proj(tmp_path):
 
 @pytest.fixture
 def make(tmp_path):
-    return lambda domain, mutants=(), start=2: make_rig(tmp_path / f"{domain}-{'-'.join(mutants) or 'clean'}", domain, mutants, start)
+    n = iter(range(10_000))
+
+    def _make(domain, mutants=(), start=2):
+        d = tmp_path / f"rig{next(n)}"
+        d.mkdir()
+        return make_rig(d, domain, mutants, start)
+    return _make
