@@ -61,6 +61,8 @@ class Core:
         self.auth = copy.deepcopy(auth_spec)
         self.booted = boot(self.domain, self.ops_spec, self.auth, self._factory, self._svc, self.clock.now)
         self.eng = self.booted.engine
+        if {"backstop_bypass", "mutable_gated_input"} & set(self.mutants):
+            self.eng.register_principal(BYPASS)  # exists ONLY in mutated deployments
         self.delegations = delegation_table(self.auth)
         self.authority_version += 1
         return self.authority_version
