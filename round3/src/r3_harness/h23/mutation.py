@@ -23,7 +23,7 @@ RULES = {"ledger_after_commit_volatile": ["crash_after", "crash_before", "crash_
          "backstop_bypass": ["hidden", "retarget", "obo", "legit"], "tool_overexposure": ["legit", "hidden"]}
 
 
-CONC_N = 48  # fixed seeded concurrency sub-corpus for the unsynchronized_commit mutant
+CONC_N = 300  # fixed seeded concurrency sub-corpus for the unsynchronized_commit mutant (dev run 5: 48 gave 1 kill)
 
 
 def _counts(variant, specs, mutant: str, n: int, seed: int) -> tuple[dict, dict | None]:
@@ -88,7 +88,9 @@ def prove(factory, specs, n: int = 150, seed: int = 4242) -> dict:
         gain = {k: mut[k] - base[k] for k in EXPECT[m]}
         killed = any(v > 0 for v in gain.values())
         entry = {"killed": killed, "expected_classes": list(EXPECT[m]), "baseline_counts": base,
-                 "mutated_counts": mut, "gain": gain, "sequences": n, "seed": seed}
+                 "mutated_counts": mut, "gain": gain, "sequences": n, "seed": seed,
+                 "scenarios": CONC_N if m == "unsynchronized_commit" else n,
+                 "kills": sum(max(v, 0) for v in gain.values())}
         if killed and first is not None and "scenario" in first:
             entry["first_counterexample"] = first["scenario"]
         elif killed and first is not None and "surface_row" in first:

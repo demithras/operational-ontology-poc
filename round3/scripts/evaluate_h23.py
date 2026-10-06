@@ -21,6 +21,10 @@ def main() -> int:
     ap.add_argument("--min-concurrency", type=int, default=None, help="TEST ONLY: lowers the A8 concurrency minimum (300)")
     ap.add_argument("--print-only", action="store_true", help="do not write verdict.json (used by verify)")
     a = ap.parse_args()
+    if (a.min_sequences is not None or a.min_concurrency is not None) and "-dev" not in a.exp_id:
+        print(f"refusing: --min-sequences/--min-concurrency override frozen minimums and are allowed only for "
+              f"dev experiment ids (containing '-dev'), not {a.exp_id!r}", file=sys.stderr)
+        return 2
     exp = Path(a.out_root) / a.exp_id
     th = json.loads((ROUND3 / "protocol" / "thresholds.json").read_text())
     res = evaluate_experiment(exp, th, a.min_sequences, a.min_concurrency)

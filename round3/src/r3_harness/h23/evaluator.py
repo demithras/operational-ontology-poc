@@ -16,11 +16,12 @@ from pathlib import Path
 from r3_shared import evidence, mutants
 from r3_shared.verdict import CommonEvaluation, Verdict, evaluate_common
 
-from . import concurrency, crash_appr, crash_rules
+from . import comparative, concurrency, crash_appr, crash_rules
 from .analyze import analyze
 from .runner import A8_FILES, FILES, ROUND3
 
-EVAL_FILES = ("evaluator.py", "analyze.py", "corpus.py", "classify.py", "concurrency.py", "crash_rules.py", "crash_appr.py")
+EVAL_FILES = ("evaluator.py", "analyze.py", "corpus.py", "classify.py", "concurrency.py", "crash_rules.py", "crash_appr.py",
+              "comparative.py")
 MIN_CONCURRENCY = 300  # PROT-H23-A8 official configuration; lowered only via the evaluate_* parameter in tests
 BANNED_IMPORTS = ("paladin", "conventional", "r3_harness", "eoo_")
 
@@ -47,41 +48,11 @@ def oracle_independent() -> tuple[bool, list[str]]:
     return not bad, bad
 
 
-def count_loc(variant: str) -> dict | None:
-    root = ROUND3 / "src" / variant
-    if not root.is_dir():
-        return None
-    vend = {}
-    vf = root / "VENDORED.json"
-    if vf.exists():
-        def walk(x, acc):
-            if isinstance(x, dict):
-                for k, v in x.items():
-                    if isinstance(v, str) and len(v) == 64:
-                        acc[Path(k).name] = v
-                    walk(v, acc)
-            elif isinstance(x, list):
-                for i in x:
-                    walk(i, acc)
-        walk(json.loads(vf.read_text()), vend)
-    total = excl = 0
-    comps = []
-    for f in sorted(root.rglob("*.py")):
-        n = sum(1 for ln in f.read_text().splitlines() if ln.strip() and not ln.strip().startswith("#"))
-        total += n
-        if vend.get(f.name) == hashlib.sha256(f.read_bytes()).hexdigest():
-            excl += n
-        else:
-            comps.append({"file": f.relative_to(root).as_posix(), "loc": n})
-    return {"total_loc": total, "vendored_unchanged_loc": excl, "security_specific_loc": total - excl,
-            "components": comps}
-
-
 def _read(p: Path):
     return json.loads(p.read_text())
 
 
-def evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_sequences: int | None = None,
+def _evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_sequences: int | None = None,
                      min_concurrency: int | None = None) -> dict:
     t = thresholds["H23"]
     need = t["min_adversarial_sequences"] if min_sequences is None else min_sequences
@@ -157,10 +128,28 @@ def evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_sequences: in
                "concurrency_unserializable": conc["summary"]["concurrency_unserializable"],
                "concurrent_progress_loss": conc["summary"]["concurrent_progress_loss"],
                "concurrency_scenarios": conc["summary"]["executed"], "concurrency_summary": conc["summary"],
-               "crash_labels": a["crash"], "loc": count_loc(vname),
+               "crash_labels": a["crash"],
+               "loc": comparative.security_specific_loc(vname),
+               "components": comparative.security_specific_components(vname),
                "payload_sha256": env.get("payload_sha256"), "evidence_sha256": env["raw_observations"].get("evidence_sha256")}
     complete = mut_ok and a["calls"] > 0
     return _finish(vname, valid, complete, sample, reject, support, reasons, metrics)
+
+
+def minimum_overrides(thresholds: dict, min_sequences: int | None, min_concurrency: int | None) -> dict:
+    """Every override of a frozen minimum that actually differs from the frozen value."""
+    frozen = {"min_sequences": thresholds["H23"]["min_adversarial_sequences"], "min_concurrency": MIN_CONCURRENCY}
+    given = {"min_sequences": min_sequences, "min_concurrency": min_concurrency}
+    return {k: v for k, v in given.items() if v is not None and v != frozen[k]}
+
+
+def evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_sequences: int | None = None,
+                     min_concurrency: int | None = None) -> dict:
+    res = _evaluate_variant(vdir, thresholds, vname, min_sequences, min_concurrency)
+    ov = minimum_overrides(thresholds, min_sequences, min_concurrency)
+    res["minimum_overrides"] = ov
+    res["reasons"] = list(res["reasons"]) + [f"DEV ONLY: minimum {k} overridden to {v}" for k, v in ov.items()]
+    return res
 
 
 def _a8(vdir: Path, a: dict, need_conc: int) -> tuple[dict, list[str]]:
@@ -216,12 +205,11 @@ def evaluate_experiment(exp_dir: Path, thresholds: dict, min_sequences: int | No
                      ("mutation_kill_rate", "mutation_kill_rate"), ("p95_latency_ms", "p95_latency_ms"),
                      ("concurrent_progress_loss", "concurrent_progress_loss")):
         comp[fld] = {n: v["metrics"].get(key) for n, v in vs.items()}
-    comp["security_specific_loc"] = {n: (v["metrics"].get("loc") or {}).get("security_specific_loc")
-                                     for n, v in vs.items()}
-    comp["security_specific_components"] = {n: [c["file"] for c in (v["metrics"].get("loc") or {}).get("components", [])]
-                                            for n, v in vs.items()}
+    comp["security_specific_loc"] = {n: comparative.security_specific_loc(n) for n in vs}
+    comp["security_specific_components"] = {n: comparative.security_specific_components(n) for n in vs}
     pick = lambda n: Verdict(vs[n]["verdict"]) if n in vs else None  # noqa: E731
     out = DualVerdict(pick("paladin"), pick("conventional"), comp).to_json()
     out.update({"experiment_id": exp_dir.name, "hypothesis": "H23", "evaluator_sha256": evaluator_sha256(),
-                "thresholds_sha256": evidence.sha256_of(thresholds["H23"]), "variants": vs})
+                "thresholds_sha256": evidence.sha256_of(thresholds["H23"]), "minimum_overrides": minimum_overrides(thresholds, min_sequences, min_concurrency),
+                "variants": vs})
     return out

@@ -53,11 +53,11 @@ def test_run_h23_writes_the_report_only_for_two_variants_and_the_evaluator_ignor
            "--mutation-sequences", "5", "--out-root", str(tmp_path)]
     subprocess.run([*cmd, "--exp-id", "one", "--variants", "fake-correct"], check=True, capture_output=True)
     assert not (tmp_path / "one" / "variant-differential.json").exists()
-    subprocess.run([*cmd, "--exp-id", "two", "--variants", "fake-correct,fake-allow-all"], check=True, capture_output=True)
-    doc = json.loads((tmp_path / "two" / "variant-differential.json").read_text())
+    subprocess.run([*cmd, "--exp-id", "two-dev", "--variants", "fake-correct,fake-allow-all"], check=True, capture_output=True)
+    doc = json.loads((tmp_path / "two-dev" / "variant-differential.json").read_text())
     assert doc["informational"] is True and doc["pairs"][0]["reference"] == "fake-correct"
     assert doc["pairs"][0]["differing_calls"] > 0 and doc["pairs"][0]["other"] == "fake-allow-all"
-    r = subprocess.run([sys.executable, str(ROUND3 / "scripts" / "evaluate_h23.py"), "two", "--out-root", str(tmp_path),
+    r = subprocess.run([sys.executable, str(ROUND3 / "scripts" / "evaluate_h23.py"), "two-dev", "--out-root", str(tmp_path),
                         "--min-sequences", "10", "--print-only"], capture_output=True, text=True)
     assert r.returncode == 0, r.stderr
     assert set(json.loads(r.stdout)["variants"]) == {"fake-correct", "fake-allow-all"}

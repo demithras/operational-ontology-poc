@@ -18,6 +18,12 @@ for v in sorted(p for p in exp.iterdir() if p.is_dir()):
 if bad: sys.exit(1)
 print("evidence hashes ok")
 PYEOF
+"$PY" - "$EXP" "$ID" <<'PYEOF'
+import json, sys
+v = json.load(open(sys.argv[1] + "/verdict.json")); ov = v.get("minimum_overrides")
+if ov and "-dev" not in sys.argv[2]:
+    print(f"FROZEN MINIMUM OVERRIDDEN in non-dev experiment {sys.argv[2]}: {ov}"); sys.exit(1)
+PYEOF
 "$PY" "$R3/scripts/evaluate_h23.py" "$ID" --print-only "$@" > "${TMPDIR:-/tmp}/h23-verify-$ID.json"
 diff <("$PY" -c "import json,sys;print(json.dumps(json.load(open(sys.argv[1])),indent=1,sort_keys=True))" "$EXP/verdict.json") \
      <("$PY" -c "import json,sys;print(json.dumps(json.load(open(sys.argv[1])),indent=1,sort_keys=True))" "${TMPDIR:-/tmp}/h23-verify-$ID.json") \
