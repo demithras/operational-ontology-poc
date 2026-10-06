@@ -24,7 +24,8 @@ TTL = 10 ** 6
 
 class Env:
     def __init__(self, variant, domain: str, ops_spec: dict, auth_spec: dict, tag: str = "env"):
-        self.variant, self.domain, self.ops = variant, domain, ops_spec
+        self.variant, self.domain, self.ops, self.tag = variant, domain, ops_spec, tag
+        self.last_result = None
         self.auth = copy.deepcopy(auth_spec)
         self.dir = tempfile.mkdtemp(prefix="h23-")
         self.store = WorldStore(os.path.join(self.dir, "world.db"))
@@ -122,6 +123,7 @@ class Env:
             err = f"{type(exc).__name__}: {exc}"
         measured = self.meter.end()
         dt = (time.perf_counter() - t0) * 1000.0
+        self.last_result = res
         status = "EXCEPTION" if res is None else res.status
         if measured and request_id is not None:
             self.committed.add(request_id)
