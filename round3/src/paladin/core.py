@@ -16,7 +16,7 @@ from paladin.boot import boot
 from paladin.engine import CapabilityError, InvalidRequest, Principal
 from paladin.engine import canon, gates
 from paladin.worldbridge import state_from_world
-from r3_shared.authspec import validate_auth_spec
+from r3_shared.authspec import validate_strict
 from r3_shared.identity import TokenError
 from r3_shared.variant import CallResult
 
@@ -69,7 +69,7 @@ class Core:
 
     # ---- authority --------------------------------------------------------------------------
     def set_authority(self, auth_spec: dict) -> int:
-        validate_auth_spec(auth_spec)
+        validate_strict(auth_spec, self.ops_spec)  # R-4: shared strict control, before anything changes (ValueError)
         self.auth = copy.deepcopy(auth_spec)
         self.booted = boot(self.domain, self.ops_spec, self.auth, self._factory, self._svc, self.clock.now)
         self.eng = self.booted.engine

@@ -56,3 +56,8 @@ WriteGrant, `Verdict.value` is written only from `derive_verdict`, and the thres
 - Approvals: `approve(token, operation, args, requester, on_behalf_of)` pre-approves the exact request; no pre-approval -> DENIED `approval_required`, zero effects. No change to vendored code.
 - Outcomes: DENIED = identity/delegation/authority/approval/policy; INVALID = shape/precondition/idempotency-key; UNAVAILABLE = adapter down; a real operation absent from the caller's tool surface -> DENIED (`surface`).
 - No new vendored-code patches in the rework (`VENDORED.json` unchanged; `test_p2a_vendored.py` re-verifies the hashes).
+
+## P5b rulings notes (R-1..R-4; no vendored-code change, `VENDORED.json` unchanged)
+- R-3 (exact create fields): `WorldGitAdapter` (src/paladin/worldbridge.py) receives, from `boot.py`, the props the ops spec lists per created type and persists only those on a create. The Engine payload's `id` is the object key (Experiment, ContractVersion, Evidence, Verdict, Decision), no longer a stored property; Hypothesis keeps `id` because the spec lists it. Payload functions are unchanged (the `no-silent-stale-write` constraint distinguishes `$key` updates from creates).
+- R-4: `Core.set_authority` calls `r3_shared.authspec.validate_strict(spec, ops_spec)` first; invalid -> ValueError, nothing changes (deploy goes through the same method).
+- R-1 / R-2: already satisfied (patch `D2` integer `committed_at`; typed reference resolution refuses a nonexistent optional `work_order`); pinned by tests/paladin/test_p5b_rulings.py.

@@ -59,7 +59,12 @@ def boot(domain: str, ops_spec: dict, auth_spec: dict, handle_factory: Callable,
         adapters = {("external_call", s): WorldExternalAdapter(s, handle_factory, per_action, inputs_of)
                     for s, per_action in specs.items()}
     else:
-        git = WorldGitAdapter(service_handle)
+        fields: dict = {}  # R-3: type -> exactly the props the ops spec lists for its create effects
+        for op in ops_spec["operations"]:
+            for e in op["effects"]:
+                if e["kind"] == "create":
+                    fields.setdefault(e["type"], set()).update(e["props"])
+        git = WorldGitAdapter(service_handle, fields)
         adapters = {("git_change", "*"): git}
     engine = Engine(ir, bindings_for(domain, ir), adapters, clock=clock)
     holder["engine"] = engine

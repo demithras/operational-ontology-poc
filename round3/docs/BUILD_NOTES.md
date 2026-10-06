@@ -191,3 +191,9 @@ Single shared definition both variants adapt to (the P2 builders had invented in
 - `PaladinVariant(mutants=())` validated by `r3_shared.mutants.validate`; `paladin/mutants.py`, `with_mutants` and the `PALADIN_MUTANTS` env path are deleted. `PaladinVariant.audience == "paladin"`, `PaladinVariant.deployment_class`; `load_variant("paladin", mutants=[...])` works.
 - Delegates are always evaluated as their `delegated_by` principal (agent-orphan transfers now DENIED, world diff empty); `approve(token, operation, args, requester, on_behalf_of=None)` is the P1b pre-approval (single use, exact request; Engine approval gate consumes it inside the commit transaction); `approval_required` is DENIED. `authority_version()` is a sha256 hex string and `set_authority` returns None.
 - Every non-OK body has a non-empty string `reason`; policy refusals are DENIED, precondition/schema INVALID. Tests: `tests/paladin/test_p2a_rework.py` plus updated r1-r4/r5-r8/functional/mutant tests.
+
+## P5b Paladin - rulings R-3/R-4 (tag r3-p5b-paladin)
+- R-3: creates persist exactly the ops-spec fields (worldbridge.py + boot.py); R-4: `validate_strict` on deploy and every `set_authority` (core.py).
+- R-1/R-2 pinned by tests (tests/paladin/test_p5b_rulings.py). Zero vendored-code changes.
+- Dev3 "new_experiment_version 0/6, evaluate_hypothesis 0/3": Paladin returned OK on all 6 and 3 calls and wrote the effects; the "misses" were
+  scoring mismatches (extra `id` prop = R-3, and oracle head_commit = R-1). Fresh-world reproduction on all experiment/contract-version pairs commits. No R8 fix needed.
