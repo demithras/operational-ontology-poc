@@ -59,11 +59,15 @@ class PaladinDeployment:
 
     _DOWN = CallResult("UNAVAILABLE", {"reason": "crashed"})
 
-    def _mutating(self, fn):
+    def _mutating(self, fn, arms: bool = True):
+        """Run one state-changing request. An armed crash fires only when the request REACHES its point; a request refused
+        (or replayed) before the point returns its normal result and the arm stays pending for the next request."""
         with self._meta:
             if self._crashed:
                 return self._DOWN
-            point, self._armed = self._armed, None
+            point = self._armed if arms else None
+            if point is not None:
+                self._armed = None
         self._tl.point = point
         try:
             res = fn()
@@ -73,9 +77,10 @@ class PaladinDeployment:
         finally:
             fired = self._tl.point is None
             self._tl.point = None
-        if point is not None and not fired:  # refused / replayed before reaching the point: the process still dies here
-            self._die()
-            return CallResult("UNKNOWN", {"reason": "crashed"})
+            if point is not None and not fired:
+                with self._meta:
+                    if self._armed is None:
+                        self._armed = point  # not reached: keep the arm
         return res
 
     def arm_crash(self, point) -> None:
@@ -218,7 +223,8 @@ class PaladinDeployment:
         return CallResult("UNKNOWN", {"reason": "unknown read"})
 
     def approve(self, token, operation, args, requester, on_behalf_of=None) -> CallResult:
-        return self._mutating(lambda: self._approve(token, operation, args, requester, on_behalf_of))
+        # recording an approval commits nothing to the world: it never reaches a crash point and leaves an armed crash pending
+        return self._mutating(lambda: self._approve(token, operation, args, requester, on_behalf_of), arms=False)
 
     def _approve(self, token, operation, args, requester, on_behalf_of=None) -> CallResult:
         """Pre-approve the EXACT request (requester, delegator, operation, args). The Engine approval gate still decides

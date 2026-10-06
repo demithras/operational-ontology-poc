@@ -121,12 +121,84 @@ def test_approval_survives_a_crash_before_commit_and_stays_usable_once(make_rig)
     assert mfg_call(rig, "c3", BIG).status == "DENIED"
 
 
-def test_armed_crash_is_taken_by_a_refused_request_too(make_rig):
+def refused(rig, rid):
+    """A request denied by authority before any crash point (nobody-1 holds nothing)."""
+    return rig.dep.direct(rig.token("nobody-1"), "transfer_inventory", TR, request_id=rid)
+
+
+@pytest.mark.parametrize("point", ["before_commit", "after_commit"])
+def test_armed_crash_survives_refused_requests_and_fires_at_its_point(make_rig, point):
+    rig = make_rig("manufacturing")
+    rig.dep.arm_crash(point)
+    for bad in (lambda: refused(rig, "r1"),
+                lambda: rig.dep.direct("garbage-token", "transfer_inventory", TR, request_id="r2"),
+                lambda: rig.dep.direct(rig.token("planner-1"), "transfer_inventory", {**TR, "bogus": 1}, request_id="r3")):
+        res, eff = rig.effects_of(bad)
+        assert res.status in ("DENIED", "INVALID") and res.body.get("reason") and eff == []
+    assert rig.dep.read(rig.token("planner-1"), "get", {"type": "Warehouse", "key": "WH-A"}).status == "OK"  # still up
+    res, eff = rig.effects_of(lambda: mfg_call(rig, "c1"))  # the first request that reaches the point crashes there
+    assert (res.status, res.body["reason"]) == ("UNKNOWN", "crashed")
+    assert len(eff) == (0 if point == "before_commit" else 1)
+    assert mfg_call(rig, "c2").status == "UNAVAILABLE"
+    rig.dep.restart()
+    assert mfg_call(rig, "c1").status == "OK"
+    assert len(rig.effects_of(lambda: mfg_call(rig, "c1"))[1]) == 0  # replay adds nothing
+    assert mfg_call(rig, "c3").status == "OK"  # the arm was consumed once: no further crash
+
+
+def test_replay_of_committed_request_does_not_consume_the_arm(make_rig):
+    rig = make_rig("manufacturing")
+    assert mfg_call(rig, "c1").status == "OK"
+    rig.dep.arm_crash("after_commit")
+    res, eff = rig.effects_of(lambda: mfg_call(rig, "c1"))
+    assert res.body.get("replayed") is True and eff == []
+    assert mfg_call(rig, "c2").status == "UNKNOWN"  # a fresh request reaches the point
+
+
+def test_approve_does_not_consume_an_armed_crash_and_approval_stays_single_use(make_rig):
+    """approve() commits nothing to the world (digest unchanged) and never reaches a crash point: the arm stays pending.
+    The approval is durable, claimed by the next commit, consumed by the recovery of that commit: not lost, not doubled."""
     rig = make_rig("manufacturing")
     rig.dep.arm_crash("after_commit")
-    res, eff = rig.effects_of(lambda: rig.dep.direct("garbage-token", "transfer_inventory", TR, request_id="c1"))
-    assert (res.status, eff) == ("UNKNOWN", [])
-    assert mfg_call(rig, "c2").status == "UNAVAILABLE"
+    res, eff = rig.effects_of(lambda: rig.dep.approve(rig.token("senior-1"), "transfer_inventory", BIG, "planner-1"))
+    assert res.status == "OK" and eff == []
+    assert rig.dep.read(rig.token("planner-1"), "get", {"type": "Warehouse", "key": "WH-A"}).status == "OK"
+    res, eff = rig.effects_of(lambda: mfg_call(rig, "c1", BIG))
+    assert res.status == "UNKNOWN" and len(eff) == 1
+    rig.dep.restart()
+    assert rig.dep.approve(rig.token("senior-1"), "transfer_inventory", BIG, "planner-1").status == "OK"  # a fresh approval
+    res, eff = rig.effects_of(lambda: mfg_call(rig, "c1", BIG))  # same id: replay, no second effect
+    assert res.body.get("replayed") is True and eff == []
+    res, eff = rig.effects_of(lambda: mfg_call(rig, "c2", BIG))  # new id consumes the fresh approval exactly once
+    assert res.status == "OK" and len(eff) == 1
+    res, eff = rig.effects_of(lambda: mfg_call(rig, "c3", BIG))
+    assert (res.status, res.body["reason"], eff) == ("DENIED", "approval_required", [])
+
+
+def test_crash_after_approve_before_any_commit_keeps_the_approval_once(make_rig):
+    rig = make_rig("manufacturing")
+    assert rig.dep.approve(rig.token("senior-1"), "transfer_inventory", BIG, "planner-1").status == "OK"
+    rig.dep.crash()
+    rig.dep.restart()
+    assert mfg_call(rig, "c1", BIG).status == "OK"
+    assert mfg_call(rig, "c2", BIG).status == "DENIED"
+
+
+def test_committed_request_that_leaves_the_world_digest_unchanged_is_recovered_safely(make_rig):
+    """An idempotent update (same value) may leave the world digest unchanged: after after_commit crash recovery aborts the
+    in-doubt row (fail-safe), the re-sent id re-executes once and the world ends identical (no duplicate effect)."""
+    rig = make_rig("project")
+    assert proj_call(rig, "p0", 11).status == "OK"
+    before = rig.snap()
+    rig.dep.arm_crash("after_commit")
+    assert proj_call(rig, "p1", 11).status == "UNKNOWN"
+    mid = rig.snap()
+    rig.dep.restart()
+    res, eff = rig.effects_of(lambda: proj_call(rig, "p1", 11))
+    assert res.status == "OK"
+    res2, eff2 = rig.effects_of(lambda: proj_call(rig, "p1", 11))
+    assert res2.body.get("replayed") is True and eff2 == []
+    assert before == mid == rig.snap() and eff == []  # the commit changed nothing: recovery aborts it, re-send adds no effect
 
 
 # ---- R10 ---------------------------------------------------------------------------------------------------
