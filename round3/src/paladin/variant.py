@@ -15,5 +15,7 @@ class PaladinVariant:
     def __init__(self, mutants: Iterable[str] = ()):
         self.mutants = _mutants.validate(mutants)
 
-    def deploy(self, domain, world_handle_factory, verifier, ops_spec, auth_spec, clock) -> PaladinDeployment:
-        return self.deployment_class(domain, world_handle_factory, verifier, ops_spec, auth_spec, clock, self.mutants)
+    def deploy(self, domain, world_handle_factory, verifier, ops_spec, auth_spec, clock,
+               state_dir=None) -> PaladinDeployment:
+        return self.deployment_class(domain, world_handle_factory, verifier, ops_spec, auth_spec, clock, self.mutants,
+                                     state_dir)

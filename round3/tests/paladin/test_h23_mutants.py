@@ -23,7 +23,8 @@ def pair(tmp_path):
 
 
 def test_switch_names_are_frozen_and_validated():
-    assert tuple(M.KNOWN["H23"]) == ("identity_substitution", "mutable_gated_input", "backstop_bypass", "tool_overexposure")
+    assert tuple(M.KNOWN["H23"]) == ("identity_substitution", "mutable_gated_input", "backstop_bypass", "tool_overexposure",
+                                    "ledger_after_commit_volatile", "unsynchronized_commit")
     with pytest.raises(ValueError):
         PaladinVariant({"not_a_switch"})
     assert PaladinVariant().mutants == frozenset()

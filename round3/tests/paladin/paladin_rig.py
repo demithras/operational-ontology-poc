@@ -17,6 +17,7 @@ SECRET = "test-secret-r3-paladin"
 class Rig:
     def __init__(self, tmp: Path, domain: str, mutants=(), auth_spec: dict | None = None):
         self.domain = domain
+        self.state_dir = str(tmp / f"state-{domain}")
         self.ops, self.auth = load_ops_spec(domain), auth_spec or load_auth_spec(domain)
         self.clock, self.idp = LogicalClock(), IdentityProvider(SECRET)
         self.store = WorldStore(tmp / f"{domain}.sqlite")
@@ -27,7 +28,7 @@ class Rig:
             seed.link(l["link_type"], l["src"], l["dst"])
         self.reader = self.store.reader()
         self.dep = PaladinVariant(mutants).deploy(domain, self.store.handle_factory(), self.idp.verifier(), self.ops,
-                                                  self.auth, self.clock)
+                                                  self.auth, self.clock, state_dir=self.state_dir)
         self._n = 0
 
     def token(self, sub: str, ttl: int = 1000, aud: str = AUDIENCE) -> str:

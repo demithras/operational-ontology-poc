@@ -46,7 +46,7 @@ class Booted:
 
 
 def boot(domain: str, ops_spec: dict, auth_spec: dict, handle_factory: Callable, service_handle: Any,
-         clock: Callable[[], int]) -> Booted:
+         clock: Callable[[], int], pre_apply: Callable[[], None] = lambda: None) -> Booted:
     ir = compile_ir(load_ir(domain), auth_spec, ops_spec)
     holder: dict = {}
     if domain == "manufacturing":
@@ -56,15 +56,15 @@ def boot(domain: str, ops_spec: dict, auth_spec: dict, handle_factory: Callable,
                 if e["kind"] == "external":
                     specs.setdefault(e["adapter"], {})[op["name"]] = e
         inputs_of = lambda xid: holder["engine"]._executions[xid]["inputs"]  # noqa: E731 - read-only adapter helper
-        adapters = {("external_call", s): WorldExternalAdapter(s, handle_factory, per_action, inputs_of)
+        adapters = {("external_call", s): WorldExternalAdapter(s, handle_factory, per_action, inputs_of, pre_apply)
                     for s, per_action in specs.items()}
     else:
-        fields: dict = {}  # R-3: type -> exactly the props the ops spec lists for its create effects
+        fields: dict = {}  # (action, kind, type) -> exactly the props the ops spec lists for that effect (R-3 creates; updates likewise)
         for op in ops_spec["operations"]:
             for e in op["effects"]:
-                if e["kind"] == "create":
-                    fields.setdefault(e["type"], set()).update(e["props"])
-        git = WorldGitAdapter(service_handle, fields)
+                if e["kind"] in ("create", "update"):
+                    fields.setdefault((op["name"], e["kind"], e["type"]), set()).update(e["props"])
+        git = WorldGitAdapter(service_handle, fields, pre_apply)
         adapters = {("git_change", "*"): git}
     engine = Engine(ir, bindings_for(domain, ir), adapters, clock=clock)
     holder["engine"] = engine
