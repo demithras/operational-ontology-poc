@@ -1,6 +1,9 @@
 """PaladinDeployment: the r3_shared Deployment protocol over the Paladin core (+ approve / set_authority extras)."""
 from __future__ import annotations
 
+import hashlib
+import json
+
 from paladin.core import AUDIENCE, Core, fingerprint, plain
 from paladin.engine import CapabilityError, InvalidRequest, Principal
 from paladin.surface import SurfaceFactory, UnknownTool, who_of
@@ -27,13 +30,13 @@ class PaladinDeployment:
         self._surfaces = SurfaceFactory(self._c.booted.ir)
 
     # ---- authority management ---------------------------------------------------------------
-    def set_authority(self, auth_spec: dict) -> int:
-        v = self._c.set_authority(auth_spec)
+    def set_authority(self, auth_spec: dict) -> None:
+        self._c.set_authority(auth_spec)
         self._surfaces = SurfaceFactory(self._c.booted.ir)
-        return v
 
-    def authority_version(self) -> int:
-        return self._c.authority_version
+    def authority_version(self) -> str:
+        """sha256 hex of the canonical JSON of the spec in force (r3_shared protocol)."""
+        return hashlib.sha256(json.dumps(self._c.auth, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
     # ---- surface (R3) -----------------------------------------------------------------------
     def _surface(self, sub: str, obo, propose):
@@ -50,8 +53,9 @@ class PaladinDeployment:
         if isinstance(s, CallResult):
             return s
         ops = self._surfaces.granted_operations(s)
-        if obo is not None:  # a delegated surface only offers what the delegation lists
-            ops &= set(self._c.delegations.get((sub, obo), ()))
+        eff = self._c.delegator.get(sub)
+        if eff is not None:  # a delegate's surface only offers what its delegation lists
+            ops &= set(self._c.delegations.get((sub, eff), ()))
         return ops
 
     def tools(self, token: str) -> list[ToolDescriptor]:
@@ -61,10 +65,7 @@ class PaladinDeployment:
         if "tool_overexposure" in self._c.mutants:  # MUTANT: every operation listed regardless of grants
             names = set(self._c.ops)
         else:
-            names = set(self._exposed(sub, None))
-            for (agent, obo) in self._c.delegations:
-                if agent == sub and obo in self._c.booted.principals:
-                    names |= self._exposed(sub, obo)
+            names = set(self._exposed(sub, None))  # a delegate is always surfaced as its delegator's delegate
         return [ToolDescriptor(n, _schema(self._c.ops[n])) for n in sorted(names)]
 
     # ---- calls ------------------------------------------------------------------------------
@@ -92,7 +93,7 @@ class PaladinDeployment:
             return surf
         tool = self._surfaces.tool_of_op[name]
         if name not in self._surfaces.granted_operations(surf):
-            return CallResult("UNKNOWN", {"reason": "no such tool"})  # absent from this principal's surface
+            return CallResult("DENIED", {"gate": "surface", "reason": "operation not granted to this principal"})  # absent from its surface
         try:
             surf.call(tool, idempotency_key=request_id, **args)
         except UnknownTool:
@@ -124,23 +125,30 @@ class PaladinDeployment:
             return CallResult("INVALID", {"reason": f"{type(exc).__name__}: {exc}"})
         return CallResult("UNKNOWN", {"reason": "unknown read"})
 
-    def approve(self, token, request_id, approve: bool = True) -> CallResult:
-        """Second-principal approval of a PENDING_APPROVAL request (not part of the Variant protocol)."""
+    def approve(self, token, operation, args, requester, on_behalf_of=None) -> CallResult:
+        """Pre-approve the EXACT request (requester, delegator, operation, args). The Engine approval gate still decides
+        at commit: this records a single-use approval that the later propose consumes (see Core._commit)."""
         c, sub = self._c, self._c.subject(token)
-        p = c.pending.get(request_id)
-        if sub is None or sub not in c.booted.principals or p is None:
-            return CallResult("DENIED", {"gate": "approval", "reason": "no such pending request or bad identity"})
-        approver = c.booted.principals[sub]
-        proposer_chain = {p["sub"], *([p["obo"]] if p["obo"] else [])}
-        if sub in proposer_chain:
+        if sub is None or sub not in c.booted.principals:
+            return CallResult("DENIED", {"gate": "identity", "reason": "invalid token or unknown approver"})
+        if not isinstance(requester, str) or requester not in c.booted.principals:
+            return CallResult("DENIED", {"gate": "approval", "reason": "unknown requester"})
+        if not isinstance(operation, str) or operation not in c.ops:
+            return CallResult("UNKNOWN", {"reason": "unknown operation"})
+        if not (c.ops[operation].get("approval") or {}).get("approver_operation"):
+            return CallResult("INVALID", {"gate": "approval", "reason": "operation takes no approval"})
+        who = c.principal(requester, on_behalf_of, operation)
+        if isinstance(who, CallResult):
+            return who
+        clean = c.check_shape(operation, args, "approval")
+        if isinstance(clean, CallResult):
+            return clean
+        if sub in c.chain_pids(requester):
             return CallResult("DENIED", {"gate": "approval", "reason": "approver is in the requester's delegation chain"})
-        if not approve:
-            return CallResult("DENIED", {"gate": "approval", "reason": "rejected"})
-        res = c._commit(approver, p["op"], {}, request_id, approve=(p["execution"], approver))
-        if res.status == "OK":
-            c.ledger[request_id] = {"fp": p["fp"], "status": "OK", "body": plain(res.body), "sub": p["sub"], "obo": p["obo"], "op": p["op"]}
-            c.pending.pop(request_id, None)
-        return res
+        if not c.holds_approval(sub, operation, clean):
+            return CallResult("DENIED", {"gate": "approval", "reason": "approver holds no approval capability for this request"})
+        c.approvals.setdefault(fingerprint(requester, c.delegator.get(requester), operation, clean), []).append(sub)
+        return CallResult("OK", {"approval": "recorded"})
 
     def crash(self) -> None:
         raise NotImplementedError("crash/restart: not implemented yet - H29")

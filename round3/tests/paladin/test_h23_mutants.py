@@ -1,7 +1,8 @@
 """Each H23 mutant switch demonstrably changes behaviour: the same script is clean without it and forbidden with it."""
 import pytest
 
-from paladin import mutants as M
+from r3_shared import mutants as M
+from r3_shared.registry import load_variant
 from paladin.variant import PaladinVariant
 from paladin_rig import Rig
 
@@ -22,16 +23,18 @@ def pair(tmp_path):
 
 
 def test_switch_names_are_frozen_and_validated():
-    assert M.H23 == ("identity_substitution", "mutable_gated_input", "backstop_bypass", "tool_overexposure")
+    assert tuple(M.KNOWN["H23"]) == ("identity_substitution", "mutable_gated_input", "backstop_bypass", "tool_overexposure")
     with pytest.raises(ValueError):
         PaladinVariant({"not_a_switch"})
     assert PaladinVariant().mutants == frozenset()
-    assert PaladinVariant().with_mutants("backstop_bypass").mutants == {"backstop_bypass"}
+    assert PaladinVariant(["backstop_bypass"]).mutants == {"backstop_bypass"}
+    assert load_variant("paladin", mutants=["backstop_bypass"]).mutants == {"backstop_bypass"}
+    assert PaladinVariant.audience == "paladin" and PaladinVariant.deployment_class.audience == "paladin"
 
 
-def test_switches_can_come_from_the_environment(monkeypatch):
-    monkeypatch.setenv(M.ENV, "tool_overexposure, backstop_bypass")
-    assert PaladinVariant().mutants == {"tool_overexposure", "backstop_bypass"}
+def test_environment_is_not_a_switch(monkeypatch):
+    monkeypatch.setenv("PALADIN_MUTANTS", "tool_overexposure, backstop_bypass")
+    assert PaladinVariant().mutants == frozenset()
 
 
 @pytest.mark.parametrize("field", ["principal", "actor", "requested_by", "owner"])
@@ -79,7 +82,7 @@ def test_mutable_gated_input(pair):
 
 
 def test_every_switch_leaves_legitimate_work_untouched(tmp_path):
-    for i, name in enumerate(M.H23):
+    for i, name in enumerate(M.KNOWN["H23"]):
         d = tmp_path / str(i)
         d.mkdir()
         rig = Rig(d, "manufacturing", mutants=(name,))

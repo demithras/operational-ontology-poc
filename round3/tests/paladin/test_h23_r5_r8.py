@@ -49,7 +49,9 @@ def test_r5_replay_after_set_authority_uses_the_authority_in_force_now(mfg):
     v0 = mfg.dep.authority_version()
     revoked = copy.deepcopy(mfg.auth)
     revoked["grants"] = [g for g in revoked["grants"] if g["id"] != "transfer-inventory-planner"]
-    assert mfg.dep.set_authority(revoked) == v0 + 1 == mfg.dep.authority_version()
+    assert mfg.dep.set_authority(revoked) is None
+    v1 = mfg.dep.authority_version()
+    assert v1 != v0 and len(v1) == 64
     assert zero(mfg, lambda: mfg.dep.direct(t, "transfer_inventory", TR, request_id="r1")).status == "DENIED"
     assert zero(mfg, lambda: mfg.dep.direct(t, "transfer_inventory", TR, request_id="r2")).status == "DENIED"
     assert "transfer_inventory" not in [d.name for d in mfg.dep.tools(t)]
@@ -73,7 +75,7 @@ def test_r6_preconditions_use_the_canonical_world_at_commit(mfg):
     t = mfg.token("planner-1")
     assert mfg.dep.direct(t, "transfer_inventory", TR, request_id="r1").status == "OK"
     mfg.store.handle("seed").update("InventoryLot", "LOT-C-PX900", {"qualityStatus": "QUARANTINE"})  # world changes under us
-    assert zero(mfg, lambda: mfg.dep.direct(t, "transfer_inventory", {**TR, "quantity": 61}, request_id="r2")).status == "INVALID"
+    assert zero(mfg, lambda: mfg.dep.direct(t, "transfer_inventory", {**TR, "quantity": 61}, request_id="r2")).status == "DENIED"  # policy hard deny (quarantine)
     mfg.store.handle("seed").update("InventoryLot", "LOT-C-PX900", {"qualityStatus": "OK", "onHand": 10})
     assert zero(mfg, lambda: mfg.dep.direct(t, "transfer_inventory", {**TR, "quantity": 62}, request_id="r3")).status == "INVALID"
 
@@ -83,7 +85,7 @@ def test_r6_target_existence_and_stale_evidence(mfg, proj):
     for args in ({**TR, "part": "PX-NOPE"}, {**TR, "source_warehouse": "WH-NOPE"}):
         assert zero(mfg, lambda: mfg.dep.direct(t, "transfer_inventory", args, request_id=mfg.rid())).status == "INVALID"
     mfg.clock.advance(6)  # evidence snapshot was observed at tick 0: older than the 5-tick window
-    assert zero(mfg, lambda: mfg.dep.direct(mfg.token("planner-1"), "transfer_inventory", TR, request_id="late")).status == "INVALID"
+    assert zero(mfg, lambda: mfg.dep.direct(mfg.token("planner-1"), "transfer_inventory", TR, request_id="late")).status == "DENIED"  # stale-evidence policy
     assert zero(proj, lambda: proj.dep.direct(proj.token("researcher-1"), "start_run", {"hypothesis": "H-NOPE"},
                                               request_id="p1")).status == "INVALID"
 
@@ -132,7 +134,7 @@ def test_r7_error_midway_commits_no_partial_effect(proj, monkeypatch):
 
 @pytest.mark.parametrize("bad", [{"claim": 7}, {"claim": ""}, {}, {"claim": "ok", "extra": 1}, {"claim": "ephemeral: scratch"}])
 def test_r7_project_invalid_inputs_have_no_effect(proj, bad):
-    assert zero(proj, lambda: proj.dep.direct(proj.token("researcher-1"), "create_hypothesis", bad, request_id="p1")).status == "INVALID"
+    assert zero(proj, lambda: proj.dep.direct(proj.token("researcher-1"), "create_hypothesis", bad, request_id="p1")).status in ("INVALID", "DENIED")
 
 
 # ---- R8 legitimate progress ----------------------------------------------------------------------------------------

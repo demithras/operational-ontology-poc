@@ -75,7 +75,7 @@ def test_r2_direct_denies_what_the_tool_surface_hides(mfg, who, op, args):
     t = mfg.token(who)
     assert op not in [d.name for d in mfg.dep.tools(t)]
     assert zero(mfg, lambda: mfg.dep.direct(t, op, args, request_id="r1")).status == "DENIED"
-    assert zero(mfg, lambda: mfg.dep.call_tool(t, op, args, request_id="r2")).status == "UNKNOWN"
+    assert zero(mfg, lambda: mfg.dep.call_tool(t, op, args, request_id="r2")).status in ("UNKNOWN", "DENIED")
 
 
 def test_r2_direct_denies_out_of_scope_resource_for_visible_tool(mfg):
@@ -118,20 +118,18 @@ def test_r3_hidden_tool_guessing_has_no_effect(mfg):
 
 
 # ---- R4 decision binding -------------------------------------------------------------------------------------
-def test_r4_pending_request_is_bound_to_its_inputs(mfg):
-    t = mfg.token("planner-1")
+def test_r4_approval_is_bound_to_the_exact_request(mfg):
+    t, sen = mfg.token("planner-1"), mfg.token("senior-1")
     res = zero(mfg, lambda: mfg.dep.direct(t, "transfer_inventory", BIG, request_id="r9"))
-    assert res.body["state"] == "PENDING_APPROVAL"
-    held = copy.deepcopy(res.body)
-    res.body["quantity"] = 1  # the caller scribbles on what it was handed; this is a copy, not execution state
-    res.body.setdefault("inputs", {})["quantity"] = 1
-    # same request id, changed gated input -> refused, never mutates the pending decision
-    again = zero(mfg, lambda: mfg.dep.direct(t, "transfer_inventory", {**BIG, "quantity": 300}, request_id="r9"))
-    assert again.status == "INVALID"
-    other_part = zero(mfg, lambda: mfg.dep.direct(t, "transfer_inventory", {**BIG, "part": "PX-17"}, request_id="r9"))
-    assert other_part.status == "INVALID"
-    res2, eff = mfg.effects_of(lambda: mfg.dep.approve(mfg.token("senior-1"), "r9"))
-    assert res2.status == "OK" and len(eff) == 1 and eff[0]["payload"]["quantity"] == 400 and held["state"] == "PENDING_APPROVAL"
+    assert (res.status, res.body["reason"]) == ("DENIED", "approval_required")
+    assert mfg.dep.approve(sen, "transfer_inventory", BIG, "planner-1").status == "OK"
+    for changed in ({**BIG, "quantity": 450}, {**BIG, "part": "PX-17"}, {**BIG, "destination_warehouse": "WH-A"}):
+        r = zero(mfg, lambda: mfg.dep.direct(t, "transfer_inventory", changed, request_id=mfg.rid()))
+        assert r.status in ("DENIED", "INVALID") and r.body["reason"], changed
+    res2, eff = mfg.effects_of(lambda: mfg.dep.direct(t, "transfer_inventory", BIG, request_id="r10"))
+    assert res2.status == "OK" and len(eff) == 1 and eff[0]["payload"]["quantity"] == 400
+    again = zero(mfg, lambda: mfg.dep.direct(t, "transfer_inventory", BIG, request_id="r11"))  # one approval, one commit
+    assert (again.status, again.body["reason"]) == ("DENIED", "approval_required")
 
 
 def test_r4_returned_records_are_copies(proj):

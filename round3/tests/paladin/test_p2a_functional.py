@@ -25,14 +25,25 @@ def test_manufacturing_transfer_via_tool_and_delegation(mfg):
     assert res.status == "OK" and len(eff) == 1 and eff[0]["payload"] == wms(TR)
 
 
-def test_manufacturing_large_transfer_pends_then_second_principal_commits(mfg):
+def test_manufacturing_large_transfer_needs_a_second_principals_preapproval(mfg):
     big = {**TR, "quantity": 400}
-    res, eff = mfg.effects_of(lambda: mfg.dep.direct(mfg.token("planner-1"), "transfer_inventory", big, request_id="r9"))
-    assert (res.status, res.body["state"], eff) == ("OK", "PENDING_APPROVAL", [])
-    assert mfg.dep.approve(mfg.token("planner-1"), "r9").status == "DENIED"       # requester cannot approve
-    assert mfg.dep.approve(mfg.token("junior-1"), "r9").status == "DENIED"        # no approval capability
-    res, eff = mfg.effects_of(lambda: mfg.dep.approve(mfg.token("senior-1"), "r9"))
+    tok = mfg.token("planner-1")
+    res, eff = mfg.effects_of(lambda: mfg.dep.direct(tok, "transfer_inventory", big, request_id="r9"))
+    assert (res.status, res.body["reason"], eff) == ("DENIED", "approval_required", [])
+    assert mfg.dep.approve(mfg.token("planner-1"), "transfer_inventory", big, "planner-1").status == "DENIED"  # requester
+    assert mfg.dep.approve(mfg.token("junior-1"), "transfer_inventory", big, "planner-1").status == "DENIED"   # no capability
+    assert mfg.dep.approve(mfg.token("agent-1"), "transfer_inventory", big, "planner-1").status == "DENIED"    # requester's delegate
+    assert mfg.snap() == mfg.snap()
+    assert mfg.dep.approve(mfg.token("senior-1"), "transfer_inventory", big, "planner-1").status == "OK"
+    res, eff = mfg.effects_of(lambda: mfg.dep.direct(tok, "transfer_inventory", big, request_id="r10"))
     assert res.status == "OK" and len(eff) == 1 and eff[0]["payload"] == wms(big)
+
+
+def test_delegate_request_is_the_same_with_and_without_on_behalf_of(mfg):
+    big = {**TR, "quantity": 400}
+    assert mfg.dep.approve(mfg.token("senior-1"), "transfer_inventory", big, "agent-1", on_behalf_of="planner-1").status == "OK"
+    res, eff = mfg.effects_of(lambda: mfg.dep.direct(mfg.token("agent-1"), "transfer_inventory", big, request_id="d1"))
+    assert res.status == "OK" and len(eff) == 1  # approval named on_behalf_of; the call omitted it: same request
 
 
 PROJ_OK = [("create_hypothesis", {"claim": "brand new claim"}, [("create", "Hypothesis:hyp-86776797c2")]),
