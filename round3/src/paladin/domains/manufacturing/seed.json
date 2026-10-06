@@ -1,0 +1,864 @@
+{
+ "description": "synthetic manufacturing seed (canonical-incident shaped)",
+ "ops": [
+  {
+   "key": "WH-A",
+   "op": "create",
+   "props": {
+    "capacityClass": "standard",
+    "region": "region-1",
+    "warehouseId": "WH-A"
+   },
+   "type": "Warehouse"
+  },
+  {
+   "key": "WH-B",
+   "op": "create",
+   "props": {
+    "capacityClass": "standard",
+    "region": "region-1",
+    "warehouseId": "WH-B"
+   },
+   "type": "Warehouse"
+  },
+  {
+   "key": "WH-C",
+   "op": "create",
+   "props": {
+    "capacityClass": "standard",
+    "region": "region-1",
+    "warehouseId": "WH-C"
+   },
+   "type": "Warehouse"
+  },
+  {
+   "key": "PX-17",
+   "op": "create",
+   "props": {
+    "criticality": "HIGH",
+    "description": "reference part for the canonical incident",
+    "partId": "PX-17",
+    "unit": "each"
+   },
+   "type": "Part"
+  },
+  {
+   "key": "PX-900",
+   "op": "create",
+   "props": {
+    "criticality": "LOW",
+    "description": "bulk part",
+    "partId": "PX-900",
+    "unit": "each"
+   },
+   "type": "Part"
+  },
+  {
+   "key": "S-7",
+   "op": "create",
+   "props": {
+    "leadTimeDays": 5,
+    "riskClass": "MEDIUM",
+    "status": "ACTIVE",
+    "supplierId": "S-7"
+   },
+   "type": "Supplier"
+  },
+  {
+   "key": "L-1",
+   "op": "create",
+   "props": {
+    "capabilities": "assembly",
+    "lineId": "L-1",
+    "status": "RUNNING"
+   },
+   "type": "ProductionLine"
+  },
+  {
+   "key": "LOT-A-PX17",
+   "op": "create",
+   "props": {
+    "lotId": "LOT-A-PX17",
+    "onHand": 20,
+    "qualityStatus": "OK",
+    "reserved": 0
+   },
+   "type": "InventoryLot"
+  },
+  {
+   "dst": [
+    "Part",
+    "PX-17"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "InventoryLot",
+    "LOT-A-PX17"
+   ],
+   "type": "PartReferencing_part"
+  },
+  {
+   "dst": [
+    "Warehouse",
+    "WH-A"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "InventoryLot",
+    "LOT-A-PX17"
+   ],
+   "type": "InventoryLot_warehouse"
+  },
+  {
+   "key": "LOT-B-PX17",
+   "op": "create",
+   "props": {
+    "lotId": "LOT-B-PX17",
+    "onHand": 140,
+    "qualityStatus": "OK",
+    "reserved": 0
+   },
+   "type": "InventoryLot"
+  },
+  {
+   "dst": [
+    "Part",
+    "PX-17"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "InventoryLot",
+    "LOT-B-PX17"
+   ],
+   "type": "PartReferencing_part"
+  },
+  {
+   "dst": [
+    "Warehouse",
+    "WH-B"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "InventoryLot",
+    "LOT-B-PX17"
+   ],
+   "type": "InventoryLot_warehouse"
+  },
+  {
+   "key": "LOT-C-PX900",
+   "op": "create",
+   "props": {
+    "lotId": "LOT-C-PX900",
+    "onHand": 500,
+    "qualityStatus": "OK",
+    "reserved": 0
+   },
+   "type": "InventoryLot"
+  },
+  {
+   "dst": [
+    "Part",
+    "PX-900"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "InventoryLot",
+    "LOT-C-PX900"
+   ],
+   "type": "PartReferencing_part"
+  },
+  {
+   "dst": [
+    "Warehouse",
+    "WH-C"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "InventoryLot",
+    "LOT-C-PX900"
+   ],
+   "type": "InventoryLot_warehouse"
+  },
+  {
+   "key": "LOT-B-PX900",
+   "op": "create",
+   "props": {
+    "lotId": "LOT-B-PX900",
+    "onHand": 10,
+    "qualityStatus": "OK",
+    "reserved": 0
+   },
+   "type": "InventoryLot"
+  },
+  {
+   "dst": [
+    "Part",
+    "PX-900"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "InventoryLot",
+    "LOT-B-PX900"
+   ],
+   "type": "PartReferencing_part"
+  },
+  {
+   "dst": [
+    "Warehouse",
+    "WH-B"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "InventoryLot",
+    "LOT-B-PX900"
+   ],
+   "type": "InventoryLot_warehouse"
+  },
+  {
+   "key": "LOT-A-PX900",
+   "op": "create",
+   "props": {
+    "lotId": "LOT-A-PX900",
+    "onHand": 30,
+    "qualityStatus": "QUARANTINE",
+    "reserved": 0
+   },
+   "type": "InventoryLot"
+  },
+  {
+   "dst": [
+    "Part",
+    "PX-900"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "InventoryLot",
+    "LOT-A-PX900"
+   ],
+   "type": "PartReferencing_part"
+  },
+  {
+   "dst": [
+    "Warehouse",
+    "WH-A"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "InventoryLot",
+    "LOT-A-PX900"
+   ],
+   "type": "InventoryLot_warehouse"
+  },
+  {
+   "key": "WO-42",
+   "op": "create",
+   "props": {
+    "plannedFinish": 40,
+    "plannedStart": 18,
+    "priority": "HIGH",
+    "status": "PLANNED",
+    "workOrderId": "WO-42"
+   },
+   "type": "WorkOrder"
+  },
+  {
+   "key": "WO-43",
+   "op": "create",
+   "props": {
+    "plannedFinish": 60,
+    "plannedStart": 30,
+    "priority": "LOW",
+    "status": "RUNNING",
+    "workOrderId": "WO-43"
+   },
+   "type": "WorkOrder"
+  },
+  {
+   "dst": [
+    "Warehouse",
+    "WH-A"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "WorkOrder",
+    "WO-42"
+   ],
+   "type": "WorkOrder_warehouse"
+  },
+  {
+   "dst": [
+    "ProductionLine",
+    "L-1"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "WorkOrder",
+    "WO-42"
+   ],
+   "type": "WorkOrder_productionLine"
+  },
+  {
+   "key": "BOM-42-PX17",
+   "op": "create",
+   "props": {
+    "iri": "BOM-42-PX17",
+    "quantity": 80
+   },
+   "type": "BomRequirement"
+  },
+  {
+   "dst": [
+    "WorkOrder",
+    "WO-42"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "BomRequirement",
+    "BOM-42-PX17"
+   ],
+   "type": "BomRequirement_workOrder"
+  },
+  {
+   "dst": [
+    "Part",
+    "PX-17"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "BomRequirement",
+    "BOM-42-PX17"
+   ],
+   "type": "BomRequirement_requiresPart"
+  },
+  {
+   "dst": [
+    "Warehouse",
+    "WH-B"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "WorkOrder",
+    "WO-43"
+   ],
+   "type": "WorkOrder_warehouse"
+  },
+  {
+   "dst": [
+    "ProductionLine",
+    "L-1"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "WorkOrder",
+    "WO-43"
+   ],
+   "type": "WorkOrder_productionLine"
+  },
+  {
+   "key": "BOM-43-PX900",
+   "op": "create",
+   "props": {
+    "iri": "BOM-43-PX900",
+    "quantity": 5
+   },
+   "type": "BomRequirement"
+  },
+  {
+   "dst": [
+    "WorkOrder",
+    "WO-43"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "BomRequirement",
+    "BOM-43-PX900"
+   ],
+   "type": "BomRequirement_workOrder"
+  },
+  {
+   "dst": [
+    "Part",
+    "PX-900"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "BomRequirement",
+    "BOM-43-PX900"
+   ],
+   "type": "BomRequirement_requiresPart"
+  },
+  {
+   "key": "PO-991",
+   "op": "create",
+   "props": {
+    "expectedAt": 120,
+    "poId": "PO-991",
+    "promisedAt": 8,
+    "status": "DELAYED"
+   },
+   "type": "PurchaseOrder"
+  },
+  {
+   "dst": [
+    "Supplier",
+    "S-7"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "PurchaseOrder",
+    "PO-991"
+   ],
+   "type": "PurchaseOrder_suppliedBy"
+  },
+  {
+   "key": "POL-991-1",
+   "op": "create",
+   "props": {
+    "iri": "POL-991-1",
+    "quantity": 100
+   },
+   "type": "PurchaseOrderLine"
+  },
+  {
+   "dst": [
+    "PurchaseOrder",
+    "PO-991"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "PurchaseOrderLine",
+    "POL-991-1"
+   ],
+   "type": "PurchaseOrderLine_purchaseOrder"
+  },
+  {
+   "dst": [
+    "Part",
+    "PX-17"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "PurchaseOrderLine",
+    "POL-991-1"
+   ],
+   "type": "PartReferencing_part"
+  },
+  {
+   "dst": [
+    "Warehouse",
+    "WH-A"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "PurchaseOrderLine",
+    "POL-991-1"
+   ],
+   "type": "PurchaseOrderLine_destinationWarehouse"
+  },
+  {
+   "key": "PO-992",
+   "op": "create",
+   "props": {
+    "expectedAt": 40,
+    "poId": "PO-992",
+    "promisedAt": 8,
+    "status": "OPEN"
+   },
+   "type": "PurchaseOrder"
+  },
+  {
+   "dst": [
+    "Supplier",
+    "S-7"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "PurchaseOrder",
+    "PO-992"
+   ],
+   "type": "PurchaseOrder_suppliedBy"
+  },
+  {
+   "key": "POL-992-1",
+   "op": "create",
+   "props": {
+    "iri": "POL-992-1",
+    "quantity": 50
+   },
+   "type": "PurchaseOrderLine"
+  },
+  {
+   "dst": [
+    "PurchaseOrder",
+    "PO-992"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "PurchaseOrderLine",
+    "POL-992-1"
+   ],
+   "type": "PurchaseOrderLine_purchaseOrder"
+  },
+  {
+   "dst": [
+    "Part",
+    "PX-900"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "PurchaseOrderLine",
+    "POL-992-1"
+   ],
+   "type": "PartReferencing_part"
+  },
+  {
+   "dst": [
+    "Warehouse",
+    "WH-B"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "PurchaseOrderLine",
+    "POL-992-1"
+   ],
+   "type": "PurchaseOrderLine_destinationWarehouse"
+  },
+  {
+   "key": "ES-1",
+   "op": "create",
+   "props": {
+    "iri": "ES-1",
+    "snapshotContentHash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "snapshotObservedAt": "2026-01-01T00:00:00+00:00"
+   },
+   "type": "EvidenceSnapshot"
+  },
+  {
+   "key": "IM-ERP",
+   "op": "create",
+   "props": {
+    "iri": "IM-ERP",
+    "mappingRuleId": "canonical-incident",
+    "mappingRuleVersion": "1",
+    "sourceLocalId": "PART-00192"
+   },
+   "type": "IdentityMapping"
+  },
+  {
+   "dst": [
+    "Part",
+    "PX-17"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "IdentityMapping",
+    "IM-ERP"
+   ],
+   "type": "IdentityMapping_canonicalId"
+  },
+  {
+   "key": "IM-MES",
+   "op": "create",
+   "props": {
+    "iri": "IM-MES",
+    "mappingRuleId": "canonical-incident",
+    "mappingRuleVersion": "1",
+    "sourceLocalId": "COMP-A17"
+   },
+   "type": "IdentityMapping"
+  },
+  {
+   "dst": [
+    "Part",
+    "PX-17"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "IdentityMapping",
+    "IM-MES"
+   ],
+   "type": "IdentityMapping_canonicalId"
+  },
+  {
+   "key": "IM-WMS",
+   "op": "create",
+   "props": {
+    "iri": "IM-WMS",
+    "mappingRuleId": "canonical-incident",
+    "mappingRuleVersion": "1",
+    "sourceLocalId": "SKU-88429"
+   },
+   "type": "IdentityMapping"
+  },
+  {
+   "dst": [
+    "Part",
+    "PX-17"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "IdentityMapping",
+    "IM-WMS"
+   ],
+   "type": "IdentityMapping_canonicalId"
+  },
+  {
+   "key": "planner-1",
+   "op": "create",
+   "props": {
+    "actorId": "planner-1",
+    "actorRole": "planner"
+   },
+   "type": "HumanActor"
+  },
+  {
+   "key": "D-1",
+   "op": "create",
+   "props": {
+    "actionType": "transfer_inventory",
+    "actionVersion": 3,
+    "authorizationModelVersion": "v2",
+    "createdAt": "2026-01-01T00:00:00+00:00",
+    "decisionId": "D-1",
+    "decisionType": "transfer",
+    "ontologyVersion": "v3",
+    "parametersJson": "{\"part\": \"PX-900\", \"quantity\": 100}",
+    "policyBundleVersion": "v2",
+    "shapeSetVersion": "v3",
+    "status": "REQUIRES_APPROVAL"
+   },
+   "type": "Decision"
+  },
+  {
+   "dst": [
+    "HumanActor",
+    "planner-1"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "Decision",
+    "D-1"
+   ],
+   "type": "Decision_actor"
+  },
+  {
+   "dst": [
+    "EvidenceSnapshot",
+    "ES-1"
+   ],
+   "op": "link",
+   "props": {},
+   "src": [
+    "Decision",
+    "D-1"
+   ],
+   "type": "Decision_evidenceSnapshot"
+  }
+ ],
+ "principals": [
+  {
+   "delegated_by": null,
+   "pid": "planner-1",
+   "relations": [
+    [
+     "Warehouse",
+     "WH-A",
+     "planner"
+    ],
+    [
+     "Warehouse",
+     "WH-B",
+     "planner"
+    ],
+    [
+     "Warehouse",
+     "WH-C",
+     "planner"
+    ]
+   ],
+   "roles": [
+    "planner"
+   ]
+  },
+  {
+   "delegated_by": null,
+   "pid": "junior-1",
+   "relations": [
+    [
+     "Warehouse",
+     "WH-A",
+     "junior_planner"
+    ],
+    [
+     "Warehouse",
+     "WH-B",
+     "junior_planner"
+    ],
+    [
+     "Warehouse",
+     "WH-C",
+     "junior_planner"
+    ]
+   ],
+   "roles": [
+    "junior_planner"
+   ]
+  },
+  {
+   "delegated_by": null,
+   "pid": "supervisor-1",
+   "relations": [
+    [
+     "Warehouse",
+     "WH-A",
+     "supervisor"
+    ],
+    [
+     "Warehouse",
+     "WH-B",
+     "supervisor"
+    ],
+    [
+     "Warehouse",
+     "WH-C",
+     "supervisor"
+    ]
+   ],
+   "roles": [
+    "supervisor"
+   ]
+  },
+  {
+   "delegated_by": null,
+   "pid": "senior-1",
+   "relations": [
+    [
+     "Warehouse",
+     "WH-A",
+     "senior_approver"
+    ],
+    [
+     "Warehouse",
+     "WH-B",
+     "senior_approver"
+    ],
+    [
+     "Warehouse",
+     "WH-C",
+     "senior_approver"
+    ]
+   ],
+   "roles": [
+    "senior_approver"
+   ]
+  },
+  {
+   "delegated_by": {
+    "delegated_by": null,
+    "pid": "planner-1",
+    "relations": [
+     [
+      "Warehouse",
+      "WH-A",
+      "planner"
+     ],
+     [
+      "Warehouse",
+      "WH-B",
+      "planner"
+     ],
+     [
+      "Warehouse",
+      "WH-C",
+      "planner"
+     ]
+    ],
+    "roles": [
+     "planner"
+    ]
+   },
+   "pid": "agent-1",
+   "relations": [
+    [
+     "Warehouse",
+     "WH-A",
+     "agent_grant"
+    ],
+    [
+     "Warehouse",
+     "WH-B",
+     "agent_grant"
+    ],
+    [
+     "Warehouse",
+     "WH-C",
+     "agent_grant"
+    ]
+   ],
+   "roles": [
+    "agent"
+   ]
+  },
+  {
+   "delegated_by": {
+    "delegated_by": null,
+    "pid": "nobody-1",
+    "relations": [],
+    "roles": [
+     "none"
+    ]
+   },
+   "pid": "agent-orphan",
+   "relations": [
+    [
+     "Warehouse",
+     "WH-A",
+     "agent_grant"
+    ],
+    [
+     "Warehouse",
+     "WH-B",
+     "agent_grant"
+    ],
+    [
+     "Warehouse",
+     "WH-C",
+     "agent_grant"
+    ]
+   ],
+   "roles": [
+    "agent"
+   ]
+  }
+ ]
+}
