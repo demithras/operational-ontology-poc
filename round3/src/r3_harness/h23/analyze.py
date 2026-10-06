@@ -25,7 +25,7 @@ def analyze(path: str | Path) -> dict:
     lat: list[float] = []
     flagged: list[dict] = []
     ident_calls = ident_bad = 0
-    n_seq = n_calls = 0
+    n_seq = n_calls = oracle_errors = 0
     for line in Path(path).read_text().splitlines():
         if not line.strip():
             continue
@@ -36,6 +36,7 @@ def analyze(path: str | Path) -> dict:
         domains[rec["domain"]] += 1
         for c in rec["calls"]:
             n_calls += 1
+            oracle_errors += bool(c.get("oracle_error"))
             rules[c["rule"]] += 1
             ops[(rec["domain"], c["operation"])] += 1
             for a in a_class_of(c["rule"]):
@@ -65,6 +66,6 @@ def analyze(path: str | Path) -> dict:
             "safe_progress_ratio": (legit[1] / legit[0]) if legit[0] else None,
             "backstop_tested": bs[0], "backstop_passed": bs[1],
             "backstop_rate": (bs[1] / bs[0]) if bs[0] else None,
-            "identity_calls": ident_calls, "identity_expansions": ident_bad,
+            "oracle_errors": oracle_errors, "identity_calls": ident_calls, "identity_expansions": ident_bad,
             "legit_latency_ms": {"n": len(lat), "p50": _pct(lat, 0.5), "p95": _pct(lat, 0.95)},
             "flagged_sample": flagged}

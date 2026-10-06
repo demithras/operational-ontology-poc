@@ -48,14 +48,20 @@ class View:
         return [(type_, k) for k in self.keys_of(type_)]
 
     # -- links -------------------------------------------------------------------------------------
-    def out(self, link: str, src: Ref) -> list[Ref]:
+    def out(self, link: str, src: Ref | None) -> list[Ref]:
+        if src is None:
+            return []
         return [split(d) for (lt, s, d) in sorted(self.links) if lt == link and s == rid(src)]
 
-    def inc(self, link: str, dst: Ref) -> list[Ref]:
+    def inc(self, link: str, dst: Ref | None) -> list[Ref]:
+        if dst is None:
+            return []
         return [split(s) for (lt, s, d) in sorted(self.links) if lt == link and d == rid(dst)]
 
-    def has_link(self, link: str, src: Ref, dst: Ref) -> bool:
+    def has_link(self, link: str, src: Ref | None, dst: Ref | None) -> bool:
+        if src is None or dst is None:
+            return False
         return (link, rid(src), rid(dst)) in self.links
 
-    def linked_to(self, link: str, type_: str, dst: Ref) -> list[Ref]:
+    def linked_to(self, link: str, type_: str, dst: Ref | None) -> list[Ref]:
         return [r for r in self.inc(link, dst) if r[0] == type_]

@@ -28,6 +28,7 @@ class Outcome:
     effects: list[dict] = field(default_factory=list)
     detail: str = ""
     extras: list[str] = field(default_factory=list)  # args keys outside the operation's schema
+    error: str | None = None  # the ORACLE itself failed on this input (fail closed; makes the run INVALID)
 
     @property
     def commits(self) -> bool:
@@ -54,6 +55,8 @@ def validate_args(op: dict, args) -> tuple[bool, str, list[str]]:
             return False, f"{i['name']} not integer", extras
         if t in ("string", "resource") and not isinstance(val, str):
             return False, f"{i['name']} not string", extras
+        if t == "resource" and val.strip() == "":
+            return False, f"{i['name']} blank resource id", extras
     return True, "", extras
 
 
@@ -137,6 +140,8 @@ def evaluate(ops_spec: dict, auth_spec: dict, subject: str, on_behalf_of: str | 
         return Outcome(COMMIT, expected_diff(ops_spec, op, ctx, snapshot), "", extras)
     except HelperError as exc:
         return Outcome(DENIED_RULE, detail=f"helper error (fail closed): {exc}", extras=extras)
+    except Exception as exc:  # noqa: BLE001 - an oracle bug must be visible, never silently pass
+        return Outcome(DENIED_RULE, detail="oracle error", extras=extras, error=f"{type(exc).__name__}: {exc}")
 
 
 # -- record matching (expected vs measured) ------------------------------------------------------------

@@ -106,6 +106,9 @@ def evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_sequences: in
     if summ.get("class_counts") != a["class_counts"] or summ.get("unique_sequences") != a["unique_sequences"]:
         valid = False
         reasons.append("effect-oracle-diff.json disagrees with the raw sequences")
+    if a["oracle_errors"]:
+        valid = False
+        reasons.append(f"the oracle failed on {a['oracle_errors']} calls")
     mut = _read(vdir / FILES[4])
     surf = _read(vdir / FILES[5])
     names = mutants.KNOWN["H23"]

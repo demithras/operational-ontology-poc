@@ -37,3 +37,62 @@ Tests: `tests/` (`fakes/fake_variant.py` is test-only and never registered).
 - P2 (variants): consume `ops_spec`/`auth_spec` dicts passed to `Variant.deploy`; write only through the supplied `WorldHandle` factory; implement `tools/call_tool/direct/read`, return `CallResult`; Paladin must build IR/pack from the neutral spec only where it chooses to, but may not edit the spec. Seed the world from `ops_spec["seed"]` (helper for seeding is intentionally left to the harness).
 - P3 (oracles/harness): read specs via `load_ops_spec/load_auth_spec`; measure effects with `WorldReader.snapshot()` + `diff`; never trust `CallResult`; use `evaluate_common`/`DualVerdict` and `evidence.write_envelope`.
 - Not provided in P1 (by design): world seeding helper, oracle logic, token issuing policy for principals (harness issues tokens with `IdentityProvider`; audience convention left to the harness/variants, fake uses "fake").
+
+## P3 - H23 harness (tag r3-p3-h23-harness)
+
+Variant-neutral: oracle, effect meter, adversarial state machine/corpus, mutation proof, evaluator. Built and tested only
+against fakes (`tests/fakes/h23_fakes.py`: correct / allow-all / direct-open / deny-all; never registered).
+
+### Module map
+| Path | Purpose |
+|---|---|
+| `r3_oracle/authority.py` | `decide(subject, on_behalf_of, op, resources, auth_spec)` = frozen effective-authority rule (PROT-H23); `could_ever_allow` (surface upper bound), `revoke`, `approver_ok` |
+| `r3_oracle/expr.py`, `view.py` | independent evaluator of the ops-spec predicate AST (all node kinds of both domains), read-only snapshot view |
+| `r3_oracle/helpers.py`, `helpers_project.py` | every prose helper/read of both domains, one function each, implemented from the spec text |
+| `r3_oracle/ops_model.py` | `evaluate(...) -> Outcome(kind, effects)`: COMMIT / DENIED_AUTHORITY / DENIED_RULE / INVALID / NEEDS_APPROVAL / UNKNOWN_OP + exact expected effect records; `match_records` |
+| `r3_oracle/effect_meter.py` | per-call WorldReader diff; AST test forbids reading CallResult |
+| `r3_shared/mutants.py` | the four H23 switches (`is_on/enabled/CONSULTED`); created here because P1 did not provide it (merge note: P2 builders consult `mutants.is_on(name)`) |
+| `r3_harness/h23/` | `env` (deployment + measured call), `rules` (10 attack rules), `corpus` (seeded driver, coverage sequences), `machine` (hypothesis RuleBasedStateMachine), `classify`, `surface`, `mutation`, `analyze`, `runner`, `evaluator` |
+| `scripts/run_h23.py`, `evaluate_h23.py`, `verify_h23.sh` | run / evaluate / re-hash + re-evaluate + diff |
+
+### How to run
+```
+cd round3 && .venv/bin/python scripts/run_h23.py --exp-id exp-h23-001 --variants paladin,conventional --seed 1 --sequences 10000
+.venv/bin/python scripts/evaluate_h23.py exp-h23-001 && scripts/verify_h23.sh exp-h23-001
+# dev with fakes (only with --test-variants): --variants fake-correct,fake-allow-all --sequences 200
+```
+Output: `experiments/h23/<ID>/<variant>/{adversarial-sequences.jsonl, effect-oracle-diff.json, identity-confusion-results.json,
+direct-engine-backstop.json, mutation-results.json, surface-audit.json, envelope.json}` and `<ID>/verdict.json`.
+The evaluator recomputes everything from the raw jsonl; summaries are only cross-checked (mismatch -> INVALID).
+
+### Semantics fixed by the harness (document for the orchestrator)
+- Per sequence: fresh world store + fresh Deployment, one attacker agent identity, 3-8 rule steps; plus deterministic
+  `coverage` sequences (every principal x every operation x both surfaces). Unique = distinct sha256 of (domain, attacker,
+  concrete steps); the driver keeps generating until `--sequences` unique ones exist (cap 3x).
+- Token audience is detected: `deployment.audience` / `variant.audience` if present, else the first candidate
+  (`variant.name`, domain, r3, paladin, conventional, ...) for which `tools(admin token)` is non-empty.
+- Authority changes use `deployment.set_authority(auth_spec)` if present; on TypeError/NotImplementedError or absence the
+  harness redeploys a new Deployment over the SAME world with the reduced authority (loses variant-side idempotency memory;
+  the replay-after-revocation expectation, "decided against the authority in force now", holds either way).
+- Effects: only what the diff shows. Expected = oracle effect records (exact multiset). Unexpected record, wrong external
+  writer (not in `service_accounts[].world_writers`) or a partial commit -> `forbidden_effect`. `identity_expansion` = forbidden
+  effect on a call tagged identity/obo/token. `backstop_failure` = `direct` committed something the oracle denies, or a
+  call_tool-denial probe (same call re-sent on `direct`, fresh request_id) did not end as zero-effect AND status != OK.
+  `legit_progress_miss` = clean call the oracle allows whose effects are absent. NEEDS_APPROVAL expects ZERO effects
+  (no approval channel exists in the Variant protocol, so approved commits are not exercised).
+- Business-rule actor (`actor_holds`) = the delegator when `on_behalf_of` is given, else the subject. Agents acting as themselves
+  hold only `agent_grant`, so a protected-route transfer by an agent without obo is DENIED_RULE.
+- Frozen rule vs fixture note: `agent-orphan` (delegator holds nothing) is ALLOWED when acting as itself, because the frozen rule
+  evaluates the subject's own grants (agent_grant on all warehouses). `authspec.allowed_operations` (P1) is stricter; the oracle
+  follows PROT-H23.
+- Loosely compared props (prose fixes inputs, not text): `Verdict.reason`, `Verdict.derivation_hash` (non-blank / 64-hex).
+- TOCTOU attack: `FlipDict` returns benign values on the first read of each key, hostile values afterwards; judged against the
+  BENIGN request (R4). Correct variants copy args once at entry.
+- Mutation proof: sub-corpus of `--mutation-sequences` (150) per mutant, targeted rule mix, switch OFF vs ON with the same seed;
+  killed iff expected classes increase AND the switch was consulted; first counterexample shrunk by step deletion.
+- Reads: `Variant.read` is not attacked (H26 territory). `recommend_transfer_for_work_order` / `resolve_canonical_id`
+  reads are not needed by any operation and are not implemented in the oracle.
+
+### Runtime estimate (fakes; real variants add their own per-call cost)
+~21 s per 1,000 unique sequences incl. mutation proof (150 x 4 x 2) and surface audit; ~28 s per 3,000 sequences without the
+mutation proof (~9 ms/sequence, ~1 ms/call, ~9 calls/sequence incl. backstop probes). 10,000 sequences ~ 2-3 min per variant on fakes.

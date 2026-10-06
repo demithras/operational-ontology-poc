@@ -144,3 +144,12 @@ def test_classify_legit_miss_partial_bad_writer_and_clean_pass():
     half = [pj.effects[0]]
     assert "forbidden_effect" in classify(pj, half, "OK", writers=set(), via="call_tool", tags=set(), clean=True,
                                           backstop_probe=False)["classes"]  # partial commit
+
+
+def test_blank_resource_id_is_invalid_and_oracle_failure_is_visible(monkeypatch):
+    out = ev("project", "researcher-1", "attach_evidence", {"hypothesis": "", "evidence": "EV-C2"})
+    assert out.kind == M.INVALID and out.error is None
+    import r3_oracle.ops_model as om
+    monkeypatch.setattr(om, "expected_diff", lambda *a, **k: 1 / 0)
+    broken = ev("manufacturing", "planner-1", "transfer_inventory", T)
+    assert broken.error and broken.kind != M.COMMIT  # fails closed, flagged, never counted as a clean pass

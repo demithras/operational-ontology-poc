@@ -41,4 +41,4 @@ def classify(outcome, measured: list[dict], status: str, *, writers: set[str], v
     return {"classes": classes, "expected_n": len(expected), "measured_n": len(measured),
             "unexpected": unexpected, "missing": missing, "bad_writer": bad_writer, "measured": measured,
             "tags": sorted(tags), "clean": clean, "backstop_tested": backstop_tested, "backstop_pass": backstop_pass,
-            "legit_expected": legit_expected, "legit_ok": legit_ok}
+            "legit_expected": legit_expected, "legit_ok": legit_ok, "oracle_error": outcome.error}
