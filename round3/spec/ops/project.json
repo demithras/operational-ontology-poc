@@ -1,0 +1,3211 @@
+{
+ "config": {
+  "evaluators": {
+   "neutral:evidence-present-v1": "protocol_valid = hypothesis.freeze_hash is non-blank; required_evidence_complete = sample_sufficient = support_hit = (evidence_count >= 1); reject_hit = false"
+  },
+  "note": "Round 2's evaluator is registered code reading committed git blobs. The neutral spec replaces it with the explicit evaluator above; Experiment.evaluator_ref values not listed here make derive_verdict fail (INVALID).",
+  "time_unit": "1 tick = 1 second of logical time"
+ },
+ "domain": "project",
+ "excluded_constraints": [],
+ "excluded_types": [],
+ "helpers": [
+  {
+   "description": "'hyp-' + first 10 hex chars of sha256(UTF-8 claim).",
+   "inputs": [
+    {
+     "name": "claim",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "name": "hypothesis_id_for_claim",
+   "output": "string"
+  },
+  {
+   "description": "Hypotheses linked TESTED_BY to the experiment; if none, follow NEW_VERSION_OF to the predecessor and repeat (cycle-safe).",
+   "inputs": [
+    {
+     "name": "experiment",
+     "required": true,
+     "resource_type": "Experiment",
+     "type": "resource"
+    }
+   ],
+   "name": "hypotheses_of_experiment",
+   "output": "list"
+  },
+  {
+   "description": "Union (first-seen order) of hypotheses_of_experiment over Experiments MEASURES-linked to Metrics GOVERNED_BY the threshold.",
+   "inputs": [
+    {
+     "name": "threshold",
+     "required": true,
+     "resource_type": "Threshold",
+     "type": "resource"
+    }
+   ],
+   "name": "hypotheses_of_threshold",
+   "output": "list"
+  },
+  {
+   "description": "claim non-blank AND >=1 HAS_RIVAL AND >=1 PREDICTS AND >=1 FALSIFIED_BY AND some TESTED_BY experiment with non-blank evidence_schema_ref and evaluator_ref.",
+   "inputs": [
+    {
+     "name": "hypothesis",
+     "required": true,
+     "resource_type": "Hypothesis",
+     "type": "resource"
+    }
+   ],
+   "name": "contract_complete",
+   "output": "boolean"
+  },
+  {
+   "description": "version+1 if version is all digits, else version + '.1'.",
+   "inputs": [
+    {
+     "name": "experiment",
+     "required": true,
+     "resource_type": "Experiment",
+     "type": "resource"
+    }
+   ],
+   "name": "new_experiment_version_number",
+   "output": "string"
+  },
+  {
+   "description": "(experiment key split at '@v', first part) + '@v' + new_experiment_version_number.",
+   "inputs": [
+    {
+     "name": "experiment",
+     "required": true,
+     "resource_type": "Experiment",
+     "type": "resource"
+    }
+   ],
+   "name": "new_experiment_id",
+   "output": "string"
+  },
+  {
+   "description": "contract_version key + '+' + new_experiment_version_number.",
+   "inputs": [
+    {
+     "name": "experiment",
+     "required": true,
+     "resource_type": "Experiment",
+     "type": "resource"
+    },
+    {
+     "name": "contract_version",
+     "required": true,
+     "resource_type": "ContractVersion",
+     "type": "resource"
+    }
+   ],
+   "name": "new_contract_version_id",
+   "output": "string"
+  },
+  {
+   "description": "new_contract_version_id if a ContractVersion with that key exists, else null.",
+   "inputs": [
+    {
+     "name": "experiment",
+     "required": true,
+     "resource_type": "Experiment",
+     "type": "resource"
+    },
+    {
+     "name": "contract_version",
+     "required": true,
+     "resource_type": "ContractVersion",
+     "type": "resource"
+    }
+   ],
+   "name": "existing_contract_version",
+   "output": "string|null"
+  },
+  {
+   "description": "Key of the Commit with the greatest committed_at (ties: greatest key); error if none.",
+   "inputs": [],
+   "name": "head_commit",
+   "output": "string"
+  },
+  {
+   "description": "The single experiment TESTED_BY the hypothesis whose version equals evidence.experiment_version; null if zero or several.",
+   "inputs": [
+    {
+     "name": "hypothesis",
+     "required": true,
+     "resource_type": "Hypothesis",
+     "type": "resource"
+    },
+    {
+     "name": "evidence",
+     "required": true,
+     "resource_type": "Evidence",
+     "type": "resource"
+    }
+   ],
+   "name": "evidence_experiment",
+   "output": "string|null"
+  },
+  {
+   "description": "evidence exists, payload_hash/git_commit/experiment_version/environment are all non-blank, and evidence_experiment is non-null.",
+   "inputs": [
+    {
+     "name": "hypothesis",
+     "required": true,
+     "resource_type": "Hypothesis",
+     "type": "resource"
+    },
+    {
+     "name": "evidence",
+     "required": true,
+     "resource_type": "Evidence",
+     "type": "resource"
+    }
+   ],
+   "name": "evidence_pinned",
+   "output": "boolean"
+  },
+  {
+   "description": "Some Experiment already PRODUCES the evidence and has version != evidence.experiment_version.",
+   "inputs": [
+    {
+     "name": "evidence",
+     "required": true,
+     "resource_type": "Evidence",
+     "type": "resource"
+    }
+   ],
+   "name": "evidence_rebinding",
+   "output": "boolean"
+  },
+  {
+   "description": "'verdict-' + hypothesis key + '-' + (number of Verdicts already EVALUATES-linked to it + 1).",
+   "inputs": [
+    {
+     "name": "hypothesis",
+     "required": true,
+     "resource_type": "Hypothesis",
+     "type": "resource"
+    }
+   ],
+   "name": "next_verdict_id",
+   "output": "string"
+  },
+  {
+   "description": "Human-readable text naming the experiment, the evidence count and the five booleans used by derive_verdict.",
+   "inputs": [
+    {
+     "name": "hypothesis",
+     "required": true,
+     "resource_type": "Hypothesis",
+     "type": "resource"
+    }
+   ],
+   "name": "verdict_reason",
+   "output": "string"
+  },
+  {
+   "description": "sha256 hex of canonical JSON of {hypothesis, experiment [key, version, evaluator_ref] or null, evidence [[key, payload_hash]] sorted, booleans, freeze_hash}.",
+   "inputs": [
+    {
+     "name": "hypothesis",
+     "required": true,
+     "resource_type": "Hypothesis",
+     "type": "resource"
+    }
+   ],
+   "name": "verdict_derivation_hash",
+   "output": "string"
+  }
+ ],
+ "invariants": [
+  {
+   "id": "supported-needs-evidence",
+   "ir": "supported-needs-evidence",
+   "text": "A SUPPORTED verdict implies evidence_count >= 1"
+  },
+  {
+   "id": "preregistration-complete-contract",
+   "ir": "preregistration-complete-contract",
+   "text": "A non-DRAFT hypothesis has a complete contract"
+  },
+  {
+   "id": "threshold-immutable-after-preregistration",
+   "ir": "threshold-immutable-after-preregistration",
+   "text": "Threshold values of a non-DRAFT hypothesis never change"
+  },
+  {
+   "id": "falsifier-immutable-after-preregistration",
+   "ir": "falsifier-immutable-after-preregistration",
+   "text": "Falsifier statements of a non-DRAFT hypothesis never change"
+  },
+  {
+   "id": "evaluator-immutable-after-preregistration",
+   "ir": "evaluator-immutable-after-preregistration",
+   "text": "Experiment evaluator_ref/evidence_schema_ref of a non-DRAFT hypothesis never change in place (a new version is created instead)"
+  },
+  {
+   "id": "running-requires-freeze-hash",
+   "ir": "running-requires-freeze-hash",
+   "text": "A RUNNING (or later) hypothesis has a non-blank freeze_hash"
+  },
+  {
+   "id": "evaluated-requires-evidence-or-reason",
+   "ir": "evaluated-requires-evidence-or-reason",
+   "text": "EVALUATED needs evidence or an INCONCLUSIVE/INVALID verdict"
+  },
+  {
+   "id": "verdict-machine-derived",
+   "ir": "verdict-machine-derived",
+   "text": "Verdict.value always equals derive_verdict at evaluation time; no direct verdict writes"
+  },
+  {
+   "id": "verdict-vocabulary",
+   "ir": "verdict-vocabulary",
+   "text": "Verdict.value in {SUPPORTED, REJECTED, INCONCLUSIVE, INVALID}"
+  },
+  {
+   "id": "evidence-bound-to-version-commit-environment",
+   "ir": "evidence-bound-to-version-commit-environment",
+   "text": "Attached evidence is pinned to an experiment version, commit and environment"
+  },
+  {
+   "id": "orphan-component-flagged-not-deleted",
+   "ir": "orphan-component-flagged-not-deleted",
+   "text": "Components are flagged, never deleted"
+  },
+  {
+   "id": "lifecycle-order",
+   "ir": "lifecycle-order",
+   "text": "Phase order DRAFT > PREREGISTERED > RUNNING > EVALUATED > SUPERSEDED, no skipping, no going back"
+  },
+  {
+   "id": "no-silent-stale-write",
+   "ir": "no-silent-stale-write",
+   "text": "A write targeting a superseded hypothesis is rejected, never silently applied"
+  },
+  {
+   "id": "conflicts-surface-explicitly",
+   "ir": "conflicts-surface-explicitly",
+   "text": "A conflicting supersede is denied with an explicit conflict"
+  },
+  {
+   "id": "ephemeral-state-marked",
+   "ir": "ephemeral-state-marked",
+   "text": "Inputs marked 'ephemeral:' never become canonical state"
+  },
+  {
+   "id": "historical-binding-preserved",
+   "ir": "historical-binding-preserved",
+   "text": "Existing evidence/version/contract bindings are never rewritten"
+  },
+  {
+   "id": "durable-actions-are-git-changes",
+   "ir": "durable-actions-are-git-changes",
+   "text": "Every durable change is a canonical-store write made by an authorized operation (no side channel)"
+  },
+  {
+   "id": "rebuild-reproduces-state-hash",
+   "ir": "rebuild-reproduces-state-hash",
+   "text": "Rebuilding the canonical state from its stored rows reproduces canonical_state_hash"
+  }
+ ],
+ "link_types": [
+  {
+   "from": "Hypothesis",
+   "from_cardinality": {
+    "max": "*",
+    "min": 0
+   },
+   "name": "HAS_RIVAL",
+   "to": "Rival",
+   "to_cardinality": {
+    "max": 1,
+    "min": 1
+   }
+  },
+  {
+   "from": "Hypothesis",
+   "from_cardinality": {
+    "max": "*",
+    "min": 0
+   },
+   "name": "PREDICTS",
+   "to": "Prediction",
+   "to_cardinality": {
+    "max": 1,
+    "min": 1
+   }
+  },
+  {
+   "from": "Hypothesis",
+   "from_cardinality": {
+    "max": "*",
+    "min": 0
+   },
+   "name": "FALSIFIED_BY",
+   "to": "Falsifier",
+   "to_cardinality": {
+    "max": 1,
+    "min": 1
+   }
+  },
+  {
+   "from": "Hypothesis",
+   "from_cardinality": {
+    "max": "*",
+    "min": 0
+   },
+   "name": "TESTED_BY",
+   "to": "Experiment",
+   "to_cardinality": {
+    "max": 1,
+    "min": 1
+   }
+  },
+  {
+   "from": "Experiment",
+   "from_cardinality": {
+    "max": "*",
+    "min": 0
+   },
+   "name": "MEASURES",
+   "to": "Metric",
+   "to_cardinality": {
+    "max": "*",
+    "min": 0
+   }
+  },
+  {
+   "from": "Metric",
+   "from_cardinality": {
+    "max": "*",
+    "min": 0
+   },
+   "name": "GOVERNED_BY",
+   "to": "Threshold",
+   "to_cardinality": {
+    "max": "*",
+    "min": 0
+   }
+  },
+  {
+   "from": "Experiment",
+   "from_cardinality": {
+    "max": "*",
+    "min": 0
+   },
+   "name": "PRODUCES",
+   "to": "Evidence",
+   "to_cardinality": {
+    "max": 1,
+    "min": 1
+   }
+  },
+  {
+   "from": "Evidence",
+   "from_cardinality": {
+    "max": "*",
+    "min": 1
+   },
+   "name": "SUPPORTS_OR_REFUTES",
+   "to": "Hypothesis",
+   "to_cardinality": {
+    "max": "*",
+    "min": 0
+   }
+  },
+  {
+   "from": "Verdict",
+   "from_cardinality": {
+    "max": 1,
+    "min": 1
+   },
+   "name": "EVALUATES",
+   "to": "Hypothesis",
+   "to_cardinality": {
+    "max": "*",
+    "min": 0
+   }
+  },
+  {
+   "from": "Evidence",
+   "from_cardinality": {
+    "max": 1,
+    "min": 1
+   },
+   "name": "CAPTURED_AT",
+   "to": "Commit",
+   "to_cardinality": {
+    "max": "*",
+    "min": 0
+   }
+  },
+  {
+   "from": "Component",
+   "from_cardinality": {
+    "max": "*",
+    "min": 0
+   },
+   "name": "EXISTS_FOR",
+   "to": "Hypothesis",
+   "to_cardinality": {
+    "max": "*",
+    "min": 0
+   }
+  },
+  {
+   "from": "Test",
+   "from_cardinality": {
+    "max": "*",
+    "min": 0
+   },
+   "name": "VALIDATES",
+   "to": "Component",
+   "to_cardinality": {
+    "max": "*",
+    "min": 0
+   }
+  },
+  {
+   "from": "Failure",
+   "from_cardinality": {
+    "max": "*",
+    "min": 1
+   },
+   "name": "DETECTED_BY",
+   "to": "Test",
+   "to_cardinality": {
+    "max": "*",
+    "min": 0
+   }
+  },
+  {
+   "from": "Decision",
+   "from_cardinality": {
+    "max": "*",
+    "min": 1
+   },
+   "name": "CHANGES",
+   "to": "ContractVersion",
+   "to_cardinality": {
+    "max": "*",
+    "min": 0
+   }
+  },
+  {
+   "from": "Hypothesis",
+   "from_cardinality": {
+    "max": 1,
+    "min": 0
+   },
+   "name": "SUPERSEDED_BY",
+   "to": "Hypothesis",
+   "to_cardinality": {
+    "max": 1,
+    "min": 0
+   }
+  },
+  {
+   "from": "Experiment",
+   "from_cardinality": {
+    "max": 1,
+    "min": 0
+   },
+   "name": "NEW_VERSION_OF",
+   "to": "Experiment",
+   "to_cardinality": {
+    "max": 1,
+    "min": 0
+   }
+  }
+ ],
+ "operations": [
+  {
+   "approval": null,
+   "business_rules": [
+    {
+     "decision": "deny",
+     "description": "Deny when any target hypothesis already has a SUPERSEDED_BY link (a newer version exists).",
+     "id": "stale-write",
+     "when": {
+      "link": "SUPERSEDED_BY",
+      "of": {
+       "lit": []
+      },
+      "op": "any_have_link"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when any string input starts with 'ephemeral:' (ephemeral state must never become canonical).",
+     "id": "ephemeral-state-never-canonical",
+     "when": {
+      "op": "any_input_prefix",
+      "prefix": "ephemeral:"
+     }
+    }
+   ],
+   "effects": [
+    {
+     "key": {
+      "args": {
+       "claim": {
+        "input": "claim"
+       }
+      },
+      "read": "hypothesis_id_for_claim"
+     },
+     "kind": "create",
+     "props": {
+      "claim": {
+       "input": "claim"
+      },
+      "id": {
+       "args": {
+        "claim": {
+         "input": "claim"
+        }
+       },
+       "read": "hypothesis_id_for_claim"
+      },
+      "phase": {
+       "lit": "DRAFT"
+      }
+     },
+     "type": "Hypothesis"
+    }
+   ],
+   "expected_outcome": "A Hypothesis with the derived key exists with phase DRAFT.",
+   "gated_inputs": [
+    "claim"
+   ],
+   "idempotency": "required",
+   "immutable_after_authorization": [
+    "claim"
+   ],
+   "inputs": [
+    {
+     "name": "claim",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "name": "create_hypothesis",
+   "preconditions": [
+    {
+     "description": "claim is not blank",
+     "id": "claim-nonblank",
+     "predicate": {
+      "args": [
+       {
+        "input": "claim"
+       }
+      ],
+      "op": "nonblank"
+     }
+    }
+   ],
+   "summary": "Create a DRAFT hypothesis from a claim."
+  },
+  {
+   "approval": null,
+   "business_rules": [
+    {
+     "decision": "deny",
+     "description": "Deny when any governing hypothesis (Threshold <-GOVERNED_BY- Metric <-MEASURES- Experiment <-TESTED_BY- Hypothesis, following NEW_VERSION_OF back to the first tested experiment) is not DRAFT.",
+     "id": "threshold-immutable-after-preregistration",
+     "when": {
+      "args": [
+       {
+        "field": "phase",
+        "nonempty": true,
+        "of": {
+         "args": {
+          "threshold": {
+           "input": "threshold"
+          }
+         },
+         "read": "hypotheses_of_threshold"
+        },
+        "op": "all_have",
+        "type": "Hypothesis",
+        "values": [
+         "DRAFT"
+        ]
+       }
+      ],
+      "op": "not"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when any target hypothesis already has a SUPERSEDED_BY link (a newer version exists).",
+     "id": "stale-write",
+     "when": {
+      "link": "SUPERSEDED_BY",
+      "of": {
+       "args": {
+        "threshold": {
+         "input": "threshold"
+        }
+       },
+       "read": "hypotheses_of_threshold"
+      },
+      "op": "any_have_link"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when any string input starts with 'ephemeral:' (ephemeral state must never become canonical).",
+     "id": "ephemeral-state-never-canonical",
+     "when": {
+      "op": "any_input_prefix",
+      "prefix": "ephemeral:"
+     }
+    }
+   ],
+   "effects": [
+    {
+     "key": {
+      "input": "threshold"
+     },
+     "kind": "update",
+     "props": {
+      "value": {
+       "input": "value"
+      }
+     },
+     "type": "Threshold"
+    }
+   ],
+   "expected_outcome": "Threshold.value equals the new value.",
+   "gated_inputs": [
+    "threshold",
+    "value"
+   ],
+   "idempotency": "required",
+   "immutable_after_authorization": [
+    "threshold",
+    "value"
+   ],
+   "inputs": [
+    {
+     "name": "threshold",
+     "required": true,
+     "resource_type": "Threshold",
+     "type": "resource"
+    },
+    {
+     "name": "value",
+     "required": true,
+     "type": "json"
+    }
+   ],
+   "name": "edit_threshold",
+   "preconditions": [
+    {
+     "description": "at least one hypothesis is governed by the threshold and all are DRAFT",
+     "id": "governed-hypotheses-draft",
+     "predicate": {
+      "field": "phase",
+      "nonempty": true,
+      "of": {
+       "args": {
+        "threshold": {
+         "input": "threshold"
+        }
+       },
+       "read": "hypotheses_of_threshold"
+      },
+      "op": "all_have",
+      "type": "Hypothesis",
+      "values": [
+       "DRAFT"
+      ]
+     }
+    }
+   ],
+   "summary": "Change a threshold value while every governed hypothesis is still DRAFT."
+  },
+  {
+   "approval": null,
+   "business_rules": [
+    {
+     "decision": "deny",
+     "description": "Deny unless contract_complete(hypothesis) (claim, >=1 rival, >=1 prediction, >=1 falsifier, and an experiment with non-blank evidence_schema_ref and evaluator_ref) and freeze_hash is not blank.",
+     "id": "contract-complete",
+     "when": {
+      "args": [
+       {
+        "args": {
+         "hypothesis": {
+          "input": "hypothesis"
+         }
+        },
+        "read": "contract_complete"
+       }
+      ],
+      "op": "not"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny unless the transition current phase -> PREREGISTERED is legal (DRAFT>PREREGISTERED>RUNNING>EVALUATED>SUPERSEDED).",
+     "id": "legal-lifecycle-transition",
+     "when": {
+      "args": [
+       {
+        "args": {
+         "hypothesis": {
+          "input": "hypothesis"
+         },
+         "target_phase": {
+          "lit": "PREREGISTERED"
+         }
+        },
+        "read": "is_legal_transition"
+       }
+      ],
+      "op": "not"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when any target hypothesis already has a SUPERSEDED_BY link (a newer version exists).",
+     "id": "stale-write",
+     "when": {
+      "link": "SUPERSEDED_BY",
+      "of": {
+       "input": "hypothesis"
+      },
+      "op": "any_have_link"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when any string input starts with 'ephemeral:' (ephemeral state must never become canonical).",
+     "id": "ephemeral-state-never-canonical",
+     "when": {
+      "op": "any_input_prefix",
+      "prefix": "ephemeral:"
+     }
+    }
+   ],
+   "effects": [
+    {
+     "key": {
+      "input": "hypothesis"
+     },
+     "kind": "update",
+     "props": {
+      "freeze_hash": {
+       "input": "freeze_hash"
+      },
+      "phase": {
+       "lit": "PREREGISTERED"
+      }
+     },
+     "type": "Hypothesis"
+    }
+   ],
+   "expected_outcome": "Hypothesis phase PREREGISTERED with the given freeze_hash.",
+   "gated_inputs": [
+    "hypothesis",
+    "freeze_hash"
+   ],
+   "idempotency": "required",
+   "immutable_after_authorization": [
+    "hypothesis",
+    "freeze_hash"
+   ],
+   "inputs": [
+    {
+     "name": "hypothesis",
+     "required": true,
+     "resource_type": "Hypothesis",
+     "type": "resource"
+    },
+    {
+     "name": "freeze_hash",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "name": "preregister_hypothesis",
+   "preconditions": [
+    {
+     "description": "hypothesis phase is DRAFT",
+     "id": "phase-draft",
+     "predicate": {
+      "args": [
+       {
+        "field": [
+         {
+          "input": "hypothesis"
+         },
+         "phase"
+        ]
+       },
+       {
+        "lit": [
+         "DRAFT"
+        ]
+       }
+      ],
+      "op": "in"
+     }
+    },
+    {
+     "description": "freeze_hash is not blank",
+     "id": "freeze-hash-present",
+     "predicate": {
+      "args": [
+       {
+        "input": "freeze_hash"
+       }
+      ],
+      "op": "nonblank"
+     }
+    }
+   ],
+   "summary": "Freeze a complete DRAFT contract."
+  },
+  {
+   "approval": null,
+   "business_rules": [
+    {
+     "decision": "deny",
+     "description": "Deny when an Experiment with the new id already exists (never overwrite a version).",
+     "id": "new-version-must-be-new",
+     "when": {
+      "args": [
+       {
+        "args": {
+         "experiment": {
+          "input": "experiment"
+         }
+        },
+        "read": "new_experiment_id"
+       }
+      ],
+      "op": "exists"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when a ContractVersion with the new contract-version id already exists.",
+     "id": "historical-binding-preserved",
+     "when": {
+      "args": [
+       {
+        "args": {
+         "contract_version": {
+          "input": "contract_version"
+         },
+         "experiment": {
+          "input": "experiment"
+         }
+        },
+        "read": "existing_contract_version"
+       }
+      ],
+      "op": "exists"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when any target hypothesis already has a SUPERSEDED_BY link (a newer version exists).",
+     "id": "stale-write",
+     "when": {
+      "link": "SUPERSEDED_BY",
+      "of": {
+       "args": {
+        "experiment": {
+         "input": "experiment"
+        }
+       },
+       "read": "hypotheses_of_experiment"
+      },
+      "op": "any_have_link"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when any string input starts with 'ephemeral:' (ephemeral state must never become canonical).",
+     "id": "ephemeral-state-never-canonical",
+     "when": {
+      "op": "any_input_prefix",
+      "prefix": "ephemeral:"
+     }
+    }
+   ],
+   "effects": [
+    {
+     "key": {
+      "args": {
+       "experiment": {
+        "input": "experiment"
+       }
+      },
+      "read": "new_experiment_id"
+     },
+     "kind": "create",
+     "props": {
+      "evaluator_ref": {
+       "field": [
+        {
+         "input": "experiment"
+        },
+        "evaluator_ref"
+       ]
+      },
+      "evidence_schema_ref": {
+       "field": [
+        {
+         "input": "experiment"
+        },
+        "evidence_schema_ref"
+       ]
+      },
+      "version": {
+       "args": {
+        "experiment": {
+         "input": "experiment"
+        }
+       },
+       "read": "new_experiment_version_number"
+      }
+     },
+     "type": "Experiment"
+    },
+    {
+     "key": {
+      "args": {
+       "contract_version": {
+        "input": "contract_version"
+       },
+       "experiment": {
+        "input": "experiment"
+       }
+      },
+      "read": "new_contract_version_id"
+     },
+     "kind": "create",
+     "props": {
+      "git_commit": {
+       "args": {},
+       "read": "head_commit"
+      },
+      "sha256": {
+       "args": {
+        "experiment": {
+         "input": "experiment"
+        }
+       },
+       "read": "compute_freeze_hash"
+      }
+     },
+     "type": "ContractVersion"
+    },
+    {
+     "dst": {
+      "input": "experiment"
+     },
+     "kind": "link",
+     "link_type": "NEW_VERSION_OF",
+     "src": {
+      "args": {
+       "experiment": {
+        "input": "experiment"
+       }
+      },
+      "read": "new_experiment_id"
+     }
+    }
+   ],
+   "expected_outcome": "New Experiment version, matching ContractVersion and NEW_VERSION_OF link exist; the old version is unchanged.",
+   "gated_inputs": [
+    "experiment",
+    "contract_version"
+   ],
+   "idempotency": "required",
+   "immutable_after_authorization": [
+    "experiment",
+    "contract_version"
+   ],
+   "inputs": [
+    {
+     "name": "experiment",
+     "required": true,
+     "resource_type": "Experiment",
+     "type": "resource"
+    },
+    {
+     "name": "contract_version",
+     "required": true,
+     "resource_type": "ContractVersion",
+     "type": "resource"
+    }
+   ],
+   "name": "new_experiment_version",
+   "preconditions": [
+    {
+     "description": "all hypotheses tested by the experiment are not DRAFT",
+     "id": "hypotheses-not-draft",
+     "predicate": {
+      "field": "phase",
+      "nonempty": true,
+      "of": {
+       "args": {
+        "experiment": {
+         "input": "experiment"
+        }
+       },
+       "read": "hypotheses_of_experiment"
+      },
+      "op": "all_have",
+      "type": "Hypothesis",
+      "values": [
+       "PREREGISTERED",
+       "RUNNING",
+       "EVALUATED",
+       "SUPERSEDED"
+      ]
+     }
+    }
+   ],
+   "summary": "Create a new version of an experiment after preregistration (thresholds stay frozen)."
+  },
+  {
+   "approval": null,
+   "business_rules": [
+    {
+     "decision": "deny",
+     "description": "Deny when the hypothesis freeze_hash is blank.",
+     "id": "running-requires-freeze-hash",
+     "when": {
+      "args": [
+       {
+        "args": [
+         {
+          "field": [
+           {
+            "input": "hypothesis"
+           },
+           "freeze_hash"
+          ]
+         }
+        ],
+        "op": "nonblank"
+       }
+      ],
+      "op": "not"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny unless the transition current phase -> RUNNING is legal (DRAFT>PREREGISTERED>RUNNING>EVALUATED>SUPERSEDED).",
+     "id": "legal-lifecycle-transition",
+     "when": {
+      "args": [
+       {
+        "args": {
+         "hypothesis": {
+          "input": "hypothesis"
+         },
+         "target_phase": {
+          "lit": "RUNNING"
+         }
+        },
+        "read": "is_legal_transition"
+       }
+      ],
+      "op": "not"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when any target hypothesis already has a SUPERSEDED_BY link (a newer version exists).",
+     "id": "stale-write",
+     "when": {
+      "link": "SUPERSEDED_BY",
+      "of": {
+       "input": "hypothesis"
+      },
+      "op": "any_have_link"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when any string input starts with 'ephemeral:' (ephemeral state must never become canonical).",
+     "id": "ephemeral-state-never-canonical",
+     "when": {
+      "op": "any_input_prefix",
+      "prefix": "ephemeral:"
+     }
+    }
+   ],
+   "effects": [
+    {
+     "key": {
+      "input": "hypothesis"
+     },
+     "kind": "update",
+     "note": "start",
+     "props": {
+      "phase": {
+       "lit": "RUNNING"
+      }
+     },
+     "type": "Hypothesis"
+    }
+   ],
+   "expected_outcome": "Hypothesis phase RUNNING.",
+   "gated_inputs": [
+    "hypothesis"
+   ],
+   "idempotency": "required",
+   "immutable_after_authorization": [
+    "hypothesis"
+   ],
+   "inputs": [
+    {
+     "name": "hypothesis",
+     "required": true,
+     "resource_type": "Hypothesis",
+     "type": "resource"
+    }
+   ],
+   "name": "start_run",
+   "preconditions": [
+    {
+     "description": "hypothesis phase is PREREGISTERED",
+     "id": "phase-preregistered",
+     "predicate": {
+      "args": [
+       {
+        "field": [
+         {
+          "input": "hypothesis"
+         },
+         "phase"
+        ]
+       },
+       {
+        "lit": [
+         "PREREGISTERED"
+        ]
+       }
+      ],
+      "op": "in"
+     }
+    },
+    {
+     "description": "hypothesis has a non-blank freeze_hash",
+     "id": "has-freeze-hash",
+     "predicate": {
+      "args": [
+       {
+        "field": [
+         {
+          "input": "hypothesis"
+         },
+         "freeze_hash"
+        ]
+       }
+      ],
+      "op": "nonblank"
+     }
+    }
+   ],
+   "summary": "Start running a preregistered hypothesis."
+  },
+  {
+   "approval": null,
+   "business_rules": [
+    {
+     "decision": "deny",
+     "description": "Deny unless evidence_pinned(hypothesis, evidence).",
+     "id": "evidence-must-bind-version-commit-environment",
+     "when": {
+      "args": [
+       {
+        "args": {
+         "evidence": {
+          "input": "evidence"
+         },
+         "hypothesis": {
+          "input": "hypothesis"
+         }
+        },
+        "read": "evidence_pinned"
+       }
+      ],
+      "op": "not"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when an experiment that already PRODUCES the evidence has a version different from evidence.experiment_version.",
+     "id": "historical-binding-preserved",
+     "when": {
+      "args": {
+       "evidence": {
+        "input": "evidence"
+       }
+      },
+      "read": "evidence_rebinding"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when any target hypothesis already has a SUPERSEDED_BY link (a newer version exists).",
+     "id": "stale-write",
+     "when": {
+      "link": "SUPERSEDED_BY",
+      "of": {
+       "input": "hypothesis"
+      },
+      "op": "any_have_link"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when any string input starts with 'ephemeral:' (ephemeral state must never become canonical).",
+     "id": "ephemeral-state-never-canonical",
+     "when": {
+      "op": "any_input_prefix",
+      "prefix": "ephemeral:"
+     }
+    }
+   ],
+   "effects": [
+    {
+     "key": {
+      "input": "evidence"
+     },
+     "kind": "create",
+     "props": {
+      "environment": {
+       "field": [
+        {
+         "input": "evidence"
+        },
+        "environment"
+       ]
+      },
+      "experiment_version": {
+       "field": [
+        {
+         "input": "evidence"
+        },
+        "experiment_version"
+       ]
+      },
+      "git_commit": {
+       "field": [
+        {
+         "input": "evidence"
+        },
+        "git_commit"
+       ]
+      },
+      "payload_hash": {
+       "field": [
+        {
+         "input": "evidence"
+        },
+        "payload_hash"
+       ]
+      }
+     },
+     "type": "Evidence",
+     "upsert_same_props": true
+    },
+    {
+     "dst": {
+      "input": "evidence"
+     },
+     "kind": "link",
+     "link_type": "PRODUCES",
+     "src": {
+      "args": {
+       "evidence": {
+        "input": "evidence"
+       },
+       "hypothesis": {
+        "input": "hypothesis"
+       }
+      },
+      "read": "evidence_experiment"
+     }
+    },
+    {
+     "dst": {
+      "input": "hypothesis"
+     },
+     "kind": "link",
+     "link_type": "SUPPORTS_OR_REFUTES",
+     "src": {
+      "input": "evidence"
+     }
+    }
+   ],
+   "expected_outcome": "PRODUCES and SUPPORTS_OR_REFUTES links exist; evidence_count(hypothesis) increased.",
+   "gated_inputs": [
+    "hypothesis",
+    "evidence"
+   ],
+   "idempotency": "required",
+   "immutable_after_authorization": [
+    "hypothesis",
+    "evidence"
+   ],
+   "inputs": [
+    {
+     "name": "hypothesis",
+     "required": true,
+     "resource_type": "Hypothesis",
+     "type": "resource"
+    },
+    {
+     "name": "evidence",
+     "required": true,
+     "resource_type": "Evidence",
+     "type": "resource"
+    }
+   ],
+   "name": "attach_evidence",
+   "preconditions": [
+    {
+     "description": "hypothesis phase is RUNNING",
+     "id": "phase-running",
+     "predicate": {
+      "args": [
+       {
+        "field": [
+         {
+          "input": "hypothesis"
+         },
+         "phase"
+        ]
+       },
+       {
+        "lit": [
+         "RUNNING"
+        ]
+       }
+      ],
+      "op": "in"
+     }
+    },
+    {
+     "description": "evidence has non-blank payload_hash, git_commit, experiment_version, environment AND its experiment_version equals the version of exactly one experiment tested by the hypothesis",
+     "id": "evidence-pinned",
+     "predicate": {
+      "args": {
+       "evidence": {
+        "input": "evidence"
+       },
+       "hypothesis": {
+        "input": "hypothesis"
+       }
+      },
+      "read": "evidence_pinned"
+     }
+    }
+   ],
+   "summary": "Attach version- and commit-pinned evidence to a RUNNING hypothesis."
+  },
+  {
+   "approval": null,
+   "business_rules": [
+    {
+     "decision": "deny",
+     "description": "Deny when evidence_count == 0 and derive_verdict is not INCONCLUSIVE/INVALID.",
+     "id": "evaluated-requires-evidence-or-reason",
+     "when": {
+      "args": [
+       {
+        "args": [
+         {
+          "args": {
+           "hypothesis": {
+            "input": "hypothesis"
+           }
+          },
+          "read": "evidence_count"
+         },
+         {
+          "lit": 0
+         }
+        ],
+        "op": "eq"
+       },
+       {
+        "args": [
+         {
+          "args": [
+           {
+            "args": {
+             "hypothesis": {
+              "input": "hypothesis"
+             }
+            },
+            "read": "derive_verdict"
+           },
+           {
+            "lit": [
+             "INCONCLUSIVE",
+             "INVALID"
+            ]
+           }
+          ],
+          "op": "in"
+         }
+        ],
+        "op": "not"
+       }
+      ],
+      "op": "and"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "The verdict value is always derive_verdict(hypothesis); callers cannot supply a verdict. Deny when derive_verdict does not yield one of SUPPORTED/REJECTED/INCONCLUSIVE/INVALID.",
+     "id": "verdict-machine-derived",
+     "when": {
+      "args": [
+       {
+        "args": [
+         {
+          "args": {
+           "hypothesis": {
+            "input": "hypothesis"
+           }
+          },
+          "read": "derive_verdict"
+         },
+         {
+          "lit": [
+           "SUPPORTED",
+           "REJECTED",
+           "INCONCLUSIVE",
+           "INVALID"
+          ]
+         }
+        ],
+        "op": "in"
+       }
+      ],
+      "op": "not"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny unless the transition current phase -> EVALUATED is legal (DRAFT>PREREGISTERED>RUNNING>EVALUATED>SUPERSEDED).",
+     "id": "legal-lifecycle-transition",
+     "when": {
+      "args": [
+       {
+        "args": {
+         "hypothesis": {
+          "input": "hypothesis"
+         },
+         "target_phase": {
+          "lit": "EVALUATED"
+         }
+        },
+        "read": "is_legal_transition"
+       }
+      ],
+      "op": "not"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when any target hypothesis already has a SUPERSEDED_BY link (a newer version exists).",
+     "id": "stale-write",
+     "when": {
+      "link": "SUPERSEDED_BY",
+      "of": {
+       "input": "hypothesis"
+      },
+      "op": "any_have_link"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when any string input starts with 'ephemeral:' (ephemeral state must never become canonical).",
+     "id": "ephemeral-state-never-canonical",
+     "when": {
+      "op": "any_input_prefix",
+      "prefix": "ephemeral:"
+     }
+    }
+   ],
+   "effects": [
+    {
+     "key": {
+      "args": {
+       "hypothesis": {
+        "input": "hypothesis"
+       }
+      },
+      "read": "next_verdict_id"
+     },
+     "kind": "create",
+     "props": {
+      "derivation_hash": {
+       "args": {
+        "hypothesis": {
+         "input": "hypothesis"
+        }
+       },
+       "read": "verdict_derivation_hash"
+      },
+      "git_commit": {
+       "args": {},
+       "read": "head_commit"
+      },
+      "reason": {
+       "args": {
+        "hypothesis": {
+         "input": "hypothesis"
+        }
+       },
+       "read": "verdict_reason"
+      },
+      "value": {
+       "args": {
+        "hypothesis": {
+         "input": "hypothesis"
+        }
+       },
+       "read": "derive_verdict"
+      }
+     },
+     "type": "Verdict"
+    },
+    {
+     "key": {
+      "input": "hypothesis"
+     },
+     "kind": "update",
+     "note": "evaluate",
+     "props": {
+      "phase": {
+       "lit": "EVALUATED"
+      }
+     },
+     "type": "Hypothesis"
+    },
+    {
+     "dst": {
+      "input": "hypothesis"
+     },
+     "kind": "link",
+     "link_type": "EVALUATES",
+     "src": {
+      "args": {
+       "hypothesis": {
+        "input": "hypothesis"
+       }
+      },
+      "read": "next_verdict_id"
+     }
+    }
+   ],
+   "expected_outcome": "A Verdict whose value equals derive_verdict(hypothesis) exists and the hypothesis is EVALUATED.",
+   "gated_inputs": [
+    "hypothesis"
+   ],
+   "idempotency": "required",
+   "immutable_after_authorization": [
+    "hypothesis"
+   ],
+   "inputs": [
+    {
+     "name": "hypothesis",
+     "required": true,
+     "resource_type": "Hypothesis",
+     "type": "resource"
+    }
+   ],
+   "name": "evaluate_hypothesis",
+   "preconditions": [
+    {
+     "description": "hypothesis phase is RUNNING",
+     "id": "phase-running",
+     "predicate": {
+      "args": [
+       {
+        "field": [
+         {
+          "input": "hypothesis"
+         },
+         "phase"
+        ]
+       },
+       {
+        "lit": [
+         "RUNNING"
+        ]
+       }
+      ],
+      "op": "in"
+     }
+    },
+    {
+     "description": "evidence_count(hypothesis) >= 1 or derive_verdict(hypothesis) is INCONCLUSIVE/INVALID",
+     "id": "evidence-or-reason",
+     "predicate": {
+      "args": [
+       {
+        "args": [
+         {
+          "args": {
+           "hypothesis": {
+            "input": "hypothesis"
+           }
+          },
+          "read": "evidence_count"
+         },
+         {
+          "lit": 1
+         }
+        ],
+        "op": "ge"
+       },
+       {
+        "args": [
+         {
+          "args": {
+           "hypothesis": {
+            "input": "hypothesis"
+           }
+          },
+          "read": "derive_verdict"
+         },
+         {
+          "lit": [
+           "INCONCLUSIVE",
+           "INVALID"
+          ]
+         }
+        ],
+        "op": "in"
+       }
+      ],
+      "op": "or"
+     }
+    }
+   ],
+   "summary": "Machine-derive a verdict and mark the hypothesis EVALUATED."
+  },
+  {
+   "approval": null,
+   "business_rules": [
+    {
+     "decision": "deny",
+     "description": "Deny when successor == hypothesis or the successor is already the SUPERSEDED_BY target of a different hypothesis.",
+     "id": "conflicting-change",
+     "when": {
+      "args": [
+       {
+        "args": [
+         {
+          "input": "successor"
+         },
+         {
+          "input": "hypothesis"
+         }
+        ],
+        "op": "eq"
+       },
+       {
+        "dst": {
+         "input": "successor"
+        },
+        "except": {
+         "input": "hypothesis"
+        },
+        "link": "SUPERSEDED_BY",
+        "op": "other_has_link_to"
+       }
+      ],
+      "op": "or"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny unless the transition current phase -> SUPERSEDED is legal (DRAFT>PREREGISTERED>RUNNING>EVALUATED>SUPERSEDED).",
+     "id": "legal-lifecycle-transition",
+     "when": {
+      "args": [
+       {
+        "args": {
+         "hypothesis": {
+          "input": "hypothesis"
+         },
+         "target_phase": {
+          "lit": "SUPERSEDED"
+         }
+        },
+        "read": "is_legal_transition"
+       }
+      ],
+      "op": "not"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when any target hypothesis already has a SUPERSEDED_BY link (a newer version exists).",
+     "id": "stale-write",
+     "when": {
+      "link": "SUPERSEDED_BY",
+      "of": {
+       "input": "hypothesis"
+      },
+      "op": "any_have_link"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when any string input starts with 'ephemeral:' (ephemeral state must never become canonical).",
+     "id": "ephemeral-state-never-canonical",
+     "when": {
+      "op": "any_input_prefix",
+      "prefix": "ephemeral:"
+     }
+    }
+   ],
+   "effects": [
+    {
+     "key": {
+      "input": "hypothesis"
+     },
+     "kind": "update",
+     "note": "supersede",
+     "props": {
+      "phase": {
+       "lit": "SUPERSEDED"
+      }
+     },
+     "type": "Hypothesis"
+    },
+    {
+     "dst": {
+      "input": "successor"
+     },
+     "kind": "link",
+     "link_type": "SUPERSEDED_BY",
+     "src": {
+      "input": "hypothesis"
+     }
+    }
+   ],
+   "expected_outcome": "Hypothesis SUPERSEDED with SUPERSEDED_BY -> successor.",
+   "gated_inputs": [
+    "hypothesis",
+    "successor"
+   ],
+   "idempotency": "required",
+   "immutable_after_authorization": [
+    "hypothesis",
+    "successor"
+   ],
+   "inputs": [
+    {
+     "name": "hypothesis",
+     "required": true,
+     "resource_type": "Hypothesis",
+     "type": "resource"
+    },
+    {
+     "name": "successor",
+     "required": true,
+     "resource_type": "Hypothesis",
+     "type": "resource"
+    }
+   ],
+   "name": "supersede_hypothesis",
+   "preconditions": [
+    {
+     "description": "hypothesis phase is EVALUATED",
+     "id": "phase-evaluated",
+     "predicate": {
+      "args": [
+       {
+        "field": [
+         {
+          "input": "hypothesis"
+         },
+         "phase"
+        ]
+       },
+       {
+        "lit": [
+         "EVALUATED"
+        ]
+       }
+      ],
+      "op": "in"
+     }
+    }
+   ],
+   "summary": "Replace an EVALUATED hypothesis by a successor."
+  },
+  {
+   "approval": null,
+   "business_rules": [
+    {
+     "decision": "deny",
+     "description": "Deny when the ContractVersion git_commit is blank (an unbound version cannot be changed by a decision).",
+     "id": "historical-binding-preserved",
+     "when": {
+      "args": [
+       {
+        "args": [
+         {
+          "field": [
+           {
+            "input": "contract_version"
+           },
+           "git_commit"
+          ]
+         }
+        ],
+        "op": "nonblank"
+       }
+      ],
+      "op": "not"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when any string input starts with 'ephemeral:' (ephemeral state must never become canonical).",
+     "id": "ephemeral-state-never-canonical",
+     "when": {
+      "op": "any_input_prefix",
+      "prefix": "ephemeral:"
+     }
+    }
+   ],
+   "effects": [
+    {
+     "key": {
+      "input": "decision"
+     },
+     "kind": "create",
+     "props": {
+      "decided_at": {
+       "field": [
+        {
+         "input": "decision"
+        },
+        "decided_at"
+       ]
+      },
+      "rationale": {
+       "field": [
+        {
+         "input": "decision"
+        },
+        "rationale"
+       ]
+      }
+     },
+     "type": "Decision",
+     "upsert_same_props": true
+    },
+    {
+     "dst": {
+      "input": "contract_version"
+     },
+     "kind": "link",
+     "link_type": "CHANGES",
+     "src": {
+      "input": "decision"
+     }
+    }
+   ],
+   "expected_outcome": "Decision and CHANGES link to the contract version exist.",
+   "gated_inputs": [
+    "decision",
+    "contract_version"
+   ],
+   "idempotency": "required",
+   "immutable_after_authorization": [
+    "decision",
+    "contract_version"
+   ],
+   "inputs": [
+    {
+     "name": "decision",
+     "required": true,
+     "resource_type": "Decision",
+     "type": "resource"
+    },
+    {
+     "name": "contract_version",
+     "required": true,
+     "resource_type": "ContractVersion",
+     "type": "resource"
+    }
+   ],
+   "name": "record_decision",
+   "preconditions": [
+    {
+     "description": "the Decision's stored rationale is not blank",
+     "id": "rationale-nonblank",
+     "predicate": {
+      "args": [
+       {
+        "field": [
+         {
+          "input": "decision"
+         },
+         "rationale"
+        ]
+       }
+      ],
+      "op": "nonblank"
+     }
+    }
+   ],
+   "summary": "Record a decision that changes a contract version."
+  },
+  {
+   "approval": null,
+   "business_rules": [
+    {
+     "decision": "classify",
+     "description": "Classification only: an orphan is flagged orphan_flagged=true and is never deleted by any operation.",
+     "id": "orphan-flagged-not-deleted",
+     "when": {
+      "lit": true
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when any target hypothesis already has a SUPERSEDED_BY link (a newer version exists).",
+     "id": "stale-write",
+     "when": {
+      "link": "SUPERSEDED_BY",
+      "of": {
+       "lit": []
+      },
+      "op": "any_have_link"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when any string input starts with 'ephemeral:' (ephemeral state must never become canonical).",
+     "id": "ephemeral-state-never-canonical",
+     "when": {
+      "op": "any_input_prefix",
+      "prefix": "ephemeral:"
+     }
+    }
+   ],
+   "effects": [
+    {
+     "key": {
+      "input": "component"
+     },
+     "kind": "update",
+     "props": {
+      "orphan_flagged": {
+       "lit": true
+      }
+     },
+     "type": "Component"
+    }
+   ],
+   "expected_outcome": "Component.orphan_flagged == true and the component still exists.",
+   "gated_inputs": [
+    "component"
+   ],
+   "idempotency": "required",
+   "immutable_after_authorization": [
+    "component"
+   ],
+   "inputs": [
+    {
+     "name": "component",
+     "required": true,
+     "resource_type": "Component",
+     "type": "resource"
+    }
+   ],
+   "name": "flag_orphan_component",
+   "preconditions": [
+    {
+     "description": "component is in find_orphan_components",
+     "id": "component-is-orphan",
+     "predicate": {
+      "op": "in_read",
+      "read": {
+       "args": {},
+       "read": "find_orphan_components"
+      },
+      "value": {
+       "input": "component"
+      }
+     }
+    }
+   ],
+   "summary": "Flag (never delete) a component with no active hypothesis."
+  }
+ ],
+ "provenance": "generated by scripts/build_ops_spec.py from round2 ir.v3.json (upstream pin 8f9ff26); architecture-neutral",
+ "reads": [
+  {
+   "description": "Number of Evidence resources with a SUPPORTS_OR_REFUTES link to the hypothesis.",
+   "inputs": [
+    {
+     "name": "hypothesis",
+     "required": true,
+     "resource_type": "Hypothesis",
+     "type": "resource"
+    }
+   ],
+   "name": "evidence_count",
+   "output": "integer"
+  },
+  {
+   "description": "NEUTRAL stand-in (not byte-identical to Round 2, which hashed committed git blobs): lowercase hex sha256 of the canonical JSON (sorted keys, no spaces) of {evidence_schema_ref, evaluator_ref, thresholds: [[threshold key, value], ...]} where thresholds are those reachable Experiment -MEASURES-> Metric -GOVERNED_BY-> Threshold, sorted by key, de-duplicated.",
+   "inputs": [
+    {
+     "name": "experiment",
+     "required": true,
+     "resource_type": "Experiment",
+     "type": "resource"
+    }
+   ],
+   "name": "compute_freeze_hash",
+   "output": "string"
+  },
+  {
+   "description": "Pack-wide precedence over five booleans (protocol_valid, required_evidence_complete, sample_sufficient, reject_hit, support_hit): not protocol_valid -> INVALID; reject_hit -> REJECTED; incomplete evidence or insufficient sample -> INCONCLUSIVE; support_hit -> SUPPORTED; else INCONCLUSIVE. Booleans: latest experiment = highest version (numeric if numeric) among experiments TESTED_BY the hypothesis; none -> (valid, incomplete, insufficient, no reject, no support); evidence = Evidence PRODUCED by it whose experiment_version equals its version; none -> protocol_valid = freeze_hash non-blank, everything else false; otherwise the evaluator named by Experiment.evaluator_ref (config.evaluators) yields the booleans and protocol_valid is further ANDed with freeze_hash non-blank. Unknown evaluator_ref -> error (operation fails closed).",
+   "inputs": [
+    {
+     "name": "hypothesis",
+     "required": true,
+     "resource_type": "Hypothesis",
+     "type": "resource"
+    }
+   ],
+   "name": "derive_verdict",
+   "output": "string"
+  },
+  {
+   "description": "Sorted keys of Components with no EXISTS_FOR link to a hypothesis whose phase is not SUPERSEDED.",
+   "inputs": [],
+   "name": "find_orphan_components",
+   "output": "list"
+  },
+  {
+   "description": "sha256 hex of the canonical JSON of the sorted list of [type, key, props] over every resource of the 15 project resource types (rows sorted by (type, str(key))).",
+   "inputs": [],
+   "name": "canonical_state_hash",
+   "output": "string"
+  },
+  {
+   "description": "True iff target_phase is the phase immediately after the hypothesis' current phase in DRAFT > PREREGISTERED > RUNNING > EVALUATED > SUPERSEDED (other conditions are checked elsewhere).",
+   "inputs": [
+    {
+     "name": "hypothesis",
+     "required": true,
+     "resource_type": "Hypothesis",
+     "type": "resource"
+    },
+    {
+     "name": "target_phase",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "name": "is_legal_transition",
+   "output": "boolean"
+  }
+ ],
+ "resource_types": [
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "id",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "claim",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "DRAFT",
+      "PREREGISTERED",
+      "RUNNING",
+      "EVALUATED",
+      "SUPERSEDED"
+     ],
+     "immutable": false,
+     "name": "phase",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "freeze_hash",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "key_field": "id",
+   "name": "Hypothesis"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "id",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "statement",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "key_field": "id",
+   "name": "Rival"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "id",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "statement",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "key_field": "id",
+   "name": "Prediction"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "id",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "statement",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "key_field": "id",
+   "name": "Falsifier"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "id",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": true,
+     "name": "version",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "evidence_schema_ref",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "evaluator_ref",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "freeze_hash",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "key_field": "id",
+   "name": "Experiment"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "id",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "name",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "key_field": "id",
+   "name": "Metric"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "id",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "value",
+     "required": true,
+     "type": "json"
+    }
+   ],
+   "key_field": "id",
+   "name": "Threshold"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "id",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": true,
+     "name": "payload_hash",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": true,
+     "name": "git_commit",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": true,
+     "name": "experiment_version",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": true,
+     "name": "environment",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "key_field": "id",
+   "name": "Evidence"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "id",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "SUPPORTED",
+      "REJECTED",
+      "INCONCLUSIVE",
+      "INVALID"
+     ],
+     "immutable": true,
+     "name": "value",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "reason",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "immutable": true,
+     "name": "derivation_hash",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": true,
+     "name": "git_commit",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "key_field": "id",
+   "name": "Verdict"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "id",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "path",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "orphan_flagged",
+     "required": true,
+     "type": "boolean"
+    }
+   ],
+   "key_field": "id",
+   "name": "Component"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "id",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": true,
+     "name": "sha256",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": true,
+     "name": "git_commit",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "frozen_at",
+     "required": false,
+     "type": "datetime"
+    }
+   ],
+   "key_field": "id",
+   "name": "ContractVersion"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "sha",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "message",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "committed_at",
+     "required": false,
+     "type": "datetime"
+    }
+   ],
+   "key_field": "sha",
+   "name": "Commit"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "id",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "name",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "passed",
+      "failed",
+      "error"
+     ],
+     "immutable": false,
+     "name": "last_result",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "key_field": "id",
+   "name": "Test"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "id",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "rationale",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "decided_at",
+     "required": false,
+     "type": "datetime"
+    }
+   ],
+   "key_field": "id",
+   "name": "Decision"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "id",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "description",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "key_field": "id",
+   "name": "Failure"
+  }
+ ],
+ "seed": {
+  "links": [
+   {
+    "dst": "Rival:R-A",
+    "link_type": "HAS_RIVAL",
+    "src": "Hypothesis:H-A"
+   },
+   {
+    "dst": "Prediction:P-A",
+    "link_type": "PREDICTS",
+    "src": "Hypothesis:H-A"
+   },
+   {
+    "dst": "Falsifier:X-A",
+    "link_type": "FALSIFIED_BY",
+    "src": "Hypothesis:H-A"
+   },
+   {
+    "dst": "Experiment:E-A@v1",
+    "link_type": "TESTED_BY",
+    "src": "Hypothesis:H-A"
+   },
+   {
+    "dst": "Metric:M-A",
+    "link_type": "MEASURES",
+    "src": "Experiment:E-A@v1"
+   },
+   {
+    "dst": "Threshold:T-A",
+    "link_type": "GOVERNED_BY",
+    "src": "Metric:M-A"
+   },
+   {
+    "dst": "Rival:R-B",
+    "link_type": "HAS_RIVAL",
+    "src": "Hypothesis:H-B"
+   },
+   {
+    "dst": "Prediction:P-B",
+    "link_type": "PREDICTS",
+    "src": "Hypothesis:H-B"
+   },
+   {
+    "dst": "Falsifier:X-B",
+    "link_type": "FALSIFIED_BY",
+    "src": "Hypothesis:H-B"
+   },
+   {
+    "dst": "Experiment:E-B@v1",
+    "link_type": "TESTED_BY",
+    "src": "Hypothesis:H-B"
+   },
+   {
+    "dst": "Metric:M-B",
+    "link_type": "MEASURES",
+    "src": "Experiment:E-B@v1"
+   },
+   {
+    "dst": "Threshold:T-B",
+    "link_type": "GOVERNED_BY",
+    "src": "Metric:M-B"
+   },
+   {
+    "dst": "Rival:R-C",
+    "link_type": "HAS_RIVAL",
+    "src": "Hypothesis:H-C"
+   },
+   {
+    "dst": "Prediction:P-C",
+    "link_type": "PREDICTS",
+    "src": "Hypothesis:H-C"
+   },
+   {
+    "dst": "Falsifier:X-C",
+    "link_type": "FALSIFIED_BY",
+    "src": "Hypothesis:H-C"
+   },
+   {
+    "dst": "Experiment:E-C@v1",
+    "link_type": "TESTED_BY",
+    "src": "Hypothesis:H-C"
+   },
+   {
+    "dst": "Metric:M-C",
+    "link_type": "MEASURES",
+    "src": "Experiment:E-C@v1"
+   },
+   {
+    "dst": "Threshold:T-C",
+    "link_type": "GOVERNED_BY",
+    "src": "Metric:M-C"
+   },
+   {
+    "dst": "Rival:R-D",
+    "link_type": "HAS_RIVAL",
+    "src": "Hypothesis:H-D"
+   },
+   {
+    "dst": "Prediction:P-D",
+    "link_type": "PREDICTS",
+    "src": "Hypothesis:H-D"
+   },
+   {
+    "dst": "Falsifier:X-D",
+    "link_type": "FALSIFIED_BY",
+    "src": "Hypothesis:H-D"
+   },
+   {
+    "dst": "Experiment:E-D@v1",
+    "link_type": "TESTED_BY",
+    "src": "Hypothesis:H-D"
+   },
+   {
+    "dst": "Metric:M-D",
+    "link_type": "MEASURES",
+    "src": "Experiment:E-D@v1"
+   },
+   {
+    "dst": "Threshold:T-D",
+    "link_type": "GOVERNED_BY",
+    "src": "Metric:M-D"
+   },
+   {
+    "dst": "Rival:R-F",
+    "link_type": "HAS_RIVAL",
+    "src": "Hypothesis:H-F"
+   },
+   {
+    "dst": "Prediction:P-F",
+    "link_type": "PREDICTS",
+    "src": "Hypothesis:H-F"
+   },
+   {
+    "dst": "Falsifier:X-F",
+    "link_type": "FALSIFIED_BY",
+    "src": "Hypothesis:H-F"
+   },
+   {
+    "dst": "Experiment:E-F@v1",
+    "link_type": "TESTED_BY",
+    "src": "Hypothesis:H-F"
+   },
+   {
+    "dst": "Metric:M-F",
+    "link_type": "MEASURES",
+    "src": "Experiment:E-F@v1"
+   },
+   {
+    "dst": "Threshold:T-F",
+    "link_type": "GOVERNED_BY",
+    "src": "Metric:M-F"
+   },
+   {
+    "dst": "Commit:c0ffee0001",
+    "link_type": "CAPTURED_AT",
+    "src": "Evidence:EV-C1"
+   },
+   {
+    "dst": "Evidence:EV-C1",
+    "link_type": "PRODUCES",
+    "src": "Experiment:E-C@v1"
+   },
+   {
+    "dst": "Hypothesis:H-C",
+    "link_type": "SUPPORTS_OR_REFUTES",
+    "src": "Evidence:EV-C1"
+   },
+   {
+    "dst": "Commit:c0ffee0001",
+    "link_type": "CAPTURED_AT",
+    "src": "Evidence:EV-C2"
+   },
+   {
+    "dst": "Commit:c0ffee0001",
+    "link_type": "CAPTURED_AT",
+    "src": "Evidence:EV-D1"
+   },
+   {
+    "dst": "Evidence:EV-D1",
+    "link_type": "PRODUCES",
+    "src": "Experiment:E-D@v1"
+   },
+   {
+    "dst": "Hypothesis:H-D",
+    "link_type": "SUPPORTS_OR_REFUTES",
+    "src": "Evidence:EV-D1"
+   },
+   {
+    "dst": "Commit:c0ffee0001",
+    "link_type": "CAPTURED_AT",
+    "src": "Evidence:EV-C-BAD"
+   },
+   {
+    "dst": "Hypothesis:H-D",
+    "link_type": "EVALUATES",
+    "src": "Verdict:verdict-H-D-1"
+   },
+   {
+    "dst": "Hypothesis:H-B",
+    "link_type": "EXISTS_FOR",
+    "src": "Component:cmp-live"
+   },
+   {
+    "dst": "Component:cmp-live",
+    "link_type": "VALIDATES",
+    "src": "Test:t-1"
+   },
+   {
+    "dst": "Test:t-1",
+    "link_type": "DETECTED_BY",
+    "src": "Failure:f-1"
+   }
+  ],
+  "objects": [
+   {
+    "key": "H-A",
+    "props": {
+     "claim": "draft claim A",
+     "id": "H-A",
+     "phase": "DRAFT"
+    },
+    "type": "Hypothesis"
+   },
+   {
+    "key": "H-B",
+    "props": {
+     "claim": "prereg claim B",
+     "freeze_hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+     "id": "H-B",
+     "phase": "PREREGISTERED"
+    },
+    "type": "Hypothesis"
+   },
+   {
+    "key": "H-C",
+    "props": {
+     "claim": "running claim C",
+     "freeze_hash": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+     "id": "H-C",
+     "phase": "RUNNING"
+    },
+    "type": "Hypothesis"
+   },
+   {
+    "key": "H-D",
+    "props": {
+     "claim": "evaluated claim D",
+     "freeze_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+     "id": "H-D",
+     "phase": "EVALUATED"
+    },
+    "type": "Hypothesis"
+   },
+   {
+    "key": "H-E",
+    "props": {
+     "claim": "successor claim E",
+     "id": "H-E",
+     "phase": "DRAFT"
+    },
+    "type": "Hypothesis"
+   },
+   {
+    "key": "H-F",
+    "props": {
+     "claim": "running claim F (no evidence yet)",
+     "freeze_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+     "id": "H-F",
+     "phase": "RUNNING"
+    },
+    "type": "Hypothesis"
+   },
+   {
+    "key": "R-A",
+    "props": {
+     "id": "R-A",
+     "statement": "rival for A"
+    },
+    "type": "Rival"
+   },
+   {
+    "key": "P-A",
+    "props": {
+     "id": "P-A",
+     "statement": "prediction for A"
+    },
+    "type": "Prediction"
+   },
+   {
+    "key": "X-A",
+    "props": {
+     "id": "X-A",
+     "statement": "falsifier for A"
+    },
+    "type": "Falsifier"
+   },
+   {
+    "key": "E-A@v1",
+    "props": {
+     "evaluator_ref": "neutral:evidence-present-v1",
+     "evidence_schema_ref": "schemas/evidence.json",
+     "id": "E-A@v1",
+     "version": "1"
+    },
+    "type": "Experiment"
+   },
+   {
+    "key": "M-A",
+    "props": {
+     "id": "M-A",
+     "name": "metric A"
+    },
+    "type": "Metric"
+   },
+   {
+    "key": "T-A",
+    "props": {
+     "id": "T-A",
+     "value": {
+      "min": 10
+     }
+    },
+    "type": "Threshold"
+   },
+   {
+    "key": "R-B",
+    "props": {
+     "id": "R-B",
+     "statement": "rival for B"
+    },
+    "type": "Rival"
+   },
+   {
+    "key": "P-B",
+    "props": {
+     "id": "P-B",
+     "statement": "prediction for B"
+    },
+    "type": "Prediction"
+   },
+   {
+    "key": "X-B",
+    "props": {
+     "id": "X-B",
+     "statement": "falsifier for B"
+    },
+    "type": "Falsifier"
+   },
+   {
+    "key": "E-B@v1",
+    "props": {
+     "evaluator_ref": "neutral:evidence-present-v1",
+     "evidence_schema_ref": "schemas/evidence.json",
+     "id": "E-B@v1",
+     "version": "1"
+    },
+    "type": "Experiment"
+   },
+   {
+    "key": "M-B",
+    "props": {
+     "id": "M-B",
+     "name": "metric B"
+    },
+    "type": "Metric"
+   },
+   {
+    "key": "T-B",
+    "props": {
+     "id": "T-B",
+     "value": {
+      "min": 10
+     }
+    },
+    "type": "Threshold"
+   },
+   {
+    "key": "R-C",
+    "props": {
+     "id": "R-C",
+     "statement": "rival for C"
+    },
+    "type": "Rival"
+   },
+   {
+    "key": "P-C",
+    "props": {
+     "id": "P-C",
+     "statement": "prediction for C"
+    },
+    "type": "Prediction"
+   },
+   {
+    "key": "X-C",
+    "props": {
+     "id": "X-C",
+     "statement": "falsifier for C"
+    },
+    "type": "Falsifier"
+   },
+   {
+    "key": "E-C@v1",
+    "props": {
+     "evaluator_ref": "neutral:evidence-present-v1",
+     "evidence_schema_ref": "schemas/evidence.json",
+     "id": "E-C@v1",
+     "version": "1"
+    },
+    "type": "Experiment"
+   },
+   {
+    "key": "M-C",
+    "props": {
+     "id": "M-C",
+     "name": "metric C"
+    },
+    "type": "Metric"
+   },
+   {
+    "key": "T-C",
+    "props": {
+     "id": "T-C",
+     "value": {
+      "min": 10
+     }
+    },
+    "type": "Threshold"
+   },
+   {
+    "key": "R-D",
+    "props": {
+     "id": "R-D",
+     "statement": "rival for D"
+    },
+    "type": "Rival"
+   },
+   {
+    "key": "P-D",
+    "props": {
+     "id": "P-D",
+     "statement": "prediction for D"
+    },
+    "type": "Prediction"
+   },
+   {
+    "key": "X-D",
+    "props": {
+     "id": "X-D",
+     "statement": "falsifier for D"
+    },
+    "type": "Falsifier"
+   },
+   {
+    "key": "E-D@v1",
+    "props": {
+     "evaluator_ref": "neutral:evidence-present-v1",
+     "evidence_schema_ref": "schemas/evidence.json",
+     "id": "E-D@v1",
+     "version": "1"
+    },
+    "type": "Experiment"
+   },
+   {
+    "key": "M-D",
+    "props": {
+     "id": "M-D",
+     "name": "metric D"
+    },
+    "type": "Metric"
+   },
+   {
+    "key": "T-D",
+    "props": {
+     "id": "T-D",
+     "value": {
+      "min": 10
+     }
+    },
+    "type": "Threshold"
+   },
+   {
+    "key": "R-F",
+    "props": {
+     "id": "R-F",
+     "statement": "rival for F"
+    },
+    "type": "Rival"
+   },
+   {
+    "key": "P-F",
+    "props": {
+     "id": "P-F",
+     "statement": "prediction for F"
+    },
+    "type": "Prediction"
+   },
+   {
+    "key": "X-F",
+    "props": {
+     "id": "X-F",
+     "statement": "falsifier for F"
+    },
+    "type": "Falsifier"
+   },
+   {
+    "key": "E-F@v1",
+    "props": {
+     "evaluator_ref": "neutral:evidence-present-v1",
+     "evidence_schema_ref": "schemas/evidence.json",
+     "id": "E-F@v1",
+     "version": "1"
+    },
+    "type": "Experiment"
+   },
+   {
+    "key": "M-F",
+    "props": {
+     "id": "M-F",
+     "name": "metric F"
+    },
+    "type": "Metric"
+   },
+   {
+    "key": "T-F",
+    "props": {
+     "id": "T-F",
+     "value": {
+      "min": 10
+     }
+    },
+    "type": "Threshold"
+   },
+   {
+    "key": "c0ffee0001",
+    "props": {
+     "committed_at": 100,
+     "message": "seed head",
+     "sha": "c0ffee0001"
+    },
+    "type": "Commit"
+   },
+   {
+    "key": "c0ffee0000",
+    "props": {
+     "committed_at": 50,
+     "message": "seed base",
+     "sha": "c0ffee0000"
+    },
+    "type": "Commit"
+   },
+   {
+    "key": "EV-C1",
+    "props": {
+     "environment": "seed-env",
+     "experiment_version": "1",
+     "git_commit": "c0ffee0001",
+     "id": "EV-C1",
+     "payload_hash": "EV-C1-hash"
+    },
+    "type": "Evidence"
+   },
+   {
+    "key": "EV-C2",
+    "props": {
+     "environment": "seed-env",
+     "experiment_version": "1",
+     "git_commit": "c0ffee0001",
+     "id": "EV-C2",
+     "payload_hash": "EV-C2-hash"
+    },
+    "type": "Evidence"
+   },
+   {
+    "key": "EV-D1",
+    "props": {
+     "environment": "seed-env",
+     "experiment_version": "1",
+     "git_commit": "c0ffee0001",
+     "id": "EV-D1",
+     "payload_hash": "EV-D1-hash"
+    },
+    "type": "Evidence"
+   },
+   {
+    "key": "EV-C-BAD",
+    "props": {
+     "environment": "seed-env",
+     "experiment_version": "9",
+     "git_commit": "c0ffee0001",
+     "id": "EV-C-BAD",
+     "payload_hash": "EV-C-BAD-hash"
+    },
+    "type": "Evidence"
+   },
+   {
+    "key": "verdict-H-D-1",
+    "props": {
+     "derivation_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "git_commit": "c0ffee0001",
+     "id": "verdict-H-D-1",
+     "reason": "seed",
+     "value": "SUPPORTED"
+    },
+    "type": "Verdict"
+   },
+   {
+    "key": "cmp-live",
+    "props": {
+     "id": "cmp-live",
+     "orphan_flagged": false,
+     "path": "src/live"
+    },
+    "type": "Component"
+   },
+   {
+    "key": "cmp-orphan",
+    "props": {
+     "id": "cmp-orphan",
+     "orphan_flagged": false,
+     "path": "src/orphan"
+    },
+    "type": "Component"
+   },
+   {
+    "key": "t-1",
+    "props": {
+     "id": "t-1",
+     "last_result": "passed",
+     "name": "live test"
+    },
+    "type": "Test"
+   },
+   {
+    "key": "f-1",
+    "props": {
+     "description": "seed failure",
+     "id": "f-1"
+    },
+    "type": "Failure"
+   },
+   {
+    "key": "CV-1",
+    "props": {
+     "git_commit": "c0ffee0001",
+     "id": "CV-1",
+     "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "type": "ContractVersion"
+   },
+   {
+    "key": "CV-UNBOUND",
+    "props": {
+     "git_commit": "",
+     "id": "CV-UNBOUND",
+     "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    "type": "ContractVersion"
+   },
+   {
+    "key": "DEC-1",
+    "props": {
+     "decided_at": 90,
+     "id": "DEC-1",
+     "rationale": "keep the threshold"
+    },
+    "type": "Decision"
+   },
+   {
+    "key": "DEC-BLANK",
+    "props": {
+     "decided_at": 91,
+     "id": "DEC-BLANK",
+     "rationale": "  "
+    },
+    "type": "Decision"
+   }
+  ]
+ },
+ "spec": "r3-ops-spec-1",
+ "unsupported": []
+}

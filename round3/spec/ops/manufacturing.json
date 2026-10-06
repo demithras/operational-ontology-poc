@@ -1,0 +1,2182 @@
+{
+ "config": {
+  "approval_threshold_cost": 500,
+  "approval_threshold_units": 80,
+  "evidence_max_age_ticks": 5,
+  "safety_stock_units": {
+   "default": 15,
+   "overrides": [
+    {
+     "part": "PX-17",
+     "units": 60,
+     "warehouse": "WH-B"
+    },
+    {
+     "part": "PX-800501",
+     "units": 60,
+     "warehouse": "WH-B"
+    }
+   ]
+  },
+  "time_unit": "1 tick = 1 second of logical time"
+ },
+ "domain": "manufacturing",
+ "excluded_constraints": [
+  {
+   "ir": "action-execution-quantity-positive",
+   "reason": "control-plane ActionExecution record (covered by quantity-positive-int)"
+  },
+  {
+   "ir": "decision-content-immutable",
+   "reason": "control-plane provenance (H27)"
+  },
+  {
+   "ir": "decision-status-vocabulary",
+   "reason": "control-plane Decision record"
+  },
+  {
+   "ir": "reconciliation-state-vocabulary",
+   "reason": "control-plane Outcome record"
+  }
+ ],
+ "excluded_types": [
+  {
+   "name": "ActionExecution",
+   "reason": "control-plane execution record"
+  },
+  {
+   "name": "AuthorizationCheck",
+   "reason": "control-plane audit"
+  },
+  {
+   "name": "ConformanceCheck",
+   "reason": "control-plane audit"
+  },
+  {
+   "name": "Decision",
+   "reason": "control-plane decision record"
+  },
+  {
+   "name": "DecisionActivity",
+   "reason": "control-plane provenance"
+  },
+  {
+   "name": "HumanActor",
+   "reason": "identity is supplied by auth spec"
+  },
+  {
+   "name": "IdentityResolutionActivity",
+   "reason": "ingestion plumbing"
+  },
+  {
+   "name": "Observation",
+   "reason": "ingestion plumbing"
+  },
+  {
+   "name": "Outcome",
+   "reason": "control-plane reconciliation record"
+  },
+  {
+   "name": "PolicyEvaluation",
+   "reason": "control-plane audit"
+  },
+  {
+   "name": "QuarantinedIdentity",
+   "reason": "ingestion plumbing"
+  },
+  {
+   "name": "SoftwareAgent",
+   "reason": "identity is supplied by auth spec"
+  },
+  {
+   "name": "SourcePosition",
+   "reason": "ingestion plumbing"
+  },
+  {
+   "name": "WmsTransferRecord",
+   "reason": "WMS-side record; lives in the external system, observed via external effects"
+  }
+ ],
+ "helpers": [
+  {
+   "description": "config.safety_stock_units override for (part, warehouse) if listed, else the default.",
+   "inputs": [
+    {
+     "name": "part",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "name": "warehouse",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "name": "safety_stock",
+   "output": "integer"
+  },
+  {
+   "description": "Empty unless work_order_risk(work_order).at_risk. For each part with positive short (ascending part) and each InventoryLot of that part whose warehouse != the work order's warehouse and available_quantity > 0: candidate {candidate_id: '<wo>|<part>|<lot warehouse>', work_order_id, part, destination_warehouse: work order's warehouse, source_warehouse: lot warehouse, candidate_quantity: min(available, short)}.",
+   "inputs": [
+    {
+     "name": "work_order",
+     "required": true,
+     "resource_type": "WorkOrder",
+     "type": "resource"
+    }
+   ],
+   "name": "transfer_candidates",
+   "output": "json"
+  },
+  {
+   "description": "Keys of WorkOrders with priority HIGH, status not DONE/CANCELLED, having a transfer_candidate whose (part, source_warehouse, destination_warehouse) equals the arguments. This protects the route of a high-priority at-risk work order from being drained by an unrelated transfer.",
+   "inputs": [
+    {
+     "name": "part",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "name": "source",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "name": "destination",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "name": "protecting_work_orders",
+   "output": "list"
+  }
+ ],
+ "invariants": [
+  {
+   "id": "inventory-on-hand-nonnegative",
+   "ir": "inventory-on-hand-nonnegative",
+   "text": "InventoryLot.onHand >= 0"
+  },
+  {
+   "id": "inventory-reserved-nonnegative",
+   "ir": "inventory-reserved-nonnegative",
+   "text": "InventoryLot.reserved >= 0"
+  },
+  {
+   "id": "inventory-on-hand-covers-reserved",
+   "ir": "inventory-on-hand-covers-reserved",
+   "text": "onHand >= reserved"
+  },
+  {
+   "id": "inventory-available-nonnegative",
+   "ir": "inventory-available-nonnegative",
+   "text": "onHand - reserved >= 0"
+  },
+  {
+   "id": "quality-vocabulary",
+   "ir": "quality-status-vocabulary",
+   "text": "qualityStatus in {OK, QUARANTINE}"
+  },
+  {
+   "id": "work-order-status-vocabulary",
+   "ir": "work-order-status-vocabulary",
+   "text": "WorkOrder.status in {PLANNED, RELEASED, RUNNING, DONE, CANCELLED}"
+  },
+  {
+   "id": "transfer-endpoints-disjoint",
+   "ir": "transfer-endpoints-disjoint",
+   "text": "no transfer with source == destination"
+  },
+  {
+   "id": "transfer-safety-stock",
+   "ir": "transfer-safety-stock",
+   "text": "no committed transfer leaves source available below safety stock"
+  },
+  {
+   "id": "transfer-quarantine-blocked",
+   "ir": "transfer-quarantine-blocked",
+   "text": "no committed transfer touches a QUARANTINE lot"
+  },
+  {
+   "id": "evidence-freshness",
+   "ir": "evidence-freshness",
+   "text": "no committed transfer on stale evidence"
+  },
+  {
+   "id": "transfer-approval-threshold",
+   "ir": "transfer-approval-threshold",
+   "text": "no committed transfer above the unit threshold without approval"
+  },
+  {
+   "id": "expedite-approval-threshold",
+   "ir": "expedite-approval-threshold",
+   "text": "no committed expedite above the cost threshold without approval"
+  },
+  {
+   "id": "high-priority-reschedule-approval",
+   "ir": "high-priority-reschedule-approval",
+   "text": "no committed reschedule of a HIGH-priority work order without approval"
+  },
+  {
+   "id": "no-effect-without-approval",
+   "ir": "no-effect-without-approval",
+   "text": "an operation whose business rules require approval commits no effect before a valid approval"
+  },
+  {
+   "id": "idempotency-key-unique",
+   "ir": "idempotency-key-unique",
+   "text": "one idempotency key identifies one intent; replays return the first result and cause no second effect"
+  }
+ ],
+ "link_types": [
+  {
+   "from": "PurchaseOrder",
+   "from_cardinality": {
+    "max": 1,
+    "min": 1
+   },
+   "name": "PurchaseOrder_suppliedBy",
+   "to": "Supplier",
+   "to_cardinality": {
+    "max": "*",
+    "min": 0
+   }
+  },
+  {
+   "from": "PurchaseOrderLine",
+   "from_cardinality": {
+    "max": 1,
+    "min": 1
+   },
+   "name": "PurchaseOrderLine_purchaseOrder",
+   "to": "PurchaseOrder",
+   "to_cardinality": {
+    "max": "*",
+    "min": 0
+   }
+  },
+  {
+   "from": "PurchaseOrderLine",
+   "from_cardinality": {
+    "max": 1,
+    "min": 1
+   },
+   "name": "PurchaseOrderLine_destinationWarehouse",
+   "to": "Warehouse",
+   "to_cardinality": {
+    "max": "*",
+    "min": 0
+   }
+  },
+  {
+   "from": "InventoryLot",
+   "from_cardinality": {
+    "max": 1,
+    "min": 0
+   },
+   "name": "InventoryLot_warehouse",
+   "to": "Warehouse",
+   "to_cardinality": {
+    "max": "*",
+    "min": 0
+   }
+  },
+  {
+   "from": "WorkOrder",
+   "from_cardinality": {
+    "max": 1,
+    "min": 1
+   },
+   "name": "WorkOrder_productionLine",
+   "to": "ProductionLine",
+   "to_cardinality": {
+    "max": "*",
+    "min": 0
+   }
+  },
+  {
+   "from": "WorkOrder",
+   "from_cardinality": {
+    "max": 1,
+    "min": 1
+   },
+   "name": "WorkOrder_warehouse",
+   "to": "Warehouse",
+   "to_cardinality": {
+    "max": "*",
+    "min": 0
+   }
+  },
+  {
+   "from": "BomRequirement",
+   "from_cardinality": {
+    "max": 1,
+    "min": 1
+   },
+   "name": "BomRequirement_workOrder",
+   "to": "WorkOrder",
+   "to_cardinality": {
+    "max": "*",
+    "min": 0
+   }
+  },
+  {
+   "from": "BomRequirement",
+   "from_cardinality": {
+    "max": 1,
+    "min": 1
+   },
+   "name": "BomRequirement_requiresPart",
+   "to": "Part",
+   "to_cardinality": {
+    "max": "*",
+    "min": 0
+   }
+  },
+  {
+   "from": "IdentityMapping",
+   "from_cardinality": {
+    "max": 1,
+    "min": 0
+   },
+   "name": "IdentityMapping_canonicalId",
+   "to": "Part",
+   "to_cardinality": {
+    "max": "*",
+    "min": 0
+   }
+  }
+ ],
+ "operations": [
+  {
+   "approval": {
+    "approver_operation": "approval:large_transfer",
+    "required_when_rule": "transfer-large-needs-approval",
+    "rules": [
+     "approver is a principal different from the requester and outside the requester's delegation chain",
+     "approval binds to the exact inputs that were pending; any change needs a fresh decision"
+    ]
+   },
+   "business_rules": [
+    {
+     "decision": "deny",
+     "description": "Deny when the source inventory lot for (part, source) is absent or ambiguous, or quantity is not an integer.",
+     "id": "transfer-no-evidence",
+     "when": {
+      "args": [
+       {
+        "args": [
+         {
+          "args": [
+           {
+            "unique": {
+             "type": "InventoryLot",
+             "where": [
+              {
+               "link": "PartReferencing_part",
+               "to": {
+                "input": "part"
+               }
+              },
+              {
+               "link": "InventoryLot_warehouse",
+               "to": {
+                "input": "source_warehouse"
+               }
+              }
+             ]
+            }
+           }
+          ],
+          "op": "exists"
+         }
+        ],
+        "op": "not"
+       },
+       {
+        "args": [
+         {
+          "args": [
+           {
+            "input": "quantity"
+           }
+          ],
+          "op": "is_int"
+         }
+        ],
+        "op": "not"
+       }
+      ],
+      "op": "or"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny unless the newest EvidenceSnapshot exists and is at most evidence_max_age_ticks old.",
+     "id": "transfer-stale-evidence",
+     "when": {
+      "args": [
+       {
+        "args": [
+         {
+          "sub": [
+           {
+            "now": true
+           },
+           {
+            "newest": {
+             "field": "snapshotObservedAt",
+             "type": "EvidenceSnapshot"
+            }
+           }
+          ]
+         },
+         {
+          "lit": 6
+         }
+        ],
+        "op": "lt"
+       }
+      ],
+      "op": "not"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when the source lot or the destination lot (if one exists) has qualityStatus QUARANTINE.",
+     "id": "transfer-quarantine",
+     "when": {
+      "args": [
+       {
+        "args": [
+         {
+          "field": [
+           {
+            "unique": {
+             "type": "InventoryLot",
+             "where": [
+              {
+               "link": "PartReferencing_part",
+               "to": {
+                "input": "part"
+               }
+              },
+              {
+               "link": "InventoryLot_warehouse",
+               "to": {
+                "input": "source_warehouse"
+               }
+              }
+             ]
+            }
+           },
+           "qualityStatus"
+          ]
+         },
+         {
+          "lit": "QUARANTINE"
+         }
+        ],
+        "op": "eq"
+       },
+       {
+        "args": [
+         {
+          "args": [
+           {
+            "unique": {
+             "type": "InventoryLot",
+             "where": [
+              {
+               "link": "PartReferencing_part",
+               "to": {
+                "input": "part"
+               }
+              },
+              {
+               "link": "InventoryLot_warehouse",
+               "to": {
+                "input": "destination_warehouse"
+               }
+              }
+             ]
+            }
+           }
+          ],
+          "op": "exists"
+         },
+         {
+          "args": [
+           {
+            "field": [
+             {
+              "unique": {
+               "type": "InventoryLot",
+               "where": [
+                {
+                 "link": "PartReferencing_part",
+                 "to": {
+                  "input": "part"
+                 }
+                },
+                {
+                 "link": "InventoryLot_warehouse",
+                 "to": {
+                  "input": "destination_warehouse"
+                 }
+                }
+               ]
+              }
+             },
+             "qualityStatus"
+            ]
+           },
+           {
+            "lit": "QUARANTINE"
+           }
+          ],
+          "op": "eq"
+         }
+        ],
+        "op": "and"
+       }
+      ],
+      "op": "or"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when the source lot has onHand < reserved.",
+     "id": "transfer-reservation-broken",
+     "when": {
+      "args": [
+       {
+        "field": [
+         {
+          "unique": {
+           "type": "InventoryLot",
+           "where": [
+            {
+             "link": "PartReferencing_part",
+             "to": {
+              "input": "part"
+             }
+            },
+            {
+             "link": "InventoryLot_warehouse",
+             "to": {
+              "input": "source_warehouse"
+             }
+            }
+           ]
+          }
+         },
+         "onHand"
+        ]
+       },
+       {
+        "field": [
+         {
+          "unique": {
+           "type": "InventoryLot",
+           "where": [
+            {
+             "link": "PartReferencing_part",
+             "to": {
+              "input": "part"
+             }
+            },
+            {
+             "link": "InventoryLot_warehouse",
+             "to": {
+              "input": "source_warehouse"
+             }
+            }
+           ]
+          }
+         },
+         "reserved"
+        ]
+       }
+      ],
+      "op": "lt"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when onHand - reserved - quantity at the source would fall below the safety stock for (part, source).",
+     "id": "transfer-safety-stock",
+     "when": {
+      "args": [
+       {
+        "sub": [
+         {
+          "sub": [
+           {
+            "field": [
+             {
+              "unique": {
+               "type": "InventoryLot",
+               "where": [
+                {
+                 "link": "PartReferencing_part",
+                 "to": {
+                  "input": "part"
+                 }
+                },
+                {
+                 "link": "InventoryLot_warehouse",
+                 "to": {
+                  "input": "source_warehouse"
+                 }
+                }
+               ]
+              }
+             },
+             "onHand"
+            ]
+           },
+           {
+            "field": [
+             {
+              "unique": {
+               "type": "InventoryLot",
+               "where": [
+                {
+                 "link": "PartReferencing_part",
+                 "to": {
+                  "input": "part"
+                 }
+                },
+                {
+                 "link": "InventoryLot_warehouse",
+                 "to": {
+                  "input": "source_warehouse"
+                 }
+                }
+               ]
+              }
+             },
+             "reserved"
+            ]
+           }
+          ]
+         },
+         {
+          "input": "quantity"
+         }
+        ]
+       },
+       {
+        "args": {
+         "part": {
+          "input": "part"
+         },
+         "warehouse": {
+          "input": "source_warehouse"
+         }
+        },
+        "read": "safety_stock"
+       }
+      ],
+      "op": "lt"
+     }
+    },
+    {
+     "decision": "deny",
+     "description": "Deny when the route (part, source, destination) protects a HIGH-priority at-risk work order (read protecting_work_orders is non-empty) and the acting principal holds neither the planner nor the supervisor relation on the source warehouse.",
+     "id": "transfer-protected-route",
+     "when": {
+      "args": [
+       {
+        "args": [
+         {
+          "args": {
+           "destination": {
+            "input": "destination_warehouse"
+           },
+           "part": {
+            "input": "part"
+           },
+           "source": {
+            "input": "source_warehouse"
+           }
+          },
+          "read": "protecting_work_orders"
+         },
+         {
+          "lit": []
+         }
+        ],
+        "op": "ne"
+       },
+       {
+        "args": [
+         {
+          "args": [
+           {
+            "on": {
+             "input": "source_warehouse"
+            },
+            "op": "actor_holds",
+            "relation": "planner"
+           },
+           {
+            "on": {
+             "input": "source_warehouse"
+            },
+            "op": "actor_holds",
+            "relation": "supervisor"
+           }
+          ],
+          "op": "or"
+         }
+        ],
+        "op": "not"
+       }
+      ],
+      "op": "and"
+     }
+    },
+    {
+     "decision": "require_approval",
+     "description": "Quantity above approval_threshold_units needs approval (applies only when no deny rule matched).",
+     "id": "transfer-large-needs-approval",
+     "when": {
+      "args": [
+       {
+        "input": "quantity"
+       },
+       {
+        "lit": 80
+       }
+      ],
+      "op": "gt"
+     }
+    }
+   ],
+   "effects": [
+    {
+     "adapter": "WMS",
+     "kind": "external",
+     "note": "Exactly one WMS command per authorized request; WMS-side stock changes are the WMS's own.",
+     "payload": {
+      "destination": {
+       "input": "destination_warehouse"
+      },
+      "part": {
+       "input": "part"
+      },
+      "quantity": {
+       "input": "quantity"
+      },
+      "source": {
+       "input": "source_warehouse"
+      }
+     },
+     "target": "transfer"
+    }
+   ],
+   "expected_outcome": "WMS commits a transfer record with actual quantity == requested quantity; source available decreases and destination available increases by quantity.",
+   "gated_inputs": [
+    "source_warehouse",
+    "destination_warehouse",
+    "part",
+    "quantity",
+    "work_order"
+   ],
+   "idempotency": "required",
+   "immutable_after_authorization": [
+    "source_warehouse",
+    "destination_warehouse",
+    "part",
+    "quantity",
+    "work_order"
+   ],
+   "inputs": [
+    {
+     "name": "source_warehouse",
+     "required": true,
+     "resource_type": "Warehouse",
+     "type": "resource"
+    },
+    {
+     "name": "destination_warehouse",
+     "required": true,
+     "resource_type": "Warehouse",
+     "type": "resource"
+    },
+    {
+     "name": "part",
+     "required": true,
+     "resource_type": "Part",
+     "type": "resource"
+    },
+    {
+     "name": "quantity",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "name": "work_order",
+     "required": false,
+     "resource_type": "WorkOrder",
+     "type": "resource"
+    }
+   ],
+   "name": "transfer_inventory",
+   "preconditions": [
+    {
+     "description": "quantity is an integer (booleans excluded) and >= 1",
+     "id": "quantity-positive-int",
+     "predicate": {
+      "args": [
+       {
+        "args": [
+         {
+          "input": "quantity"
+         }
+        ],
+        "op": "is_int"
+       },
+       {
+        "args": [
+         {
+          "input": "quantity"
+         },
+         {
+          "lit": 1
+         }
+        ],
+        "op": "ge"
+       }
+      ],
+      "op": "and"
+     }
+    },
+    {
+     "description": "source_warehouse != destination_warehouse",
+     "id": "endpoints-differ",
+     "predicate": {
+      "args": [
+       {
+        "input": "source_warehouse"
+       },
+       {
+        "input": "destination_warehouse"
+       }
+      ],
+      "op": "ne"
+     }
+    },
+    {
+     "description": "the source lot exists and onHand - reserved >= quantity",
+     "id": "source-has-stock",
+     "predicate": {
+      "args": [
+       {
+        "args": [
+         {
+          "unique": {
+           "type": "InventoryLot",
+           "where": [
+            {
+             "link": "PartReferencing_part",
+             "to": {
+              "input": "part"
+             }
+            },
+            {
+             "link": "InventoryLot_warehouse",
+             "to": {
+              "input": "source_warehouse"
+             }
+            }
+           ]
+          }
+         }
+        ],
+        "op": "exists"
+       },
+       {
+        "args": [
+         {
+          "sub": [
+           {
+            "field": [
+             {
+              "unique": {
+               "type": "InventoryLot",
+               "where": [
+                {
+                 "link": "PartReferencing_part",
+                 "to": {
+                  "input": "part"
+                 }
+                },
+                {
+                 "link": "InventoryLot_warehouse",
+                 "to": {
+                  "input": "source_warehouse"
+                 }
+                }
+               ]
+              }
+             },
+             "onHand"
+            ]
+           },
+           {
+            "field": [
+             {
+              "unique": {
+               "type": "InventoryLot",
+               "where": [
+                {
+                 "link": "PartReferencing_part",
+                 "to": {
+                  "input": "part"
+                 }
+                },
+                {
+                 "link": "InventoryLot_warehouse",
+                 "to": {
+                  "input": "source_warehouse"
+                 }
+                }
+               ]
+              }
+             },
+             "reserved"
+            ]
+           }
+          ]
+         },
+         {
+          "input": "quantity"
+         }
+        ],
+        "op": "ge"
+       }
+      ],
+      "op": "and"
+     }
+    }
+   ],
+   "summary": "Move stock of a part between two warehouses via the external WMS."
+  },
+  {
+   "approval": {
+    "approver_operation": "approval:expedite",
+    "required_when_rule": "expedite-large-fee-needs-approval",
+    "rules": [
+     "approver differs from the requester and is outside the requester's delegation chain"
+    ]
+   },
+   "business_rules": [
+    {
+     "decision": "deny",
+     "description": "Deny when the PO is absent, has no status, has a terminal status, or the fee is not an integer.",
+     "id": "expedite-closed-po",
+     "when": {
+      "args": [
+       {
+        "args": [
+         {
+          "args": [
+           {
+            "input": "po_id"
+           }
+          ],
+          "op": "exists"
+         }
+        ],
+        "op": "not"
+       },
+       {
+        "args": [
+         {
+          "field": [
+           {
+            "input": "po_id"
+           },
+           "status"
+          ]
+         },
+         {
+          "lit": [
+           "RECEIVED",
+           "CANCELLED"
+          ]
+         }
+        ],
+        "op": "in"
+       },
+       {
+        "args": [
+         {
+          "args": [
+           {
+            "input": "expedite_fee"
+           }
+          ],
+          "op": "is_int"
+         }
+        ],
+        "op": "not"
+       }
+      ],
+      "op": "or"
+     }
+    },
+    {
+     "decision": "require_approval",
+     "description": "Fee above approval_threshold_cost needs approval.",
+     "id": "expedite-large-fee-needs-approval",
+     "when": {
+      "args": [
+       {
+        "input": "expedite_fee"
+       },
+       {
+        "lit": 500
+       }
+      ],
+      "op": "gt"
+     }
+    }
+   ],
+   "effects": [
+    {
+     "adapter": "ERP",
+     "kind": "external",
+     "payload": {
+      "expedite_fee": {
+       "input": "expedite_fee"
+      },
+      "po_id": {
+       "input": "po_id"
+      }
+     },
+     "target": "expedite"
+    }
+   ],
+   "expected_outcome": "ERP reports a smaller expectedAt for the purchase order.",
+   "gated_inputs": [
+    "po_id",
+    "expedite_fee"
+   ],
+   "idempotency": "required",
+   "immutable_after_authorization": [
+    "po_id",
+    "expedite_fee"
+   ],
+   "inputs": [
+    {
+     "name": "po_id",
+     "required": true,
+     "resource_type": "PurchaseOrder",
+     "type": "resource"
+    },
+    {
+     "name": "expedite_fee",
+     "required": true,
+     "type": "integer"
+    }
+   ],
+   "name": "expedite_purchase_order",
+   "preconditions": [
+    {
+     "description": "expedite_fee is an integer >= 0",
+     "id": "fee-nonneg-int",
+     "predicate": {
+      "args": [
+       {
+        "args": [
+         {
+          "input": "expedite_fee"
+         }
+        ],
+        "op": "is_int"
+       },
+       {
+        "args": [
+         {
+          "input": "expedite_fee"
+         },
+         {
+          "lit": 0
+         }
+        ],
+        "op": "ge"
+       }
+      ],
+      "op": "and"
+     }
+    },
+    {
+     "description": "the purchase order status is not RECEIVED or CANCELLED",
+     "id": "po-open",
+     "predicate": {
+      "args": [
+       {
+        "args": [
+         {
+          "field": [
+           {
+            "input": "po_id"
+           },
+           "status"
+          ]
+         },
+         {
+          "lit": [
+           "RECEIVED",
+           "CANCELLED"
+          ]
+         }
+        ],
+        "op": "in"
+       }
+      ],
+      "op": "not"
+     }
+    }
+   ],
+   "summary": "Pay a fee to pull a purchase order's expected arrival earlier via the ERP."
+  },
+  {
+   "approval": {
+    "approver_operation": "approval:reschedule",
+    "required_when_rule": "reschedule-high-priority-needs-approval",
+    "rules": [
+     "approver differs from the requester and is outside the requester's delegation chain"
+    ]
+   },
+   "business_rules": [
+    {
+     "decision": "deny",
+     "description": "Deny when the work order is absent, lacks status or priority, or is DONE/CANCELLED.",
+     "id": "reschedule-closed-wo",
+     "when": {
+      "args": [
+       {
+        "args": [
+         {
+          "args": [
+           {
+            "input": "work_order_id"
+           }
+          ],
+          "op": "exists"
+         }
+        ],
+        "op": "not"
+       },
+       {
+        "args": [
+         {
+          "field": [
+           {
+            "input": "work_order_id"
+           },
+           "status"
+          ]
+         },
+         {
+          "lit": [
+           "DONE",
+           "CANCELLED"
+          ]
+         }
+        ],
+        "op": "in"
+       }
+      ],
+      "op": "or"
+     }
+    },
+    {
+     "decision": "require_approval",
+     "description": "A HIGH-priority work order needs approval.",
+     "id": "reschedule-high-priority-needs-approval",
+     "when": {
+      "args": [
+       {
+        "field": [
+         {
+          "input": "work_order_id"
+         },
+         "priority"
+        ]
+       },
+       {
+        "lit": "HIGH"
+       }
+      ],
+      "op": "eq"
+     }
+    }
+   ],
+   "effects": [
+    {
+     "adapter": "MES",
+     "kind": "external",
+     "payload": {
+      "new_planned_start": {
+       "input": "new_planned_start"
+      },
+      "work_order_id": {
+       "input": "work_order_id"
+      }
+     },
+     "target": "reschedule"
+    }
+   ],
+   "expected_outcome": "MES reports the work order plannedStart == new_planned_start.",
+   "gated_inputs": [
+    "work_order_id",
+    "new_planned_start"
+   ],
+   "idempotency": "required",
+   "immutable_after_authorization": [
+    "work_order_id",
+    "new_planned_start"
+   ],
+   "inputs": [
+    {
+     "name": "work_order_id",
+     "required": true,
+     "resource_type": "WorkOrder",
+     "type": "resource"
+    },
+    {
+     "name": "new_planned_start",
+     "required": true,
+     "type": "integer"
+    }
+   ],
+   "name": "reschedule_work_order",
+   "preconditions": [
+    {
+     "description": "the work order status is not DONE or CANCELLED",
+     "id": "wo-open",
+     "predicate": {
+      "args": [
+       {
+        "args": [
+         {
+          "field": [
+           {
+            "input": "work_order_id"
+           },
+           "status"
+          ]
+         },
+         {
+          "lit": [
+           "DONE",
+           "CANCELLED"
+          ]
+         }
+        ],
+        "op": "in"
+       }
+      ],
+      "op": "not"
+     }
+    }
+   ],
+   "summary": "Change a work order's planned start via the MES."
+  }
+ ],
+ "provenance": "generated by scripts/build_ops_spec.py from round2 ir.json (upstream pin 8f9ff26); architecture-neutral",
+ "reads": [
+  {
+   "description": "onHand - reserved of the lot (missing onHand/reserved count as 0).",
+   "expr": {
+    "sub": [
+     {
+      "field": [
+       {
+        "input": "lot"
+       },
+       "onHand"
+      ]
+     },
+     {
+      "field": [
+       {
+        "input": "lot"
+       },
+       "reserved"
+      ]
+     }
+    ]
+   },
+   "inputs": [
+    {
+     "name": "lot",
+     "required": true,
+     "resource_type": "InventoryLot",
+     "type": "resource"
+    }
+   ],
+   "name": "available_quantity",
+   "output": "integer"
+  },
+  {
+   "description": "Sum of PurchaseOrderLine.quantity over lines whose PartReferencing_part == part and PurchaseOrderLine_destinationWarehouse == warehouse, whose purchase order (PurchaseOrderLine_purchaseOrder) exists, is not RECEIVED/CANCELLED and has expectedAt <= deadline (missing expectedAt counts as 0).",
+   "inputs": [
+    {
+     "name": "part",
+     "required": true,
+     "resource_type": "Part",
+     "type": "resource"
+    },
+    {
+     "name": "warehouse",
+     "required": true,
+     "resource_type": "Warehouse",
+     "type": "resource"
+    },
+    {
+     "name": "deadline",
+     "required": true,
+     "type": "integer"
+    }
+   ],
+   "name": "incoming_before",
+   "output": "integer"
+  },
+  {
+   "description": "{work_order_id, shortage, at_risk}. Unknown or DONE/CANCELLED work order: shortage 0, at_risk false. Otherwise requirements = sum BomRequirement.quantity per required part (BomRequirement_workOrder, BomRequirement_requiresPart). For each part in ascending string order: have = available_quantity of the unique lot (part, WorkOrder_warehouse) or 0 if none/ambiguous; short = max(0, need - have - incoming_before(part, work-order warehouse, plannedStart)); shortage = sum of shorts; at_risk = shortage > 0.",
+   "inputs": [
+    {
+     "name": "work_order",
+     "required": true,
+     "resource_type": "WorkOrder",
+     "type": "resource"
+    }
+   ],
+   "name": "work_order_risk",
+   "output": "json"
+  },
+  {
+   "description": "null unless work_order_risk.at_risk and transfer_candidates is non-empty. Otherwise take the candidate with the largest candidate_quantity (ties: smallest candidate_id) and return {action_type: transfer_inventory, parameters: {source_warehouse, destination_warehouse, part, quantity: min(candidate_quantity, shortage), work_order}, context: {}}. A recommendation is advice, not an authorization.",
+   "inputs": [
+    {
+     "name": "work_order",
+     "required": true,
+     "resource_type": "WorkOrder",
+     "type": "resource"
+    }
+   ],
+   "name": "recommend_transfer_for_work_order",
+   "output": "json|null"
+  },
+  {
+   "description": "Find the IdentityMapping whose sourceLocalId == source_local_id (iterate in key order) and return the key of the resource linked by IdentityMapping_canonicalId; if no mapping resolves, return source_local_id unchanged.",
+   "inputs": [
+    {
+     "name": "source_local_id",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "name": "resolve_canonical_id",
+   "output": "string|null"
+  }
+ ],
+ "resource_types": [
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "supplierId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "ACTIVE",
+      "SUSPENDED"
+     ],
+     "immutable": false,
+     "name": "status",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "leadTimeDays",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "enum": [
+      "LOW",
+      "MEDIUM",
+      "HIGH"
+     ],
+     "immutable": false,
+     "name": "riskClass",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "key_field": "supplierId",
+   "name": "Supplier"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "partId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "description",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "unit",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "LOW",
+      "MEDIUM",
+      "HIGH",
+      "CRITICAL"
+     ],
+     "immutable": false,
+     "name": "criticality",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "key_field": "partId",
+   "name": "Part"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "poId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "OPEN",
+      "DELAYED",
+      "RECEIVED",
+      "CANCELLED"
+     ],
+     "immutable": false,
+     "name": "status",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "promisedAt",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "immutable": false,
+     "name": "expectedAt",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "immutable": false,
+     "name": "delayReason",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "key_field": "poId",
+   "name": "PurchaseOrder"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "iri",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "quantity",
+     "required": false,
+     "type": "integer"
+    }
+   ],
+   "key_field": "iri",
+   "name": "PurchaseOrderLine"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "lotId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "onHand",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "immutable": false,
+     "name": "reserved",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "enum": [
+      "OK",
+      "QUARANTINE"
+     ],
+     "immutable": false,
+     "name": "qualityStatus",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "key_field": "lotId",
+   "name": "InventoryLot"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "warehouseId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "SMALL",
+      "MEDIUM",
+      "LARGE"
+     ],
+     "immutable": false,
+     "name": "capacityClass",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "region",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "key_field": "warehouseId",
+   "name": "Warehouse"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "workOrderId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "PLANNED",
+      "RELEASED",
+      "RUNNING",
+      "DONE",
+      "CANCELLED"
+     ],
+     "immutable": false,
+     "name": "status",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "LOW",
+      "MEDIUM",
+      "HIGH"
+     ],
+     "immutable": false,
+     "name": "priority",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "plannedStart",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "immutable": false,
+     "name": "plannedFinish",
+     "required": false,
+     "type": "integer"
+    }
+   ],
+   "key_field": "workOrderId",
+   "name": "WorkOrder"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "iri",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "quantity",
+     "required": false,
+     "type": "integer"
+    }
+   ],
+   "key_field": "iri",
+   "name": "BomRequirement"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "lineId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "ACTIVE",
+      "MAINTENANCE"
+     ],
+     "immutable": false,
+     "name": "status",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "capabilities",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "key_field": "lineId",
+   "name": "ProductionLine"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "iri",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "key_field": "iri",
+   "name": "Shipment"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "iri",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "snapshotObservedAt",
+     "note": "logical ticks (Round 2 used an ISO datetime); 1 tick = 1 second",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "immutable": false,
+     "name": "snapshotContentHash",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "sourcePositionsJson",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "requiredFactsJson",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "excludedFactsJson",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "projectionRowHashesJson",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "key_field": "iri",
+   "name": "EvidenceSnapshot"
+  },
+  {
+   "fields": [
+    {
+     "immutable": true,
+     "name": "iri",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "mappingRuleId",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "mappingRuleVersion",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "sourceLocalId",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "authority",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "immutable": false,
+     "name": "confidence",
+     "required": false,
+     "type": "number"
+    },
+    {
+     "immutable": false,
+     "name": "createdAtMapping",
+     "required": false,
+     "type": "datetime"
+    }
+   ],
+   "key_field": "iri",
+   "name": "IdentityMapping"
+  }
+ ],
+ "seed": {
+  "links": [
+   {
+    "dst": "Part:PX-17",
+    "link_type": "PartReferencing_part",
+    "src": "InventoryLot:LOT-A-PX17"
+   },
+   {
+    "dst": "Warehouse:WH-A",
+    "link_type": "InventoryLot_warehouse",
+    "src": "InventoryLot:LOT-A-PX17"
+   },
+   {
+    "dst": "Part:PX-17",
+    "link_type": "PartReferencing_part",
+    "src": "InventoryLot:LOT-B-PX17"
+   },
+   {
+    "dst": "Warehouse:WH-B",
+    "link_type": "InventoryLot_warehouse",
+    "src": "InventoryLot:LOT-B-PX17"
+   },
+   {
+    "dst": "Part:PX-900",
+    "link_type": "PartReferencing_part",
+    "src": "InventoryLot:LOT-C-PX900"
+   },
+   {
+    "dst": "Warehouse:WH-C",
+    "link_type": "InventoryLot_warehouse",
+    "src": "InventoryLot:LOT-C-PX900"
+   },
+   {
+    "dst": "Part:PX-900",
+    "link_type": "PartReferencing_part",
+    "src": "InventoryLot:LOT-B-PX900"
+   },
+   {
+    "dst": "Warehouse:WH-B",
+    "link_type": "InventoryLot_warehouse",
+    "src": "InventoryLot:LOT-B-PX900"
+   },
+   {
+    "dst": "Part:PX-900",
+    "link_type": "PartReferencing_part",
+    "src": "InventoryLot:LOT-A-PX900"
+   },
+   {
+    "dst": "Warehouse:WH-A",
+    "link_type": "InventoryLot_warehouse",
+    "src": "InventoryLot:LOT-A-PX900"
+   },
+   {
+    "dst": "Warehouse:WH-A",
+    "link_type": "WorkOrder_warehouse",
+    "src": "WorkOrder:WO-42"
+   },
+   {
+    "dst": "ProductionLine:L-1",
+    "link_type": "WorkOrder_productionLine",
+    "src": "WorkOrder:WO-42"
+   },
+   {
+    "dst": "WorkOrder:WO-42",
+    "link_type": "BomRequirement_workOrder",
+    "src": "BomRequirement:BOM-42-PX17"
+   },
+   {
+    "dst": "Part:PX-17",
+    "link_type": "BomRequirement_requiresPart",
+    "src": "BomRequirement:BOM-42-PX17"
+   },
+   {
+    "dst": "Warehouse:WH-B",
+    "link_type": "WorkOrder_warehouse",
+    "src": "WorkOrder:WO-43"
+   },
+   {
+    "dst": "ProductionLine:L-1",
+    "link_type": "WorkOrder_productionLine",
+    "src": "WorkOrder:WO-43"
+   },
+   {
+    "dst": "WorkOrder:WO-43",
+    "link_type": "BomRequirement_workOrder",
+    "src": "BomRequirement:BOM-43-PX900"
+   },
+   {
+    "dst": "Part:PX-900",
+    "link_type": "BomRequirement_requiresPart",
+    "src": "BomRequirement:BOM-43-PX900"
+   },
+   {
+    "dst": "Supplier:S-7",
+    "link_type": "PurchaseOrder_suppliedBy",
+    "src": "PurchaseOrder:PO-991"
+   },
+   {
+    "dst": "PurchaseOrder:PO-991",
+    "link_type": "PurchaseOrderLine_purchaseOrder",
+    "src": "PurchaseOrderLine:POL-991-1"
+   },
+   {
+    "dst": "Part:PX-17",
+    "link_type": "PartReferencing_part",
+    "src": "PurchaseOrderLine:POL-991-1"
+   },
+   {
+    "dst": "Warehouse:WH-A",
+    "link_type": "PurchaseOrderLine_destinationWarehouse",
+    "src": "PurchaseOrderLine:POL-991-1"
+   },
+   {
+    "dst": "Supplier:S-7",
+    "link_type": "PurchaseOrder_suppliedBy",
+    "src": "PurchaseOrder:PO-992"
+   },
+   {
+    "dst": "PurchaseOrder:PO-992",
+    "link_type": "PurchaseOrderLine_purchaseOrder",
+    "src": "PurchaseOrderLine:POL-992-1"
+   },
+   {
+    "dst": "Part:PX-900",
+    "link_type": "PartReferencing_part",
+    "src": "PurchaseOrderLine:POL-992-1"
+   },
+   {
+    "dst": "Warehouse:WH-B",
+    "link_type": "PurchaseOrderLine_destinationWarehouse",
+    "src": "PurchaseOrderLine:POL-992-1"
+   },
+   {
+    "dst": "Part:PX-17",
+    "link_type": "IdentityMapping_canonicalId",
+    "src": "IdentityMapping:IM-ERP"
+   },
+   {
+    "dst": "Part:PX-17",
+    "link_type": "IdentityMapping_canonicalId",
+    "src": "IdentityMapping:IM-MES"
+   },
+   {
+    "dst": "Part:PX-17",
+    "link_type": "IdentityMapping_canonicalId",
+    "src": "IdentityMapping:IM-WMS"
+   }
+  ],
+  "objects": [
+   {
+    "key": "WH-A",
+    "props": {
+     "capacityClass": "standard",
+     "region": "region-1",
+     "warehouseId": "WH-A"
+    },
+    "type": "Warehouse"
+   },
+   {
+    "key": "WH-B",
+    "props": {
+     "capacityClass": "standard",
+     "region": "region-1",
+     "warehouseId": "WH-B"
+    },
+    "type": "Warehouse"
+   },
+   {
+    "key": "WH-C",
+    "props": {
+     "capacityClass": "standard",
+     "region": "region-1",
+     "warehouseId": "WH-C"
+    },
+    "type": "Warehouse"
+   },
+   {
+    "key": "PX-17",
+    "props": {
+     "criticality": "HIGH",
+     "description": "reference part for the canonical incident",
+     "partId": "PX-17",
+     "unit": "each"
+    },
+    "type": "Part"
+   },
+   {
+    "key": "PX-900",
+    "props": {
+     "criticality": "LOW",
+     "description": "bulk part",
+     "partId": "PX-900",
+     "unit": "each"
+    },
+    "type": "Part"
+   },
+   {
+    "key": "S-7",
+    "props": {
+     "leadTimeDays": 5,
+     "riskClass": "MEDIUM",
+     "status": "ACTIVE",
+     "supplierId": "S-7"
+    },
+    "type": "Supplier"
+   },
+   {
+    "key": "L-1",
+    "props": {
+     "capabilities": "assembly",
+     "lineId": "L-1",
+     "status": "RUNNING"
+    },
+    "type": "ProductionLine"
+   },
+   {
+    "key": "LOT-A-PX17",
+    "props": {
+     "lotId": "LOT-A-PX17",
+     "onHand": 20,
+     "qualityStatus": "OK",
+     "reserved": 0
+    },
+    "type": "InventoryLot"
+   },
+   {
+    "key": "LOT-B-PX17",
+    "props": {
+     "lotId": "LOT-B-PX17",
+     "onHand": 140,
+     "qualityStatus": "OK",
+     "reserved": 0
+    },
+    "type": "InventoryLot"
+   },
+   {
+    "key": "LOT-C-PX900",
+    "props": {
+     "lotId": "LOT-C-PX900",
+     "onHand": 500,
+     "qualityStatus": "OK",
+     "reserved": 0
+    },
+    "type": "InventoryLot"
+   },
+   {
+    "key": "LOT-B-PX900",
+    "props": {
+     "lotId": "LOT-B-PX900",
+     "onHand": 10,
+     "qualityStatus": "OK",
+     "reserved": 0
+    },
+    "type": "InventoryLot"
+   },
+   {
+    "key": "LOT-A-PX900",
+    "props": {
+     "lotId": "LOT-A-PX900",
+     "onHand": 30,
+     "qualityStatus": "QUARANTINE",
+     "reserved": 0
+    },
+    "type": "InventoryLot"
+   },
+   {
+    "key": "WO-42",
+    "props": {
+     "plannedFinish": 40,
+     "plannedStart": 18,
+     "priority": "HIGH",
+     "status": "PLANNED",
+     "workOrderId": "WO-42"
+    },
+    "type": "WorkOrder"
+   },
+   {
+    "key": "WO-43",
+    "props": {
+     "plannedFinish": 60,
+     "plannedStart": 30,
+     "priority": "LOW",
+     "status": "RUNNING",
+     "workOrderId": "WO-43"
+    },
+    "type": "WorkOrder"
+   },
+   {
+    "key": "BOM-42-PX17",
+    "props": {
+     "iri": "BOM-42-PX17",
+     "quantity": 80
+    },
+    "type": "BomRequirement"
+   },
+   {
+    "key": "BOM-43-PX900",
+    "props": {
+     "iri": "BOM-43-PX900",
+     "quantity": 5
+    },
+    "type": "BomRequirement"
+   },
+   {
+    "key": "PO-991",
+    "props": {
+     "expectedAt": 120,
+     "poId": "PO-991",
+     "promisedAt": 8,
+     "status": "DELAYED"
+    },
+    "type": "PurchaseOrder"
+   },
+   {
+    "key": "POL-991-1",
+    "props": {
+     "iri": "POL-991-1",
+     "quantity": 100
+    },
+    "type": "PurchaseOrderLine"
+   },
+   {
+    "key": "PO-992",
+    "props": {
+     "expectedAt": 40,
+     "poId": "PO-992",
+     "promisedAt": 8,
+     "status": "OPEN"
+    },
+    "type": "PurchaseOrder"
+   },
+   {
+    "key": "POL-992-1",
+    "props": {
+     "iri": "POL-992-1",
+     "quantity": 50
+    },
+    "type": "PurchaseOrderLine"
+   },
+   {
+    "key": "ES-1",
+    "props": {
+     "iri": "ES-1",
+     "snapshotContentHash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "snapshotObservedAt": 0
+    },
+    "type": "EvidenceSnapshot"
+   },
+   {
+    "key": "IM-ERP",
+    "props": {
+     "iri": "IM-ERP",
+     "mappingRuleId": "canonical-incident",
+     "mappingRuleVersion": "1",
+     "sourceLocalId": "PART-00192"
+    },
+    "type": "IdentityMapping"
+   },
+   {
+    "key": "IM-MES",
+    "props": {
+     "iri": "IM-MES",
+     "mappingRuleId": "canonical-incident",
+     "mappingRuleVersion": "1",
+     "sourceLocalId": "COMP-A17"
+    },
+    "type": "IdentityMapping"
+   },
+   {
+    "key": "IM-WMS",
+    "props": {
+     "iri": "IM-WMS",
+     "mappingRuleId": "canonical-incident",
+     "mappingRuleVersion": "1",
+     "sourceLocalId": "SKU-88429"
+    },
+    "type": "IdentityMapping"
+   }
+  ]
+ },
+ "spec": "r3-ops-spec-1",
+ "unsupported": [
+  {
+   "kind": "function",
+   "name": "decision_content_hash",
+   "reason": "Hashes a control-plane Decision record (ontology/shape/authorization-model/policy-bundle versions, actor, evidence snapshot). Those are Engine provenance concepts with no neutral operational meaning; provenance integrity is measured separately (H27) with its own corpus."
+  }
+ ]
+}
