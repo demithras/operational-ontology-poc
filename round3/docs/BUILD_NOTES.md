@@ -37,3 +37,28 @@ Tests: `tests/` (`fakes/fake_variant.py` is test-only and never registered).
 - P2 (variants): consume `ops_spec`/`auth_spec` dicts passed to `Variant.deploy`; write only through the supplied `WorldHandle` factory; implement `tools/call_tool/direct/read`, return `CallResult`; Paladin must build IR/pack from the neutral spec only where it chooses to, but may not edit the spec. Seed the world from `ops_spec["seed"]` (helper for seeding is intentionally left to the harness).
 - P3 (oracles/harness): read specs via `load_ops_spec/load_auth_spec`; measure effects with `WorldReader.snapshot()` + `diff`; never trust `CallResult`; use `evaluate_common`/`DualVerdict` and `evidence.write_envelope`.
 - Not provided in P1 (by design): world seeding helper, oracle logic, token issuing policy for principals (harness issues tokens with `IdentityProvider`; audience convention left to the harness/variants, fake uses "fake").
+
+
+## P2b Conventional (tag r3-p2b-conventional, branch r3-conv)
+
+Builder worked only from neutral inputs (ops/authority specs, PROT-H23, FAIRNESS, DUAL_TRACK, `r3_shared`); no round2 or paladin source read.
+
+### Module map (`round3/src/conventional/`)
+| Module | Purpose |
+|---|---|
+| `codegen.py` -> `models_gen.py` | typed frozen request model per operation, generated from `spec/ops/*.json`; `python -m conventional.codegen [--check]` |
+| `validation.py` | strict schema checks (unknown fields rejected, bool is not int, JSON deep copy, single read of caller keys) |
+| `policy.py` | policy decision point (ABAC/ReBAC over the authority spec; deny overrides; on-behalf-of; approver independence; static exposure) |
+| `worldview.py`, `interp.py`, `helpers_mfg.py`, `helpers_proj.py` | commit-time interpretation of preconditions/business rules; prose helpers implemented from the spec text |
+| `effects.py`, `store.py` | declarative effects applied through `WorldHandle("conventional-service")`; idempotency/approval tables in the world file |
+| `service.py`, `tools.py`, `variant.py` | service API (one transaction per request), tool surface, `ConventionalVariant` (audience `conventional`) |
+| `mutants.py` | the four H23 switches (names as in PROT-H23; `r3_shared.mutants` does not exist in P1, so they live here) |
+
+Tests: `tests/conventional/` (functional per operation, R1-R8 negatives with zero-effect diffs, mutants, codegen/policy, stateful sequences with known-negative mutant kills). Protection mapping: `spec/protections/H23-conventional.md`.
+
+### Findings / notes for the orchestrator
+- `r3_shared.world.WorldHandle` has no auxiliary-table API; `store.py` uses `handle._con` for `conv_idempotency` / `conv_approvals` in the same SQLite file (atomic with effects; invisible to `WorldReader.snapshot`). Suggest a public hook in P1 if Paladin needs the same.
+- Spec ambiguity: `exists` over a resource input means the object exists in the world (otherwise `expedite-closed-po` / `reschedule-closed-wo` never fire for absent targets); `exists(new_experiment_id)` tests Experiment existence (helper yields an id).
+- `agent-orphan` is allowed without `on_behalf_of` under the frozen rule (see H23-conventional.md); `authspec.allowed_operations` disagrees for delegated principals.
+- A `tests/test_variant_protocol.py` P1 test asserted both variants raise NotImplementedError; relaxed to "built or not-implemented" so it holds on both branches.
+- Business rules defend in depth: on `PX-17 WH-B->WH-A` the protected-route rule masks a missing authorization check, so mutant tests use an unprotected route (WH-B->WH-C).

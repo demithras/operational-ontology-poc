@@ -38,5 +38,10 @@ def test_registry_lazy_and_never_contains_fake():
     with pytest.raises(KeyError):
         load_variant("fake")
     for n in ("paladin", "conventional"):
-        with pytest.raises(NotImplementedError, match="not implemented yet"):
-            load_variant(n)
+        # P2 landed per variant: a variant is either built (satisfies the protocol) or reports it is not built yet
+        try:
+            v = load_variant(n)
+        except NotImplementedError as exc:
+            assert "not implemented yet" in str(exc)
+        else:
+            assert isinstance(v, Variant) and v.name == n
