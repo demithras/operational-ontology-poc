@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .authority import Resource
+from .authority import Principal, Resource
 from .canon import freeze
 from .capabilities import ReadOnly
 from .functions import check_params
@@ -36,7 +36,8 @@ def make_ctx(eng, spec, rec: dict, state=None, **extra) -> ReadOnly:
 
     base = dict(package_id=eng.model.package_id, package_version=eng.model.version, action=spec.rid,
                 action_version=spec.version, execution=rec["exec"], inputs=freeze(rec["inputs"]),
-                principal=eng.principal_of(rec["principal"]["pid"]), view=view, call=call, now=rec["updated_at"],
+                principal=Principal.from_plain(rec["principal"]),  # P2a patch V2: the presented (possibly delegated) principal
+                view=view, call=call, now=rec["updated_at"],
                 planned=(), observations=(), responses=())
     base.update({k: freeze(v) for k, v in extra.items()})
     return ReadOnly(**base)

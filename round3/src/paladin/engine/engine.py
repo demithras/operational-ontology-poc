@@ -109,10 +109,25 @@ class Engine:
         if reg is None:
             return None, f"unknown principal {pid!r}"
         if isinstance(presented, Principal) and presented != reg:
-            return None, "presented claims differ from the registered identity"
+            # P2a patch V1 (request-scoped delegation): a presented principal may carry a delegated_by chain that the
+            # directory does not hold, provided EVERY chain element is registered with exactly the presented claims.
+            if not self._chain_registered(presented):
+                return None, "presented claims differ from the registered identity"
+            return presented, ""
         if not isinstance(presented, (str, Principal)):
             return None, "unsupported principal object"
         return reg, ""
+
+    def _chain_registered(self, p: Principal) -> bool:
+        """P2a patch V1: p's own claims and every delegator's claims equal the registered claims of that pid."""
+        seen = set()
+        while p is not None:
+            reg = self.directory.get(p.pid)
+            if reg is None or p.pid in seen or (p.roles, p.relations) != (reg.roles, reg.relations):
+                return False
+            seen.add(p.pid)
+            p = p.delegated_by
+        return True
 
     # ---- seeding (before any execution) --------------------------------------------------
     def seed(self, ops: list) -> None:

@@ -133,4 +133,5 @@ def freshness(view, now: Any) -> str:
 
 
 def holds(principal, obj_type: str, key: Any, relation: str) -> bool:
-    return (obj_type, key, relation) in principal.relations
+    # P2a patch D5: a delegated request acts with its delegation chain (agent on behalf of P): any link may hold the relation
+    return any((obj_type, key, relation) in p.relations for p in principal.chain())
