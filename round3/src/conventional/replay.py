@@ -16,7 +16,7 @@ from .provenance import ZERO, sha
 
 AUTH_DENY = {"no_matching_allow", "no_matching_allow_or_denied", "on_behalf_of_not_delegator", "unknown_principal",
              "unknown_delegator", "no_delegation", "denied_by_deny_grant", "no_delegable_grant",
-             "delegator_not_allowed", "no_valid_path"}
+             "delegator_not_allowed", "no_valid_path", "tool_not_available"}
 ENV_KEYS = {"v", "stream", "seq", "prev", "decision", "artifacts"}
 ART_KEYS = {"evidence", "authority", "policy", "contract"}
 
