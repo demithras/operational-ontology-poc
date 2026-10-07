@@ -203,3 +203,24 @@ def test_a_moved_artifact_is_indeterminate_not_definite_and_not_a_false_alarm(en
     v.write("elsewhere/copy", raw)
     aff = tamper.derive(b, v)
     assert 1 in aff["indeterminate"] and 1 not in aff["definite"]
+
+
+def test_a_digest_kept_in_a_sidecar_makes_its_decision_affected_when_the_sidecar_is_rewritten(env, tmp_path):
+    """digest_omission shape: the policy digest sits in a record beside the envelope. Rewriting that record affects
+    exactly its own decision (a VERIFIED replay of it is a tamper acceptance), not the others sharing the digest."""
+    import copy
+    b = env["bases"][1]
+    _, h = b.copy_to(str(tmp_path))
+    v = TamperView(h)
+    pol = {s: dict(b.bound(s))["policy"] for s in (2, 3)}
+    for s in (2, 3):
+        v.write(f"side/{s:010d}", pol[s].encode())
+    b2 = copy.copy(b)
+    b2.sc = layout.scan(v)
+    if hasattr(b2, "_bound_holders"):
+        del b2._bound_holders
+    assert not tamper.derive(b2, v)["definite"]                       # untouched sidecars: nothing affected
+    other = next(d for d in sorted(b.all_digests()) if d != pol[3])
+    v.write("side/%010d" % 3, other.encode())
+    aff = tamper.derive(b2, v)
+    assert 3 in aff["definite"] and 2 not in aff["definite"], aff

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 
 from r3_oracle import provenance as pv
 
@@ -256,6 +257,38 @@ def apply_case(view, base, rng, classes: list[str]) -> dict:
     return ctx
 
 
+_SEQ = re.compile(r"(?:^|/)(\d+)$")
+# layout kinds whose records are not part of a decision's bound state (request/approval ledgers, stream meta): T9 owns them
+_LEDGER_KINDS = ("approval", "idempotency", "ledger_meta", "meta", "stream")
+
+
+def holders_of_bound(base) -> dict[int, list[str]]:
+    """seq -> keys of ORIGINAL records (not envelopes/receipts/artifact blobs) that carry one of that decision's bound
+    digests as text (sidecars, indexes; found by content, never by layout). A key ending in a seq number belongs to that
+    seq only (a digest shared by many decisions must not make every sidecar everyone's), other keys to every match."""
+    cached = getattr(base, "_bound_holders", None)
+    if cached is not None:
+        return cached
+    sc, skip, out = base.sc, set(), {}
+    lay = base.stream.layout
+    ledger = tuple(lay[k] for k in _LEDGER_KINDS if lay.get(k))
+    for hits in list(sc.envs.values()) + list(sc.receipts.values()):
+        skip.update(h["key"] for h in hits)
+    blobs = base.all_digests()
+    for k, raw in sc.raw.items():
+        if k in skip or pv.sha(raw) in blobs or (ledger and k.startswith(ledger)):
+            continue
+        m = _SEQ.search(k)
+        kseq = int(m.group(1)) if m else None
+        for s in range(1, base.n + 1):
+            if kseq is not None and kseq != s:
+                continue
+            if any(d.encode() in raw for _, d in base.bound(s)):
+                out.setdefault(s, []).append(k)
+    base._bound_holders = out
+    return out
+
+
 def derive(base, view) -> dict:
     """definite / indeterminate / unaffected seq sets from the end state of the store (see module docstring)."""
     sc = layout.scan(view)
@@ -273,6 +306,9 @@ def derive(base, view) -> dict:
         if ch:
             changed.add(s)
             definite.add(s)
+        for k in holders_of_bound(base).get(s, []):  # a record holding its bound digests (sidecar) changed/vanished
+            if sc.raw.get(k) != base.sc.raw.get(k):
+                definite.add(s)
         if any(not present[d] for _, d in base.bound(s)):
             definite.add(s)
         elif any(not set(sc.blobs[d]) & set(base.sc.blobs.get(d, [])) for _, d in base.bound(s)):
