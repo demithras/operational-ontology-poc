@@ -37,7 +37,7 @@ class PaladinDeployment:
         self._args = (domain, factory, verifier, ops_spec, auth_spec, clock, mutants)
         self.history, self.anchor, self.mutants = history, anchor, frozenset(mutants)
         self.stream = stream_for(history, anchor, domain) if history is not None else None
-        self.reauth = Reauth(domain, ops_spec)
+        self.reauth, self.ops_spec = Reauth(domain, ops_spec), ops_spec
         self._state_dir = None if history is not None else (state_dir or tempfile.mkdtemp(prefix="paladin-state-"))
         self._meta = threading.Lock()   # crash flags
         self._tl = threading.local()    # the armed crash point of THIS thread's request

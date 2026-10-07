@@ -95,5 +95,5 @@ class G2Rig:
 
 
 def new_anchor(tmp: Path):
-    ap = start_anchor(tmp / "anchor", str(tmp / "anchor.sock"))
-    return ap
+    import tempfile  # AF_UNIX paths are short: the socket lives in a short temp dir, the log under tmp
+    return start_anchor(tmp / "anchor", str(Path(tempfile.mkdtemp(prefix="r3s")) / "s"))
