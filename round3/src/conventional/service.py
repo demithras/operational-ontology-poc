@@ -255,7 +255,7 @@ class Service(AuthorityOps):
         res = tuple((model.RESOURCES[n], v) for n, v in inputs.items() if n in model.RESOURCES)
         bound = BoundRequest(sub, obo, operation, MappingProxyType(inputs), res, request_id, self._policy.version,
                              store.fingerprint(sub, obo, operation, inputs))  # on_behalf_of bound LITERALLY (P10)
-        dc.args = dict(inputs)
+        # E-4: dc.args stays the args exactly as passed (args_digest covers them, not the normalised inputs)
         h = self._factory(WRITER)
         try:
             # unsynchronized_commit BUG: no lock above and no world transaction here, so check-then-act interleaves
@@ -377,7 +377,7 @@ class Service(AuthorityOps):
         with self._lock:
             if self.crashed:
                 return CallResult("UNAVAILABLE", {"reason": "crashed"})
-            dc = DecisionCtx("approve", None, None, on_behalf_of if isinstance(on_behalf_of, str) else None, operation, None)
+            dc = DecisionCtx("approve", None, None, on_behalf_of if isinstance(on_behalf_of, str) else None, operation, args)
             try:
                 approver = self.authenticate(token)
                 op = self._ops.get(operation) if isinstance(operation, str) else None
@@ -392,7 +392,6 @@ class Service(AuthorityOps):
                     inputs = model.from_args(args).inputs()
                 except RequestInvalid as exc:
                     raise _Abort("INVALID", {"reason": exc.reason}) from exc
-                dc.args = {"requester": requester, "on_behalf_of": on_behalf_of, "operation": operation, "args": inputs}
                 res = [(model.RESOURCES[n], v) for n, v in inputs.items() if n in model.RESOURCES]
                 dc.governed, dc.authority_doc = True, self._policy.doc
                 if not self._policy.can_approve(approver, requester, on_behalf_of, op["approval"]["approver_operation"], res,

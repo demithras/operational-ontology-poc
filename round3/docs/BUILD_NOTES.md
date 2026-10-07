@@ -308,3 +308,8 @@ Approval/idempotency fingerprint now binds `on_behalf_of` literally (service.py;
 - Known limitations: a committed request whose anchor append failed is never re-anchored later (retry -> UNAVAILABLE `anchor_unavailable`, replay UNRESOLVED
   `unanchored`); duplicate decision_ids (same request_id reused after a refusal) share the first anchor entry on lookup; evidence `newest` ties keep the first key.
 - Assumptions for the frozen text: see the end of spec/protections/H27-conventional.md.
+
+## G2 errata E-3/E-4 (conventional)
+- provenance: `operation` null for delegate/revoke; `args_digest` over the raw args (call_tool/direct), raw approve args, edge dict, edge_id string; `newest` tie-break greatest value then smallest key.
+- authority_ops: plans run on `authdoc.upgraded(policy.doc)` (v1 == empty v2, depth 8); ConventionalDeployment methods wrapped by `_safe` (internal error -> UNAVAILABLE/internal_error CallResult).
+- tests: tests/conventional/test_conv_g2_e34.py (14 tests, 11 fail on the pre-change source; the tie-break test passes either way because the store lists rows key-ordered).

@@ -79,7 +79,9 @@ class AuthorityOps:
                 return CallResult("DENIED", {"reason": "token"})
             if not isinstance(request_id, str) or not request_id.strip():
                 return CallResult("INVALID", {"reason": "bad_request_id"})
-            dc = DecisionCtx(kind, request_id, sub, None, kind, args, governed=True)
+            # E-4: args_digest covers the edge dict (delegate) / the edge_id string (revoke), operation is null
+            dc = DecisionCtx(kind, request_id, sub, None, kind, args["edge"] if kind == "delegate" else args["edge_id"],
+                             governed=True)
             dc.authority_doc, dc.evidence = self._policy.doc, []
             h = self._factory("conventional-service")
             try:
@@ -113,7 +115,7 @@ class AuthorityOps:
                 if self.prov is not None and not self.prov.anchored(rid):
                     raise _Abort("UNAVAILABLE", {"reason": "anchor_unavailable"})
                 return CallResult(prior[1]["status"], {**prior[1]["body"], "replayed": True})
-            refusal, new_doc, body, mark = plan(sub, args, self._policy.doc, tx.tick)
+            refusal, new_doc, body, mark = plan(sub, args, authdoc.upgraded(self._policy.doc), tx.tick)  # E-3: v1 == empty v2
             if refusal is not None:
                 raise _Abort(refusal[0], {"reason": refusal[1]})
             if self._armed == "before_commit":

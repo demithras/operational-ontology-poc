@@ -99,9 +99,9 @@ class Provenance:
                 {"ref": f"{t}:{k}", "version": rec["version"], "props": rec["props"]}
         for t, f in newest_terms([op["business_rules"], op["preconditions"]]):
             best = None
-            for row in h.list(t):
+            for row in h.list(t):  # E-4: greatest value, then the smallest ref
                 v = row["props"].get(f)
-                if type(v) is int and (best is None or v > best[0]):
+                if type(v) is int and (best is None or v > best[0] or (v == best[0] and row["key"] < best[1]["key"])):
                     best = (v, row)
             if best is not None:
                 refs[f"{t}:{best[1]['key']}"] = {"ref": f"{t}:{best[1]['key']}", "version": best[1]["version"],
@@ -136,7 +136,9 @@ class Provenance:
             head_e = self.anchor.head(self.stream)
             seq, prev = (head_e["seq"] + 1, head_e["root"]) if head_e else (1, ZERO)
             decision = {"decision_id": dc.rid or f"{dc.kind}-{seq}", "kind": dc.kind, "subject": dc.subject,
-                        "on_behalf_of": dc.obo, "operation": dc.operation, "args_digest": args_digest,
+                        "on_behalf_of": dc.obo,
+                        "operation": dc.operation if dc.kind in ("call_tool", "direct", "approve") else None,
+                        "args_digest": args_digest,
                         "status": result.status, "reason": "ok" if ok else str(result.body.get("reason", "")),
                         "effect_digest": self.effect_digest(h, dc.tx_id if ok else None),
                         "world_seq": dc.world_seq if ok and dc.world_seq is not None else head,
