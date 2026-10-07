@@ -156,6 +156,14 @@ class Service(AuthorityOps):
         return name in self._mutants
 
     @property
+    def mutants(self):
+        return self._mutants
+
+    @property
+    def factory(self):
+        return self._factory
+
+    @property
     def policy(self) -> Pdp:
         return self._policy
 
