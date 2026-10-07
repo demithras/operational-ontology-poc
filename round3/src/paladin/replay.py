@@ -146,6 +146,8 @@ def _ref_of(h, digest: str) -> str | None:
 def _reauthorize(dep, dec: dict, arts_d: dict, blobs: dict) -> str | None:
     if dec["kind"] not in ("call_tool", "direct"):
         return None
+    if dec.get("status") not in ("OK", "DENIED"):  # E-10: INVALID decisions need not have reached an authority verdict
+        return None
     doc = json.loads(blobs[arts_d["authority"]])
     spec = next((o for o in dep.ops_spec["operations"] if o["name"] == dec["operation"]), None)
     if spec is None:
