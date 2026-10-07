@@ -1,0 +1,16 @@
+{
+ "informational": true,
+ "note": "no verdict clause reads this file (ruling R-5)",
+ "pairs": [
+  {
+   "calls_compared": 96504,
+   "differences": [],
+   "differing_calls": 0,
+   "listed": 0,
+   "other": "conventional",
+   "reference": "paladin"
+  }
+ ],
+ "seed": 2310,
+ "sequences": 10000
+}

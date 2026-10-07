@@ -18,6 +18,9 @@ round3/spec/authority/<domain>.json is authoritative (it follows round2/docs/eng
   exists and lists the operation; (b) an allow grant matching the SUBJECT has `delegable: true`; (c) P would itself be
   allowed the same request (same operation, same inputs); (d) no deny grant matches the subject or P. Otherwise DENIED.
 - Approvals: an approver must differ from the requester and lie outside the requester's delegation chain.
+- Approval binding (clarified 2026-10-07, author decision after exp-h23-001): a pre-approval binds the request exactly
+  as supplied - requester, `on_behalf_of` LITERALLY (null and an explicit delegator are different requests for approval
+  purposes, even for a delegate), operation and canonicalised args. Authority evaluation of a delegate is unchanged.
 - Deny grants on pseudo-operations (`write:canonical-state`, `write:<Type>.<field>`, `update:<Type>` with a state
   condition) forbid those world changes by any path other than the governed operation semantics in the ops spec.
 - Operation preconditions and helper predicates (ops spec `helpers`, defined in prose) are evaluated against the

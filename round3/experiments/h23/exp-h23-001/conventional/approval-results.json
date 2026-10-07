@@ -1,0 +1,78 @@
+{
+ "rule_names": [
+  "appr_ok",
+  "appr_missing",
+  "appr_self",
+  "appr_chain",
+  "appr_unauth",
+  "appr_forged",
+  "appr_swap",
+  "appr_by_attacker"
+ ],
+ "rules": {
+  "appr_by_attacker": {
+   "approve_calls": 325,
+   "calls": 650,
+   "forbidden_effect": 0,
+   "legit_expected": 0,
+   "legit_ok": 0,
+   "zero_effect_ok": 650
+  },
+  "appr_chain": {
+   "approve_calls": 143,
+   "calls": 286,
+   "forbidden_effect": 1,
+   "legit_expected": 0,
+   "legit_ok": 0,
+   "zero_effect_ok": 283
+  },
+  "appr_forged": {
+   "approve_calls": 145,
+   "calls": 290,
+   "forbidden_effect": 0,
+   "legit_expected": 0,
+   "legit_ok": 0,
+   "zero_effect_ok": 290
+  },
+  "appr_missing": {
+   "approve_calls": 0,
+   "calls": 152,
+   "forbidden_effect": 0,
+   "legit_expected": 0,
+   "legit_ok": 0,
+   "zero_effect_ok": 151
+  },
+  "appr_ok": {
+   "approve_calls": 144,
+   "calls": 432,
+   "forbidden_effect": 0,
+   "legit_expected": 144,
+   "legit_ok": 144,
+   "zero_effect_ok": 286
+  },
+  "appr_self": {
+   "approve_calls": 156,
+   "calls": 312,
+   "forbidden_effect": 1,
+   "legit_expected": 0,
+   "legit_ok": 0,
+   "zero_effect_ok": 310
+  },
+  "appr_swap": {
+   "approve_calls": 144,
+   "calls": 288,
+   "forbidden_effect": 0,
+   "legit_expected": 0,
+   "legit_ok": 0,
+   "zero_effect_ok": 288
+  },
+  "appr_unauth": {
+   "approve_calls": 148,
+   "calls": 296,
+   "forbidden_effect": 1,
+   "legit_expected": 0,
+   "legit_ok": 0,
+   "zero_effect_ok": 295
+  }
+ }
+}

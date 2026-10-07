@@ -1,0 +1,11 @@
+STEP start 2026-10-06T21:14:09Z head=01bc7aca059a7de94284aacce013d0deb72e610e load=5.92 5.10 4.80
+paladin: sequences=10002 unique=10000 calls=96504 classes={'forbidden_effect': 3, 'backstop_failure': 1} elapsed=1429.0s
+conventional: sequences=10002 unique=10000 calls=96504 classes={'forbidden_effect': 3, 'backstop_failure': 1} elapsed=263.3s
+differential paladin vs conventional: 0 differing of 96504 calls
+STEP run-done 2026-10-06T22:01:26Z
+{"paladin_verdict": "REJECTED", "conventional_verdict": "REJECTED"}
+conventional: REJECTED ['forbidden=3 identity_expansions=0 backstop_failures=1']
+paladin: REJECTED ['forbidden=3 identity_expansions=0 backstop_failures=1']
+evidence hashes ok
+verdict reproduces
+DONE 2026-10-06T22:01:29Z load=4.28 4.12 4.20

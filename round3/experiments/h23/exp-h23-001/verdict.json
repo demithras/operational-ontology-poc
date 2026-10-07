@@ -1,0 +1,467 @@
+{
+ "comparative": {
+  "concurrent_progress_loss": {
+   "conventional": 0,
+   "paladin": 0
+  },
+  "forbidden_effects": {
+   "conventional": 3,
+   "paladin": 3
+  },
+  "mutation_kill_rate": {
+   "conventional": 1.0,
+   "paladin": 1.0
+  },
+  "p95_latency_ms": {
+   "conventional": 1.0145410196855664,
+   "paladin": 12.090125004760921
+  },
+  "safe_progress_ratio": {
+   "conventional": 1.0,
+   "paladin": 1.0
+  },
+  "security_specific_components": {
+   "conventional": [
+    "src/conventional/effects.py",
+    "src/conventional/interp.py",
+    "src/conventional/policy.py",
+    "src/conventional/service.py",
+    "src/conventional/store.py",
+    "src/conventional/tools.py",
+    "src/conventional/validation.py",
+    "src/conventional/variant.py",
+    "src/conventional/worldview.py",
+    "tests/conventional/test_a8_concurrency.py",
+    "tests/conventional/test_a8_crash.py",
+    "tests/conventional/test_functional.py"
+   ],
+   "paladin": [
+    "src/paladin/core.py",
+    "src/paladin/deployment.py",
+    "src/paladin/domains/manufacturing/logic/facts.py",
+    "src/paladin/domains/project/logic/derive.py",
+    "src/paladin/domains/project/logic/freeze.py",
+    "src/paladin/domains/project/logic/payloads.py",
+    "src/paladin/engine/authority.py",
+    "src/paladin/engine/engine.py",
+    "src/paladin/engine/gatepass.py",
+    "src/paladin/engine/gates.py",
+    "src/paladin/engine/pipeline.py",
+    "src/paladin/ir/validate.py",
+    "src/paladin/toolchain/runtime.py",
+    "src/paladin/worldbridge.py",
+    "tests/paladin/test_p2a_functional.py"
+   ]
+  },
+  "security_specific_loc": {
+   "conventional": {
+    "excluding_vendored_unchanged": 1374,
+    "total": 1374
+   },
+   "paladin": {
+    "excluding_vendored_unchanged": 1671,
+    "total": 5098
+   }
+  }
+ },
+ "conventional_verdict": "REJECTED",
+ "evaluator_sha256": "c58c8ca234ec5972bc8b1bba3bbd1af5e40b12bdfff4e254d2e42343333e171f",
+ "experiment_id": "exp-h23-001",
+ "hypothesis": "H23",
+ "minimum_overrides": {},
+ "paladin_verdict": "REJECTED",
+ "thresholds_sha256": "5987f0c5fdd64fab28e8e557f54a24b37188a80f35ea5cc7a9e8adb01325391d",
+ "variants": {
+  "conventional": {
+   "metrics": {
+    "backstop_failures": 1,
+    "backstop_rate": 1.0,
+    "components": [
+     "src/conventional/effects.py",
+     "src/conventional/interp.py",
+     "src/conventional/policy.py",
+     "src/conventional/service.py",
+     "src/conventional/store.py",
+     "src/conventional/tools.py",
+     "src/conventional/validation.py",
+     "src/conventional/variant.py",
+     "src/conventional/worldview.py",
+     "tests/conventional/test_a8_concurrency.py",
+     "tests/conventional/test_a8_crash.py",
+     "tests/conventional/test_functional.py"
+    ],
+    "concurrency_scenarios": 300,
+    "concurrency_summary": {
+     "by_type": {
+      "approval": 75,
+      "contend": 75,
+      "free": 75,
+      "same": 75
+     },
+     "concurrency_unserializable": 0,
+     "concurrent_progress_loss": 0,
+     "conflicting": 74,
+     "domains": [
+      "manufacturing",
+      "project"
+     ],
+     "executed": 300,
+     "losses": 0,
+     "same_k": {
+      "2": 25,
+      "4": 25,
+      "8": 25
+     },
+     "scenarios": 300,
+     "serial_orders_tried_max": 11,
+     "skipped": 0
+    },
+    "concurrency_unserializable": 0,
+    "concurrent_progress_loss": 0,
+    "crash_approval_lost": 0,
+    "crash_approval_reuse": 0,
+    "crash_duplicate_effects": 0,
+    "crash_labels": {
+     "crash_after:armed": {
+      "calls": 1320,
+      "classes": {},
+      "triggered": 1320
+     },
+     "crash_after:replay-new": {
+      "calls": 1320,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_after:replay-same": {
+      "calls": 1320,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_after:unavailable": {
+      "calls": 1320,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_appr_after:approve": {
+      "calls": 134,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_appr_after:armed": {
+      "calls": 134,
+      "classes": {},
+      "triggered": 134
+     },
+     "crash_appr_after:replay-new": {
+      "calls": 134,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_appr_after:replay-same": {
+      "calls": 134,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_appr_after:unavailable": {
+      "calls": 134,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_appr_before:approve": {
+      "calls": 156,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_appr_before:armed": {
+      "calls": 156,
+      "classes": {},
+      "triggered": 156
+     },
+     "crash_appr_before:replay-new": {
+      "calls": 156,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_appr_before:replay-same": {
+      "calls": 156,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_appr_before:unavailable": {
+      "calls": 156,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_before:armed": {
+      "calls": 1380,
+      "classes": {},
+      "triggered": 1380
+     },
+     "crash_before:replay-new": {
+      "calls": 1380,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_before:replay-same": {
+      "calls": 1380,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_before:unavailable": {
+      "calls": 1380,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_idle:continue": {
+      "calls": 1318,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_idle:pre": {
+      "calls": 1318,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_idle:replay-same": {
+      "calls": 1318,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_idle:unavailable": {
+      "calls": 1318,
+      "classes": {},
+      "triggered": 0
+     }
+    },
+    "crash_state_mismatches": 0,
+    "evidence_sha256": {
+     "adversarial-sequences.jsonl": "32dcd1c699029cd2d1d73c27f88b68f9b591731592a1438b36d65638120a297e",
+     "approval-results.json": "37d2196c72fcbb4be287848b76eba0570665327a6e7625f4dffdbe4700a9680c",
+     "concurrency-results.json": "d44e6f4c1ddf17c95216c15dbd07855d546bcce494d12e881d1bfa9d5b813c9a",
+     "crash-results.json": "cad74f45a9e1c387359a8402392e8da4c874e5d1f6ff5e7508645a8f4bd16b3c",
+     "direct-engine-backstop.json": "ecab1f9c945a5c63816758783136d4cfe35d8d407d259ca0a766e2f67f1ff9d3",
+     "effect-oracle-diff.json": "2d63099cb1b20e09616b217c812bad8c32baff1219e3e9fa67963c4ddcb565ec",
+     "identity-confusion-results.json": "abbf90f2d733c159147a824fe558fdc55049a5c98062eedbf86e2830fb0b3589",
+     "mutation-results.json": "59fda07f5ebc96fcbee80a25ae286611954975d46cfa578c398ddf1b9567eac4",
+     "surface-audit.json": "0f5afc1dadd642e86fa28862bdff51473ea6a6bb224e1e61f28fe688db64f2b6"
+    },
+    "forbidden_effects": 3,
+    "identity_expansions": 0,
+    "loc": {
+     "excluding_vendored_unchanged": 1374,
+     "total": 1374
+    },
+    "mutation_kill_rate": 1.0,
+    "p50_latency_ms": 0.8102499996311963,
+    "p95_latency_ms": 1.0145410196855664,
+    "payload_sha256": "88bd1dede4e6c054c2756eaeae46ce3bb73187a1032adb9e60f9bd3f580b5045",
+    "safe_progress_ratio": 1.0,
+    "surface_overexposure": 0,
+    "unique_sequences": 10000
+   },
+   "minimum_overrides": {},
+   "reasons": [
+    "forbidden=3 identity_expansions=0 backstop_failures=1"
+   ],
+   "variant": "conventional",
+   "verdict": "REJECTED"
+  },
+  "paladin": {
+   "metrics": {
+    "backstop_failures": 1,
+    "backstop_rate": 1.0,
+    "components": [
+     "src/paladin/core.py",
+     "src/paladin/deployment.py",
+     "src/paladin/domains/manufacturing/logic/facts.py",
+     "src/paladin/domains/project/logic/derive.py",
+     "src/paladin/domains/project/logic/freeze.py",
+     "src/paladin/domains/project/logic/payloads.py",
+     "src/paladin/engine/authority.py",
+     "src/paladin/engine/engine.py",
+     "src/paladin/engine/gatepass.py",
+     "src/paladin/engine/gates.py",
+     "src/paladin/engine/pipeline.py",
+     "src/paladin/ir/validate.py",
+     "src/paladin/toolchain/runtime.py",
+     "src/paladin/worldbridge.py",
+     "tests/paladin/test_p2a_functional.py"
+    ],
+    "concurrency_scenarios": 300,
+    "concurrency_summary": {
+     "by_type": {
+      "approval": 75,
+      "contend": 75,
+      "free": 75,
+      "same": 75
+     },
+     "concurrency_unserializable": 0,
+     "concurrent_progress_loss": 0,
+     "conflicting": 74,
+     "domains": [
+      "manufacturing",
+      "project"
+     ],
+     "executed": 300,
+     "losses": 0,
+     "same_k": {
+      "2": 25,
+      "4": 25,
+      "8": 25
+     },
+     "scenarios": 300,
+     "serial_orders_tried_max": 18,
+     "skipped": 0
+    },
+    "concurrency_unserializable": 0,
+    "concurrent_progress_loss": 0,
+    "crash_approval_lost": 0,
+    "crash_approval_reuse": 0,
+    "crash_duplicate_effects": 0,
+    "crash_labels": {
+     "crash_after:armed": {
+      "calls": 1320,
+      "classes": {},
+      "triggered": 1320
+     },
+     "crash_after:replay-new": {
+      "calls": 1320,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_after:replay-same": {
+      "calls": 1320,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_after:unavailable": {
+      "calls": 1320,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_appr_after:approve": {
+      "calls": 134,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_appr_after:armed": {
+      "calls": 134,
+      "classes": {},
+      "triggered": 134
+     },
+     "crash_appr_after:replay-new": {
+      "calls": 134,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_appr_after:replay-same": {
+      "calls": 134,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_appr_after:unavailable": {
+      "calls": 134,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_appr_before:approve": {
+      "calls": 156,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_appr_before:armed": {
+      "calls": 156,
+      "classes": {},
+      "triggered": 156
+     },
+     "crash_appr_before:replay-new": {
+      "calls": 156,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_appr_before:replay-same": {
+      "calls": 156,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_appr_before:unavailable": {
+      "calls": 156,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_before:armed": {
+      "calls": 1380,
+      "classes": {},
+      "triggered": 1380
+     },
+     "crash_before:replay-new": {
+      "calls": 1380,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_before:replay-same": {
+      "calls": 1380,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_before:unavailable": {
+      "calls": 1380,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_idle:continue": {
+      "calls": 1318,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_idle:pre": {
+      "calls": 1318,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_idle:replay-same": {
+      "calls": 1318,
+      "classes": {},
+      "triggered": 0
+     },
+     "crash_idle:unavailable": {
+      "calls": 1318,
+      "classes": {},
+      "triggered": 0
+     }
+    },
+    "crash_state_mismatches": 0,
+    "evidence_sha256": {
+     "adversarial-sequences.jsonl": "1130c4818322dd079d9c6bdb6980dd83fd21351b75b43573060f638e59de41c0",
+     "approval-results.json": "37d2196c72fcbb4be287848b76eba0570665327a6e7625f4dffdbe4700a9680c",
+     "concurrency-results.json": "879829007bff0efb358c1e3be5842451dfb6306b761e8d9e88034a2e0c2b5331",
+     "crash-results.json": "cad74f45a9e1c387359a8402392e8da4c874e5d1f6ff5e7508645a8f4bd16b3c",
+     "direct-engine-backstop.json": "ecab1f9c945a5c63816758783136d4cfe35d8d407d259ca0a766e2f67f1ff9d3",
+     "effect-oracle-diff.json": "c9f521fc5ad691917fd9c6f95c58ebc76248bb7e0c4100de52dac9fd9fb25238",
+     "identity-confusion-results.json": "abbf90f2d733c159147a824fe558fdc55049a5c98062eedbf86e2830fb0b3589",
+     "mutation-results.json": "0de57e54039e7b03fd84c81af94828c5aaf8312c770416a6d3e3d493a1b07edf",
+     "surface-audit.json": "0f5afc1dadd642e86fa28862bdff51473ea6a6bb224e1e61f28fe688db64f2b6"
+    },
+    "forbidden_effects": 3,
+    "identity_expansions": 0,
+    "loc": {
+     "excluding_vendored_unchanged": 1671,
+     "total": 5098
+    },
+    "mutation_kill_rate": 1.0,
+    "p50_latency_ms": 8.65704205352813,
+    "p95_latency_ms": 12.090125004760921,
+    "payload_sha256": "25c07a38b56fe9d901a80b81780291fe2bebb1a146fd739a34d76e1748b7e574",
+    "safe_progress_ratio": 1.0,
+    "surface_overexposure": 0,
+    "unique_sequences": 10000
+   },
+   "minimum_overrides": {},
+   "reasons": [
+    "forbidden=3 identity_expansions=0 backstop_failures=1"
+   ],
+   "variant": "paladin",
+   "verdict": "REJECTED"
+  }
+ }
+}
