@@ -6,6 +6,7 @@ the marks of PROT-H24 s4: `authority` {op, ...} (mutations) and `commit` {reques
 """
 from __future__ import annotations
 
+import copy
 import threading
 from typing import Any
 
@@ -13,7 +14,7 @@ from paladin import capgraph, evid
 from paladin.engine import gates
 from paladin.prov import Prov
 from paladin.worldbridge import log_head, tx_rows
-from r3_shared.authgraph import authority_digest
+from r3_shared.authgraph import V2, authority_digest
 from r3_shared.authspec import validate_strict
 from r3_shared.evidence import canonical_bytes
 from r3_shared.variant import CallResult
@@ -66,7 +67,14 @@ class G2Mixin:
 
     def replace_authority(self, spec: dict) -> None:
         """set_authority: validate, then one transaction {mark authority set_authority; boot; persist}. ValueError changes nothing."""
+        if self.auth_fault is not None:
+            raise ValueError("authority history unresolved")
         validate_strict(spec, self.ops_spec)
+        inforce = bool(self.auth.get("capabilities") or self.auth.get("revoked"))
+        if self.auth.get("spec") == V2 and (inforce or spec.get("spec") == V2):  # E-5: base layer only; edges and revocations in force persist, the doc's are ignored
+            spec = {"max_delegation_depth": self.auth["max_delegation_depth"], **copy.deepcopy(spec), "spec": V2, "capabilities": copy.deepcopy(list(self.auth.get("capabilities", ()))),
+                    "revoked": sorted(self.auth.get("revoked", ()))}
+            validate_strict(spec, self.ops_spec)
         with self._svc.transaction(tag="authority") as tx:
             tx.mark("authority", {"op": "set_authority", "version": authority_digest(spec)})
             self.install(spec)
@@ -93,7 +101,14 @@ class G2Mixin:
             reason = "ok"
         elif res.status in ("DENIED", "INVALID"):
             reason = d["reason"] or GOVERNED.get(res.body.get("gate"))
-            if reason is None or (res.status == "INVALID" and reason not in RULE_INVALID and not d.get("rule_invalid")):
+            if res.status == "INVALID":  # E-8: every INVALID is governed unless the ops-spec input schema refuses the request
+                if d["op"] is None:  # delegate / revoke: schema faults carry no reason code (PROT-H24 s2)
+                    if reason is None:
+                        return res
+                elif self.schema_problem(d["op"], d["args"]) is not None:
+                    return res
+                reason = reason or str(res.body.get("gate") or "invalid")
+            elif reason is None:
                 return res
         else:
             return res
@@ -108,6 +123,33 @@ class G2Mixin:
         if err == "float_in_artifact":
             return CallResult("INVALID", {"reason": err})
         return CallResult("UNAVAILABLE", {"reason": err}) if err else res
+
+    def schema_problem(self, op: Any, args: Any) -> str | None:
+        """E-8: the ops-spec INPUT SCHEMA verdict (names, required, null, scalar type) - never existence, rules or reason text."""
+        o = self.ops.get(op) if isinstance(op, str) else None
+        if o is None:
+            return None  # not an operation request (delegate / revoke carry their own shape checks)
+        if not isinstance(args, dict):
+            return "args must be an object"
+        names = {i["name"]: i for i in o["inputs"]}
+        for k in args:
+            if k not in names:
+                return f"unknown argument {k}"
+        for n, i in names.items():
+            if n not in args:
+                if i["required"]:
+                    return f"missing {n}"
+                continue
+            v = args[n]
+            t = i["type"]
+            if v is None:
+                return f"null {n}" if i["required"] or t != "json" else None
+            ok = (isinstance(v, int) and not isinstance(v, bool)) if t == "integer" else \
+                isinstance(v, (int, float)) and not isinstance(v, bool) if t == "number" else \
+                isinstance(v, bool) if t == "boolean" else isinstance(v, str) if t in ("string", "resource") else True
+            if not ok:
+                return f"type {n}"
+        return None
 
     def refuse(self, sub: str, obo: Any, op: str, args: Any, rid: Any, res: CallResult, kind: str) -> CallResult:
         """A refusal decided before the commit path (surface / delegation): still a governed decision when it is an authority verdict."""
@@ -160,6 +202,8 @@ class G2Mixin:
     # ---- authority mutations (PROT-H24 s2, s5) ---------------------------------------------------
     def mutate_authority(self, kind: str, sub: str, payload: Any, rid: Any) -> CallResult:
         from paladin.core import fingerprint, plain  # noqa: PLC0415 - core imports this module
+        if self.auth_fault is not None:  # E-7
+            return CallResult("UNAVAILABLE", {"reason": "authority_history_unresolved"})
         if not isinstance(rid, str) or not rid:
             return CallResult("INVALID", {"reason": "request_id required"})
         fp = fingerprint(sub, kind, payload)
