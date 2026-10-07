@@ -95,3 +95,35 @@ def make_g2(tmp_path, mutants=(), with_history=False, spec=None, start=2, domain
         anc = proc.client()
     dep = variant.deploy(domain, store.handle_factory(), idp.verifier(), ops, auth, clock, None, hist, anc)
     return G2Rig(store, store.reader(), clock, idp, dep, ops, auth, variant, hist, anc, proc, tmp)
+
+
+# ---- H27 helpers --------------------------------------------------------------------------------------------------
+def populate27(r):
+    """A small history: delegate, edge request, base request, refusals (rule, authority), second touch of WH-B, revoke."""
+    d, t = r.dep, r.token
+    seed = r.store.handle("seed")
+    seed.update("InventoryLot", "LOT-B-PX17", {"onHand": 400})
+    seed.update("EvidenceSnapshot", "ES-1", {"snapshotObservedAt": 1})
+    seed.close()
+    res = [d.delegate(t("planner-1"), edge("e1", "planner-1", "nobody-1"), "d1"),
+           d.direct(t("nobody-1"), "transfer_inventory", TRANSFER, "planner-1", "x1"),
+           d.call_tool(t("planner-1"), "transfer_inventory", {**TRANSFER, "quantity": 2}, None, "x2")]
+    seed = r.store.handle("seed")
+    seed.update("EvidenceSnapshot", "ES-1", {"snapshotObservedAt": 2})  # a NEWER version of the evidence object
+    seed.close()
+    res += [
+           d.direct(t("junior-1"), "expedite_purchase_order", {"po_id": "PO-991", "expedite_fee": 1}, None, "x3"),
+           d.direct(t("planner-1"), "transfer_inventory", {**TRANSFER, "quantity": 3}, None, "x4"),
+           d.revoke(t("planner-1"), "e1", "rv"),
+           d.direct(t("nobody-1"), "transfer_inventory", TRANSFER, "planner-1", "x5")]
+    return [x for x in ("d1", "x1", "x2", "x3", "x4", "rv", "x5")], res
+
+
+def tamper(r):
+    from r3_shared.histstore import TamperView
+    return TamperView(r.history._path)
+
+
+def sha(b: bytes) -> str:
+    import hashlib
+    return hashlib.sha256(b).hexdigest()
