@@ -302,3 +302,13 @@ def test_verify_script_reproduces_the_verdict(exp, tmp_path):
     p = subprocess.run([str(ROUND3 / "scripts" / "verify_h27.sh"), "exp-h27-dev", "--min-tampered", "100",
                         "--min-bases-per-domain", "6", "--min-controls", "20"], capture_output=True, text=True, env=env)
     assert p.returncode == 0 and "verdict reproduces" in p.stdout, p.stdout + p.stderr
+
+
+def test_e7_a_deploy_crash_blocks_supported_and_is_inconclusive_not_rejected(copy_honest):
+    def crash(cs):
+        cs[0]["classes_hit"] = ["deploy_crash"]
+        return cs
+    edit_cases(copy_honest, crash)
+    v = ev(copy_honest)
+    assert v["verdict"] == "INCONCLUSIVE" and any("deploy_crash" in r for r in v["reasons"])
+    assert v["metrics"]["deploy_crashes"] == 1

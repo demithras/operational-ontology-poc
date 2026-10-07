@@ -60,6 +60,7 @@ def analyze(vdir: Path) -> dict:
         if c["replays"] and c.get("replay_ms") is not None:
             lat.append(c["replay_ms"] / len(c["replays"]))
     div = t.get("binding_divergences", [])
+    deploy_crashes = cc["deploy_crash"] + clean_cc["deploy_crash"]
     false_alarms = cc["false_alarm"] + clean_cc["false_alarm"]
     return {
         "tamper_cases": len(cases), "tampered_cases": tampered, "compound_cases": compound,
@@ -73,6 +74,7 @@ def analyze(vdir: Path) -> dict:
         "unanchored_ack": len(t.get("unanchored_acks", [])) + cc["unanchored_ack"],
         "false_alarms": false_alarms, "binding_divergences": len(div), "explain_mismatch": cc["explain_mismatch"] + clean_cc["explain_mismatch"],
         "fallback_to_current": cc["fallback_to_current"], "unsupported": unsupported, "replay_errors": errors,
+        "deploy_crashes": deploy_crashes,
         "latency_ms_per_replay": {"p50": _p(lat, 0.5), "p95": _p(lat, 0.95)},
         "clean_verified_ratio": (clean_ok / clean_replays) if clean_replays else None,
     }

@@ -115,14 +115,15 @@ def _evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_tampered=Non
     dom = a["bases_by_domain"]
     bases_ok = all(dom.get(d, 0) >= need_b for d in ("manufacturing", "project"))
     sample = (e12 and classes_ok and compound_ok and a["tampered_cases"] >= need_t and bases_ok and a["controls"] >= need_c
-              and a["unsupported"] == 0 and a["replay_errors"] == 0)
+              and a["unsupported"] == 0 and a["replay_errors"] == 0 and a["deploy_crashes"] == 0)
     for ok, why in ((e12, None), (classes_ok, f"tamper classes absent: {a['missing_classes']}"),
                     (compound_ok, f"compound cases {a['compound_cases']} of {a['tampered_cases']} < {MIN_COMPOUND_FRACTION:.0%}"),
                     (a["tampered_cases"] >= need_t, f"tampered cases {a['tampered_cases']} < {need_t}"),
                     (bases_ok, f"base histories per domain {dom} < {need_b}"),
                     (a["controls"] >= need_c, f"clean controls {a['controls']} < {need_c}"),
                     (a["unsupported"] == 0, f"{a['unsupported']} unsupported results (G2 methods missing)"),
-                    (a["replay_errors"] == 0, f"{a['replay_errors']} replay/explain calls raised")):
+                    (a["replay_errors"] == 0, f"{a['replay_errors']} replay/explain calls raised"),
+                    (a["deploy_crashes"] == 0, f"{a['deploy_crashes']} deploy_crash (E-7: deploy raised on history content)")):
         if not ok and why:
             reasons.append(why)
     fb = a["fallback_to_current"]
@@ -140,7 +141,7 @@ def _evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_tampered=Non
         reasons.append(f"support conditions unmet: detection={a['detection_rate']} kill_rate={kill_rate}")
     metrics = {**{k: a[k] for k in ("tampered_cases", "compound_cases", "distinct_bases", "controls", "detection_rate",
                                     "definite_total", "accepted", "fallback_to_current", "false_alarms", "binding_divergences",
-                                    "unanchored_ack", "explain_mismatch", "unsupported", "applied_classes", "class_counts")},
+                                    "unanchored_ack", "explain_mismatch", "unsupported", "deploy_crashes", "applied_classes", "class_counts")},
                "forbidden_effects": a["accepted"] + a["unanchored_ack"], "safe_progress_ratio": a["clean_verified_ratio"],
                "mutation_kill_rate": kill_rate, "p50_latency_ms": a["latency_ms_per_replay"]["p50"],
                "p95_latency_ms": a["latency_ms_per_replay"]["p95"], "anchor_enforcement": au.get("E3_enforcement"),

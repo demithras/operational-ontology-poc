@@ -26,8 +26,12 @@ class Fresh:
         self.store = WorldStore(world, clock=LogicalClock(st.clock.now()), writers=st.writers)
         self.hist = HistoryStore(hist)
         self.reader = WorldReader(world)
-        self.dep = variant.deploy(base.domain, self.store.handle_factory(), st.idp.verifier(), st.ops,
-                                  base.deploy_auth(), self.store.clock, state_dir=None, history=self.hist, anchor=anchor)
+        try:
+            self.dep = variant.deploy(base.domain, self.store.handle_factory(), st.idp.verifier(), st.ops,
+                                      base.deploy_auth(), self.store.clock, state_dir=None, history=self.hist, anchor=anchor)
+        except BaseException:
+            self.close()  # never leak the handles of a deployment that did not come up
+            raise
 
     def close(self):
         self.reader.close()
@@ -129,7 +133,13 @@ def run_case(base, variant, anchor, case_dir: str, case_id: str, seed: int, clas
     rec = {"case": case_id, "base": base.id, "domain": base.domain, "classes": classes, "applied": ctx["applied"],
            "flags": sorted(ctx["flags"]), "primitives": prims, "n": base.n, "definite": sorted(aff["definite"]),
            "indeterminate": sorted(aff["indeterminate"]), "replays": [], "classes_hit": [], "unsupported": ctx.get("unsupported")}
-    fr = Fresh(base, variant, anchor, w, h)
+    try:
+        fr = Fresh(base, variant, anchor, w, h)
+    except Exception as exc:  # noqa: BLE001 - E-7: deploy over a tampered store must not raise; if it does, that is data
+        rec["deploy_error"] = f"{type(exc).__name__}: {exc}"
+        rec["classes_hit"] = ["deploy_crash"]  # not a detection and not an acceptance: blocks SUPPORTED (INCONCLUSIVE)
+        shutil.rmtree(case_dir, ignore_errors=True)
+        return rec
     t0 = time.perf_counter()
     try:
         explain_for = set(rng.sample(range(1, base.n + 1), min(2, base.n))) if clean else None
