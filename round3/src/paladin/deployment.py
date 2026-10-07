@@ -241,19 +241,19 @@ class PaladinDeployment:
         c, sub = self._c, self._c.subject(token)
         if sub is None or sub not in c.booted.principals:
             return CallResult("DENIED", {"gate": "identity", "reason": "invalid token or unknown approver"})
-        if not isinstance(requester, str) or requester not in c.booted.principals:
-            return CallResult("DENIED", {"gate": "approval", "reason": "unknown requester"})
         if not isinstance(operation, str) or operation not in c.ops:
             return CallResult("UNKNOWN", {"reason": "unknown operation"})
-        if not (c.ops[operation].get("approval") or {}).get("approver_operation"):
-            return CallResult("INVALID", {"gate": "approval", "reason": "operation takes no approval"})
-        who = c.principal(requester, on_behalf_of, operation)
-        if isinstance(who, CallResult):
-            return who
-        clean = c.check_shape(operation, args, "approval")
+        clean = c.check_shape(operation, args, "approval")  # E-9: the request's own schema first; every later refusal of a valid one is governed
         if isinstance(clean, CallResult):
             return clean
         d = c.new_decision("approve", sub, on_behalf_of, operation, clean, None)
+        if not isinstance(requester, str) or requester not in c.booted.principals:
+            return c.finish(d, CallResult("DENIED", {"gate": "approval", "reason": "unknown requester"}))
+        if not (c.ops[operation].get("approval") or {}).get("approver_operation"):
+            return c.finish(d, CallResult("INVALID", {"gate": "approval", "reason": "operation takes no approval"}))
+        who = c.principal(requester, on_behalf_of, operation)
+        if isinstance(who, CallResult):
+            return c.finish(d, who)
         with c.lock:
             if sub in c.excluded_approvers(requester, on_behalf_of):  # static chain + every edge issuer from the root to the requester
                 return c.finish(d, CallResult("DENIED", {"gate": "approval", "reason": "approver is in the requester's delegation chain"}))

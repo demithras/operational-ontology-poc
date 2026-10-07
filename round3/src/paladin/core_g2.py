@@ -97,6 +97,8 @@ class G2Mixin:
         """Bind, chain and anchor the decision (anchor-before-ack, R27-6) when it is a governed decision."""
         if self.prov is None:
             return res
+        if d["op"] is not None and self.schema_problem(d["op"], d["args"]) is not None:
+            return res  # E-9: a schema-INVALID request is never a governed decision, whatever gate answered first
         if res.status == "OK":
             reason = "ok"
         elif res.status in ("DENIED", "INVALID"):
@@ -143,7 +145,9 @@ class G2Mixin:
             v = args[n]
             t = i["type"]
             if v is None:
-                return f"null {n}" if i["required"] or t != "json" else None
+                return f"null {n}" if i["required"] else None  # E-9: null is "missing" - fatal only for a required input
+            if t == "resource" and isinstance(v, str) and v.strip() == "":
+                return f"blank {n}"
             ok = (isinstance(v, int) and not isinstance(v, bool)) if t == "integer" else \
                 isinstance(v, (int, float)) and not isinstance(v, bool) if t == "number" else \
                 isinstance(v, bool) if t == "boolean" else isinstance(v, str) if t in ("string", "resource") else True
