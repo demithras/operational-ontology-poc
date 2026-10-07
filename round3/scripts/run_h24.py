@@ -1,0 +1,69 @@
+#!/usr/bin/env python
+"""Run the H24 experiment per variant and write evidence to experiments/h24/<exp-id>/<variant>/.
+
+Fake variants (tests/fakes/h24_fakes.py) are selectable ONLY with --test-variants and are never registered.
+Unimplemented real variants: prints "not implemented yet - G2" and exits 2."""
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import sys
+import time
+from pathlib import Path
+
+ROUND3 = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROUND3 / "src"))
+sys.path.insert(0, str(ROUND3))
+
+from r3_harness.h24.runner import run_variant  # noqa: E402
+from r3_shared.registry import load_variant  # noqa: E402
+
+
+def load_fakes():
+    spec = importlib.util.spec_from_file_location("h24_fakes", ROUND3 / "tests" / "fakes" / "h24_fakes.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--exp-id", required=True)
+    ap.add_argument("--variants", default="paladin,conventional")
+    ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--sequences", type=int, default=10000)
+    ap.add_argument("--races", type=int, default=1200, help="concurrent race cases per variant (official: >= 1000 overlapping)")
+    ap.add_argument("--mutation-sequences", type=int, default=60)
+    ap.add_argument("--mutation-races", type=int, default=60)
+    ap.add_argument("--test-variants", action="store_true", help="allow fake-* variants from tests/fakes")
+    ap.add_argument("--out-root", default=str(ROUND3 / "experiments" / "h24"))
+    a = ap.parse_args()
+    fakes = load_fakes() if a.test_variants else None
+    for name in a.variants.split(","):
+        if name.startswith("fake-"):
+            if fakes is None:
+                print(f"{name}: fake variants need --test-variants", file=sys.stderr)
+                return 2
+            factory, pkg = (lambda m, n=name: fakes.load(n, m)), None
+        else:
+            try:
+                load_variant(name)
+                factory, pkg = (lambda m, n=name: load_variant(n, m)), name
+            except NotImplementedError as exc:
+                print(f"not implemented yet - G2 ({exc})", file=sys.stderr)
+                return 2
+        out = Path(a.out_root) / a.exp_id / name
+        if out.exists():
+            print(f"refusing to overwrite {out}", file=sys.stderr)
+            return 2
+        t0 = time.perf_counter()
+        r = run_variant(factory, name, out, a.exp_id, a.seed, a.sequences, a.races, a.mutation_sequences,
+                        a.mutation_races, pkg)
+        an = r["analysis"]
+        print(f"{name}: sequences={an['sequences']} unique={an['unique_sequences']} races={an['races']['cases']} "
+              f"classes={an['class_counts']} elapsed={time.perf_counter() - t0:.1f}s")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

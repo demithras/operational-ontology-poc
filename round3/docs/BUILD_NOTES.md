@@ -293,3 +293,31 @@ Approval/idempotency fingerprint now binds `on_behalf_of` literally (service.py;
   sandbox-exec with file-write* denied on the anchor dir (tests/test_p1d_sandbox.py: known-negative + known-positive + non-sandbox control).
 - Import scan: paladin/conventional may not import r3_shared.anchor_server or TamperView (tests/test_import_boundaries.py).
 - Fakes: tests/fakes/fake_g2.py (G2Mixin on FakeDeployment). Edited existing test: tests/test_mutants.py (ALL was asserted == H23 list).
+
+## G2 H24 harness (variant-neutral; tag r3-g2-h24-harness)
+- Oracle (`src/r3_oracle`): `authority_v2.py` (immutable `RefAuthority`: `from_spec`, `apply(event)` -> NEW value, `issue_delegate`/`issue_revoke`
+  = PROT-H24 s2/s5, `decide` = s3 returning (allow, reason, valid_paths), `was_ever_valid` = stale-path test), `scope_v2.py` (own scope
+  covers/subset/schema/digest; parity test against r3_shared.authgraph), `judge_v2.py` + `judge_calls.py` + `logreplay.py` (walk the
+  world_log in seq order, replay it onto the start snapshot, classify every harness call; compare the replayed world with the real final
+  snapshot for `unlogged_write`). No clock, no variant (AST-scanned by `evaluator.oracle_independent` and tests/test_h24_oracle.py).
+- Harness (`src/r3_harness/h24`): `env.py` (G2Env: world store with world_log + clock + writer allowlist, harness-counter invoke/return,
+  schedule rows), `gen_graph.py` (A2 DAG generator), `gen_seq.py` (state machine, 20-60 steps/sequence), `gen_race.py` (RV RA EX SA DP AP CR
+  UN + SEQ control; barrier-started threads, <= 1.5 ms seeded jitter), `rows.py`, `analyze.py` (recomputes every metric from raw rows; used by
+  runner AND evaluator), `mutation.py`, `runner.py`, `evaluator.py`. Scripts: `run_h24.py`, `evaluate_h24.py`, `verify_h24.sh`.
+- Requests that use delegated authority go through `Deployment.direct(..., on_behalf_of=Q)` (the layer under the tools; fresh principals
+  have no tool surface). set_authority is composed by the harness as a full v2 document: narrowed base + the oracle's capabilities/revoked.
+- Class mapping for an edge the oracle refuses but the variant marked: scope/expiry amplification -> `scope_amplification`; cycle, static,
+  unknown parent/principal, duplicate, schema -> `cycle_grant`; parent_invalid -> `post_boundary_effect`; anything else -> `forbidden_effect`.
+  Reject set (Q3): scope_amplification, post_boundary/forbidden/unattributed/writer/unlogged, cycle_grant, linearizability_violation.
+  authority_ack_without_commit, historical_mismatch, progress_loss block SUPPORTED but are INCONCLUSIVE, not REJECTED (no frozen mapping).
+- Frozen-hash check: protocol/FREEZE.json has no PROT-H24 amendment hash yet; the evaluator uses `FREEZE.json["amendments"]["PROT-H24.md"]` when
+  present, else the on-disk file hash (reason text names the source). Add the amendment when PROT-H24 is refrozen.
+- Dev overrides: `--min-sequences`, `--min-concurrent` (dev ids only, stamped in verdict.json and every reasons list). Floors (progress 1.0,
+  overlap 0.5, >= 1 effect-first RV) are not overridable.
+- Runtime on FakeHonest (this host): ~90 s per 1,000 sequences, ~35 ms per race case (1,350 cases ~ 50 s), mutation proof (60+60) ~ 15 s;
+  10,000 sequences + 1,200 races ~ 17 min per variant on the fake; real variants will be slower.
+- Observed on the real H23 variants (no G2 methods yet): `unsupported` on every delegate/revoke/authority_used and `unattributed_write`
+  (their effect transactions carry no `commit` mark) -> REJECTED by the frozen meter rule until the G2 builders add marks. Not a harness bug.
+- Side observation (H23 harness, not edited): `r3_harness/h23/runner.py` and `evaluator.py` compute ROUND3 as `parents[3].parent`, which is
+  the worktree root: `tree_sha('r3_oracle')` hashes an empty tree and H23's `oracle_independent()` scans a directory that does not
+  exist (returns (True, []) vacuously; verified). The H24 modules use `parents[3]` and scan 15 real oracle files.
