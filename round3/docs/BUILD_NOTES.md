@@ -361,3 +361,21 @@ variant-chosen and read from its envelope.
 - provenance: `operation` null for delegate/revoke; `args_digest` over the raw args (call_tool/direct), raw approve args, edge dict, edge_id string; `newest` tie-break greatest value then smallest key.
 - authority_ops: plans run on `authdoc.upgraded(policy.doc)` (v1 == empty v2, depth 8); ConventionalDeployment methods wrapped by `_safe` (internal error -> UNAVAILABLE/internal_error CallResult).
 - tests: tests/conventional/test_conv_g2_e34.py (14 tests, 11 fail on the pre-change source; the tie-break test passes either way because the store lists rows key-ordered).
+## G2 paladin - H24 + H27 protections (tag r3-g2-paladin)
+- New: `capgraph.py` (edges, issuance/use rules, mutant sites), `core_g2.py` (G2Mixin: decisions, edge-mode authority, delegate/revoke/
+  set_authority transactions, history guard), `prov.py` + `evid.py` (decision envelope, artifacts, anchoring), `replay.py` +
+  `authreplay.py` (replay/explain with re-authorization over the bound artifact), `histledger.py` (the ledger interface over a
+  HistoryStore), worldbridge `log_head`/`tx_rows`. Edited: `core.py` (one world transaction per effect commit on the handle owning the
+  operation's effects, `commit` mark, edge-mode principal, anchor-before-ack, history mode), `deployment.py` (delegate, revoke,
+  authority_used, replay, explain, authority_state, HISTORY_LAYOUT), `variant.py` (history=, anchor=), `ledger.py` (commit_row/drop/claim verify).
+  No vendored Engine/Toolchain file changed.
+- H23 path unchanged when `history` is None, with one observable addition: every effect commit now also appends a `commit` mark row
+  (required by PROT-H24 s4) so `log_head` moves on a no-op commit; tests/paladin/test_p7a_a8.py compares snapshots without `log_head`.
+- A request naming `on_behalf_of` for a principal WITHOUT a spec delegator is now an EDGE request (DENIED `no_valid_path` when no valid
+  path) instead of the H23 "on_behalf_of does not name this principal's delegator" refusal; still DENIED, zero effects.
+- Oracle-facing assumptions (effect_digest, world_seq, reason codes, approve decision id): spec/protections/H27-paladin.md.
+- Gaps: authority-document durability window and unauthenticated authority/`used` records in the HistoryStore (see both protection maps).
+
+## G2 errata E-3/E-4 (Paladin)
+Changed src/paladin/core_g2.py (authority decisions: operation null, revoke args = edge_id string) and deployment.py (total
+methods wrapper). Tests: tests/paladin/test_pal_g2_e34.py. tests/paladin: 207 passed.

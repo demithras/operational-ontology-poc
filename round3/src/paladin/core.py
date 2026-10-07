@@ -16,12 +16,18 @@ import tempfile
 import threading
 from typing import Any, Callable
 
+from paladin import capgraph, evid
 from paladin.authcompile import delegation_table
 from paladin.boot import boot
 from paladin.engine import CapabilityError, InvalidRequest, Principal
 from paladin.engine import canon, gates
+from paladin.core_g2 import G2Mixin, Rollback
+from paladin.histledger import HistLedger
 from paladin.ledger import Ledger
-from paladin.worldbridge import state_from_world
+from paladin.worldbridge import state_from_world, tx_rows
+from r3_shared.anchor import AnchorError
+from r3_shared.authgraph import authority_digest
+from r3_shared.evidence import canonical_bytes
 from r3_shared.authspec import validate_strict
 from r3_shared.identity import TokenError
 from r3_shared.variant import CallResult
@@ -51,9 +57,7 @@ class Crash(BaseException):
         self.point = point
 
 
-class _Rollback(Exception):
-    def __init__(self, result: CallResult):
-        self.result = result
+_Rollback = Rollback
 
 
 def fingerprint(*parts: Any) -> str:
@@ -64,45 +68,48 @@ def plain(x: Any) -> Any:
     return copy.deepcopy(canon.to_plain(x))
 
 
-class Core:
+class Core(G2Mixin):
     def __init__(self, domain, factory, verifier, ops_spec, auth_spec, clock, mutants, state_dir=None,
-                 hook: Callable[[str], None] = lambda point: None, restart: bool = False):
+                 hook: Callable[[str], None] = lambda point: None, restart: bool = False, history=None, anchor=None,
+                 stream=None):
         self.domain, self._factory, self._verifier, self.clock, self.mutants = domain, factory, verifier, clock, mutants
         self.hook = hook  # crash-injection point callback (before_commit fires inside the adapters, after_commit in run)
-        self.state_dir = state_dir or tempfile.mkdtemp(prefix="paladin-state-")  # a private dir even when none is given
-        os.makedirs(self.state_dir, exist_ok=True)
         self.lock = threading.RLock()  # the Engine State, the service connection and the ledger are single-writer
-        self._svc = factory("paladin-service")
         self.ops_spec = ops_spec
+        self.g2_init(history, anchor, stream, mutants)
+        self._svc = self.handle("paladin-service")
         self.ops = {o["name"]: o for o in ops_spec["operations"]}
         self.reads = {r["name"] for r in ops_spec["reads"]}
         # canonical writes share ONE world transaction (all-or-nothing); external effects are single atomic adapter writes
         # through each system's own handle (a second SQLite connection cannot write inside the service transaction)
         self._canonical = any(e["kind"] != "external" for o in ops_spec["operations"] for e in o["effects"])
-        # durable write-ahead ledger + single-use approvals + authority in force (see paladin.ledger)
-        self.ledger = Ledger(os.path.join(self.state_dir, "ledger.sqlite"), volatile="ledger_after_commit_volatile" in mutants)
-        self.authority_version = 0
+        # durable write-ahead ledger + single-use approvals + authority in force (see paladin.ledger / paladin.histledger)
+        if history is not None:  # H27 runs: every durable record lives in the (attackable) HistoryStore, no state_dir
+            self.state_dir, self.ledger = None, HistLedger(history)
+        else:
+            self.state_dir = state_dir or tempfile.mkdtemp(prefix="paladin-state-")  # a private dir even when none is given
+            os.makedirs(self.state_dir, exist_ok=True)
+            self.ledger = Ledger(os.path.join(self.state_dir, "ledger.sqlite"), volatile="ledger_after_commit_volatile" in mutants)
         self._mut_n = 0
         self._attempts = self.ledger.get_meta("attempts") or 0
-        persisted = self.ledger.get_meta("auth_spec") if restart else None  # restart: the authority in force at the crash wins over the deploy-time spec
-        self.set_authority(persisted if persisted is not None else auth_spec)
+        persisted = self.ledger.get_meta("auth_spec") if (restart or history is not None) else None  # the authority in force wins over the deploy-time spec
+        self.install(persisted if persisted is not None else auth_spec)
         if not self.ledger.volatile:
             self.recovered = self.ledger.recover(self.world_digest())  # resolve a request left in doubt by a crash
 
     # ---- authority --------------------------------------------------------------------------
-    def set_authority(self, auth_spec: dict) -> int:
+    def install(self, auth_spec: dict) -> None:
         validate_strict(auth_spec, self.ops_spec)  # R-4: shared strict control, before anything changes (ValueError)
-        self.auth = copy.deepcopy(auth_spec)
-        self.booted = boot(self.domain, self.ops_spec, self.auth, self._factory, self._svc, self.clock.now,
+        doc = copy.deepcopy(auth_spec)
+        self.booted = boot(self.domain, self.ops_spec, doc, self.handle, self._svc, self.clock.now,
                            lambda: self.hook("before_commit"))
-        self.ledger.put_meta("auth_spec", self.auth)
+        self.auth = doc
+        self.persist(self.auth)
         self.eng = self.booted.engine
         if {"backstop_bypass", "mutable_gated_input"} & set(self.mutants):
             self.eng.register_principal(BYPASS)  # exists ONLY in mutated deployments
         self.delegations = delegation_table(self.auth)
         self.delegator = {p["id"]: p["delegated_by"] for p in self.auth["principals"]}
-        self.authority_version += 1
-        return self.authority_version
 
     def chain_pids(self, pid: str) -> set:
         out = set()
@@ -137,12 +144,18 @@ class Core:
 
     def principal(self, sub: str, obo: Any, op: str | None) -> Principal | CallResult:
         """Delegate semantics (PROT-H23): a principal whose spec `delegated_by` is P is ALWAYS evaluated as P's delegate;
-        on_behalf_of must be absent or P; a principal without a delegator that names on_behalf_of is DENIED."""
+        on_behalf_of must be absent or P. A principal WITHOUT a delegator that names on_behalf_of Q is an EDGE request
+        (PROT-H24 s3): the rules run with actor_for_rules = Q and the path is checked at the commit point (`edge_check`)."""
         p = self.booted.principals.get(sub)
         if p is None:
             return CallResult("DENIED", {"gate": "identity", "reason": "unknown principal"})
         eff = self.delegator.get(sub)
-        if obo is not None and (eff is None or obo != eff):
+        if eff is None and obo is not None:
+            q = self.booted.principals.get(obo) if isinstance(obo, str) else None
+            if q is None or obo == sub:
+                return CallResult("DENIED", {"gate": "delegation", "reason": "no_valid_path"})
+            return q
+        if obo is not None and obo != eff:
             return CallResult("DENIED", {"gate": "delegation", "reason": "on_behalf_of does not name this principal's delegator"})
         if eff is None:
             return p
@@ -170,33 +183,43 @@ class Core:
     def run(self, sub: str, obo: Any, op: str, args: Any, rid: Any, via: str) -> CallResult:
         if op not in self.ops:
             return CallResult("UNKNOWN", {"reason": "unknown operation"})
+        kind = "direct" if via == "direct" else "call_tool"
         who = self.principal(sub, obo, op)
         if isinstance(who, CallResult):
-            return who
+            return self.refuse(sub, obo, op, args, rid, who, kind) if who.body.get("gate") == "delegation" else who
         clean = self.check_shape(op, args, rid)
         if isinstance(clean, CallResult):
             return clean
+        edge = obo is not None and self.delegator.get(sub) is None
         afp = fingerprint(sub, obo, op, clean)  # approval binding: on_behalf_of EXACTLY as supplied (P10; null != explicit delegator)
-        obo = self.delegator.get(sub)  # request-id replay identity: the delegator in force
+        obo_id = obo if edge else self.delegator.get(sub)  # request-id replay identity: the delegator (or edge root) in force
         bypass = via == "direct" and "backstop_bypass" in self.mutants
-        fp = fingerprint(sub, obo, op, clean)
+        fp = fingerprint(sub, obo_id, op, clean)
         with self._guard():
             led = self.ledger.get(rid)
             if led is not None:
                 if led["state"] != "COMMITTED":
                     return CallResult("UNAVAILABLE", {"reason": "request in flight"})
-                return self._replay(led, who, bypass, fp, sub, obo, op, clean, rid)
+                return self._replay(led, who, bypass, fp, sub, obo_id, op, clean, rid, edge)
+            g = self.guard_history(rid)  # R27-5: an anchored committed decision without its idempotency record never re-commits
+            if g is not None:
+                return g
             self._attempts += 1  # the Engine's own idempotency map is per attempt; request-id idempotency is the ledger's job
             attempt = self._attempts
             self.ledger.put_meta("attempts", attempt)
-            self.ledger.prepare(rid, fp, self.world_digest(), sub, obo, op)  # durable BEFORE any world write
+            self.ledger.prepare(rid, fp, self.world_digest(), sub, obo_id, op)  # durable BEFORE any world write
+            d = self.new_decision(kind, sub, obo, op, clean, rid)
             try:
-                res = self._commit(BYPASS if bypass else who, op, clean, f"{rid}~{attempt}", afp, rid)
+                res = self._commit(BYPASS if bypass else who, op, clean, f"{rid}~{attempt}", afp, rid, True, (sub, obo) if edge else None, d)
                 if res.status == "OK":
                     self.hook("after_commit")  # crash here: world committed, ledger still PREPARED (recovered at restart)
-                    self.ledger.finalize(rid, fp, sub, obo, op, res.status, plain(res.body))
+                res = self._anchor(d, res, rid)
+                if d.get("committed"):  # the world holds the effect: the request id is spent even if the anchor failed
+                    self.ledger.finalize(rid, fp, sub, obo_id, op, res.status, plain(res.body))
                 else:
                     self.ledger.abort(rid)
+                if res.status == "OK" and self._deferred:
+                    self.flush_deferred()
             except Crash:
                 raise
             except BaseException:
@@ -204,9 +227,25 @@ class Core:
                 raise
             return res
 
-    def _replay(self, led, who, bypass, fp, sub, obo, op, clean, rid) -> CallResult:
+    def _anchor(self, d: dict, res: CallResult, rid: str) -> CallResult:
+        """Anchor-before-ack (R27-6): the decision's root is appended to the anchor before any result leaves the core."""
+        if self.prov is None:
+            return res
+        out = self.finish(d, res)
+        cr = self.ledger.claimed_record(rid) if out.status == "OK" else None
+        if cr and cr.get("decision_id"):  # the approval is spent in the anchor too: a restored record cannot be used twice
+            from r3_shared.anchor import AnchorError  # noqa: PLC0415
+            try:
+                self.prov.mark_consumed(cr["decision_id"], rid)
+            except AnchorError:
+                return CallResult("UNAVAILABLE", {"reason": "anchor_unavailable"})
+        return out
+
+    def _replay(self, led, who, bypass, fp, sub, obo, op, clean, rid, edge=False) -> CallResult:
         if led["fp"] == fp:  # R5: same request -> never a second effect, decided against the authority in force NOW
-            if not bypass and not self.allowed_now(who, op, clean):
+            if led["status"] == "OK" and led["body"] == {"recovered": True} and self.prov is not None:
+                return CallResult("UNAVAILABLE", {"reason": "unanchored_after_crash"})  # never an OK without its anchor entry
+            if not edge and not bypass and not self.allowed_now(who, op, clean):  # edge requests: the stored result (PROT-H24 s4 retry)
                 return CallResult("DENIED", {"gate": "authority", "reason": "authority changed since commit"})
             return CallResult(led["status"], {**plain(led["body"]), "replayed": True})
         if "mutable_gated_input" in self.mutants and (led["sub"], led["obo"], led["op"]) == (sub, obo, op):
@@ -232,21 +271,37 @@ class Core:
                                      resources=res, view=self.eng.read_view()).allowed
                    for cap in pipeline.approval_capabilities(self.eng, spec))
 
-    def _commit(self, who: Principal, op: str, args: dict, key: str, fp: str, rid: str, journaled: bool = True) -> CallResult:
+    def _commit(self, who: Principal, op: str, args: dict, key: str, fp: str, rid: str, journaled: bool = True,
+                edge: tuple | None = None, d: dict | None = None) -> CallResult:
         """Propose; if the Engine parks it for approval, consume a matching single-use pre-approval and let the Engine's
-        approval gate run in the same world transaction; without one the request is refused (zero effects)."""
+        approval gate run in the same world transaction; without one the request is refused (zero effects).
+        ONE world write transaction per commit (PROT-H24 s4): the edge path, the evidence read, the Engine pipeline, the
+        adapters' writes and the `commit` mark share it; `tx.tick` is the commit tick."""
+        d = d if d is not None else self.new_decision("direct", None, None, op, args, rid)
+        th = self.handle(self.owner[op])  # the handle that owns the operation's effects (service, or its one external system)
         try:
-            with (self._svc.transaction() if self._canonical else contextlib.nullcontext()):
+            with th.transaction(tag="effect") as tx:
                 self.eng.store.current = state_from_world(self.eng.model, self._svc)
+                d["doc"] = self.auth
+                if edge is not None:  # freshness at the commit point: path validity is decided inside this transaction
+                    bad = self.edge_check(edge[0], edge[1], op, args, tx.tick, d)
+                    if bad is not None:
+                        raise _Rollback(bad)
+                d["evidence"] = self.evidence_for(op, args)
                 rec = self.eng.propose(op, args, who, idempotency_key=key)
                 if rec["state"] == "PENDING_APPROVAL":
-                    approver = self.ledger.claim_approval(fp, rid)  # durable claim: one approval authorises one commit
+                    approver = self.ledger.claim_approval(fp, rid, self._approval_check(op, args))  # durable claim: one approval, one commit
                     if approver is None:
                         raise _Rollback(CallResult("DENIED", {"gate": "approval", "reason": "approval_required"}))
                     rec = self.eng.approve(rec["exec"], self.booted.principals[approver])
                 res = self.map_record(rec)
                 if res.status != "OK":
                     raise _Rollback(res)  # nothing but an OK commit may touch the world (R7)
+                seq = tx.mark("commit", {"request_id": d["rid"], "kind": d["kind"], "authority_version": self.version()})
+                d.update(world_seq=seq, tick=tx.tick, rows=tx_rows(th, tx.id))
+            d["committed"] = True
+            self.ledger.put_meta(f"used:{d['rid']}", {"authority_version": self.version(), "world_seq": d["world_seq"],
+                                                      "tick": d["tick"], "path": d["path"], "on_behalf_of": d["obo"]})
             if not journaled:
                 self.ledger.consume(rid)  # mutant path is not journaled: consume its claim here
             return res
@@ -262,6 +317,23 @@ class Core:
         except Exception as exc:  # noqa: BLE001 - fail closed: the transaction was rolled back
             self.ledger.release_approval(rid)
             return CallResult("UNAVAILABLE", {"reason": f"{type(exc).__name__}: {exc}"})
+
+    def _approval_check(self, op: str, args: dict):
+        """R27-5: with an anchor, a stored approval counts only if its decision is anchored with a provable envelope that
+        names the same approver, operation and args, and the anchor does not show it consumed."""
+        if self.prov is None:
+            return None
+
+        def verify(rec: dict) -> bool:
+            did = rec.get("decision_id") or ""
+            try:
+                a = self.prov.anchored_decision(did)
+                return bool(a and a["status"] == "OK" and a["kind"] == "approve" and a["subject"] == rec.get("approver")
+                            and a["operation"] == op and a["args_digest"] == evid.digest(canonical_bytes(args))
+                            and not self.prov.consumed(did))
+            except (AnchorError, LookupError):
+                return False
+        return verify
 
     def map_record(self, rec: dict) -> CallResult:
         st = rec["state"]

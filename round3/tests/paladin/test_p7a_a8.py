@@ -198,7 +198,8 @@ def test_committed_request_that_leaves_the_world_digest_unchanged_is_recovered_s
     assert res.status == "OK"
     res2, eff2 = rig.effects_of(lambda: proj_call(rig, "p1", 11))
     assert res2.body.get("replayed") is True and eff2 == []
-    assert before == mid == rig.snap() and eff == []  # the commit changed nothing: recovery aborts it, re-send adds no effect
+    nolog = lambda x: {k: v for k, v in x.items() if k != "log_head"}  # G2: a no-op commit still appends its `commit` mark row
+    assert nolog(before) == nolog(mid) == nolog(rig.snap()) and eff == []  # the commit changed nothing: recovery aborts it, re-send adds no effect
 
 
 # ---- R10 ---------------------------------------------------------------------------------------------------
