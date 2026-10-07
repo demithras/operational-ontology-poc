@@ -249,5 +249,5 @@ class PaladinDeployment:
         with c.lock:
             if not c.holds_approval(sub, operation, clean):
                 return CallResult("DENIED", {"gate": "approval", "reason": "approver holds no approval capability for this request"})
-            c.ledger.add_approval(fingerprint(requester, c.delegator.get(requester), operation, clean), sub)
+            c.ledger.add_approval(fingerprint(requester, on_behalf_of, operation, clean), sub)
         return CallResult("OK", {"approval": "recorded"})

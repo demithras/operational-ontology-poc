@@ -176,7 +176,8 @@ class Core:
         clean = self.check_shape(op, args, rid)
         if isinstance(clean, CallResult):
             return clean
-        obo = self.delegator.get(sub)  # a delegate's request is the same request with or without on_behalf_of
+        afp = fingerprint(sub, obo, op, clean)  # approval binding: on_behalf_of EXACTLY as supplied (P10; null != explicit delegator)
+        obo = self.delegator.get(sub)  # request-id replay identity: the delegator in force
         bypass = via == "direct" and "backstop_bypass" in self.mutants
         fp = fingerprint(sub, obo, op, clean)
         with self._guard():
@@ -190,7 +191,7 @@ class Core:
             self.ledger.put_meta("attempts", attempt)
             self.ledger.prepare(rid, fp, self.world_digest(), sub, obo, op)  # durable BEFORE any world write
             try:
-                res = self._commit(BYPASS if bypass else who, op, clean, f"{rid}~{attempt}", fp, rid)
+                res = self._commit(BYPASS if bypass else who, op, clean, f"{rid}~{attempt}", afp, rid)
                 if res.status == "OK":
                     self.hook("after_commit")  # crash here: world committed, ledger still PREPARED (recovered at restart)
                     self.ledger.finalize(rid, fp, sub, obo, op, res.status, plain(res.body))

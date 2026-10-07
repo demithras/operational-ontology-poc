@@ -263,3 +263,7 @@ Binding spec: spec/protections/PROT-H23-A8.md. Everything below is variant-neutr
 - corpus.crash_coverage: deterministic seeded per-domain/agent pass over all crash rules so required labels never depend on the random draw. The project domain has no approval-needing operation, so crash_appr scenarios exist only in manufacturing.
 - Test fakes persist approvals durably; known negatives (tests/test_h23_r6.py) lose or double-consume them.
 - Dev run exp-h23-dev5 (seed 13, 1000 sequences, 300 concurrency): both variants SUPPORTED, zero classes, differential 0/9684. Evidence copied to the scratchpad; experiment directory deleted.
+
+## P10 Paladin: approval binds on_behalf_of literally
+- Cause (exp-h23-001 ATTRIBUTION.md): approval fingerprint used the delegator in force, so null and explicit `planner-1` were one request. Now `fingerprint(sub, obo_as_supplied, op, inputs)` for both `approve` and the commit's approval claim. No vendored Engine code changed; request-id replay fingerprint unchanged; delegate authority evaluation unchanged.
+- Tests: tests/paladin/test_p10_approval_binding.py (agent-1, agent-hostile-1; both mismatch directions DENIED approval_required with zero world effects, same form OK once then consumed, across crash/restart); 6 of 10 fail on the pre-fix code. test_p2a_functional's old "same with and without on_behalf_of" test replaced by the same-form test.

@@ -53,7 +53,7 @@ WriteGrant, `Verdict.value` is written only from `derive_verdict`, and the thres
 
 ## P2a rework notes (protocol P1b)
 - Delegate semantics: `Core.principal` (src/paladin/core.py:103) always evaluates a principal whose spec `delegated_by` is P as P's delegate (Engine `Principal.delegated_by` chain, rule a-d enforced by the Engine authority gate); `on_behalf_of` must be absent or P, else DENIED; `delegated_by: null` + `on_behalf_of` is DENIED. A delegate's request fingerprint uses the effective delegator, so with/without `on_behalf_of` is one request. Business rules that look at the actor's relations see the delegator (patch `D5`).
-- Approvals: `approve(token, operation, args, requester, on_behalf_of)` pre-approves the exact request; no pre-approval -> DENIED `approval_required`, zero effects. No change to vendored code.
+- Approvals (P10, 2026-10-07): the approval fingerprint binds `on_behalf_of` LITERALLY as supplied (null differs from the explicit delegator, both directions; src/paladin/core.py `run` computes `afp`, src/paladin/deployment.py `_approve`). Authority evaluation of a delegate is unchanged. Request-id replay identity is unchanged. `approve(token, operation, args, requester, on_behalf_of)` pre-approves the exact request; no pre-approval -> DENIED `approval_required`, zero effects. No change to vendored code.
 - Outcomes: DENIED = identity/delegation/authority/approval/policy; INVALID = shape/precondition/idempotency-key; UNAVAILABLE = adapter down; a real operation absent from the caller's tool surface -> DENIED (`surface`).
 - No new vendored-code patches in the rework (`VENDORED.json` unchanged; `test_p2a_vendored.py` re-verifies the hashes).
 
