@@ -93,8 +93,8 @@ def _outcome(c, r, cl, all_, any_, exp):
         elif c["crash"] == "after_commit" and not committed and all_:
             cl.append("authority_ack_without_commit" if k in AUTH_KINDS else "progress_loss")
         return
-    if committed or c.get("replay"):
-        return
+    if committed or c.get("replay") or (st == "UNAVAILABLE" and c.get("reason") == "crashed"):
+        return  # UNAVAILABLE-after-crash is the protocol's answer (PROT-H23-A8), not a refusal decision
     if st == "OK":
         if k in AUTH_KINDS and not (exp and exp[1] == "already"):
             cl.append("authority_ack_without_commit")
