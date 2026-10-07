@@ -101,3 +101,14 @@ E-7 `Variant.deploy` never raises because of HistoryStore content. A tampered/un
 E-8 Governed decisions (PROT-H27 s1): the ORACLE decides from the ops-spec input schema whether a request is
     schema-INVALID (no envelope); every other result with status OK, DENIED or INVALID is governed and must have exactly one
     envelope at its stream position. Variants must envelope exactly that set, independent of their reason strings.
+E-9 (2026-10-07, after G2 fix round 1, before any official G2 run) The schema-INVALID set of E-8, exactly:
+    - call_tool/direct/approve: the operation is unknown, OR args is not an object, OR args has a key that is not a
+      declared input (unknown keys are schema-INVALID - consistent with PROT-H23 R1), OR a required input is missing or
+      null, OR a supplied input fails its type (integer: int not bool; number: int or float not bool; boolean: bool;
+      string: str; resource: non-blank str; json: any value). Existence of a referenced object is NOT schema (E-6: it is
+      a governed INVALID). For approve the same check applies to the approved request's operation and args.
+    - delegate: the edge fails the authority-spec-v2 edge schema (PROT-H24 s1 / schemas/authority-spec-v2.schema.json).
+      Semantic issuance refusals (cycle, unknown parent, amplification, ...) are governed.
+    - revoke: edge_id is not a non-empty string. unknown_edge / not_revoker are governed.
+    The oracle function r3_harness/h27/stream.py:oracle_schema_invalid implements exactly this; each variant envelopes
+    exactly the complement; a shared conformance test compares them on generated edge cases.
