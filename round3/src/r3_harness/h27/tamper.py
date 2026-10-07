@@ -2,7 +2,8 @@
 The affected set is derived from the END STATE of the store versus the base history (what actually changed), never from
 which primitive was meant: definite = envelope record changed/missing or a bound artifact no longer present by content;
 indeterminate = later decisions whose own bytes are untouched but whose predecessor chain changed (a verifier may
-verify them through anchor roots only, so either answer is acceptable and neither is counted)."""
+verify them through anchor roots only), or whose bound artifact survives only under a different key; either answer is
+acceptable for these and neither is counted (R27-3 still applies: a VERIFIED answer must return the bound artifacts)."""
 from __future__ import annotations
 
 import copy
@@ -259,7 +260,7 @@ def derive(base, view) -> dict:
     """definite / indeterminate / unaffected seq sets from the end state of the store (see module docstring)."""
     sc = layout.scan(view)
     present = layout.digests_present(sc, base.all_digests())
-    definite, changed = set(), set()
+    definite, changed, moved = set(), set(), set()
     for s in range(1, base.n + 1):
         orig = base.sc.envs.get(s, [])
         ch = not orig
@@ -274,8 +275,10 @@ def derive(base, view) -> dict:
             definite.add(s)
         if any(not present[d] for _, d in base.bound(s)):
             definite.add(s)
+        elif any(not set(sc.blobs[d]) & set(base.sc.blobs.get(d, [])) for _, d in base.bound(s)):
+            moved.add(s)  # the bytes survive only under another key: content-addressed lookups may find them, key lookups not
     first = min(changed) if changed else None
-    indet = {s for s in range(1, base.n + 1) if first is not None and s > first and s not in definite}
+    indet = {s for s in range(1, base.n + 1) if first is not None and s > first and s not in definite} | (moved - definite)
     missing = {s: [k for k, d in base.bound(s) if not present[d]] for s in definite}
     return {"definite": definite, "indeterminate": indet, "changed_env": changed,
             "unaffected": set(range(1, base.n + 1)) - definite - indet, "missing": missing}

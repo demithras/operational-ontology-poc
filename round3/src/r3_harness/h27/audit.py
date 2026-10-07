@@ -48,9 +48,18 @@ def probe(anchor_dir: str, sock: str) -> dict:
             "E3_holds": e4 and level in ("sandbox-exec", "chmod"), "key_revealed_during_run": (d / KEY_NAME).exists()}
 
 
+def safe_verify(anchor_dir, expected_head=None) -> dict:
+    """verify_anchor_log, but a log it cannot even parse structurally (it raises) is an E5 FAILURE, not a harness crash."""
+    try:
+        return verify_anchor_log(anchor_dir, expected_head=expected_head)
+    except Exception as exc:  # noqa: BLE001 - r3_shared reports shape errors by raising; see report (frozen module)
+        return {"ok": False, "chain_ok": False, "mac_ok": False, "head_ok": False, "entries": None,
+                "errors": [f"verify_anchor_log raised {type(exc).__name__}: {exc}"]}
+
+
 def finalize(audit: dict, anchor_copy: str, closed_head: dict | None) -> dict:
     """E2 (key revealed only at close, MACs verify) and E5 (chain + MAC + head equals the head reported at close)."""
-    v = verify_anchor_log(anchor_copy, expected_head=closed_head)
+    v = safe_verify(anchor_copy, closed_head)
     out = dict(audit)
     out["E2_key_only_at_close"] = (not audit.get("key_revealed_during_run", True)) and v["mac_ok"]
     out["E5_log_integrity"] = bool(v["ok"]) and closed_head is not None

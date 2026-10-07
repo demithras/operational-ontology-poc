@@ -13,13 +13,13 @@ import json
 from pathlib import Path
 
 from r3_shared import evidence, mutants
-from r3_shared.anchor import verify_anchor_log
 from r3_shared.verdict import CommonEvaluation, DualVerdict, Verdict, evaluate_common
 
 from r3_harness.h23.comparative import security_specific_components, security_specific_loc
 from r3_harness.h23.evaluator import oracle_independent
 
 from .analyze import analyze
+from .audit import safe_verify
 from .runner import CANON_SHA, FILES, ROUND3
 
 EVAL_FILES = ("evaluator.py", "analyze.py", "corpus.py", "case.py", "tamper.py", "base.py", "layout.py", "mutation.py",
@@ -83,7 +83,7 @@ def _evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_tampered=Non
     anchor_dir = vdir / "anchor"
     e5 = None
     if anchor_dir.is_dir() and au.get("closed_head"):
-        e5 = verify_anchor_log(anchor_dir, expected_head=au["closed_head"])["ok"]
+        e5 = safe_verify(anchor_dir, au["closed_head"])["ok"]
     else:
         complete = False
         reasons.append("anchor directory/closed head missing: E5 cannot be re-verified")

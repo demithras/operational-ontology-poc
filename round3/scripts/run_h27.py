@@ -6,6 +6,7 @@ Fake variants (tests/fakes) only with --test-variants, never registered. Unbuilt
 from __future__ import annotations
 
 import argparse
+import inspect
 import json
 import os
 import sys
@@ -27,9 +28,13 @@ def factory_for(name: str, test_variants: bool):
         from tests.fakes import fake_h27
         return (lambda m, n=name: fake_h27.load(n, m)), None
     try:
-        load_variant(name)
+        v = load_variant(name)
     except NotImplementedError as exc:
         print(f"not implemented yet - G2 ({exc})", file=sys.stderr)
+        raise SystemExit(2)
+    params = inspect.signature(type(v).deploy).parameters
+    if "history" not in params or "anchor" not in params:  # built for H23 only: no HistoryStore/AnchorClient yet
+        print(f"not implemented yet - G2 ({name}.deploy takes no history/anchor)", file=sys.stderr)
         raise SystemExit(2)
     return (lambda m, n=name: load_variant(n, m)), name
 

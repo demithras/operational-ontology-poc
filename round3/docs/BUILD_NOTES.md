@@ -293,3 +293,25 @@ Approval/idempotency fingerprint now binds `on_behalf_of` literally (service.py;
   sandbox-exec with file-write* denied on the anchor dir (tests/test_p1d_sandbox.py: known-negative + known-positive + non-sandbox control).
 - Import scan: paladin/conventional may not import r3_shared.anchor_server or TamperView (tests/test_import_boundaries.py).
 - Fakes: tests/fakes/fake_g2.py (G2Mixin on FakeDeployment). Edited existing test: tests/test_mutants.py (ALL was asserted == H23 list).
+
+## G2 H27 harness (branch r3-harness-h27, tag r3-g2-h27-harness)
+Variant-neutral. New: `r3_oracle/provenance.py` (expected bindings), `r3_harness/h27/` (stream, gen_history, base, layout,
+tamper, case, corpus, mutation, runner, analyze, audit, evaluator), `scripts/{run,evaluate,verify}_h27.*`, `tests/test_h27_*.py`,
+`tests/fakes/fake_h27*.py`. Real variants are consulted only through the registry; a variant whose `deploy` has no
+`history`/`anchor` parameter prints "not implemented yet - G2" and exits 2.
+
+How to run (official): `scripts/run_h27.sh --exp-id exp-h27-001 --variants paladin,conventional --seed N` (per variant the
+anchor is started OUTSIDE the sandbox by run_sandboxed.sh, the run executes under sandbox-exec, then `run_h27.py finalize`
+adds E2/E5 and seals envelope.json); `scripts/evaluate_h27.py exp-h27-001`; `scripts/verify_h27.sh exp-h27-001`. Defaults are the
+frozen sizes: 300 base histories per domain, 5,000 EFFECTIVE tampered cases (no-op attempts are dropped and counted in
+`attempt_stats`), 1,000 clean controls, mutation proof = 90 cases per mutant. Dev runs lower minimums only through
+`evaluate_h27.py --min-tampered/--min-bases-per-domain/--min-controls`, refused unless the experiment id contains `-dev`, and recorded
+as `minimum_overrides` + a `DEV ONLY` reason. Runtime on FakeHonest: ~45 s per 1,000 tampered cases (incl. 100 controls, 80 bases, mutation proof).
+
+Design points the evaluator relies on: (1) artifacts/envelopes/receipts are found BY CONTENT; `HISTORY_LAYOUT` is only used for
+`approval` and `idempotency` records. (2) The affected set of a tamper case is derived from the END STATE of the store vs the base
+history: definite = envelope record changed/missing or a bound artifact gone everywhere; indeterminate = later decisions whose own
+bytes are untouched (a verifier may check them through anchor roots only) or whose artifact survives only under another key.
+Only definite and unaffected decisions are judged. (3) At most one T9 (continuation) case per base history, because a continuation
+request appends to the base stream's anchor entries. (4) Approve has no request_id in the protocol, so the approve decision id is
+variant-chosen and read from its envelope.

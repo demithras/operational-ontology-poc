@@ -64,13 +64,13 @@ def run_variant(factory, vname: str, out: Path, exp_id: str, seed: int, anchor_s
                                  "artifacts": r["artifacts"]} for b in bases for r in b.decisions))
         exp_sha = hashlib.sha256((out / EXTRA[0]).read_bytes()).hexdigest()  # hashed BEFORE any tampering
         _lines(out / FILES[0], (row for b in bases for row in b.bundles))
-        tcases = list(corpus.run_plan(variant, anchor, bases, corpus.plan(random.Random(seed + 1), tamper_cases, len(bases)),
-                                      work, seed))
+        stats: dict = {}
+        tcases = list(corpus.run_effective(variant, anchor, bases, work, seed, tamper_cases, stats))
         ccases = list(corpus.run_clean(variant, anchor, bases, work, seed, controls))
         base_div = [d for b in bases for d in b.divergences]
         unanch = [u for b in bases for u in b.unanchored]
         _dump(out / FILES[1], {"seed": seed, "bases": len(bases), "base_domains": {d: sum(b.domain == d for b in bases) for d in corpus.DOMAINS},
-                               "cases": tcases, "binding_divergences": base_div, "unanchored_acks": unanch})
+                               "attempt_stats": stats, "cases": tcases, "binding_divergences": base_div, "unanchored_acks": unanch})
         _dump(out / FILES[2], {"controls": [{k: c[k] for k in ("case", "base", "domain", "n", "replays", "classes_hit", "replay_ms")}
                                            for c in ccases], "binding_divergences": base_div})
         _dump(out / FILES[4], {"cases_per_mutant": mutation_cases, **mutation.prove(factory, anchor, seed, mutation_bases, mutation_cases)})
