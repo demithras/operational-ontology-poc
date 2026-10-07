@@ -15,7 +15,7 @@ from . import approval_rules, concurrency, crash_appr, crash_rules, mutation, su
 from .analyze import analyze
 from .corpus import DOMAINS, load_specs, new_env, run_corpus
 
-ROUND3 = Path(__file__).resolve().parents[3].parent
+ROUND3 = Path(__file__).resolve().parents[3]
 FILES = ("adversarial-sequences.jsonl", "effect-oracle-diff.json", "identity-confusion-results.json",
          "direct-engine-backstop.json", "mutation-results.json", "surface-audit.json")
 A8_FILES = ("crash-results.json", "concurrency-results.json")  # missing/empty -> INCONCLUSIVE, not INVALID

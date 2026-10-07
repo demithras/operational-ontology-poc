@@ -51,11 +51,24 @@ def oracle_independent() -> tuple[bool, list[str]]:
     return not bad, bad
 
 
+def freeze_g2() -> dict:
+    return json.loads((ROUND3 / "protocol" / "FREEZE_G2.json").read_text())["files"]
+
+
+def freeze_g2_mismatches() -> list[str]:
+    """Frozen G2 spec files whose on-disk sha256 differs from protocol/FREEZE_G2.json (missing file = mismatch). Any -> INVALID."""
+    bad = []
+    for rel, want in sorted(freeze_g2().items()):
+        f = ROUND3 / rel
+        got = hashlib.sha256(f.read_bytes()).hexdigest() if f.is_file() else None
+        if got != want:
+            bad.append(f"{rel}: sha256 {str(got)[:12]} differs from protocol/FREEZE_G2.json {want[:12]}")
+    return bad
+
+
 def frozen_prot_hash() -> tuple[str, str]:
-    """(sha256, source). A FREEZE amendment hash wins; with none recorded the on-disk file is the reference."""
-    fz = json.loads((ROUND3 / "protocol" / "FREEZE.json").read_text())
-    am = (fz.get("amendments") or {}).get("PROT-H24.md")
-    return (am, "protocol/FREEZE.json amendment") if am else (hashlib.sha256(PROT.read_bytes()).hexdigest(), "on-disk file")
+    """(sha256, source): the PROT-H24.md hash recorded in protocol/FREEZE_G2.json (never the on-disk file alone)."""
+    return freeze_g2()["spec/protections/PROT-H24.md"], "protocol/FREEZE_G2.json"
 
 
 def minimum_overrides(thresholds: dict, min_sequences, min_concurrent) -> dict:
@@ -105,6 +118,10 @@ def _evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_sequences=No
     ind, bad = oracle_independent()
     valid = ind
     reasons += bad
+    drift = freeze_g2_mismatches()
+    if drift:
+        valid = False
+        reasons += ["frozen G2 spec changed: " + d for d in drift]
     files_ok, env = _check_files(vdir, reasons)
     if env is None:
         return _finish(vname, False, False, False, False, False, reasons, {})

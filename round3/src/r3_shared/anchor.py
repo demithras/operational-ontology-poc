@@ -125,12 +125,27 @@ def verify_anchor_log(anchor_dir, key: bytes | None = None, expected_head: dict 
             errors.append(f"line {n}: not JSON")
             chain_ok = False
             continue
+        if not isinstance(e, dict):
+            errors.append(f"line {n}: not a JSON object")
+            chain_ok = False
+            prev = line_sha(line)
+            continue
         if e.get("i") != n or e.get("prev_entry") != prev:
             errors.append(f"line {n}: chain break (i/prev_entry mismatch)")
             chain_ok = False
         if key is not None and not hmac.compare_digest(str(e.get("mac")), entry_mac(key, e)):
             errors.append(f"line {n}: bad MAC")
             mac_ok = False
+        if not isinstance(e.get("seq"), int) or isinstance(e.get("seq"), bool):
+            errors.append(f"line {n}: seq missing or not an int")
+            chain_ok = False
+            prev = line_sha(line)
+            continue
+        if not isinstance(e.get("stream"), (str, int, type(None))):
+            errors.append(f"line {n}: stream is not a scalar")
+            chain_ok = False
+            prev = line_sha(line)
+            continue
         if e.get("seq") != streams.get(e.get("stream"), 0) + 1:
             errors.append(f"line {n}: stream seq gap/duplicate")
             chain_ok = False

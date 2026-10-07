@@ -17,6 +17,7 @@ from r3_shared.verdict import CommonEvaluation, DualVerdict, Verdict, evaluate_c
 
 from r3_harness.h23.comparative import security_specific_components, security_specific_loc
 from r3_harness.h23.evaluator import oracle_independent
+from r3_harness.h24.evaluator import freeze_g2, freeze_g2_mismatches
 
 from .analyze import analyze
 from .audit import safe_verify
@@ -56,9 +57,13 @@ def _evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_tampered=Non
     ok_ind, bad = oracle_independent()
     if not ok_ind:
         valid, reasons = False, reasons + bad
+    drift = freeze_g2_mismatches()
+    if drift:
+        valid = False
+        reasons += ["frozen G2 spec changed: " + d for d in drift]
     missing = [f for f in (*FILES, "envelope.json", "expected-bindings.jsonl") if not (vdir / f).is_file()]
     if missing:
-        return _finish(vname, valid, False, False, False, False, ["required evidence missing: " + ", ".join(missing)], {})
+        return _finish(vname, valid, False, False, False, False, reasons + ["required evidence missing: " + ", ".join(missing)], {})
     env = _read(vdir / "envelope.json")
     try:
         evidence.validate_envelope(env)
@@ -67,6 +72,9 @@ def _evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_tampered=Non
             if hashlib.sha256((vdir / f).read_bytes()).hexdigest() != ro["evidence_sha256"].get(f):
                 valid = False
                 reasons.append(f"{f}: sha256 differs from envelope")
+        if ro.get("prot_h27_sha256") != freeze_g2()["spec/protections/PROT-H27.md"]:
+            valid = False
+            reasons.append("PROT-H27.md sha256 in the envelope differs from protocol/FREEZE_G2.json: semantics changed")
         if ro.get("expected_bindings_sha256") != ro["evidence_sha256"].get("expected-bindings.jsonl"):
             valid = False
             reasons.append("expected bindings were not hashed before tampering")

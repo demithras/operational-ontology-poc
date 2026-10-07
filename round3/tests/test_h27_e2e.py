@@ -277,10 +277,20 @@ def test_minimum_overrides_are_refused_for_non_dev_experiment_ids(exp, tmp_path)
     assert set(out["comparative"]) >= {"forbidden_effects", "safe_progress_ratio", "mutation_kill_rate", "p95_latency_ms"}
 
 
-def test_real_variants_not_built_exit_2_with_the_honest_message(tmp_path):
-    p = subprocess.run([str(ROUND3 / "scripts" / "run_h27.sh"), "--exp-id", "exp-h27-dev", "--variants", "paladin",
-                        "--out-root", str(tmp_path)], capture_output=True, text=True, timeout=120)
-    assert p.returncode != 0 and "not implemented yet - G2" in (p.stdout + p.stderr)
+def test_unbuilt_real_variant_exits_2_with_the_honest_message(monkeypatch, capsys):
+    """Both real variants are built since G2, so the unbuilt path is exercised by making the registry refuse (P12: the old
+    subprocess form ran the full paladin run and timed out)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("run_h27_script", ROUND3 / "scripts" / "run_h27.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    def refuse(name, mutants=()):
+        raise NotImplementedError(f"variant {name!r} not implemented yet")
+    monkeypatch.setattr(mod, "load_variant", refuse)
+    with pytest.raises(SystemExit) as e:
+        mod.factory_for("paladin", False)
+    assert e.value.code == 2 and "not implemented yet - G2" in capsys.readouterr().err
 
 
 def test_verify_script_reproduces_the_verdict(exp, tmp_path):
