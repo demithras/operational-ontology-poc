@@ -65,12 +65,9 @@ def classify(base, seq: int, kind: str, r, e, aff: dict, flags: set) -> list[str
             out.append("rebinding_accepted")
     elif r.status == "VERIFIED":
         miss = aff["missing"].get(seq, [])
-        if miss:
-            if any(k in ("authority", "policy", "contract") for k in miss) or ok:
-                out.append("fallback_to_current")
-            else:
-                out.append("rebinding_accepted")
-        elif any(f.startswith("rebind") for f in flags):
+        if miss and ok:      # the bound artifact was gone, yet exactly its content came back: rebuilt from current state
+            out.append("fallback_to_current")
+        elif miss or any(f.startswith("rebind") for f in flags):  # different content verified under the old binding
             out.append("rebinding_accepted")
         else:
             out.append("tamper_accepted")

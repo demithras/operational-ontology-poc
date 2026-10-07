@@ -24,10 +24,17 @@ def _sha(b: bytes) -> str:
 
 class HonestDep(ReplayMixin, G2Mixin, FakeDep):
     def __init__(self, mode, domain, factory, verifier, ops, auth, clock, mutants, history, anchor, paranoid=False,
-                 no_anchor=False):
+                 no_anchor=False, anchor_writer=False):
         FakeDep.__init__(self, "correct", domain, factory, verifier, ops, auth, clock, mutants, None)
         self.auth_spec, self.history, self.anchor = auth, history, anchor
         self.paranoid, self.no_anchor = paranoid, no_anchor
+        if anchor_writer:  # known negative: tries to scribble into the anchor log (blocked only by the sandbox)
+            import os
+            try:
+                with open(os.path.join(os.environ["R3_ANCHOR_DIR"], "anchor.log"), "ab") as fh:
+                    fh.write(b"{}\n")
+            except (OSError, KeyError):
+                pass
         have = history.get("meta/stream")
         self._g2_init(history, anchor)
         if have is None:
@@ -177,12 +184,13 @@ class FakeH27Variant:
     HISTORY_LAYOUT = {"approval": "appr/", "idempotency": "idem/", "envelope": "env/", "artifact": "art/",
                       "receipt": "rcpt/"}
 
-    def __init__(self, mutants=(), paranoid=False, no_anchor=False, name="fake-honest"):
+    def __init__(self, mutants=(), paranoid=False, no_anchor=False, name="fake-honest", anchor_writer=False):
         self.mutants, self.paranoid, self.no_anchor, self.name = mutants_mod.validate(mutants), paranoid, no_anchor, name
+        self.anchor_writer = anchor_writer
 
     def deploy(self, domain, factory, verifier, ops_spec, auth_spec, clock, state_dir=None, history=None, anchor=None):
         return HonestDep("correct", domain, factory, verifier, ops_spec, auth_spec, clock, self.mutants, history, anchor,
-                         self.paranoid, self.no_anchor)
+                         self.paranoid, self.no_anchor, self.anchor_writer)
 
 
 def load(name, mutants=()):
@@ -192,6 +200,8 @@ def load(name, mutants=()):
         return FakeH27Variant(mutants, name=name)
     if tail == "paranoid":
         return FakeH27Variant(mutants, paranoid=True, name=name)
+    if tail == "anchorwriter":
+        return FakeH27Variant(mutants, name=name, anchor_writer=True)
     if tail == "noanchor":
         return FakeH27Variant(mutants, no_anchor=True, name=name)
     return FakeH27Variant(tuple(mutants) + (tail,), name=name)
