@@ -96,6 +96,8 @@ class Core(G2Mixin):
         self.auth_fault = None  # E-7: set when the authority record in the history is unusable; mutating calls then fail closed
         self.recovered = []
         try:
+            if persisted is None and history is not None and history.keys("auth/"):
+                raise ValueError("authority record missing from a non-empty history")  # deleted record = rollback attempt
             if persisted is not None and history is not None:  # the record must match its content-addressed copy
                 if history.get(f"auth/{authority_digest(persisted)}") != canonical_bytes(persisted):
                     raise ValueError("authority record does not match its digest-addressed copy")
@@ -103,7 +105,7 @@ class Core(G2Mixin):
             else:
                 self.install(persisted if persisted is not None else auth_spec)
         except Exception as exc:  # noqa: BLE001 - E-7: deploy never raises on HistoryStore content
-            if persisted is None:
+            if persisted is None and history is None:
                 raise  # the deploy-time spec itself is bad: a caller error, not history content
             self.auth_fault = f"{type(exc).__name__}: {exc}"
             self.install(auth_spec, persist=False)  # boot the deploy-time base; never overwrite the tampered record
