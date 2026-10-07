@@ -9,6 +9,7 @@ import os
 import shutil
 import tempfile
 import threading
+import time
 
 from r3_oracle import ops_model
 from r3_oracle.authority_v2 import RefAuthority
@@ -77,6 +78,7 @@ class G2Env:
         rec.update({"kind": kind, "approved": False, "replay": False, "unsupported": False, "timeout": False,
                     "status": "EXC", "reason": None}, **fields)
         rec["tick_inv"], rec["inv"] = self.clock.now(), self._tick()
+        t0 = time.perf_counter()
         try:
             res = fn()
             if res is not None:
@@ -87,6 +89,7 @@ class G2Env:
             rec["unsupported"], rec["reason"] = True, str(exc)
         except Exception as exc:  # noqa: BLE001 - an exception from a variant is data, not a harness crash
             rec["reason"] = f"{type(exc).__name__}: {exc}"
+        rec["lat_ms"] = (time.perf_counter() - t0) * 1000.0  # harness-side latency; never read by the oracle
         rec["ret"], rec["tick_ret"] = self._tick(), self.clock.now()
         with self._lock:
             rec["n"] = len(self.calls)

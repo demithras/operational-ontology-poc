@@ -70,14 +70,15 @@ def classify_calls(calls, res, txs, tx_calls, states, snaps, ops, diverged=False
             continue
         s_pre, snap, s_post = _positions(c, idx, tx_calls, states, snaps)
         ticks = {c.get("tick_inv", 0), c.get("tick_ret", 0)}
-        legal, exp = [], None
+        legal, exp = [], []
         for ra in (s_pre, s_post):
             for t in ticks:
                 ok, exp_ = _legal(c, ra, snap, t, ops)
                 legal.append(ok)
-                exp = exp if (exp is not None and ok) else exp_
+                exp.append(exp_)
         all_, any_ = all(legal), any(legal)
-        r["must"] = bool(all_ and not c.get("replay") and not c.get("crash") and c["status"] != "UNKNOWN")
+        already = all(e is not None and e[1] == "already" for e in exp)  # OK without a mark: nothing to commit
+        r["must"] = bool(all_ and not already and not c.get("replay") and not c.get("crash") and c["status"] != "UNKNOWN")
         r["legal_any"] = any_
         _outcome(c, r, cl, all_, any_, exp)
         if not cl:
@@ -96,14 +97,15 @@ def _outcome(c, r, cl, all_, any_, exp):
     if committed or c.get("replay") or (st == "UNAVAILABLE" and c.get("reason") == "crashed"):
         return  # UNAVAILABLE-after-crash is the protocol's answer (PROT-H23-A8), not a refusal decision
     if st == "OK":
-        if k in AUTH_KINDS and not (exp and exp[1] == "already"):
+        if k in AUTH_KINDS and not all(e and e[1] == "already" for e in exp):
             cl.append("authority_ack_without_commit")
         elif k == "request" and any_:
             cl.append("progress_loss")
         return
     if any_:
         cl.append("progress_loss" if all_ else "race_refusal_ok")
-    elif exp is not None and (k in AUTH_KINDS or c.get("obo") is not None) and (st, c.get("reason")) != tuple(exp):
+    elif all(e is not None for e in exp) and (k in AUTH_KINDS or c.get("obo") is not None) \
+            and (st, c.get("reason")) not in {tuple(e) for e in exp}:
         cl.append("explicit_reason_mismatch")
 
 

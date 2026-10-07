@@ -61,7 +61,7 @@ class Race:
                  "parent": parent["id"] if parent else None, "scope": copy.deepcopy(sc),
                  "expires_at": leaf_exp if (d == depth - 1) else None, "redelegable": d < depth - 1, "issued_at": 0}
             self.k += 1
-            env.delegate(e, self.rid("d"))
+            env.delegate(e, self.rid("d"))["depth"] = d + 1
             mirror_delegate(env, e)
             edges.append(e)
             parent, issuer = e, child
@@ -177,6 +177,7 @@ class Race:
             cls = {k for r in rows for k in r["classes"]} | set(out["case_classes"])
             if self.hung:
                 cls.add("world_lock_timeout")
+                out["case_classes"] = sorted(set(out["case_classes"]) | {"world_lock_timeout"})
             return {"id": f"race-{self.i}-{self.rtype}", "type": self.rtype, "domain": self.domain,
                     "digest": input_digest(self.domain, self.env.calls), "calls": rows, "case_classes": out["case_classes"],
                     "classes": sorted(cls), "match": not (cls & set(VIOLATIONS)), **self._shape(out)}

@@ -19,7 +19,7 @@ ALL_CLASSES = VIOLATIONS + MEASURED_ONLY + UNMEASURABLE
 
 def row_of(call: dict, res: dict, depth_of: dict | None = None) -> dict:
     keep = ("n", "kind", "rid", "actor", "obo", "op", "args", "edge", "edge_id", "to", "approved", "status", "reason", "inv",
-            "ret", "crash", "replay", "intent")
+            "ret", "crash", "replay", "intent", "lat_ms", "depth")
     r = {k: call.get(k) for k in keep if call.get(k) is not None or k in ("n", "kind", "status")}
     r.update({"classes": sorted(set(res["classes"])), "seq": res["seq"], "tick": res["tick"], "committed": res["committed"],
               "must": res.get("must"), "legal_any": res.get("legal_any"), "oracle": res["oracle"]})
