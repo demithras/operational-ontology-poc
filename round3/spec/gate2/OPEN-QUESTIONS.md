@@ -1,0 +1,65 @@
+# Gate 2 open questions - rulings needed before freezing PROT-H24 / PROT-H27 / P1d
+
+Each with a recommended answer. "Author" = needs the author; "orch" = orchestrator may rule.
+
+Q1 (author) Anchor filesystem enforcement level. The variants run IN the harness process, same OS user; no root.
+  Options: (a) macOS sandbox-exec profile denying file-write* on the anchor dir for the harness process, anchor started
+  outside the sandbox; (b) chmod 0555/0444 + held O_APPEND fd (same uid can chmod back); (c) a second OS user (needs sudo).
+  RECOMMEND (a) as required, with (b) as defense in depth and E5 (MAC chain, key revealed at close) as the cryptographic
+  check; if sandbox-exec fails on this macOS, rule (b)+E5 acceptable and record "enforcement=chmod" in anchor-audit.
+  PROBE (designer, 2026-10-07, this host, scratch dir only): under `sandbox-exec -p '(version 1)(allow default)(deny
+  file-write* (subpath D))'` a write into D and a chmod of D both failed "Operation not permitted" (rc 1) while a write
+  outside D succeeded (rc 0). So (a) is feasible; P1d-8 must re-prove it as a test (known-negative + known-positive).
+  Stdlib has no Ed25519; HMAC + delayed key disclosure avoids a new dependency. Alternative: add `cryptography` (shared
+  low-level lib, allowed) for public-key receipts. Recommend HMAC (no dependency, same strength for this threat model).
+
+Q2 (author) Safe-progress and race-realism thresholds for H24. thresholds.json has no H24 progress floor; the contract
+  says measure progress separately and calls a harness that prevents races INCONCLUSIVE. RECOMMEND frozen in PROT-H24:
+  unaffected-legit progress must be 1.0 (as H23 R8) else INCONCLUSIVE; >= 50% of concurrent cases overlap in real time
+  and >= 1 effect-first order among overlapping RV cases, else INCONCLUSIVE. Numbers are design choices, not thresholds.json
+  edits, and must be frozen before any run.
+
+Q3 (orch) H24 reject mapping. reject_if names only stale effects and amplification; falsifiers 3-4 add races and cycles.
+  RECOMMEND reject on any preregistered falsifier: cycle_grant > 0 and any linearizability_violation REJECT.
+
+Q4 (orch) 4th H24 mutant `expiry_inclusive`. The contract lists three; expiry boundary exactness is otherwise only
+  covered by the corpus. RECOMMEND add it (stronger proof; kill rate still required 1.0).
+
+Q5 (orch) 4th H27 mutant `receipt_self_trust` (trust the stored receipt, not the anchor). It is the direct test of the
+  trust split. RECOMMEND add it.
+
+Q6 (author) Evidence set breadth. Binding objects found by `unique`/`exists` queries (e.g. InventoryLot for transfer)
+  needs a frozen read-set for the expression language and enables full business-rule replay; costlier and a new
+  oracle/variant disagreement surface. RECOMMEND the narrow set (resource inputs + `newest` terms) for H27 and record
+  "business rules not replayed" as a scope limit in the H27 SUMMARY; widen in a later version if needed.
+
+Q7 (author) Counting "5,000 histories". Generating 5,000 independent base histories per variant is slow; the plan uses
+  >= 600 base histories each copied into many tamper cases (>= 5,000 tampered cases + >= 1,000 clean controls).
+  The contract text says "histories/mutations". RECOMMEND count tampered cases, require >= 600 distinct base histories,
+  both domains, and state the counting rule in the H27 SUMMARY.
+
+Q8 (orch) False alarms. Falsifier 4 says material false positives falsify; reject_if omits it. RECOMMEND
+  false_alarm > 0 -> REJECTED (preregistered falsifier), so a paranoid always-TAMPERED variant cannot be INCONCLUSIVE-safe.
+
+Q9 (orch) Variant migration for H27: approvals and idempotency records move into HistoryStore when `history` is
+  given. This touches H23-proven code paths in both variants. RECOMMEND both builders migrate behind the `history`
+  parameter only (H23 path unchanged when history is None) and the full H23 suite + one H23 dev run re-pass before G2.
+
+Q10 (orch) H24 interplay with H23 static delegates. Spec keeps them disjoint (static delegates can neither issue nor
+  receive edges). RECOMMEND keep disjoint for Gate 2; H25 (constitutional authority) may unify them.
+
+Q11 (orch) world_log is a protocol change to the world store under H23 evidence. RECOMMEND additive only (new table,
+  H23 meter ignores it), full suite + H23 dev rerun as regression, H23 official verdicts untouched.
+
+Q12 (author) Gate-2 stop rule wording. If one variant fails H24/H27 and the other passes, record per DUAL_TRACK (two
+  verdicts, parity/difference descriptive), do not stop downstream gates unless BOTH reject (the conventional path stays
+  the product path). RECOMMEND confirm.
+
+## Rulings (2026-10-07)
+Author: Q1 = (a) sandbox-exec + HMAC chain with key revealed at close; Q2 = floors as recommended (frozen in PROT-H24 s8);
+Q6/Q7 = as recommended (narrow evidence set; count >= 5,000 tampered cases from >= 600 distinct base histories in both
+domains + >= 1,000 clean controls; business rules not replayed is a recorded scope limit); Q12 = record two verdicts and
+continue; stop downstream gates only if BOTH variants reject.
+Orchestrator: Q3 yes (any preregistered H24 falsifier -> REJECTED incl. cycle_grant and linearizability violations);
+Q4 yes; Q5 yes; Q8 yes (false_alarm > 0 -> REJECTED); Q9 yes (behind `history`, H23 suite + one H23 dev rerun as
+regression); Q10 yes (static delegates and edges disjoint); Q11 yes (world_log additive; H23 official verdicts untouched).
