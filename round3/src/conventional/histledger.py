@@ -103,6 +103,8 @@ class HistLedger:
         digest = marks[-1]["version"] if marks else (self.history.get("meta/initial_authority") or b"").decode()
         raw = self.history.get(f"art/{digest}") if digest else None
         if raw is None:
+            if marks:  # E-7: a lineage with authority marks but a missing version blob is damaged, never "fresh"
+                raise LedgerUnresolved("authority version blob is missing")
             return None
         if hashlib.sha256(raw).hexdigest() != digest:
             raise LedgerUnresolved("authority version blob does not hash to its digest")

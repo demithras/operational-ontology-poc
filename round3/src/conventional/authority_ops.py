@@ -6,6 +6,7 @@ service lock serialises it with effect commits, so the world_log order is the li
 """
 from __future__ import annotations
 
+import copy
 import sqlite3
 
 from r3_shared.authgraph import authority_digest
@@ -18,6 +19,14 @@ from .pdp import Pdp
 from .provenance import DecisionCtx
 
 
+class _NoOp(Exception):
+    """Internal: a plan that is a successful no-op; unwinds the (empty) world transaction."""
+
+    def __init__(self, body: dict):
+        super().__init__("noop")
+        self.body = body
+
+
 class AuthorityOps:
     # -- set_authority (harness / operator surface; not a request) -----------------------------------------
     def set_authority(self, auth_spec: dict) -> int:
@@ -25,16 +34,32 @@ class AuthorityOps:
         with self._lock:
             if self.crashed:
                 raise RuntimeError("deployment is crashed; restart() first")
-            new = Pdp(auth_spec, self._policy.version + 1, self._mutants)
+            if self._authority_unresolved:
+                raise RuntimeError("authority history is unresolved; refusing to extend it")
+            doc = self._compose_base(auth_spec)
+            new = Pdp(doc, self._policy.version + 1, self._mutants)
             h = self._factory("conventional-service")
             try:
                 with h.transaction(tag="authority") as tx:
-                    self._store.authority_put(h, new.version, auth_spec)  # durable first, then swapped in
+                    self._store.authority_put(h, new.version, doc)  # durable first, then swapped in
                     tx.mark("authority", {"op": "set_authority", "version": new.digest})
             finally:
                 h.close()
             self._policy = new
             return new.version
+
+    def _compose_base(self, auth_spec: dict) -> dict:
+        """E-5: set_authority replaces the BASE layer only. Capability edges and revocations in force persist; any
+        `capabilities`/`revoked` in the supplied document are ignored (there is no un-revoke by any path)."""
+        cur = self._policy.doc
+        if not authdoc.is_v2(auth_spec) and not cur.get("capabilities") and not cur.get("revoked"):
+            return copy.deepcopy(auth_spec)  # pure H23 path / empty table: a v1 document stays literally what it is (E-3)
+        new = authdoc.upgraded(auth_spec)
+        if not authdoc.is_v2(auth_spec):  # a v1 document carries no depth bound: keep the one in force
+            new["max_delegation_depth"] = cur.get("max_delegation_depth", new["max_delegation_depth"])
+        new["capabilities"] = copy.deepcopy(cur.get("capabilities", []))
+        new["revoked"] = list(cur.get("revoked", []))
+        return new
 
     # -- delegate / revoke ---------------------------------------------------------------------------------
     def delegate(self, token: str, edge: dict, request_id: str) -> CallResult:
@@ -74,6 +99,8 @@ class AuthorityOps:
         with self._lock:
             if self.crashed:
                 return CallResult("UNAVAILABLE", {"reason": "crashed"})
+            if self._authority_unresolved:  # E-7
+                return CallResult("UNAVAILABLE", {"reason": "history_unresolved"})
             sub = self.authenticate(token)
             if sub is None:
                 return CallResult("DENIED", {"reason": "token"})
@@ -89,9 +116,12 @@ class AuthorityOps:
                     res = self._mutation_tx(h, sub, request_id, kind, args, plan, dc)
                 except _Abort as a:
                     res = a.result
+                except _NoOp as n:  # the open transaction rolled back: world_log and tx counter are untouched
+                    res = CallResult("OK", n.body)
                 except (sqlite3.Error, ConnectionError, LedgerUnresolved):
                     return CallResult("UNAVAILABLE", {"reason": "dependency_unavailable"})
-                if res.status == "OK" and not res.body.get("replayed") and self._armed == "after_commit":
+                if res.status == "OK" and not res.body.get("replayed") and not res.body.get("already") \
+                        and self._armed == "after_commit":
                     raise_ = self._crash_now()
                     return raise_.result
                 if res.body.get("replayed"):
@@ -118,9 +148,11 @@ class AuthorityOps:
             refusal, new_doc, body, mark = plan(sub, args, authdoc.upgraded(self._policy.doc), tx.tick)  # E-3: v1 == empty v2
             if refusal is not None:
                 raise _Abort(refusal[0], {"reason": refusal[1]})
+            if mark.get("noop"):  # PROT-H24 s5: already revoked -> OK {already:true}, no mark and NO world transaction
+                raise _NoOp(body)
             if self._armed == "before_commit":
                 raise self._crash_now()
-            if deferred and not mark.get("noop"):  # BUG (revoke_commit_reorder): acknowledge now, apply after the next effect
+            if deferred:  # BUG (revoke_commit_reorder): acknowledge now, apply after the next effect
                 self._pending.append((sub, rid, args, fp))
                 return CallResult("OK", body)
             version = self._apply_mutation(h, tx, rid, kind, new_doc, body, mark, sub, fp)
@@ -131,9 +163,8 @@ class AuthorityOps:
     def _apply_mutation(self, h, tx, rid, kind, new_doc, body, mark, sub, fp) -> int:
         """Inside the open transaction: durable table version + marks + idempotency record. Returns the commit seq."""
         digest = authority_digest(new_doc)
-        if not mark.get("noop"):
-            self._store.authority_put(h, self._policy.version + 1, new_doc)
-            tx.mark("authority", {**mark, "version": digest})
+        self._store.authority_put(h, self._policy.version + 1, new_doc)
+        tx.mark("authority", {**mark, "version": digest})
         seq = tx.mark("commit", {"request_id": rid, "kind": kind, "authority_version": digest})
         self._store.idem_put(h, rid, fp, {"status": "OK", "body": body,
                                           "used": {"authority_version": digest, "path": [], "on_behalf_of": None}})

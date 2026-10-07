@@ -39,6 +39,5 @@ class ToolSurface:
             return CallResult("UNAVAILABLE", {"reason": "crashed"})
         if self._svc.authenticate(token) is None:
             return CallResult("DENIED", {"reason": "invalid_token"})
-        if name not in self.visible(token):
-            return CallResult("DENIED", {"reason": "tool_not_available"})
-        return self._svc.execute(token, name, args, on_behalf_of, request_id, _kind="call_tool")
+        hidden = name not in self.visible(token)  # a hidden tool is still a governed refusal: the service decides (E-8)
+        return self._svc.execute(token, name, args, on_behalf_of, request_id, _kind="call_tool", _hidden=hidden)

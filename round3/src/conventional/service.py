@@ -42,6 +42,9 @@ def _base(doc: dict) -> dict:
     return {k: v for k, v in doc.items() if k not in ("spec", "capabilities", "revoked", "max_delegation_depth")}
 
 
+_LINEAGE_ERRORS = (LedgerUnresolved, ValueError, KeyError, TypeError, AttributeError, IndexError)
+
+
 class _Abort(Exception):
     def __init__(self, status: str, body: dict):
         super().__init__(status)
@@ -82,16 +85,24 @@ class Service(AuthorityOps):
         self._armed: str | None = None
         self._mem_ledger: dict = {}  # used ONLY by the ledger_after_commit_volatile mutant
         doc, version = auth_spec, 1
+        self._initial_spec = copy.deepcopy(auth_spec)
+        self._authority_unresolved: str | None = None  # E-7: set when the durable authority lineage cannot be trusted
         h = factory(WRITER)
         try:
             self._store.init(h)
-            if history is not None:  # a fresh deployment over an existing history continues its authority lineage
-                got = self._store.authority_get(h)
-                if got is not None and _base(got[1]) == _base(auth_spec):
-                    version, doc = got
-            with h.transaction():
-                if version == 1 and (history is None or self._store.authority_get(h) is None):
-                    self._store.authority_put(h, 1, doc)
+            try:
+                got = None
+                if history is not None:  # a fresh deployment over an existing history continues its authority lineage
+                    got = self._store.authority_get(h)
+                    if got is not None and _base(got[1]) == _base(auth_spec):
+                        version, doc = got
+                        Pdp(doc, version, self._mutants)  # a document that cannot even be evaluated is unresolved too
+                with h.transaction():
+                    if version == 1 and (history is None or got is None):
+                        self._store.authority_put(h, 1, doc)
+            except _LINEAGE_ERRORS as exc:  # E-7: never raise from deploy because of HistoryStore content
+                self._authority_unresolved = f"{type(exc).__name__}"
+                doc, version = auth_spec, 1
         finally:
             h.close()
         self._policy = Pdp(doc, version, self._mutants)
@@ -139,10 +150,17 @@ class Service(AuthorityOps):
         with self._lock:
             h = self._factory(WRITER)
             try:
-                version, spec = self._store.authority_get(h)
+                got = self._store.authority_get(h)
+                if got is None:
+                    raise LedgerUnresolved("no durable authority version")
+                version, spec = got
+                self._policy = Pdp(spec, version, self._mutants)
+                self._authority_unresolved = None
+            except _LINEAGE_ERRORS as exc:  # E-7: restart over a damaged lineage stays up but refuses mutations
+                self._authority_unresolved = f"{type(exc).__name__}"
+                self._policy = Pdp(self._initial_spec, 1, self._mutants)
             finally:
                 h.close()
-            self._policy = Pdp(spec, version, self._mutants)
             self._mem_ledger, self.unavailable, self._pending, self._dcache = {}, set(), [], {}
             self.crashed, self._armed = False, None
 
@@ -190,14 +208,17 @@ class Service(AuthorityOps):
 
     # -- the write path ------------------------------------------------------------------------
     def execute(self, token: str, operation: str, args: dict, on_behalf_of: str | None = None,
-                request_id: str | None = None, *, _enforce: bool = True, _kind: str = "direct") -> CallResult:
+                request_id: str | None = None, *, _enforce: bool = True, _kind: str = "direct",
+                _hidden: bool = False) -> CallResult:
         with self._guarded():
             if self.crashed:
                 return CallResult("UNAVAILABLE", {"reason": "crashed"})
+            if self._authority_unresolved:  # E-7: the authority a decision depends on cannot be trusted: no effects
+                return CallResult("UNAVAILABLE", {"reason": "history_unresolved"})
             dc = DecisionCtx(_kind, request_id if isinstance(request_id, str) and request_id.strip() else None, None,
                              on_behalf_of if isinstance(on_behalf_of, str) else None, operation, args)
             try:
-                res = self._execute(token, operation, args, on_behalf_of, request_id, _enforce, dc)
+                res = self._execute(token, operation, args, on_behalf_of, request_id, _enforce, dc, _hidden)
             except _Abort as a:
                 res = a.result
             except (sqlite3.Error, ConnectionError) as exc:
@@ -206,9 +227,27 @@ class Service(AuthorityOps):
                 return CallResult("UNAVAILABLE", {"reason": "history_unresolved"})
             return self._provenance(dc, res)
 
+    def _schema_valid(self, dc: DecisionCtx) -> bool:
+        """E-8: schema validity from the ops-spec input schema (never from a reason string)."""
+        model = OPERATION_MODELS.get(dc.operation) if isinstance(dc.operation, str) else None
+        if dc.op is None or model is None or dc.subject is None or has_float(dc.args):
+            return False
+        if dc.obo is not None and not isinstance(dc.obo, str):
+            return False
+        try:
+            model.from_args(dc.args)
+        except RequestInvalid:
+            return False
+        return True
+
     def _provenance(self, dc: DecisionCtx, res: CallResult) -> CallResult:
         """Anchor-before-ack: the governed decision's envelope root is appended to the anchor before `res` is returned."""
-        if self.prov is None or not dc.governed or res.status not in ("OK", "DENIED", "INVALID") or self.crashed:
+        if self.prov is None or res.status not in ("OK", "DENIED", "INVALID") or self.crashed \
+                or dc.extra.get("replayed"):
+            return res
+        if dc.kind in ("call_tool", "direct"):  # E-8: governed iff the request is schema-valid, whatever the status
+            dc.governed = self._schema_valid(dc)
+        if not dc.governed:
             return res
         h = self._factory(WRITER)
         try:
@@ -224,7 +263,7 @@ class Service(AuthorityOps):
         finally:
             h.close()
 
-    def _execute(self, token, operation, args, obo, request_id, enforce, dc: DecisionCtx) -> CallResult:
+    def _execute(self, token, operation, args, obo, request_id, enforce, dc: DecisionCtx, hidden=False) -> CallResult:
         sub = self.authenticate(token)
         if sub is None:
             raise _Abort("DENIED", {"reason": "invalid_token"})
@@ -235,6 +274,9 @@ class Service(AuthorityOps):
                     break
         dc.subject = sub
         op = self._ops.get(operation) if isinstance(operation, str) else None
+        if hidden:  # the tool layer found no such tool for this subject: a governed refusal (E-8), decided server-side
+            dc.op = op
+            raise _Abort("DENIED", {"reason": "tool_not_available"})
         if op is None:
             raise _Abort("INVALID", {"reason": "unknown_operation"})
         dc.op = op
@@ -271,6 +313,7 @@ class Service(AuthorityOps):
                 self._mem_ledger[bound.request_id] = (bound.fingerprint, {"status": "OK", "body": result.body})
             if result.body.get("replayed"):
                 dc.governed = False  # a retry of a committed request is not a new decision (its envelope exists)
+                dc.extra["replayed"] = True
             return result
         finally:
             h.close()
@@ -303,7 +346,7 @@ class Service(AuthorityOps):
             prior = self._mem_ledger.get(b.request_id) if self.mutant("ledger_after_commit_volatile") \
                 else self._store.idem_get(h, b.request_id)
             if prior is not None:
-                dc.governed = False
+                dc.governed, dc.extra["replayed"] = False, True
                 if prior[0] != b.fingerprint:
                     raise _Abort("INVALID", {"reason": "idempotency_key_reuse"})
                 if self.prov is not None and not self.prov.anchored(b.request_id):
@@ -333,6 +376,10 @@ class Service(AuthorityOps):
                 if br["decision"] == "deny":
                     raise _Abort("DENIED", {"reason": "business_rule", "rule": br["id"]})
                 needs_approval = needs_approval or br["id"]
+            for name, kind, required in model.SCHEMA:  # E-6: a supplied REQUIRED ref must resolve too (after the
+                if kind == "resource" and required and name in inputs \
+                        and ctx.view.props(model.RESOURCES[name], inputs[name]) is None:  # deny rules, as before)
+                    raise _Abort("INVALID", {"reason": "target_not_found", "input": name})
             if needs_approval:
                 self._consume_approval(h, tx, op, b, needs_approval)
             planned = effects.resolve(op["effects"], ctx)
@@ -377,6 +424,8 @@ class Service(AuthorityOps):
         with self._lock:
             if self.crashed:
                 return CallResult("UNAVAILABLE", {"reason": "crashed"})
+            if self._authority_unresolved:
+                return CallResult("UNAVAILABLE", {"reason": "history_unresolved"})
             dc = DecisionCtx("approve", None, None, on_behalf_of if isinstance(on_behalf_of, str) else None, operation, args)
             try:
                 approver = self.authenticate(token)
