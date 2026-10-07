@@ -269,7 +269,7 @@ class Service(AuthorityOps):
         stale_authority_cache mutant keys on (subject, obo, op, resources) only and never invalidates."""
         pol = self._policy
         key = (b.subject, b.on_behalf_of, b.operation, b.resources) if self.mutant("stale_authority_cache") \
-            else (pol.digest, b.subject, b.on_behalf_of, b.operation, b.resources, tick)
+            else (pol.version, pol.digest, b.subject, b.on_behalf_of, b.operation, b.resources, tick)
         d = self._dcache.get(key)
         if d is None:
             d = self._dcache[key] = pol.decide(b.subject, b.on_behalf_of, b.operation, list(b.resources), tick)
