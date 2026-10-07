@@ -191,7 +191,11 @@ def _illegal(rng, ops, info, e, parent, edges, names, now, new_id, pool, kind=No
     elif kind == "unknown_parent":
         c["parent"] = "e-missing"
     elif kind == "not_holder":
-        c["issuer"] = rng.choice([p for p in info["leaves"] if p != e["child"]] or ["dp-0"])
+        taken = {e["child"], e["issuer"]} | ({parent["child"]} if parent else set())
+        others = [p for p in info["leaves"] if p not in taken]
+        if not others:
+            return []
+        c["issuer"] = rng.choice(others)
     elif kind == "not_redelegable":
         free = [p for p in pool if p not in {x["issuer"] for x in _ancestors(edges, e)} | {e["child"]}]
         if e["redelegable"] or not free:

@@ -35,6 +35,8 @@ class Seq:
         self.plan = gen_graph.plan_edges(self.ops, self.world, self.info, self.rng, 0, self.rng.randint(6, 14),
                                          force_deep=i % 10 == 0)
         self.n = 0
+        self.by_id = {st["edge"]["id"]: st["edge"] for st in self.plan if st["intent"] != "illegal:dup_id"}
+        self.accepted_illegal: list = []  # illegal edges the VARIANT accepted: requests through them probe the use rule
         self.oplist = [o["name"] for o in self.ops["operations"]]
 
     def rid(self, p="r"):
@@ -47,17 +49,27 @@ class Seq:
         r = self.env.delegate(st["edge"], self.rid("d"), intent=st["intent"])
         r["depth"] = st["depth"]
         mirror_delegate(self.env, st["edge"])
+        if st["intent"] != "legal" and r["status"] == "OK" and st["intent"] != "illegal:dup_id":
+            self.accepted_illegal.append(st["edge"])
+
+    def _root_of(self, e):
+        seen = 0
+        while e["parent"] in self.by_id and seen < 12:
+            e, seen = self.by_id[e["parent"]], seen + 1
+        return e["issuer"]
 
     def _edge_request(self, stale=False):
         env, rng = self.env, self.rng
         edges = list(env.mirror.view(None).edges.values())
-        if not edges:
+        if not edges and not self.accepted_illegal:
             return False
         st, now = env.mirror.view(None), env.clock.now()
         live = [x for x in edges if all(y["id"] not in st.revoked and (y["expires_at"] is None or now < y["expires_at"])
                                         for y in env.mirror.edge_path(x["id"]))]
-        e = rng.choice(live if live and rng.random() < 0.75 else edges)
-        root = env.mirror.edge_path(e["id"])[0]["issuer"]
+        e = rng.choice(live if live and rng.random() < 0.75 else (edges or self.accepted_illegal))
+        if self.accepted_illegal and rng.random() < 0.3:
+            e = rng.choice(self.accepted_illegal)
+        root = self._root_of(e)
         # sweep operations so every operation gets exercised; fall back to the scope's own operations
         names = sorted(e["scope"]["operations"])
         sweep = self.oplist[self.i % len(self.oplist)]

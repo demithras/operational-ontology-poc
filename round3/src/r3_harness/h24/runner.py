@@ -69,6 +69,13 @@ def run_variant(factory, vname: str, out: Path, exp_id: str, seed: int, sequence
     cases = [_safe(run_race, variant, specs, seed, j, TYPES[j % len(TYPES)], kind="race", i=j, domain=domains[j % 2])
              for j in range(n_total)]
     _dump(out / RACE_FILE, {"seed": seed, "cases": cases})
+    mres = mutation.prove(factory, specs, mutation_sequences, mutation_races, seed)
+    return write_evidence(out, vname, exp_id, seed, sequences, races, mres, candidate_pkg)
+
+
+def write_evidence(out: Path, vname: str, exp_id: str, seed: int, sequences: int, races: int, mutation_results: dict,
+                   candidate_pkg: str | None = None) -> dict:
+    """Everything after the raw rows exist (authority-sequences.jsonl.gz, revocation-races.json): summaries + envelope."""
     a = analyze(out)
     attempts = a.pop("attempts")
     _dump(out / FILES[0], {**{k: v for k, v in a.items() if k != "races"}, "seed": seed,
@@ -79,7 +86,7 @@ def run_variant(factory, vname: str, out: Path, exp_id: str, seed: int, sequence
                            "cycle_grant": a["class_counts"].get("cycle_grant", 0)})
     _dump(out / FILES[3], {"progress": a["progress"], "races": a["races"], "latency_ms": a["latency_ms"],
                            "floors": {"unaffected_legit_progress": 1.0, "overlap_fraction": 0.5, "effect_first_rv": 1}})
-    _dump(out / FILES[4], mutation.prove(factory, specs, mutation_sequences, mutation_races, seed))
+    _dump(out / FILES[4], mutation_results)
     from .evaluator import evaluator_sha256
     raw = {f: sha_file(out / f) for f in FILES + EXTRA}
     env_ = evidence.build_envelope(

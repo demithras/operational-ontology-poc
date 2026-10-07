@@ -34,20 +34,25 @@ def _legal(c, ra: RefAuthority, snap: dict, tick: int, ops):
 
 
 def _positions(c, i_of, tx_calls, states, snaps):
-    """(S_pre, snap, S_post) for call c."""
+    """(S_pre, [snapshots], S_post) for call c. The extra snapshot is the world after every overlapping transaction of
+    another call (any order of overlapping effects is a consistent linearization); skipped if it would contain c's own."""
     pre = -1
     for j, (o, _) in enumerate(tx_calls):
         if o is not None and o["n"] != c["n"] and o["ret"] < c["inv"]:
             pre = j
     s_pre = states[pre + 1]
-    post = s_pre
+    post, jmax = s_pre, None
+    own = i_of.get(c["n"])
     for j in range(pre + 1, len(tx_calls)):
         o, evt = tx_calls[j]
-        if o is None or evt is None or o["n"] == c["n"]:
+        if o is None or o["n"] == c["n"]:
             continue
         if o["inv"] < c["ret"] and c["inv"] < o["ret"]:
-            post = post.apply(evt)
-    return s_pre, snaps[pre + 1], post
+            jmax = j
+            if evt is not None:
+                post = post.apply(evt)
+    after = [snaps[jmax + 1]] if jmax is not None and (own is None or own > jmax) else []
+    return s_pre, [snaps[pre + 1], *after], post
 
 
 def classify_calls(calls, res, txs, tx_calls, states, snaps, ops, diverged=False):
@@ -68,14 +73,15 @@ def classify_calls(calls, res, txs, tx_calls, states, snaps, ops, diverged=False
         if c["kind"] == "authority_used":
             _used(c, cl, by_rid, idx, txs, tx_calls, states, res, ops, diverged)
             continue
-        s_pre, snap, s_post = _positions(c, idx, tx_calls, states, snaps)
+        s_pre, snap_list, s_post = _positions(c, idx, tx_calls, states, snaps)
         ticks = {c.get("tick_inv", 0), c.get("tick_ret", 0)}
         legal, exp = [], []
         for ra in (s_pre, s_post):
-            for t in ticks:
-                ok, exp_ = _legal(c, ra, snap, t, ops)
-                legal.append(ok)
-                exp.append(exp_)
+            for snap in snap_list:
+                for t in ticks:
+                    ok, exp_ = _legal(c, ra, snap, t, ops)
+                    legal.append(ok)
+                    exp.append(exp_)
         all_, any_ = all(legal), any(legal)
         already = all(e is not None and e[1] == "already" for e in exp)  # OK without a mark: nothing to commit
         r["must"] = bool(all_ and not already and not c.get("replay") and not c.get("crash") and c["status"] != "UNKNOWN")
