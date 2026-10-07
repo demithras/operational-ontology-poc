@@ -46,9 +46,9 @@ def _is_int(x: Any) -> bool:
 def schema_ok(e: Any) -> bool:
     if not isinstance(e, dict) or set(e) != EDGE_KEYS:
         return False
-    if not all(isinstance(e[k], str) and e[k] for k in ("id", "issuer", "child")):
+    if not (isinstance(e["id"], str) and e["id"]):  # E-9: the v2 edge schema - only `id` has minLength 1
         return False
-    if e["parent"] is not None and not (isinstance(e["parent"], str) and e["parent"]):
+    if not all(isinstance(e[k], str) for k in ("issuer", "child")) or not (e["parent"] is None or isinstance(e["parent"], str)):
         return False
     if not (e["expires_at"] is None or _is_int(e["expires_at"])) or not _is_int(e["issued_at"]):
         return False
@@ -149,7 +149,9 @@ def check_issue(doc: dict, edge: Any, subject: str, tick: int, principals: dict,
 def check_revoke(doc: dict, edge_id: Any, subject: str) -> tuple | None:
     """PROT-H24 s5: (status, reason) refusal, ("OK", "already") for a no-op, or None to apply."""
     by = {e["id"]: e for e in edges_of(doc)}
-    if not isinstance(edge_id, str) or edge_id not in by:
+    if not isinstance(edge_id, str) or edge_id == "":  # E-9: not a non-empty string is schema-INVALID (no envelope)
+        return ("INVALID", "schema")
+    if edge_id not in by:
         return ("INVALID", "unknown_edge")
     path = _path_ids(by, edge_id) or [by[edge_id]]
     if subject not in {e["issuer"] for e in path}:
