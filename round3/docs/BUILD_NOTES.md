@@ -293,3 +293,18 @@ Approval/idempotency fingerprint now binds `on_behalf_of` literally (service.py;
   sandbox-exec with file-write* denied on the anchor dir (tests/test_p1d_sandbox.py: known-negative + known-positive + non-sandbox control).
 - Import scan: paladin/conventional may not import r3_shared.anchor_server or TamperView (tests/test_import_boundaries.py).
 - Fakes: tests/fakes/fake_g2.py (G2Mixin on FakeDeployment). Edited existing test: tests/test_mutants.py (ALL was asserted == H23 list).
+
+## G2 paladin - H24 + H27 protections (tag r3-g2-paladin)
+- New: `capgraph.py` (edges, issuance/use rules, mutant sites), `core_g2.py` (G2Mixin: decisions, edge-mode authority, delegate/revoke/
+  set_authority transactions, history guard), `prov.py` + `evid.py` (decision envelope, artifacts, anchoring), `replay.py` +
+  `authreplay.py` (replay/explain with re-authorization over the bound artifact), `histledger.py` (the ledger interface over a
+  HistoryStore), worldbridge `log_head`/`tx_rows`. Edited: `core.py` (one world transaction per effect commit on the handle owning the
+  operation's effects, `commit` mark, edge-mode principal, anchor-before-ack, history mode), `deployment.py` (delegate, revoke,
+  authority_used, replay, explain, authority_state, HISTORY_LAYOUT), `variant.py` (history=, anchor=), `ledger.py` (commit_row/drop/claim verify).
+  No vendored Engine/Toolchain file changed.
+- H23 path unchanged when `history` is None, with one observable addition: every effect commit now also appends a `commit` mark row
+  (required by PROT-H24 s4) so `log_head` moves on a no-op commit; tests/paladin/test_p7a_a8.py compares snapshots without `log_head`.
+- A request naming `on_behalf_of` for a principal WITHOUT a spec delegator is now an EDGE request (DENIED `no_valid_path` when no valid
+  path) instead of the H23 "on_behalf_of does not name this principal's delegator" refusal; still DENIED, zero effects.
+- Oracle-facing assumptions (effect_digest, world_seq, reason codes, approve decision id): spec/protections/H27-paladin.md.
+- Gaps: authority-document durability window and unauthenticated authority/`used` records in the HistoryStore (see both protection maps).

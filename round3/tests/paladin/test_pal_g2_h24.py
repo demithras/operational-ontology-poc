@@ -243,3 +243,15 @@ def test_r24_7_unaffected_requests_all_commit_while_a_revocation_races(rig):
     [t.join() for t in ts]
     assert all(r.status == "OK" for r in out)  # none of the unaffected requests was refused or made UNAVAILABLE
     assert rig.transfer("ag-1", "planner-1").status == "DENIED"  # and the revocation took effect (negative)
+
+
+def test_edge_requests_through_the_generated_tool_surface(rig):
+    assert rig.delegate("planner-1", edge("e", "planner-1", "ag-1")).status == "OK"
+    tok = rig.token("ag-1")
+    res, eff = rig.effects_of(lambda: rig.dep.call_tool(tok, "transfer_inventory", TR, on_behalf_of="planner-1", request_id="tool1"))
+    assert res.status == "OK" and len(eff) == 1  # via the same commit path as direct()
+    assert rig.dep.tools(tok) == []  # holding an edge exposes nothing on its own: no ambient tools
+    assert rig.revoke("planner-1", "e").status == "OK"
+    res, eff = rig.effects_of(lambda: rig.dep.call_tool(tok, "transfer_inventory", {**TR, "quantity": 7}, on_behalf_of="planner-1",
+                                                        request_id="tool2"))
+    assert res.status == "DENIED" and eff == []
