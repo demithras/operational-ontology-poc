@@ -27,14 +27,16 @@ def is_governed(outcome) -> bool:
 
 
 def oracle_schema_invalid(ops_spec: dict, kind: str, op: str | None, args) -> bool:
-    """E-8: the ORACLE (never the variant's reason text) decides whether an authority/approval call is schema-INVALID,
+    """E-8/E-9: the ORACLE (never the variant's reason text) decides whether an authority/approval call is schema-INVALID,
     i.e. outside the governed set: no envelope is expected for it."""
     if kind == "delegate":
         return not sc.well_formed(args)
     if kind == "revoke":
-        return not (isinstance(args, str) and args.strip() != "")
-    spec_op = ops_model.op_of(ops_spec, op) if op is not None else None
-    return spec_op is None or not ops_model.validate_args(spec_op, args)[0]
+        return not (isinstance(args, str) and args != "")  # E-9: non-empty string (whitespace counts)
+    spec_op = ops_model.op_of(ops_spec, op) if isinstance(op, str) else None
+    if spec_op is None:
+        return True
+    return not ops_model.schema_valid_args(spec_op, args)
 
 
 def checkpoint(path: str) -> None:

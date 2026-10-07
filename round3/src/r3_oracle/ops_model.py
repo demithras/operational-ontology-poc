@@ -61,6 +61,35 @@ def validate_args(op: dict, args) -> tuple[bool, str, list[str]]:
     return True, "", extras
 
 
+def schema_valid_args(op: dict, args) -> bool:
+    """E-9 strict schema check (PROT-H27): args is an object, no key outside the declared inputs, every required input
+    present and non-null, every supplied (non-null) input of its declared type. Existence of referenced objects is NOT
+    schema. Unlike validate_args, unknown keys are INVALID here."""
+    if not isinstance(args, dict):
+        return False
+    decl = {i["name"]: i for i in op["inputs"]}
+    if any(k not in decl for k in args):
+        return False
+    for name, i in decl.items():
+        val = args.get(name)
+        if val is None:
+            if i["required"]:
+                return False
+            continue
+        t = i["type"]
+        if t == "integer" and (not isinstance(val, int) or isinstance(val, bool)):
+            return False
+        if t == "number" and (not isinstance(val, (int, float)) or isinstance(val, bool)):
+            return False
+        if t == "boolean" and not isinstance(val, bool):
+            return False
+        if t == "string" and not isinstance(val, str):
+            return False
+        if t == "resource" and (not isinstance(val, str) or val.strip() == ""):
+            return False
+    return True
+
+
 def resources_of(op: dict, args: dict) -> list[tuple[str, str]]:
     return [(i["resource_type"], args[i["name"]]) for i in op["inputs"]
             if i["type"] == "resource" and isinstance(args.get(i["name"]), str) and args[i["name"]]]
