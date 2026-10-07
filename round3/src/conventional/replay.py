@@ -140,6 +140,8 @@ class Replayer:
         d = env["decision"]
         if d["kind"] not in ("call_tool", "direct"):
             return
+        if d["status"] not in ("OK", "DENIED"):  # E-10: INVALID decisions carry no re-derivable authority verdict
+            return
         contract = json.loads(arts["contract"])
         types = {i["resource_type"] for i in contract["inputs"] if i["type"] == "resource"}
         res = [tuple(e["ref"].split(":", 1)) for e in arts["evidence"] if e["ref"].split(":", 1)[0] in types]
