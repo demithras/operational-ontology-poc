@@ -28,9 +28,11 @@ def _tx_authority_op(t: dict) -> dict | None:
 def _claim(calls: list[dict], t: dict, used: set) -> dict | None:
     """The harness call a transaction belongs to: by commit-mark request_id, else by authority payload ids."""
     rid = t["commit"]["data"].get("request_id") if t["commit"] else None
-    for c in calls:
-        if c["n"] not in used and rid is not None and c.get("rid") == rid and c["kind"] != "advance":
-            return c
+    cands = [c for c in calls if c["n"] not in used and rid is not None and c.get("rid") == rid and c["kind"] != "advance"]
+    # a call that crashed BEFORE its commit point has no transaction by protocol: a later send of the same id owns it
+    cands.sort(key=lambda c: (c.get("crash") == "before_commit" and c.get("status") == "UNKNOWN", c["inv"]))
+    if cands:
+        return cands[0]
     a = _tx_authority_op(t)
     if a is not None:
         d = a["data"]
@@ -64,6 +66,7 @@ def judge(calls: list[dict], rows: list[dict], ra0: RefAuthority, snap0: dict, f
     res = {c["n"]: {"n": c["n"], "kind": c["kind"], "classes": [], "seq": None, "tick": None, "tx": None, "committed": False,
                     "oracle": None} for c in calls}
     committed_rid: dict = {}
+    diverged = False
     pending_set = [c for c in calls if c["kind"] == "set_authority"]
     for i, t in enumerate(txs):
         c = _claim(calls, t, used)
@@ -84,6 +87,7 @@ def judge(calls: list[dict], rows: list[dict], ra0: RefAuthority, snap0: dict, f
             seq, tick = r["seq"], t["tick"]
             if a is not None:
                 evt = _authority_tx(c, a, t, ra, seq, tick, r, pending_set)
+                diverged = diverged or bool(r["classes"])  # the variant's authority state no longer equals the oracle's
             elif t["commit"] is not None:
                 _effect_tx(c, t, ra, snap, ops, seq, tick, r, committed_rid)
             tx_calls.append((c, evt))
@@ -93,7 +97,7 @@ def judge(calls: list[dict], rows: list[dict], ra0: RefAuthority, snap0: dict, f
         states.append(ra)
         snaps.append(snap)
     from .judge_calls import classify_calls
-    classify_calls(calls, res, txs, tx_calls, states, snaps, ops)
+    classify_calls(calls, res, txs, tx_calls, states, snaps, ops, diverged)
     if final_snap is not None and not logreplay.same_world(snap, final_snap):
         case.append("unlogged_write")
     return {"calls": res, "case_classes": sorted(set(case)), "final_authority": ra}

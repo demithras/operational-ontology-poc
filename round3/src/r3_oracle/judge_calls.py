@@ -30,7 +30,7 @@ def _legal(c, ra: RefAuthority, snap: dict, tick: int, ops):
     if not dec.allow:
         return False, ("DENIED", dec.reason)
     out = _effect_outcome(ops, ra, c, snap, tick, dec)
-    return out.kind == ops_model.COMMIT and bool(out.effects), ("DENIED", out.detail)
+    return out.kind == ops_model.COMMIT and bool(out.effects), None  # a business-rule refusal: reason text is the variant's
 
 
 def _positions(c, i_of, tx_calls, states, snaps):
@@ -50,7 +50,7 @@ def _positions(c, i_of, tx_calls, states, snaps):
     return s_pre, snaps[pre + 1], post
 
 
-def classify_calls(calls, res, txs, tx_calls, states, snaps, ops):
+def classify_calls(calls, res, txs, tx_calls, states, snaps, ops, diverged=False):
     idx = {o["n"]: j for j, (o, _) in enumerate(tx_calls) if o is not None}
     by_rid = {c["rid"]: c for c in calls if c["kind"] == "request" and c["n"] in idx and c.get("rid")}
     advances = [c for c in calls if c["kind"] == "advance"]
@@ -66,7 +66,7 @@ def classify_calls(calls, res, txs, tx_calls, states, snaps, ops):
             cl.append("world_lock_timeout")
             continue
         if c["kind"] == "authority_used":
-            _used(c, cl, by_rid, idx, txs, tx_calls, states, res, ops)
+            _used(c, cl, by_rid, idx, txs, tx_calls, states, res, ops, diverged)
             continue
         s_pre, snap, s_post = _positions(c, idx, tx_calls, states, snaps)
         ticks = {c.get("tick_inv", 0), c.get("tick_ret", 0)}
@@ -127,7 +127,7 @@ def _linearizable(calls, res, idx, tx_calls, advances):
         res[n]["classes"].append("linearizability_violation")
 
 
-def _used(c, cl, by_rid, idx, txs, tx_calls, states, res, ops):
+def _used(c, cl, by_rid, idx, txs, tx_calls, states, res, ops, diverged=False):
     """R24-6: path in oracle valid_paths at that commit point, version == oracle digest, seq/tick == ground truth."""
     from .judge_v2 import _res
     body, owner = c.get("body") or {}, by_rid.get(c["rid"])
@@ -136,11 +136,15 @@ def _used(c, cl, by_rid, idx, txs, tx_calls, states, res, ops):
             cl.append("historical_mismatch")  # authority claimed for a request that never committed
         return
     r = res[owner["n"]]
+    if (r["oracle"] or {}).get("allow") is False:  # the effect itself is already classified; its authority_used is derived
+        cl.append("ok")
+        return
     j = idx[owner["n"]]
     ra = states[j]
     dec = ra.decide(owner["actor"], owner["obo"], owner["op"], _res(ops, owner), r["seq"], r["tick"])
     paths = {tuple(p) for p in dec.valid_paths} or {()}
     good = (c["status"] == "OK" and body.get("world_seq") == r["seq"] and body.get("tick") == r["tick"]
-            and tuple(body.get("path") or ()) in paths and body.get("authority_version") == ra.digest_at(r["seq"])
+            and tuple(body.get("path") or ()) in paths
+            and (diverged or body.get("authority_version") == ra.digest_at(r["seq"]))
             and body.get("on_behalf_of") == owner["obo"])
     cl.append("ok" if good else "historical_mismatch")
