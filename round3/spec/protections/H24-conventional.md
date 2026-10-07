@@ -25,3 +25,12 @@ An already-revoked edge writes the `commit` mark and the idempotency record but 
 | `stale_authority_cache` | `service.py:278-297` (`_decide`, the PDP decision cache) | key = (subject, obo, op, resources) without version/digest/tick, never invalidated; the cached Decision's version is not compared. |
 | `revoke_commit_reorder` | `authority_ops.py:121` + `service.py:265` (`_drain_pending`) | revoke validates, returns OK and queues; the revocation (mark, commit mark) is applied after the NEXT effect commit. |
 | `expiry_inclusive` | `pdp.py:48` -> `authdoc.py:57` (`inclusive_expiry`) | an edge is valid while `tick <= expires_at`. |
+
+## G2 fix1 (errata E-5, no-op revoke)
+
+- E-5: `AuthorityOps.set_authority` composes the new document as the supplied BASE layer plus the capability edges and
+  revocations already in force (`_compose_base`); `capabilities`/`revoked` in the supplied document are ignored. A v1
+  document over an empty table stays a literal v1 document (E-3). Test: `test_conv_g2_fix1.py::test_e5_*`.
+- PROT-H24 s5 "already revoked -> OK {already:true}, no mark": the plan raises `_NoOp`, the (empty) world transaction rolls
+  back, so `world_log` and the transaction counter are untouched and no idempotency/commit record exists.
+  Test: `test_noop_revoke_writes_no_world_transaction`.

@@ -32,3 +32,15 @@ HistoryStore when `history` is given (`HISTORY_LAYOUT`, `histledger.py:18`); H23
 5. Not decisions (no envelope): invalid token, unknown operation, schema INVALID, `idempotency_key_reuse`, an idempotent retry of a committed id, UNAVAILABLE/UNKNOWN.
 6. Replay re-evaluates the authority decision only for `call_tool`/`direct`; resources are the bound evidence refs whose type is a resource-typed input of the bound contract (the `newest` object is excluded by type).
 7. A stream id is `conventional-<domain>-<128-bit seeded from (domain, history path)>`, persisted in `meta/stream`.
+
+## G2 fix1 (errata E-6, E-7, E-8)
+
+- E-6: after the deny rules, every supplied REQUIRED resource ref must exist at commit, else INVALID `target_not_found`
+  (optional refs keep their earlier check). Ordering of the H23 verdicts is unchanged. Sweep: `test_e6_sweep_*` (both domains).
+- E-7: `Service.__init__`/`restart()` catch every lineage error (`LedgerUnresolved`, malformed JSON/keys) and set
+  `_authority_unresolved`; execute/approve/delegate/revoke/set_authority then refuse (UNAVAILABLE `history_unresolved`, zero
+  effects). `HistLedger.authority_get` treats a named-but-missing authority blob as damaged, never fresh. replay/explain
+  report TAMPERED/UNRESOLVED from the bound artifacts. Test: `test_e7_*` over write/other-valid-json/delete/rename.
+- E-8: governed = valid token + known operation + schema-valid args (from the generated model), whatever the status
+  (OK/DENIED/INVALID); `call_tool` on a hidden tool is decided server-side (`_hidden`) and enveloped; replays are not decisions.
+  `replay` accepts `tool_not_available` as an authority denial. Test: `test_e8_*` (per kind and status).
