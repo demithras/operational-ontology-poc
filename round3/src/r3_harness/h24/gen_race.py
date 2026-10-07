@@ -56,7 +56,12 @@ class Race:
         used, edges, parent, issuer = {root}, [], None, root
         sc = _scope(self.ops, [o for o, _ in ops_args], [a for _, a in ops_args], rng)
         for d in range(depth):
-            child = rng.choice([p for p in pool if p not in used])
+            avail = [p for p in pool if p not in used]
+            if not avail:  # population exhausted: a shorter chain, deterministically (never an exception)
+                if edges:
+                    edges[-1]["redelegable"] = False
+                break
+            child = rng.choice(avail)
             used.add(child)
             e = {"id": f"{tag}{self.i}-{len(edges) + 1}-{self.k}", "issuer": issuer, "child": child,
                  "parent": parent["id"] if parent else None, "scope": copy.deepcopy(sc),
@@ -131,6 +136,8 @@ class Race:
             par = rng.choice(edges[:-1] or edges)
             free = [p["id"] for p in self.world["principals"] if p["delegated_by"] is None
                     and p["id"] not in {x["issuer"] for x in edges} | {x["child"] for x in edges}]
+            if not free:  # every principal already sits on the chain: delegate to an unknown principal (a refused edge)
+                free = ["ghost-1"]
             e2 = {"id": f"dp{self.i}-{self.k}", "issuer": par["child"], "child": rng.choice(free), "parent": par["id"],
                   "scope": copy.deepcopy(par["scope"]), "expires_at": None, "redelegable": False, "issued_at": 0}
             revoke = lambda **kw: env.revoke(q, par["id"], self.rid("v"), **kw)  # noqa: E731

@@ -92,7 +92,10 @@ def t1(view, base, rng, ctx) -> bool:
     if not hits:
         return False
     env = copy.deepcopy(hits[0]["env"])
-    path = rng.choice([p for p, _ in _leaves(env) if p and p[0] not in ("v",)])
+    leaves = [p for p, _ in _leaves(env) if p and p[0] not in ("v",)]
+    if not leaves:  # nothing flippable in this envelope: a recorded no-op attempt, never an exception
+        return False
+    path = rng.choice(leaves)
     cur = env
     for k in path[:-1]:
         cur = cur[k]

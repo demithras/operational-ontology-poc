@@ -107,6 +107,8 @@ def plan_edges(ops: dict, world: dict, info: dict, rng, now: int, budget: int, f
         parent, issuer, chain_issuers = None, root, [root]
         for d in range(depth_target):
             cands = [p for p in pool if p not in chain_issuers]
+            if not cands:  # no principal left to delegate to: end this chain
+                break
             child = rng.choice(cands)
             e = {"id": new_id(), "issuer": issuer, "child": child, "parent": parent["id"] if parent else None,
                  "scope": sc if parent is None else _scope(ops, names, rng, parent["scope"]),

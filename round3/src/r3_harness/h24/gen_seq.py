@@ -110,7 +110,9 @@ class Seq:
             return
         e = rng.choice(edges)
         path = env.mirror.edge_path(e["id"])
-        actor = rng.choice([x["issuer"] for x in path] + ([rng.choice(self.info["leaves"])] if rng.random() < 0.15 else []))
+        leaf_pick = rng.random() < 0.15  # same draw as before; a world with no leaf principals simply skips the leaf actor
+        actor = rng.choice([x["issuer"] for x in path] + ([rng.choice(self.info["leaves"])]
+                                                          if leaf_pick and self.info["leaves"] else []))
         env.revoke(actor, e["id"] if rng.random() > 0.05 else "e-nope", self.rid("v"))
         mirror_revoke(env, actor, e["id"])
 
