@@ -93,18 +93,39 @@ class Core(G2Mixin):
         self._mut_n = 0
         self._attempts = self.ledger.get_meta("attempts") or 0
         persisted = self.ledger.get_meta("auth_spec") if (restart or history is not None) else None  # the authority in force wins over the deploy-time spec
-        self.install(persisted if persisted is not None else auth_spec)
+        self.auth_fault = None  # E-7: set when the authority record in the history is unusable; mutating calls then fail closed
+        self.recovered = []
+        try:
+            if persisted is None and history is not None and history.keys("auth/"):
+                raise ValueError("authority record missing from a non-empty history")  # deleted record = rollback attempt
+            if persisted is not None and history is not None:  # the record must match its content-addressed copy
+                if history.get(f"auth/{authority_digest(persisted)}") != canonical_bytes(persisted):
+                    raise ValueError("authority record does not match its digest-addressed copy")
+                self.install(persisted, persist=False)
+            else:
+                self.install(persisted if persisted is not None else auth_spec)
+        except Exception as exc:  # noqa: BLE001 - E-7: deploy never raises on HistoryStore content
+            if persisted is None and history is None:
+                raise  # the deploy-time spec itself is bad: a caller error, not history content
+            self.auth_fault = f"{type(exc).__name__}: {exc}"
+            self.install(auth_spec, persist=False)  # boot the deploy-time base; never overwrite the tampered record
         if not self.ledger.volatile:
-            self.recovered = self.ledger.recover(self.world_digest())  # resolve a request left in doubt by a crash
+            try:
+                self.recovered = self.ledger.recover(self.world_digest())  # resolve a request left in doubt by a crash
+            except Exception as exc:  # noqa: BLE001 - E-7
+                if history is None:
+                    raise
+                self.auth_fault = self.auth_fault or f"ledger recovery: {type(exc).__name__}: {exc}"
 
     # ---- authority --------------------------------------------------------------------------
-    def install(self, auth_spec: dict) -> None:
+    def install(self, auth_spec: dict, persist: bool = True) -> None:
         validate_strict(auth_spec, self.ops_spec)  # R-4: shared strict control, before anything changes (ValueError)
         doc = copy.deepcopy(auth_spec)
         self.booted = boot(self.domain, self.ops_spec, doc, self.handle, self._svc, self.clock.now,
                            lambda: self.hook("before_commit"))
         self.auth = doc
-        self.persist(self.auth)
+        if persist:
+            self.persist(self.auth)
         self.eng = self.booted.engine
         if {"backstop_bypass", "mutable_gated_input"} & set(self.mutants):
             self.eng.register_principal(BYPASS)  # exists ONLY in mutated deployments
@@ -183,6 +204,8 @@ class Core(G2Mixin):
     def run(self, sub: str, obo: Any, op: str, args: Any, rid: Any, via: str) -> CallResult:
         if op not in self.ops:
             return CallResult("UNKNOWN", {"reason": "unknown operation"})
+        if self.auth_fault is not None:  # E-7: the authority history is unresolved - nothing mutates
+            return CallResult("UNAVAILABLE", {"reason": "authority_history_unresolved"})
         kind = "direct" if via == "direct" else "call_tool"
         who = self.principal(sub, obo, op)
         if isinstance(who, CallResult):

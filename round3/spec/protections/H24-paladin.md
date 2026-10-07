@@ -43,3 +43,9 @@ build vs mutant on the same scenario), tests/paladin/test_pal_g2_project.py (sec
   world store exposes no read of world_log to the variant to reconcile it). An in-process failure of the COMMIT undoes the write.
 - Variant reads of its own world_log head / transaction rows use the handle's SQLite connection (worldbridge.log_head / tx_rows):
   the handle has no accessor (reported as a missing capability, not a bug).
+
+## G2 fix1 (E-5)
+- `set_authority` replaces the BASE layer only. When the authority in force is v2 and has edges/revocations (or the supplied document
+  is itself v2), `Core.replace_authority` re-attaches the in-force `capabilities` and `revoked` (and the in-force depth when the document
+  omits it) before validation; `capabilities`/`revoked` in the document are ignored. No un-revoke by any path.
+  Tests: tests/paladin/test_pal_g2_fix1.py::test_e5_*.
