@@ -21,7 +21,9 @@ def load_auth_spec(domain: str, root: Path = ROUND3) -> dict:
 
 
 def validate_auth_spec(spec: dict, root: Path = ROUND3) -> None:
-    jsonschema.validate(spec, json.loads((root / "schemas" / "authority-spec.schema.json").read_text()))
+    name = "authority-spec-v2.schema.json" if isinstance(spec, dict) and spec.get("spec") == "r3-authority-2" \
+        else "authority-spec.schema.json"
+    jsonschema.validate(spec, json.loads((root / "schemas" / name).read_text()))
     ids = [p["id"] for p in spec["principals"]]
     if len(set(ids)) != len(ids):
         raise ValueError("duplicate principal ids")
@@ -85,6 +87,7 @@ def _approver_operations(ops_spec: dict) -> set[str]:
 def validate_strict(spec: dict, ops_spec: dict | None = None, root: Path = ROUND3) -> dict:
     """Strict shared control (ruling R-4), called by BOTH variants on deploy/set_authority and by the harness.
 
+    (spec "r3-authority-2" additionally runs authgraph.validate_graph: capability-edge graph rules, PROT-H24)
     schema + unique principal ids + unique grant ids + no dangling delegation/principal/grant references +
     delegated_by names a known principal + no duplicate delegation pairs; with `ops_spec` additionally: non-round2
     allow grants and delegations may only name operations the ops spec defines (or its approver operations).
@@ -116,4 +119,7 @@ def validate_strict(spec: dict, ops_spec: dict | None = None, root: Path = ROUND
             for o in d["operations"]:
                 if o not in names:
                     raise ValueError(f"delegation {d['agent']}->{d['on_behalf_of']}: operation {o!r} is not in the ops spec")
+    if spec["spec"] == "r3-authority-2":  # P1d-3: dispatch on `spec`; v1 behaviour above is unchanged
+        from .authgraph import validate_graph
+        validate_graph(spec, ops_spec)
     return spec
