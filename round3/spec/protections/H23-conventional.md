@@ -57,3 +57,6 @@ New mutant switches (`r3_shared.mutants`):
 
 Audit items (P6): (a) FIXED - `PolicyEngine.exposed_operations` now requires the delegation entry to list the operation, matching `decide()`
 (`test_a8_audit.py`). (b) `request_id=None` is still accepted and has NO replay protection (documented in `service.py`; unchanged by decision).
+
+## P10 - approval binding (on_behalf_of literal)
+The approval fingerprint (`store.fingerprint`, used in `Service._execute` and `Service.approve`) takes `on_behalf_of` exactly as supplied: null and an explicit delegator are different requests, so a pre-approval given with one form is not consumed by a commit sent with the other (DENIED `approval_required`, zero effects). Authority evaluation of a delegate is unchanged. `PolicyEngine.canonical_obo` removed. The idempotency ledger shares the fingerprint, so a replayed `request_id` must also repeat `on_behalf_of` literally. Tests: `tests/conventional/test_p10_approval_binding.py` (incl. crash/restart).
