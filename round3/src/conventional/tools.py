@@ -41,4 +41,4 @@ class ToolSurface:
             return CallResult("DENIED", {"reason": "invalid_token"})
         if name not in self.visible(token):
             return CallResult("DENIED", {"reason": "tool_not_available"})
-        return self._svc.execute(token, name, args, on_behalf_of, request_id)
+        return self._svc.execute(token, name, args, on_behalf_of, request_id, _kind="call_tool")

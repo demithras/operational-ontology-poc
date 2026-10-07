@@ -6,10 +6,10 @@ Deny overrides allow; no matching allow means deny. The acting subject is always
 from __future__ import annotations
 
 import copy
-import hashlib
-import json
 from dataclasses import dataclass
 from typing import Iterable
+
+from r3_shared.authgraph import authority_digest
 
 Resource = tuple[str, str]  # (type, key)
 
@@ -22,6 +22,7 @@ class Decision:
     on_behalf_of: str | None
     operation: str
     authority_version: int
+    path: tuple = ()  # PROT-H24: edge ids of the delegation path the decision relied on ([] = base authority / H23 rule)
 
 
 def op_match(pattern: str, op: str) -> bool:
@@ -32,7 +33,8 @@ class PolicyEngine:
     def __init__(self, auth_spec: dict, version: int = 1):
         spec = copy.deepcopy(auth_spec)  # the engine owns its copy; later mutation of the caller's dict changes nothing
         self.version = version
-        self.digest = hashlib.sha256(json.dumps(spec, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        self.doc = spec
+        self.digest = authority_digest(spec)  # PROT-H24: v2 documents hash with capabilities in issuance order
         self._principals = {p["id"]: p for p in spec["principals"]}
         self._grants = list(spec["grants"])
         self._delegations = list(spec["delegations"])
@@ -120,10 +122,11 @@ class PolicyEngine:
         return out
 
     def can_approve(self, approver: str, requester: str, on_behalf_of: str | None, approval_op: str,
-                    resources: list[Resource]) -> bool:
+                    resources: list[Resource], extra_forbidden: Iterable[str] = ()) -> bool:
         if not self.known(approver) or not self.known(requester):
             return False
         forbidden = {requester} | self.chain(requester) | ({on_behalf_of} | self.chain(on_behalf_of) if on_behalf_of else set())
+        forbidden |= set(extra_forbidden)  # PROT-H24 s3: Q and every issuer on any edge path from Q to the requester
         if approver in forbidden:
             return False
         return self._self_allowed(approver, approval_op, resources)[0]
