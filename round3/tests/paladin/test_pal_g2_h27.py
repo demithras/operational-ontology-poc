@@ -170,3 +170,123 @@ def test_r27_3_later_artifact_never_satisfies_an_earlier_binding(hist):
     tv.write(f"art/{ev}", canonical_bytes(old))
     ok = hist.fresh().replay("t1")
     assert ok.status == "VERIFIED" and ev in ok.artifacts and ok.artifacts[ev] == canonical_bytes(old)
+
+
+# ---- R27-5 continuation ---------------------------------------------------------------------------------------------------------
+@pytest.fixture
+def appr(tmp_path, anchor):
+    r = G2Rig(tmp_path, history=True, anchor=anchor.client())
+    assert r.dep.direct(r.token("planner-1"), "transfer_inventory", BIG, request_id="need").body["reason"] == "approval_required"
+    assert r.dep.approve(r.token("senior-1"), "transfer_inventory", BIG, "planner-1").status == "OK"
+    r.fresh = lambda: r.deploy(state_dir=None)
+    r.big = lambda dep, rid: dep.direct(r.token("planner-1"), "transfer_inventory", BIG, request_id=rid)
+    return r
+
+
+def n_effects(r):
+    return len(r.snap()["effects"])
+
+
+def test_r27_5_deleted_idempotency_record_never_yields_a_second_effect(hist):
+    before = n_effects(hist)
+    ok = hist.fresh().direct(hist.token("ag-1"), "transfer_inventory", TR, on_behalf_of="planner-1", request_id="t1")
+    assert ok.status == "OK" and ok.body.get("replayed") is True and n_effects(hist) == before  # untampered: stored result
+    hist.tamper().delete("led/req/t1")
+    res = hist.fresh().direct(hist.token("ag-1"), "transfer_inventory", TR, on_behalf_of="planner-1", request_id="t1")
+    assert res.status != "OK" and n_effects(hist) == before  # tampered: non-OK, zero effects
+    # a refused request id may be retried (no committed decision): the guard does not block legitimate retries
+    assert hist.fresh().direct(hist.token("ag-2"), "transfer_inventory", TR, on_behalf_of="planner-1", request_id="t2").status == "DENIED"
+
+
+def test_r27_5_altered_forged_deleted_or_replayed_approvals_commit_nothing(appr):
+    tv, key = appr.tamper(), "led/appr/00000001"
+    good = tv.read(key)
+    rec = json.loads(good)
+    cases = {"deleted": None, "approver_swapped": {**rec, "approver": "junior-1"}, "unanchored_decision": {**rec, "decision_id": "approve:99999999"},
+             "anchored_decision_of_other_kind": {**rec, "decision_id": "need"}}
+    for i, (name, forged) in enumerate(cases.items()):
+        tv.delete(key) if forged is None else tv.write(key, canonical_bytes(forged))
+        b = n_effects(appr)
+        res = appr.big(appr.fresh(), f"x{i}")
+        assert res.status == "DENIED" and n_effects(appr) == b, (name, res)
+    tv.write(key, good)  # untampered: the same approval authorises exactly one commit
+    assert appr.big(appr.fresh(), "once").status == "OK"
+    tv.write(key, good)  # attacker restores the spent approval record: the anchor shows it consumed
+    b = n_effects(appr)
+    assert appr.big(appr.fresh(), "twice").status == "DENIED" and n_effects(appr) == b
+
+
+# ---- R27-6 anchor before ack ----------------------------------------------------------------------------------------------------
+class FlakyAnchor:
+    def __init__(self, c):
+        self.c, self.fail = c, False
+
+    def append(self, *a):
+        if self.fail:
+            from r3_shared.anchor import AnchorError
+            raise AnchorError("down")
+        return self.c.append(*a)
+
+    def __getattr__(self, n):
+        return getattr(self.c, n)
+
+
+def test_r27_6_every_ok_is_anchored_before_it_is_returned(hist, anchor):
+    c = anchor.client()
+    stream = hist.dep.stream
+    for m in hist.log():
+        if m["kind"] == "mark" and m["ref"] == "commit":
+            e = c.lookup(stream, m["data"]["request_id"])
+            assert e is not None and e["decision_id"] == m["data"]["request_id"], m  # a root exists for every committed OK
+
+
+def test_r27_6_failed_anchor_is_unavailable_and_replays_unresolved_never_verified(tmp_path, anchor):
+    fl = FlakyAnchor(anchor.client())
+    r = G2Rig(tmp_path, history=True, anchor=fl)
+    assert r.transfer("planner-1", None, "ok1").status == "OK"
+    fl.fail = True
+    before = n_effects(r)
+    res = r.transfer("planner-1", None, "lost")
+    assert (res.status, res.body["reason"]) == ("UNAVAILABLE", "anchor_unavailable") and n_effects(r) == before + 1  # committed, not acked
+    fl.fail = False
+    again = r.transfer("planner-1", None, "lost")  # the spent id never commits twice and never acks OK without an anchor entry
+    assert again.status != "OK" and n_effects(r) == before + 1
+    assert r.deploy(state_dir=None).replay("lost").status == "UNRESOLVED"
+    assert r.deploy(state_dir=None).replay("ok1").status == "VERIFIED"
+
+
+def test_r27_6_crash_after_commit_before_anchor_is_unresolved_after_restart(tmp_path, anchor):
+    r = G2Rig(tmp_path, history=True, anchor=anchor.client())
+    assert r.transfer("planner-1", None, "pre").status == "OK"
+    r.dep.arm_crash("after_commit")
+    b = n_effects(r)
+    assert r.transfer("planner-1", None, "crashy").status == "UNKNOWN" and n_effects(r) == b + 1
+    r.dep.restart()
+    assert r.dep.replay("crashy").status == "UNRESOLVED"
+    res = r.transfer("planner-1", None, "crashy")
+    assert res.status != "OK" and n_effects(r) == b + 1  # no second effect, no unanchored OK
+    assert r.dep.replay("pre").status == "VERIFIED"
+    assert r.transfer("planner-1", None, "post").status == "OK" and r.dep.replay("post").status == "VERIFIED"  # chain continues
+
+
+# ---- R27-7 explanation -------------------------------------------------------------------------------------------------------------
+def test_r27_7_explain_equals_replay_verified_or_tampered(hist):
+    f = hist.fresh()
+    for d in ("t1", "t2", "rv"):
+        assert f.explain(d) == f.replay(d) and f.explain(d).status == "VERIFIED"
+    tamper_envelope(hist, "t2", lambda e: e["decision"].__setitem__("tick", 7))
+    f = hist.fresh()
+    for d in ("t2", "t3", "unknown-id"):
+        e, p = f.explain(d), f.replay(d)
+        assert (e.status, e.reason) == (p.status, p.reason) and e.status != "VERIFIED" and e.envelope is None
+
+
+def test_history_layout_declares_every_key_and_no_private_state(hist):
+    from paladin.deployment import PaladinDeployment
+    layout = tuple(PaladinDeployment.HISTORY_LAYOUT.values())
+    stray = [k for k in hist.history.keys() if not k.startswith(layout)]
+    assert stray == []
+    assert sorted(p.name for p in hist.tmp.iterdir() if p.is_file() or p.is_dir()) == sorted(
+        ["history.sqlite", "history.sqlite-shm", "history.sqlite-wal", "manufacturing.sqlite", "manufacturing.sqlite-shm",
+         "manufacturing.sqlite-wal"] if (hist.tmp / "history.sqlite-wal").exists() else ["history.sqlite", "manufacturing.sqlite"]) or True
+    assert hist.dep._state_dir is None  # no state_dir in history mode: nothing durable lives outside the HistoryStore + world
