@@ -46,6 +46,8 @@ def mirror_delegate(env, edge: dict) -> None:
 
 
 def mirror_revoke(env, actor: str, edge_id: str) -> None:
+    """Mirror a revoke the variant may have made effective (also via a crashed first send whose retry answered "already").
+    A genuine no-op (edge already revoked in the mirror) is not an event; everything else the oracle would accept is."""
     v = env.mirror.issue_revoke(actor, edge_id, INF)
     mirror_apply(env, "revoke", {"edge_id": edge_id}, v.ok and v.reason != "already")
 

@@ -18,10 +18,10 @@ DOMAINS = ("manufacturing", "project")
 
 
 def composed(env, narrowed_base: dict | None = None) -> dict:
-    """Full v2 document = (optionally narrowed) base + the mirror's capabilities + revoked."""
-    st = env.mirror.view(None)
-    base = narrowed_base if narrowed_base is not None else st.base
-    return {**base, "capabilities": list(st.edges.values()), "revoked": sorted(st.revoked)}
+    """set_authority document (E-5): the (optionally narrowed) BASE layer only. Edges/revocations change solely through
+    delegate/revoke, so the document carries none (and anything it carried would be ignored by oracle and variants)."""
+    base = narrowed_base if narrowed_base is not None else env.mirror.view(None).base
+    return {**base, "capabilities": [], "revoked": []}
 
 
 class Seq:
@@ -179,8 +179,12 @@ class Seq:
         env.arm(point)
         r = env.revoke(e["issuer"], e["id"], self.rid("v"), crash=point)
         env.crash_restart()  # also clears an armed crash that did not trigger
-        mirror_revoke(env, e["issuer"], e["id"]) if (r["status"] == "OK" or point == "after_commit") else None
-        env.revoke(e["issuer"], e["id"], r["rid"], crash=None) if r["status"] == "UNKNOWN" else None
+        if r["status"] == "OK" or point == "after_commit":
+            mirror_revoke(env, e["issuer"], e["id"])
+        if r["status"] == "UNKNOWN":
+            retry = env.revoke(e["issuer"], e["id"], r["rid"], crash=None)
+            if retry["status"] == "OK":  # effective via the retry (or already effective via the crashed send): mirror = reality
+                mirror_revoke(env, e["issuer"], e["id"])
 
     # -- driver ------------------------------------------------------------------------------------------------
     def run(self) -> dict:
