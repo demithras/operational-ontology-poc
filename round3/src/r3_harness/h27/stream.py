@@ -196,6 +196,15 @@ class Stream:
         self.decisions.append(rec)
         return rec
 
+    def release(self) -> None:
+        """Drop every open handle of the generating deployment (the fresh deployments under test never reuse it)."""
+        for c in (self.hist, self.view):
+            try:
+                c.close()
+            except Exception:  # noqa: BLE001
+                pass
+        self.dep = self.store = None
+
     def finish(self) -> None:
         self.reader.close()
         checkpoint(self.world_path)

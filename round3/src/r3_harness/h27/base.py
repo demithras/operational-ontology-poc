@@ -109,6 +109,7 @@ def analyze(stream: Stream, anchor, base_id: str) -> Base:
         if div:
             b.divergences.append({"base": base_id, "seq": seq, "diffs": div})
         b.bundles.append(row)
+    stream.release()
     return b
 
 
