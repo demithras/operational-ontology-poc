@@ -1,0 +1,345 @@
+{
+ "cases_per_mutant": 90,
+ "digest_omission": {
+  "bases": 6,
+  "cases_run": 90,
+  "divergent_clean_decisions": 56,
+  "first_killing_case": {
+   "applied": [
+    "T5",
+    "T6",
+    "T7",
+    "T8"
+   ],
+   "case": "mc23",
+   "class": "rebinding_accepted",
+   "classes": [
+    "T5",
+    "T6",
+    "T7",
+    "T8"
+   ],
+   "flags": [
+    "forge",
+    "rebind:policy",
+    "reorder"
+   ],
+   "primitives": [
+    {
+     "key": "side/0000000004",
+     "op": "write",
+     "size": 64
+    },
+    {
+     "key": "side/0000000006",
+     "op": "write",
+     "size": 64
+    },
+    {
+     "key": "env/0000000004",
+     "op": "write",
+     "size": 839
+    },
+    {
+     "key": "env/0000000005",
+     "op": "write",
+     "size": 766
+    },
+    {
+     "key": "env/0000000006",
+     "op": "write",
+     "size": 866
+    },
+    {
+     "key": "env/0000000007",
+     "op": "write",
+     "size": 869
+    },
+    {
+     "key": "env/0000000008",
+     "op": "write",
+     "size": 706
+    },
+    {
+     "key": "env/0000000009",
+     "op": "write",
+     "size": 843
+    },
+    {
+     "existed": true,
+     "key": "env/0000000007",
+     "op": "delete"
+    },
+    {
+     "existed": true,
+     "key": "env/0000000008",
+     "op": "delete"
+    },
+    {
+     "existed": true,
+     "key": "env/0000000009",
+     "op": "delete"
+    },
+    {
+     "key": "env/0000000004",
+     "op": "write",
+     "size": 866
+    },
+    {
+     "key": "env/0000000005",
+     "op": "write",
+     "size": 766
+    },
+    {
+     "key": "env/0000000006",
+     "op": "write",
+     "size": 839
+    },
+    {
+     "key": "receipt/0000000004",
+     "op": "write",
+     "size": 336
+    },
+    {
+     "key": "receipt/0000000005",
+     "op": "write",
+     "size": 336
+    },
+    {
+     "key": "receipt/0000000006",
+     "op": "write",
+     "size": 336
+    }
+   ]
+  },
+  "killed": true,
+  "killing_classes": {
+   "rebinding_accepted": 5
+  }
+ },
+ "evidence_rebinding": {
+  "bases": 6,
+  "cases_run": 90,
+  "divergent_clean_decisions": 0,
+  "first_killing_case": {
+   "applied": [
+    "T4"
+   ],
+   "case": "mc40",
+   "class": "rebinding_accepted",
+   "classes": [
+    "T4"
+   ],
+   "flags": [
+    "substitute:evidence"
+   ],
+   "primitives": [
+    {
+     "key": "art/06a27cb108a8c8239b2e4f32851457afa3cb336b2c8a1a3c3c24e20809cbd584",
+     "op": "write",
+     "size": 114
+    }
+   ]
+  },
+  "killed": true,
+  "killing_classes": {
+   "rebinding_accepted": 3
+  }
+ },
+ "fallback_to_current": {
+  "bases": 6,
+  "cases_run": 90,
+  "divergent_clean_decisions": 0,
+  "first_killing_case": {
+   "applied": [
+    "T2"
+   ],
+   "case": "mc13",
+   "class": "fallback_to_current",
+   "classes": [
+    "T2"
+   ],
+   "flags": [
+    "delete:contract"
+   ],
+   "primitives": [
+    {
+     "existed": true,
+     "key": "art/8033f393603cd9187503e43a4dffc9d24968783605b8db30627d115086cd50e9",
+     "op": "delete"
+    }
+   ]
+  },
+  "killed": true,
+  "killing_classes": {
+   "fallback_to_current": 6
+  }
+ },
+ "receipt_self_trust": {
+  "bases": 6,
+  "cases_run": 90,
+  "divergent_clean_decisions": 0,
+  "first_killing_case": {
+   "applied": [
+    "T1",
+    "T4",
+    "T8"
+   ],
+   "case": "mc7",
+   "class": "rebinding_accepted",
+   "classes": [
+    "T1",
+    "T4",
+    "T8"
+   ],
+   "flags": [
+    "forge",
+    "mutate:envelope",
+    "rebind:authority",
+    "substitute:authority"
+   ],
+   "primitives": [
+    {
+     "key": "env/0000000005",
+     "op": "write",
+     "size": 923
+    },
+    {
+     "key": "art/60a879c702ea436f1bb1bee43f20d6b47d83afc4455b8ce1fbb4c58a27da8ba5",
+     "op": "write",
+     "size": 6428
+    },
+    {
+     "key": "env/0000000001",
+     "op": "write",
+     "size": 781
+    },
+    {
+     "key": "env/0000000002",
+     "op": "write",
+     "size": 874
+    },
+    {
+     "key": "env/0000000003",
+     "op": "write",
+     "size": 936
+    },
+    {
+     "key": "env/0000000004",
+     "op": "write",
+     "size": 877
+    },
+    {
+     "key": "env/0000000005",
+     "op": "write",
+     "size": 923
+    },
+    {
+     "key": "ledger/218dd3ced6449ed528fad1c52caa1b059880e047aa5c6a1b8e5f1689e62dbce4",
+     "op": "write",
+     "size": 317
+    },
+    {
+     "key": "ledger/727bb5e144b8c9457553688fd72d7081c58a028582ee89bf9a29fd4005a03242",
+     "op": "write",
+     "size": 312
+    },
+    {
+     "key": "meta/initial_authority",
+     "op": "write",
+     "size": 64
+    },
+    {
+     "key": "env/0000000002",
+     "op": "write",
+     "size": 874
+    },
+    {
+     "key": "env/0000000003",
+     "op": "write",
+     "size": 936
+    },
+    {
+     "key": "env/0000000004",
+     "op": "write",
+     "size": 877
+    },
+    {
+     "key": "env/0000000005",
+     "op": "write",
+     "size": 923
+    },
+    {
+     "key": "env/0000000006",
+     "op": "write",
+     "size": 771
+    },
+    {
+     "key": "env/0000000007",
+     "op": "write",
+     "size": 771
+    },
+    {
+     "key": "env/0000000008",
+     "op": "write",
+     "size": 792
+    },
+    {
+     "key": "env/0000000009",
+     "op": "write",
+     "size": 769
+    },
+    {
+     "key": "receipt/0000000001",
+     "op": "write",
+     "size": 336
+    },
+    {
+     "key": "receipt/0000000002",
+     "op": "write",
+     "size": 336
+    },
+    {
+     "key": "receipt/0000000003",
+     "op": "write",
+     "size": 336
+    },
+    {
+     "key": "receipt/0000000004",
+     "op": "write",
+     "size": 336
+    },
+    {
+     "key": "receipt/0000000005",
+     "op": "write",
+     "size": 336
+    },
+    {
+     "key": "receipt/0000000006",
+     "op": "write",
+     "size": 336
+    },
+    {
+     "key": "receipt/0000000007",
+     "op": "write",
+     "size": 336
+    },
+    {
+     "key": "receipt/0000000008",
+     "op": "write",
+     "size": 336
+    },
+    {
+     "key": "receipt/0000000009",
+     "op": "write",
+     "size": 336
+    }
+   ]
+  },
+  "killed": true,
+  "killing_classes": {
+   "rebinding_accepted": 8,
+   "tamper_accepted": 4
+  }
+ }
+}

@@ -1,0 +1,205 @@
+{
+ "expiry_inclusive": {
+  "control": {
+   "post_boundary_effect": 0,
+   "world_lock_timeout": 0
+  },
+  "first_killing_case": {
+   "calls": [
+    {
+     "actor": "dp-4",
+     "classes": [
+      "post_boundary_effect"
+     ],
+     "edge_id": null,
+     "kind": "request",
+     "obo": "planner-1",
+     "op": "expedite_purchase_order",
+     "seq": 67,
+     "status": "OK",
+     "tick": 88
+    },
+    {
+     "actor": "dp-0",
+     "classes": [
+      "post_boundary_effect"
+     ],
+     "edge_id": null,
+     "kind": "request",
+     "obo": "planner-1",
+     "op": "expedite_purchase_order",
+     "seq": 77,
+     "status": "OK",
+     "tick": 187
+    }
+   ],
+   "case": "seq-0",
+   "class": "post_boundary_effect"
+  },
+  "killed": true,
+  "killing_class": "post_boundary_effect",
+  "mutated": {
+   "post_boundary_effect": 36,
+   "world_lock_timeout": 0
+  },
+  "sub_corpus": {
+   "races": 60,
+   "seed": 7002404,
+   "sequences": 60
+  }
+ },
+ "non_attenuating_delegation": {
+  "control": {
+   "forbidden_effect": 0,
+   "scope_amplification": 0,
+   "world_lock_timeout": 0
+  },
+  "first_killing_case": {
+   "calls": [
+    {
+     "actor": "dp-4",
+     "classes": [
+      "scope_amplification"
+     ],
+     "edge_id": null,
+     "kind": "delegate",
+     "obo": null,
+     "op": null,
+     "seq": 58,
+     "status": "OK",
+     "tick": 5
+    }
+   ],
+   "case": "seq-2",
+   "class": "scope_amplification"
+  },
+  "killed": true,
+  "killing_class": "scope_amplification",
+  "mutated": {
+   "forbidden_effect": 5,
+   "scope_amplification": 10,
+   "world_lock_timeout": 0
+  },
+  "sub_corpus": {
+   "races": 60,
+   "seed": 7002404,
+   "sequences": 60
+  }
+ },
+ "revoke_commit_reorder": {
+  "control": {
+   "authority_ack_without_commit": 0,
+   "linearizability_violation": 0,
+   "post_boundary_effect": 0,
+   "world_lock_timeout": 0
+  },
+  "first_killing_case": {
+   "calls": [
+    {
+     "actor": "dp-0",
+     "classes": [
+      "linearizability_violation",
+      "ok"
+     ],
+     "edge_id": "e4",
+     "kind": "revoke",
+     "obo": null,
+     "op": null,
+     "seq": 68,
+     "status": "UNKNOWN",
+     "tick": 89
+    },
+    {
+     "actor": "planner-1",
+     "classes": [
+      "authority_ack_without_commit"
+     ],
+     "edge_id": "e5",
+     "kind": "revoke",
+     "obo": null,
+     "op": null,
+     "seq": null,
+     "status": "OK",
+     "tick": null
+    },
+    {
+     "actor": "planner-1",
+     "classes": [
+      "authority_ack_without_commit"
+     ],
+     "edge_id": "e2",
+     "kind": "revoke",
+     "obo": null,
+     "op": null,
+     "seq": null,
+     "status": "OK",
+     "tick": null
+    },
+    {
+     "actor": "dp-9",
+     "classes": [
+      "authority_ack_without_commit"
+     ],
+     "edge_id": "e2",
+     "kind": "revoke",
+     "obo": null,
+     "op": null,
+     "seq": null,
+     "status": "OK",
+     "tick": null
+    }
+   ],
+   "case": "seq-0",
+   "class": "linearizability_violation"
+  },
+  "killed": true,
+  "killing_class": "linearizability_violation",
+  "mutated": {
+   "authority_ack_without_commit": 130,
+   "linearizability_violation": 88,
+   "post_boundary_effect": 0,
+   "world_lock_timeout": 0
+  },
+  "sub_corpus": {
+   "races": 60,
+   "seed": 7002404,
+   "sequences": 60
+  }
+ },
+ "stale_authority_cache": {
+  "control": {
+   "post_boundary_effect": 0,
+   "world_lock_timeout": 0
+  },
+  "first_killing_case": {
+   "calls": [
+    {
+     "actor": "dp-11",
+     "classes": [
+      "post_boundary_effect"
+     ],
+     "edge_id": null,
+     "kind": "request",
+     "obo": "admin-1",
+     "op": "reschedule_work_order",
+     "seq": 59,
+     "status": "OK",
+     "tick": 120
+    }
+   ],
+   "case": "seq-12",
+   "class": "post_boundary_effect"
+  },
+  "killed": true,
+  "killing_class": "post_boundary_effect",
+  "mutated": {
+   "post_boundary_effect": 16,
+   "world_lock_timeout": 0
+  },
+  "sub_corpus": {
+   "races": 60,
+   "seed": 7002404,
+   "sequences": 60
+  }
+ }
+}
