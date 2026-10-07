@@ -87,3 +87,17 @@ E-4 (2026-10-07, after the G2 builds, before any H27 measurement) Envelope encod
     - `newest` evidence tie-break: greatest field value, then the smallest ref.
     - policy artifact = canonical {"config", "business_rules", "approval"}; contract artifact = canonical(op minus
       business_rules/approval, plus "helpers" and "spec") - exactly PROT-H27 s1.
+E-5 (2026-10-07, after H24 dev run 1 - dev runs are not measurements; no official G2 run exists) `set_authority` replaces
+    the BASE layer only (principals, grants, static delegations, max_delegation_depth). Any `capabilities`/`revoked` in a
+    set_authority document are ignored: edges and revocations change only through delegate/revoke (commit-ordered, marked).
+    There is no un-revoke by any path (PROT-H24 s5). authority_version() still hashes the full v2 document in force.
+E-6 Every SUPPORTED-type resource reference supplied in a request - required or optional - must resolve to an existing
+    object of its declared type at commit, otherwise INVALID with zero effects (PROT-H23 R6 "target existence"; extends
+    ruling R-2 from optional to required refs). Oracle and variants identically.
+E-7 `Variant.deploy` never raises because of HistoryStore content. A tampered/unreadable history (including the authority
+    version record) must surface through replay/explain as TAMPERED or UNRESOLVED and, for mutating calls that depend on
+    it, as a non-OK result with zero effects (R27-5). The harness wraps deploy; a remaining deploy exception is recorded as
+    `deploy_crash` (not a tamper acceptance; blocks SUPPORTED -> INCONCLUSIVE).
+E-8 Governed decisions (PROT-H27 s1): the ORACLE decides from the ops-spec input schema whether a request is
+    schema-INVALID (no envelope); every other result with status OK, DENIED or INVALID is governed and must have exactly one
+    envelope at its stream position. Variants must envelope exactly that set, independent of their reason strings.

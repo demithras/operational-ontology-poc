@@ -1,7 +1,7 @@
 {
   "recorded_at": "2026-10-07",
   "repo_commit": "d02e902109aa0010a452257f5047ba1042a0883c",
-  "note": "Gate 2 frozen design (tag r3-g2-freeze) plus errata E-1..E-4 in spec/gate2/OPEN-QUESTIONS.md, all recorded before any H24/H27 measurement. Evaluators compare against these hashes.",
+  "note": "Gate 2 frozen design (tag r3-g2-freeze) plus errata E-1..E-4 in spec/gate2/OPEN-QUESTIONS.md, all recorded before any H24/H27 measurement. Evaluators compare against these hashes. Updated 2026-10-07 for errata E-5..E-8 (after dev runs, before any official G2 run).",
   "files": {
     "spec/protections/PROT-H23.md": "12cb485946d897bee5c36227c2250272d5f5be556ae3adfecff7a6cfe290c183",
     "spec/protections/PROT-H23-A8.md": "f29dee3d9e1c836919454c274d05b849ccf00647d0541811650f3b8e5197e9c0",
@@ -10,6 +10,6 @@
     "spec/gate2/PROTOCOL-P1d.md": "55682ef5edffe63af27d7db721eb06aa234c5281e210dbcea56cf2221eefa04d",
     "spec/gate2/ORACLE-AND-HARNESS-G2.md": "498743e32e4fb120780a7db9fd8db8a59eaf470e69d61e0260f0978c5e1321ce",
     "spec/gate2/EQUIVALENCE-G2.md": "d45d43a385bcc438aeaefffe4b439846ac53f92333c9d5475586ec726d903f79",
-    "spec/gate2/OPEN-QUESTIONS.md": "4584fe0a66ca845b190438442f0e4796e3425703ecddf96f42307aa6ef4d9bed"
+    "spec/gate2/OPEN-QUESTIONS.md": "23723f8cd8ee138eb903bd6a472bb1825f06c4847c31fea47be3dc18ea1abd58"
   }
 }
