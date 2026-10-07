@@ -28,10 +28,12 @@ class HonestDep(ReplayMixin, G2Mixin, FakeDep):
         FakeDep.__init__(self, "correct", domain, factory, verifier, ops, auth, clock, mutants, None)
         self.auth_spec, self.history, self.anchor = auth, history, anchor
         self.paranoid, self.no_anchor = paranoid, no_anchor
+        have = history.get("meta/stream")
         self._g2_init(history, anchor)
-        self.stream = "fake-%s-%s" % (domain, _sha(str(getattr(history, "_path", domain)).encode())[:16])
-        history.put("meta/stream", self.stream.encode())
-        self._path = self.world._con.execute("PRAGMA database_list").fetchone()[2]
+        if have is None:
+            self.stream = "fake-%s-%s" % (domain, _sha(str(getattr(history, "_path", domain)).encode())[:16])
+            history.put("meta/stream", self.stream.encode())
+        self._wpath = self.world._con.execute("PRAGMA database_list").fetchone()[2]
 
     # -- authority document (v2 when the spec says so) ----------------------------------------------------
     def _auth_doc(self):
@@ -99,7 +101,7 @@ class HonestDep(ReplayMixin, G2Mixin, FakeDep):
         return CallResult("OK", body)  # envelopes are written by _gov (all kinds, refusals included)
 
     def _rows(self, head):
-        r = WorldReader(self._path)
+        r = WorldReader(self._wpath)
         try:
             return r.log(head), r.snapshot()
         finally:

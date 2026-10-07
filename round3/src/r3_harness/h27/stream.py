@@ -49,7 +49,8 @@ class Stream:
         self.clock = LogicalClock(10)
         writers = {w for a in auth["service_accounts"] for w in a["world_writers"]} | {"harness-seed", "harness-refresh"} \
             | ({getattr(type(variant), "TEST_WORLD_WRITER")} if hasattr(type(variant), "TEST_WORLD_WRITER") else set())
-        self.store = WorldStore(self.world_path, clock=self.clock, writers=frozenset(writers))
+        self.writers = frozenset(writers)
+        self.store = WorldStore(self.world_path, clock=self.clock, writers=self.writers)
         h = self.store.handle("harness-seed")
         with h.transaction(tag="seed"):
             for o in ops["seed"]["objects"]:
@@ -187,7 +188,7 @@ class Stream:
         res_op = op if kind in ("call_tool", "direct", "approve") else None
         a_args = args if kind in ("call_tool", "direct", "approve") else None
         blobs = pv.artifact_blobs(kind, res_op, a_args, self.ops, pre, use_doc)
-        dec = {"decision_id": rid, "kind": kind, "subject": subject, "on_behalf_of": obo, "operation": res_op,
+        dec = {"decision_id": None if kind == "approve" else rid, "kind": kind, "subject": subject, "on_behalf_of": obo, "operation": res_op,
                "args_digest": pv.args_digest(args), "status": res.status,
                "effect_digest": pv.effect_digest(eff_rows), "world_seq": seq_now, "tick": tick_now}
         rec.update({"governed": True, "decision": dec, "blobs": blobs,
