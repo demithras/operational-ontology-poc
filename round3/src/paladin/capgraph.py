@@ -110,8 +110,7 @@ def check_issue(doc: dict, edge: Any, subject: str, tick: int, principals: dict,
         return ("DENIED", "not_parent_holder")
     parent = by.get(edge["parent"]) if edge["parent"] is not None else None
     ppath = _path_ids(by, parent["id"]) if parent is not None else []
-    if edge["issuer"] == edge["child"] or (edge["parent"] is not None and ppath is not None and (
-            edge["child"] in {e["issuer"] for e in ppath} or edge["child"] == ppath[0]["issuer"])):
+    if edge["issuer"] == edge["child"] or (ppath and edge["child"] in {e["issuer"] for e in ppath}):
         return ("INVALID", "delegation_cycle")
     for who in (edge["issuer"], edge["child"]):
         p = principals.get(who)
