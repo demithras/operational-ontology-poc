@@ -319,4 +319,5 @@ Approval/idempotency fingerprint now binds `on_behalf_of` literally (service.py;
 - Observed on the real H23 variants (no G2 methods yet): `unsupported` on every delegate/revoke/authority_used and `unattributed_write`
   (their effect transactions carry no `commit` mark) -> REJECTED by the frozen meter rule until the G2 builders add marks. Not a harness bug.
 - Side observation (H23 harness, not edited): `r3_harness/h23/runner.py` and `evaluator.py` compute ROUND3 as `parents[3].parent`, which is
-  the worktree root, so `tree_sha('r3_oracle')` hashes an empty tree there. The H24 modules use `parents[3]`.
+  the worktree root: `tree_sha('r3_oracle')` hashes an empty tree and H23's `oracle_independent()` scans a directory that does not
+  exist (returns (True, []) vacuously; verified). The H24 modules use `parents[3]` and scan 15 real oracle files.
