@@ -70,3 +70,6 @@ E-1 PROT-H24 s4 writes `tx.mark("authority", <kind>, payload)`; PROTOCOL-P1d P1d
     `tx.mark("authority", {"op": <delegate|revoke|set_authority>, ...})`. No semantic change.
 E-2 validate_strict (P1d-3) does not check the root-edge delegable-grant rule or `redelegable` statically; both remain
     runtime issuance rules exactly as PROT-H24 s2 (steps 4-5). No semantic change.
+E-3 (2026-10-07, after the G2 variant builds, before any H24/H27 measurement) delegate/revoke/authority_used while a v1
+    authority spec is in force: treat it exactly as a v2 document with `capabilities: []`, `revoked: []` and
+    `max_delegation_depth: 8` (PROT-H24 s1 frozen maximum). Never an uncaught exception (every call returns a CallResult).
