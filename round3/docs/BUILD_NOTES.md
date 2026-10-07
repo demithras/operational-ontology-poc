@@ -293,3 +293,18 @@ Approval/idempotency fingerprint now binds `on_behalf_of` literally (service.py;
   sandbox-exec with file-write* denied on the anchor dir (tests/test_p1d_sandbox.py: known-negative + known-positive + non-sandbox control).
 - Import scan: paladin/conventional may not import r3_shared.anchor_server or TamperView (tests/test_import_boundaries.py).
 - Fakes: tests/fakes/fake_g2.py (G2Mixin on FakeDeployment). Edited existing test: tests/test_mutants.py (ALL was asserted == H23 list).
+
+
+## G2 conventional (H24 + H27)
+- New modules (src/conventional/): `authdoc.py` (delegation-table rules: issuance, path validity), `pdp.py` (PolicyEngine + edges; decision at the commit tick),
+  `authority_ops.py` (delegate/revoke/set_authority/authority_used, one world transaction + `authority`/`commit` marks), `histledger.py` (records in the
+  HistoryStore, world-log-checked), `provenance.py` (evidence, envelope, anchor-before-ack), `replay.py` (replay/explain). Maps: spec/protections/H24-conventional.md, H27-conventional.md.
+- Tokens carry identity only; the PDP re-derives authority from the table inside the commit transaction (no token-scoped authority).
+- Without a HistoryStore the H23 aux tables are used unchanged (Q9); with one, idempotency/approvals/authority versions live in the HistoryStore and
+  the world log (marks `commit`, `approval`, `approval_used`, `authority`) decides whether something committed. The `approval`/`approval_used` marks are an addition to the two
+  documented mark kinds; they carry no canonical change.
+- Every effect transaction now carries a `commit` mark and tag `effect` (also on the H23 path); the world meter's attribution rule needs it.
+- `deploy()` over an existing history continues its authority lineage (last `authority` mark -> `art/<digest>`) when the base spec is unchanged.
+- Known limitations: a committed request whose anchor append failed is never re-anchored later (retry -> UNAVAILABLE `anchor_unavailable`, replay UNRESOLVED
+  `unanchored`); duplicate decision_ids (same request_id reused after a refusal) share the first anchor entry on lookup; evidence `newest` ties keep the first key.
+- Assumptions for the frozen text: see the end of spec/protections/H27-conventional.md.
