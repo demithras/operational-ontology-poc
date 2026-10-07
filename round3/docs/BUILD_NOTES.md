@@ -308,3 +308,7 @@ Approval/idempotency fingerprint now binds `on_behalf_of` literally (service.py;
   path) instead of the H23 "on_behalf_of does not name this principal's delegator" refusal; still DENIED, zero effects.
 - Oracle-facing assumptions (effect_digest, world_seq, reason codes, approve decision id): spec/protections/H27-paladin.md.
 - Gaps: authority-document durability window and unauthenticated authority/`used` records in the HistoryStore (see both protection maps).
+
+## G2 errata E-3/E-4 (Paladin)
+Changed src/paladin/core_g2.py (authority decisions: operation null, revoke args = edge_id string) and deployment.py (total
+methods wrapper). Tests: tests/paladin/test_pal_g2_e34.py. tests/paladin: 207 passed.

@@ -14,6 +14,8 @@ from paladin.prov import HISTORY_LAYOUT, stream_for
 from paladin.surface import SurfaceFactory, UnknownTool, who_of
 from paladin.worldbridge import state_from_world
 from r3_shared.evidence import canonical_bytes
+import functools
+
 from r3_shared.variant import CallResult, ReplayResult, ToolDescriptor
 
 _JSON = {"integer": "integer", "string": "string", "resource": "string", "json": None, "boolean": "boolean"}
@@ -308,3 +310,22 @@ class PaladinDeployment:
         if kind == "authority":
             return canonical_bytes(c.auth if c is not None else self._args[4])
         return canonical_bytes(evid.policy_of(ops, op) if kind == "policy" else evid.contract_of(ops, op))
+
+
+def _total(fn, fail):
+    """E-3: no Deployment method raises; an internal error becomes a result (Crash is a BaseException and passes through)."""
+    @functools.wraps(fn)
+    def wrapper(self, *a, **k):
+        try:
+            return fn(self, *a, **k)
+        except Exception as exc:  # noqa: BLE001
+            return fail(exc)
+    return wrapper
+
+
+_CALL = lambda exc: CallResult("UNAVAILABLE", {"reason": f"internal_error: {type(exc).__name__}"})  # noqa: E731
+_REPLAY = lambda exc: ReplayResult("UNRESOLVED", f"internal_error: {type(exc).__name__}")  # noqa: E731
+for _n in ("call_tool", "direct", "read", "approve", "delegate", "revoke", "authority_used"):
+    setattr(PaladinDeployment, _n, _total(getattr(PaladinDeployment, _n), _CALL))
+for _n in ("replay", "explain"):
+    setattr(PaladinDeployment, _n, _total(getattr(PaladinDeployment, _n), _REPLAY))

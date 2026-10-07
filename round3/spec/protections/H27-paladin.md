@@ -48,3 +48,11 @@ approvals `led/appr/`, idempotency `led/req/`, ledger meta (attempts, authority 
 - The authority document in force (`led/meta/auth_spec`) and `used:<rid>` records live in the attackable HistoryStore and are not
   anchor-checked on load; R27-5 protects the two continuation records the spec names (idempotency, approvals).
 - Business rules are not replayed (Q6 scope limit).
+
+## Errata E-3 / E-4 alignment (2026-10-07)
+- E-4: `operation` is null for delegate/revoke; `args_digest` subject = args dict (call_tool/direct), approved request's args dict
+  (approve), edge dict (delegate), edge_id string (revoke). effect_digest, world_seq/tick, `newest` tie-break and policy/contract
+  artifact forms were already as specified; now pinned by tests/paladin/test_pal_g2_e34.py (envelope built by hand).
+- E-3: a v1 spec in force is treated as v2 (capabilities [], revoked [], depth 8) by delegate/revoke/authority_used
+  (capgraph.to_v2). Every Deployment method is total: internal errors return CallResult UNAVAILABLE `internal_error: <Type>`
+  (replay/explain: UNRESOLVED); Crash (BaseException, simulated process death) still passes through.

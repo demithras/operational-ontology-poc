@@ -77,6 +77,11 @@ class G2Mixin:
                 "art_op": op if art_op == "same" else art_op, "path": [], "rows": [], "world_seq": None, "tick": None,
                 "evidence": None, "doc": None, "reason": None}
 
+    @staticmethod
+    def decision_args(kind: str, payload: Any) -> Any:
+        """E-4 args_digest subject: the edge dict for delegate, the edge_id STRING for revoke."""
+        return payload.get("edge_id") if kind == "revoke" and isinstance(payload, dict) else payload
+
     def evidence_for(self, op: str, args: Any) -> list:
         return evid.evidence_objects(self.ops_spec, op, args, self._svc.get, self._svc.list)
 
@@ -169,7 +174,7 @@ class G2Mixin:
             g = self.guard_history(rid)
             if g is not None:
                 return g
-            d = self.new_decision(kind, sub, None, kind, payload, rid, art_op=None)
+            d = self.new_decision(kind, sub, None, None, self.decision_args(kind, payload), rid, art_op=None)  # E-4: operation null
             if kind == "revoke" and "revoke_commit_reorder" in self.mutants:  # MUTANT: acknowledge now, apply after the next effect
                 bad = capgraph.check_revoke(self.auth, payload.get("edge_id") if isinstance(payload, dict) else None, sub)
                 if bad is None:
@@ -223,7 +228,7 @@ class G2Mixin:
         """MUTANT revoke_commit_reorder: apply the acknowledged revocations after an effect committed."""
         pending, self._deferred = self._deferred, []
         for sub, payload, rid, fp in pending:
-            self.apply_authority("revoke", sub, payload, rid, fp, self.new_decision("revoke", sub, None, "revoke", payload, rid, None))
+            self.apply_authority("revoke", sub, payload, rid, fp, self.new_decision("revoke", sub, None, None, self.decision_args("revoke", payload), rid, None))
 
     def guard_history(self, rid: str) -> CallResult | None:
         """R27-5: a request id the anchor knows as a committed decision, but whose idempotency record is gone, never commits twice."""
