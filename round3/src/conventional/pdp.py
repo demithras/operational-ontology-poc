@@ -56,6 +56,13 @@ class Pdp(PolicyEngine):
             return p
         return None
 
+    def exposed_operations(self, subject: str, operations, _depth: int = 0) -> list[str]:
+        base = super().exposed_operations(subject, operations, _depth)
+        if not authdoc.is_v2(self.doc) or not self.known(subject) or self.is_static_delegate(subject):
+            return base
+        held = {o for e in self.doc["capabilities"] if e["child"] == subject for o in e["scope"]["operations"]}
+        return [op for op in operations if op in base or op in held]  # static upper bound; decide() re-checks at commit
+
     def mutant(self, name: str) -> bool:
         return name in self.mutants
 

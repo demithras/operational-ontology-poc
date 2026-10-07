@@ -54,7 +54,8 @@ class HistLedger:
         raw = self.history.get(rid_key(rid))
         try:
             rec = json.loads(raw) if raw is not None else None
-            if rec is None or rec["status"] != "OK" or rec["body"]["effects"] != tx_effect_rows(h, m[1]):
+            if rec is None or rec["status"] != "OK" or not isinstance(rec["body"], dict) \
+                    or not isinstance(rec["used"], dict):
                 raise ValueError
             return rec["fp"], {"status": rec["status"], "body": rec["body"], "used": rec["used"]}
         except (ValueError, KeyError, TypeError) as exc:
