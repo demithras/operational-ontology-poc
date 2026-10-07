@@ -14,6 +14,7 @@ import os
 import sqlite3
 import tempfile
 import threading
+import time
 from typing import Any, Callable
 
 from paladin import capgraph, evid
@@ -75,6 +76,7 @@ class Core(G2Mixin):
         self.domain, self._factory, self._verifier, self.clock, self.mutants = domain, factory, verifier, clock, mutants
         self.hook = hook  # crash-injection point callback (before_commit fires inside the adapters, after_commit in run)
         self.lock = threading.RLock()  # the Engine State, the service connection and the ledger are single-writer
+        self._mutant_io = threading.RLock()  # used ONLY by the unsynchronized_commit mutant (serialises storage I/O, not the check)
         self.ops_spec = ops_spec
         self.g2_init(history, anchor, stream, mutants)
         self._svc = self.handle("paladin-service")
@@ -218,12 +220,15 @@ class Core(G2Mixin):
         obo_id = obo if edge else self.delegator.get(sub)  # request-id replay identity: the delegator (or edge root) in force
         bypass = via == "direct" and "backstop_bypass" in self.mutants
         fp = fingerprint(sub, obo_id, op, clean)
-        with self._guard():
+        with self._guard(), contextlib.ExitStack() as _mx:
             led = self.ledger.get(rid)
             if led is not None:
                 if led["state"] != "COMMITTED":
                     return CallResult("UNAVAILABLE", {"reason": "request in flight"})
                 return self._replay(led, who, bypass, fp, sub, obo_id, op, clean, rid, edge)
+            if "unsynchronized_commit" in self.mutants:  # MUTANT ONLY: hold the unlocked check->commit window open (deterministic race)
+                time.sleep(0.15)
+                _mx.enter_context(self._mutant_io)  # the storage layer is serialised; the CHECK above is still stale
             g = self.guard_history(rid)  # R27-5: an anchored committed decision without its idempotency record never re-commits
             if g is not None:
                 return g
