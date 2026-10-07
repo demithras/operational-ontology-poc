@@ -54,3 +54,36 @@ def authority_put(handle, version: int, spec: dict) -> None:
 def authority_get(handle):
     r = handle._con.execute("SELECT version, spec_json FROM conv_authority WHERE id=1").fetchone()
     return None if r is None else (r[0], json.loads(r[1]))
+
+
+class AuxStore:
+    """The H23/H24 durable store: auxiliary tables in the world DB (atomic with the effects). Used when no HistoryStore
+    is given. The method set is shared with histledger.HistLedger so the service is backend-agnostic."""
+    uses_history = False
+
+    def init(self, h) -> None:
+        init(h)
+
+    def idem_get(self, h, rid):
+        return idem_get(h, rid)
+
+    def idem_put(self, h, rid, fp, rec) -> None:
+        idem_put(h, rid, fp, rec)
+
+    def approval_add(self, h, fp, approver, tx=None) -> None:
+        approval_add(h, fp, approver)
+
+    def approvals_open(self, h, fp):
+        return approvals_open(h, fp)
+
+    def approval_consume(self, h, aid, tx=None) -> None:
+        approval_consume(h, aid)
+
+    def approval_restore(self, h, aid) -> None:
+        h._con.execute("UPDATE conv_approvals SET consumed=0 WHERE id=?", (aid,))
+
+    def authority_put(self, h, version, doc) -> None:
+        authority_put(h, version, doc)
+
+    def authority_get(self, h):
+        return authority_get(h)
