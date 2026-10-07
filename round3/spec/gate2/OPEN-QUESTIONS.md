@@ -63,3 +63,10 @@ continue; stop downstream gates only if BOTH variants reject.
 Orchestrator: Q3 yes (any preregistered H24 falsifier -> REJECTED incl. cycle_grant and linearizability violations);
 Q4 yes; Q5 yes; Q8 yes (false_alarm > 0 -> REJECTED); Q9 yes (behind `history`, H23 suite + one H23 dev rerun as
 regression); Q10 yes (static delegates and edges disjoint); Q11 yes (world_log additive; H23 official verdicts untouched).
+
+## Errata (2026-10-07, after P1d, before any Gate 2 builder)
+E-1 PROT-H24 s4 writes `tx.mark("authority", <kind>, payload)`; PROTOCOL-P1d P1d-1 defines `tx.mark(kind, payload)` and its
+    mark list puts `op: delegate|revoke|set_authority` in the payload. The P1d form is binding:
+    `tx.mark("authority", {"op": <delegate|revoke|set_authority>, ...})`. No semantic change.
+E-2 validate_strict (P1d-3) does not check the root-edge delegable-grant rule or `redelegable` statically; both remain
+    runtime issuance rules exactly as PROT-H24 s2 (steps 4-5). No semantic change.
