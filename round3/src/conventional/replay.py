@@ -103,11 +103,11 @@ class Replayer:
         self._authority_check(env, arts)
         return ReplayResult("VERIFIED", "ok", env, {d: b for d, b in arts["bytes"].items()})
 
-    def _blob(self, digest: str, kind: str) -> bytes:
+    def _blob(self, digest: str, kind: str, operation: str = "") -> bytes:
         s = self.s
         b = s.history.get(f"art/{digest}")
         if b is None and "fallback_to_current" in s.mutants:  # BUG: substitutes the current spec when the history lacks it
-            b = s.current_artifact(kind)
+            b = s.current_artifact(kind, operation)
             b = b if b is not None and sha(b) == digest else None
         if b is None:
             raise _Stop("UNRESOLVED", "missing_artifact")
@@ -127,7 +127,7 @@ class Replayer:
             raise _Stop("TAMPERED", "malformed_artifact_bindings")
         out: dict = {"bytes": {}, "evidence": []}
         for kind in ("authority", "policy", "contract"):
-            out[kind] = self._blob(a[kind], kind)
+            out[kind] = self._blob(a[kind], kind, env["decision"]["operation"])
             out["bytes"][a[kind]] = out[kind]
         for d in a["evidence"]:
             b = self._blob(d, "evidence")

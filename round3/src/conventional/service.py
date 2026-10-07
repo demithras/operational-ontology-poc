@@ -111,12 +111,15 @@ class Service(AuthorityOps):
             self.history.put("meta/stream", raw)
         return raw.decode()
 
-    def current_artifact(self, kind: str):
+    def current_artifact(self, kind: str, operation: str = ""):
         """The CURRENT (not historical) artifact bytes: used only by the fallback_to_current mutant."""
         from r3_shared.authgraph import authority_document
         from r3_shared.evidence import canonical_bytes
         if kind == "authority":
             return canonical_bytes(authority_document(self._policy.doc))
+        if kind in ("policy", "contract") and self.prov is not None:
+            op = self._ops.get(operation)  # delegate/revoke bind `null`: no operation definition
+            return self.prov.policy_bytes(op) if kind == "policy" else self.prov.contract_bytes(op)
         return None
 
     # -- crash / restart (PROT-H23-A8). Durable state = world DB (effects, idempotency ledger, approvals, authority). --
