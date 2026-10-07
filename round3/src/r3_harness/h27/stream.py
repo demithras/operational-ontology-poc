@@ -9,6 +9,7 @@ import shutil
 import sqlite3
 
 from r3_oracle import approvals, ops_model, provenance as pv
+from r3_oracle import scope_v2 as sc
 from r3_shared.clock import LogicalClock
 from r3_shared.histstore import HistoryStore, TamperView
 from r3_shared.identity import IdentityProvider
@@ -23,6 +24,17 @@ def is_governed(outcome) -> bool:
     if k in (ops_model.COMMIT, ops_model.DENIED_AUTHORITY, ops_model.DENIED_RULE, ops_model.NEEDS_APPROVAL):
         return True
     return k == ops_model.INVALID and outcome.detail.startswith("precondition")
+
+
+def oracle_schema_invalid(ops_spec: dict, kind: str, op: str | None, args) -> bool:
+    """E-8: the ORACLE (never the variant's reason text) decides whether an authority/approval call is schema-INVALID,
+    i.e. outside the governed set: no envelope is expected for it."""
+    if kind == "delegate":
+        return not sc.well_formed(args)
+    if kind == "revoke":
+        return not (isinstance(args, str) and args.strip() != "")
+    spec_op = ops_model.op_of(ops_spec, op) if op is not None else None
+    return spec_op is None or not ops_model.validate_args(spec_op, args)[0]
 
 
 def checkpoint(path: str) -> None:
@@ -162,7 +174,7 @@ class Stream:
                 akey = approvals.key(subject, obo, op, args)
                 self.approval_keys[akey] = self.approval_keys.get(akey, 0) - 1
         else:
-            gov = res.status in GOVERNED_STATUS and (res.body.get("reason") != "schema")
+            gov = res.status in GOVERNED_STATUS and not oracle_schema_invalid(self.ops, kind, op, args)  # E-8
             if kind == "approve" and res.status == "OK":
                 akey = approvals.key(requester, obo, op, args)
                 self.approval_keys[akey] = self.approval_keys.get(akey, 0) + 1
