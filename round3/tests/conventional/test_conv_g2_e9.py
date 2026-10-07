@@ -31,7 +31,7 @@ DELEGATE = [  # (edge, envelope?)
     (edge("g1", "planner-1", "nobody-1"), True),
     (edge("g2", "planner-1", "nobody-1", ops=("not_an_op",)), True),  # semantic refusals stay governed
     (bad_edge(id=""), False), (bad_edge(id=5), False), (bad_edge(id=KeyError), False),
-    (bad_edge(issuer=None), False), (bad_edge(child=""), False), (bad_edge(parent=3), False),
+    (bad_edge(issuer=None), False), (bad_edge(child=""), True), (bad_edge(issuer=""), True), (bad_edge(parent=""), True), (bad_edge(parent=3), False),
     (bad_edge(redelegable="yes"), False), (bad_edge(issued_at=True), False), (bad_edge(issued_at=1.5), False),
     (bad_edge(expires_at="soon"), False), (bad_edge(scope=None), False), (bad_edge(scope={"operations": []}), False),
     (bad_edge(extra=1), False), ("not-a-dict", False), (None, False), ([], False),
@@ -45,7 +45,7 @@ def test_delegate_envelope_iff_edge_schema_valid(rig, e, env):
     assert (envs(rig) - n) == (1 if env else 0)
 
 
-REVOKE = [("nope", True), ("", False), ("   ", False), (None, False), (5, False), (["e1"], False), ({"id": "e1"}, False)]
+REVOKE = [("nope", True), ("", False), ("   ", True), (" ", True), ("\t", True), ("\n", True), (None, False), (5, False), (["e1"], False), ({"id": "e1"}, False)]
 
 
 @pytest.mark.parametrize("eid,env", REVOKE)

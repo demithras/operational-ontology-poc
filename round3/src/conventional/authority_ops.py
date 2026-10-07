@@ -111,8 +111,8 @@ class AuthorityOps:
                              governed=True)
             if kind == "delegate":  # E-9: an edge failing the v2 edge schema is schema-INVALID -> no envelope
                 dc.governed = authdoc.edge_schema_ok(args["edge"])
-            else:  # E-9: revoke with a non-string / empty edge_id is schema-INVALID -> no envelope
-                dc.governed = isinstance(args["edge_id"], str) and args["edge_id"].strip() != ""
+            else:  # E-9: revoke with a non-string / empty edge_id (whitespace is governed) is schema-INVALID -> no envelope
+                dc.governed = isinstance(args["edge_id"], str) and args["edge_id"] != ""
             dc.authority_doc, dc.evidence = self._policy.doc, []
             h = self._factory("conventional-service")
             try:

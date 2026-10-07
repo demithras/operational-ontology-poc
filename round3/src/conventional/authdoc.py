@@ -34,7 +34,8 @@ def edge_schema_ok(e) -> bool:
     s = lambda v: isinstance(v, str) and v != ""  # noqa: E731
     i = lambda v: isinstance(v, int) and not isinstance(v, bool)  # noqa: E731
     sc = e["scope"]
-    if not (s(e["id"]) and s(e["issuer"]) and s(e["child"]) and (e["parent"] is None or s(e["parent"]))
+    t = lambda v: isinstance(v, str)  # noqa: E731  (schema: issuer/child/parent are plain strings; only id has minLength 1)
+    if not (s(e["id"]) and t(e["issuer"]) and t(e["child"]) and (e["parent"] is None or t(e["parent"]))
             and (e["expires_at"] is None or i(e["expires_at"])) and isinstance(e["redelegable"], bool)
             and i(e["issued_at"]) and isinstance(sc, dict) and set(sc) == {"operations", "resources"}):
         return False
