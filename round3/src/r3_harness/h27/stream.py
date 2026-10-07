@@ -81,6 +81,8 @@ class Stream:
         self.view = TamperView(self.hist_path)  # read-only use here; the log stays empty until tampering
         self.dep = variant.deploy(domain, self.store.handle_factory(), self.idp.verifier(), ops, self.auth,
                                   self.clock, state_dir=None, history=self.hist, anchor=anchor_client)
+        if not self.layout:  # real variants declare it on the Deployment class, fakes on the Variant class: accept either
+            self.layout = dict(getattr(self.dep, "HISTORY_LAYOUT", None) or getattr(type(self.dep), "HISTORY_LAYOUT", {}) or {})
         self.decisions: list[dict] = []
         self.caps: list[dict] = []
         self.revoked: list[str] = []
