@@ -11,12 +11,13 @@ from r3_shared import mutants
 from . import concurrency, surface
 from .corpus import DOMAINS, attack_sequence, new_env, run_steps
 
-EXPECT = {"ledger_after_commit_volatile": ("crash_duplicate_effect",),
-          "unsynchronized_commit": ("concurrency_unserializable",),
-          "identity_substitution": ("forbidden_effect", "identity_expansion"),
-          "mutable_gated_input": ("forbidden_effect",),
-          "backstop_bypass": ("backstop_failure",),
-          "tool_overexposure": ("surface_overexposure",)}
+# world_lock_timeout counts as a detection for every mutant: the mutant made the system observably fail (P11)
+EXPECT = {"ledger_after_commit_volatile": ("crash_duplicate_effect", "world_lock_timeout"),
+          "unsynchronized_commit": ("concurrency_unserializable", "world_lock_timeout"),
+          "identity_substitution": ("forbidden_effect", "identity_expansion", "world_lock_timeout"),
+          "mutable_gated_input": ("forbidden_effect", "world_lock_timeout"),
+          "backstop_bypass": ("backstop_failure", "world_lock_timeout"),
+          "tool_overexposure": ("surface_overexposure", "world_lock_timeout")}
 RULES = {"ledger_after_commit_volatile": ["crash_after", "crash_before", "crash_idle", "legit"],
          "unsynchronized_commit": [],
          "identity_substitution": ["ident", "legit", "retarget"], "mutable_gated_input": ["toctou", "legit", "replay"],
@@ -28,12 +29,13 @@ CONC_N = 300  # fixed seeded concurrency sub-corpus for the unsynchronized_commi
 
 def _counts(variant, specs, mutant: str, n: int, seed: int) -> tuple[dict, dict | None]:
     cnt = {c: 0 for c in ("forbidden_effect", "identity_expansion", "backstop_failure", "surface_overexposure",
-                          "crash_duplicate_effect", "concurrency_unserializable")}
+                          "crash_duplicate_effect", "concurrency_unserializable", "world_lock_timeout")}
     first = None
     if mutant == "unsynchronized_commit":  # concurrency sub-corpus (threads), not the sequential state machine
         for rec in concurrency.run(variant, specs, CONC_N, seed):
-            if "concurrency_unserializable" in rec["classes"]:
-                cnt["concurrency_unserializable"] += 1
+            for k in ("concurrency_unserializable", "world_lock_timeout"):
+                cnt[k] += k in rec["classes"]
+            if "concurrency_unserializable" in rec["classes"] or "world_lock_timeout" in rec["classes"]:
                 first = first or {"scenario": rec, "domain": rec["domain"], "attacker": "-", "steps": []}
         return cnt, first
     for i in range(0 if RULES[mutant] == [] else n):

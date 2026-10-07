@@ -269,3 +269,10 @@ Binding spec: spec/protections/PROT-H23-A8.md. Everything below is variant-neutr
 - Tests: tests/paladin/test_p10_approval_binding.py (agent-1, agent-hostile-1; both mismatch directions DENIED approval_required with zero world effects, same form OK once then consumed, across crash/restart); 6 of 10 fail on the pre-fix code. test_p2a_functional's old "same with and without on_behalf_of" test replaced by the same-form test.
 ## P10 Conventional
 Approval/idempotency fingerprint now binds `on_behalf_of` literally (service.py; `canonical_obo` removed from policy.py). New tests in tests/conventional/test_p10_approval_binding.py (10; 6 fail on the old code). Note: tests/test_h23_p9.py::test_override_on_a_non_dev_experiment_id_exits_2_known_negative failed once in a full-suite run (and 20 errors in another), but passes alone and on the pre-change baseline - appears load/flake related.
+
+## P11 - WAL world store; world-lock timeouts classified
+- Cause (hypothesis, not reproduced in 20x300 isolated concurrency scenarios): default rollback-journal mode + 5s default timeout; in
+  unsynchronized_commit threads, writers (BEGIN IMMEDIATE, then EXCLUSIVE at commit) block/are blocked by readers and a thread left
+  past JOIN_S (daemon) can keep a lock while the harness snapshots.
+- Fix: world.py WAL on every connection, busy_timeout 15s, reader = one read txn with bounded retry -> WorldLockTimeout; Env/concurrency
+  classify `world_lock_timeout`; mutant runs count it as detection; evaluator adds "world unreadable N times" and denies SUPPORTED.

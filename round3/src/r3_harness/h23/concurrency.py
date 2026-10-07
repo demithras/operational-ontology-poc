@@ -17,6 +17,7 @@ import random
 import threading
 
 from r3_oracle import ops_model, serial
+from r3_shared.world import WorldLockTimeout
 
 from . import approval_rules
 from .chooser import RandChooser
@@ -159,9 +160,13 @@ def scenario(variant, specs, seed: int, i: int, types=TYPES) -> dict:
             rec["skipped"] = "no suitable request group found"
             return rec
         rec["k"] = len(reqs)
-        snap0 = env.snapshot()
-        res = _fire(env, reqs)
-        final = env.snapshot()
+        try:
+            snap0 = env.snapshot()
+            res = _fire(env, reqs)
+            final = env.snapshot()
+        except WorldLockTimeout as exc:  # unreadable world: classify the scenario, do not crash the run
+            rec.update({"classes": ["world_lock_timeout"], "error": str(exc), "k": len(reqs)})
+            return rec
         uniq, idx = [], []
         for q in reqs:  # identical requests (same scenario) are one request for the serial search
             sig = (q["subject"], q["op"], repr(q["args"]), q["rid"])
@@ -182,6 +187,9 @@ def scenario(variant, specs, seed: int, i: int, types=TYPES) -> dict:
                     "requests": [{"subject": q["subject"], "op": q["op"], "args": q["args"], "rid": q["rid"],
                                   "status": r["status"]} for q, r in zip(reqs, res)]})
         return rec
+    except WorldLockTimeout as exc:  # setup read (pool/state groups) hit an unreadable world
+        return {"scenario": i, "type": stype, "domain": domain, "classes": ["world_lock_timeout"],
+                "skipped": None, "requests": [], "error": str(exc)}
     finally:
         env.close()
 
@@ -192,9 +200,10 @@ def summarise(rows: list[dict]) -> dict:
     types, ks = {}, {}
     for r in done:
         types[r["type"]] = types.get(r["type"], 0) + 1
-        if r["type"] == "same":
+        if r["type"] == "same" and "k" in r:
             ks[str(r["k"])] = ks.get(str(r["k"]), 0) + 1
-    cnt = {c: sum(c in r["classes"] for r in done) for c in ("concurrency_unserializable", "concurrent_progress_loss")}
+    cnt = {c: sum(c in r["classes"] for r in done)
+           for c in ("concurrency_unserializable", "concurrent_progress_loss", "world_lock_timeout")}
     return {"scenarios": len(rows), "executed": len(done), "skipped": len(rows) - len(done), "by_type": types,
             "same_k": ks, "conflicting": sum(bool(r.get("conflicting")) for r in done),
             "domains": sorted({r["domain"] for r in done}), "losses": sum(r.get("losses", 0) for r in done),

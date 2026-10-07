@@ -20,6 +20,9 @@ class EffectMeter:
         self._before = self._reader.snapshot()
         return self._before
 
+    def abort(self) -> None:
+        self._before = None
+
     def end(self) -> list[dict]:
         if self._before is None:
             raise RuntimeError("end() without begin()")

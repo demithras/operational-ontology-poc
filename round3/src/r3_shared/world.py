@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import time
 from pathlib import Path
 from typing import Any, Callable
 
@@ -20,6 +21,25 @@ CREATE TABLE IF NOT EXISTS external_effects(
   seq INTEGER PRIMARY KEY AUTOINCREMENT, adapter TEXT NOT NULL, target TEXT NOT NULL,
   payload_json TEXT NOT NULL, idempotency_key TEXT, writer TEXT NOT NULL);
 """
+
+
+BUSY_MS = 15_000  # writers/handles: SQLite busy_timeout (WAL: writers queue behind one writer, readers never wait)
+READ_WAIT_S = 20.0  # WorldReader: bounded total wait before the world is classified unreadable
+
+
+class WorldLockTimeout(Exception):
+    """The world store stayed locked/unreadable past the bounded wait (a leaked write transaction, a hung writer)."""
+
+
+def _connect(target: str, **kw) -> sqlite3.Connection:
+    con = sqlite3.connect(target, timeout=BUSY_MS / 1000, **kw)
+    con.execute(f"PRAGMA busy_timeout={BUSY_MS}")
+    return con
+
+
+def _is_lock(exc: sqlite3.OperationalError) -> bool:
+    m = str(exc).lower()
+    return "locked" in m or "busy" in m
 
 
 def _j(x: Any) -> str:
@@ -37,7 +57,8 @@ def ref(type_: str, key: str) -> str:
 class WorldStore:
     def __init__(self, path: str | Path):
         self.path = str(path)
-        con = sqlite3.connect(self.path)
+        con = _connect(self.path)
+        con.execute("PRAGMA journal_mode=WAL")  # persistent in the file: every later connection is WAL
         con.executescript(SCHEMA)
         con.commit()
         con.close()
@@ -59,7 +80,8 @@ class WorldHandle:
         if not writer:
             raise ValueError("writer name required")
         self.writer = writer
-        self._con = sqlite3.connect(path, isolation_level=None, check_same_thread=False)  # PROT-H23-A8: callers may be threads; serialisation is the variant's job
+        self._con = _connect(path, isolation_level=None, check_same_thread=False)  # PROT-H23-A8: callers may be threads; serialisation is the variant's job
+        self._con.execute("PRAGMA synchronous=NORMAL")
         self._in_tx = False
 
     def close(self) -> None:
@@ -152,12 +174,33 @@ class WorldReader:
     """Read-only connection (SQLite mode=ro): any write raises sqlite3.OperationalError."""
 
     def __init__(self, path: str):
-        self._con = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+        self._con = _connect(f"file:{path}?mode=ro", uri=True, isolation_level=None, check_same_thread=False)
 
     def close(self) -> None:
         self._con.close()
 
     def snapshot(self) -> dict:
+        """One consistent read transaction (WAL: never blocked by an active writer). Bounded retry on lock errors;
+        raises WorldLockTimeout when the world stays unreadable."""
+        deadline, last = time.monotonic() + READ_WAIT_S, None
+        while True:
+            try:
+                self._con.execute("BEGIN")
+                try:
+                    return self._snapshot()
+                finally:
+                    self._con.execute("COMMIT")
+            except sqlite3.OperationalError as exc:
+                if not _is_lock(exc):
+                    raise
+                last = exc
+                if self._con.in_transaction:
+                    self._con.execute("ROLLBACK")
+                if time.monotonic() >= deadline:
+                    raise WorldLockTimeout(f"world unreadable for {READ_WAIT_S}s: {last}") from exc
+                time.sleep(0.05)
+
+    def _snapshot(self) -> dict:
         objs = {f"{t}:{k}": {"props": json.loads(p), "version": v} for t, k, p, v in self._con.execute(
             "SELECT type,key,props_json,version FROM canonical_objects ORDER BY type,key")}
         links = [list(r) for r in self._con.execute(

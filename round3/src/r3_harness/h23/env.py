@@ -14,7 +14,7 @@ from r3_oracle.effect_meter import EffectMeter
 from r3_shared.clock import LogicalClock
 from r3_shared.identity import IdentityProvider
 from r3_shared.variant import CallResult
-from r3_shared.world import WorldStore
+from r3_shared.world import WorldLockTimeout, WorldStore
 
 from . import authspecs
 from .classify import classify
@@ -114,7 +114,10 @@ class Env:
         """Run one call, measure it, judge it. `subject` is the VERIFIED subject the token should resolve to
         (None for tokens that must not verify)."""
         self.n += 1
-        snap, pending_key = self.snapshot(), None
+        try:
+            snap, pending_key = self.snapshot(), None
+        except WorldLockTimeout as exc:
+            return self._lock_timeout_rec(rule, via, subject, operation, args, on_behalf_of, request_id, tags, str(exc))
         oargs = args if args_for_oracle is None else args_for_oracle
         was_crashed, dup_id = self.crashed, request_id is not None and request_id in self.committed
         if was_crashed:  # PROT-H23-A8: a crashed deployment is UNAVAILABLE and changes nothing
@@ -131,12 +134,19 @@ class Env:
         t0 = time.perf_counter()
         res: CallResult | None = None
         err = None
-        self.meter.begin()
+        try:
+            self.meter.begin()
+        except WorldLockTimeout as exc:
+            return self._lock_timeout_rec(rule, via, subject, operation, args, on_behalf_of, request_id, tags, str(exc))
         try:
             res = fn(token, operation, args, on_behalf_of, request_id)
         except Exception as exc:  # noqa: BLE001 - an exception from a variant is data, not a harness crash
             err = f"{type(exc).__name__}: {exc}"
-        measured = self.meter.end()
+        try:
+            measured = self.meter.end()
+        except WorldLockTimeout as exc:  # the call ran but its effects cannot be measured: classify, do not crash
+            self.meter.abort()
+            return self._lock_timeout_rec(rule, via, subject, operation, args, on_behalf_of, request_id, tags, str(exc))
         dt = (time.perf_counter() - t0) * 1000.0
         self.last_result = res
         status = "EXCEPTION" if res is None else res.status
@@ -158,6 +168,19 @@ class Env:
                     "in_tools": operation in self.tools(subject) if subject else None,
                     "crash_point": crash_point, "crash_triggered": crashed_now})
         self._a8_classes(rec, was_crashed, dup_id, crash_point, crashed_now, status)
+        return rec
+
+    def _lock_timeout_rec(self, rule, via, subject, operation, args, obo, request_id, tags, why: str) -> dict:
+        """The world store stayed unreadable past the bounded wait: a classified observation, never a harness crash.
+        Nothing is measured, so no effect classes are asserted; the evaluator refuses SUPPORTED on any of these."""
+        self.world_unreadable = getattr(self, "world_unreadable", 0) + 1
+        rec = classify(ops_model.Outcome(ops_model.DENIED_RULE, detail="world unreadable"), [], "UNMEASURED",
+                       writers=self.writers, via=via, tags=set(tags), clean=False, backstop_probe=False)
+        rec["classes"] = ["world_lock_timeout"]
+        rec.update({"rule": rule, "via": via, "subject": subject, "operation": operation, "args": _plain(args),
+                    "on_behalf_of": obo, "request_id": request_id, "status": "UNMEASURED", "error": why,
+                    "latency_ms": None, "oracle": "WORLD_UNREADABLE", "oracle_detail": why, "in_tools": None,
+                    "crash_point": None, "crash_triggered": False})
         return rec
 
     @staticmethod

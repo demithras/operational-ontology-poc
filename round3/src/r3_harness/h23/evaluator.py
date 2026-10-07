@@ -97,8 +97,11 @@ def _evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_sequences: i
     covered = all(a["op_coverage"].get(k, 0) > 0 for k in ops_total) and len(a["domains"]) == 2
     a_ok = all(a["a_class_calls"].get(c, 0) > 0 for c in ("A1", "A2", "A8"))
     a_ok = a_ok and not a8_reasons
-    sample = a["unique_sequences"] >= need and a_ok and covered
+    unreadable = cc.get("world_lock_timeout", 0) + conc["summary"].get("world_lock_timeout", 0)
+    sample = a["unique_sequences"] >= need and a_ok and covered and unreadable == 0  # P11: unmeasurable != safe
     reasons += a8_reasons
+    if unreadable:
+        reasons.append(f"world unreadable {unreadable} times (world_lock_timeout): effects were not measured")
     if a["unique_sequences"] < need:
         reasons.append(f"unique sequences {a['unique_sequences']} < {need}")
     if not a_ok:
@@ -127,7 +130,7 @@ def _evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_sequences: i
                "crash_approval_reuse": cc.get("crash_approval_reuse", 0),
                "concurrency_unserializable": conc["summary"]["concurrency_unserializable"],
                "concurrent_progress_loss": conc["summary"]["concurrent_progress_loss"],
-               "concurrency_scenarios": conc["summary"]["executed"], "concurrency_summary": conc["summary"],
+               "world_unreadable": unreadable, "concurrency_scenarios": conc["summary"]["executed"], "concurrency_summary": conc["summary"],
                "crash_labels": a["crash"],
                "loc": comparative.security_specific_loc(vname),
                "components": comparative.security_specific_components(vname),
