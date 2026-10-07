@@ -379,3 +379,6 @@ variant-chosen and read from its envelope.
 ## G2 errata E-3/E-4 (Paladin)
 Changed src/paladin/core_g2.py (authority decisions: operation null, revoke args = edge_id string) and deployment.py (total
 methods wrapper). Tests: tests/paladin/test_pal_g2_e34.py. tests/paladin: 207 passed.
+
+## G2 fix1 - Paladin (E-5, E-7, E-8)
+Changes in src/paladin/core.py and core_g2.py only; see spec/protections/H24-paladin.md and H27-paladin.md "G2 fix1". Tests: tests/paladin/test_pal_g2_fix1.py (14, all red on 319e567).

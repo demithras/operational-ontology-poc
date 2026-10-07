@@ -56,3 +56,15 @@ approvals `led/appr/`, idempotency `led/req/`, ledger meta (attempts, authority 
 - E-3: a v1 spec in force is treated as v2 (capabilities [], revoked [], depth 8) by delegate/revoke/authority_used
   (capgraph.to_v2). Every Deployment method is total: internal errors return CallResult UNAVAILABLE `internal_error: <Type>`
   (replay/explain: UNRESOLVED); Crash (BaseException, simulated process death) still passes through.
+
+## G2 fix1 (E-7, E-8)
+- E-7: `Core.__init__` never raises because of HistoryStore content. The authority record (`led/meta/auth_spec`) must exist in a
+  non-empty history, parse, validate, and equal its digest-addressed copy `auth/<digest>`; otherwise `Core.auth_fault` is set, the
+  deploy-time base is booted WITHOUT persisting (the tampered record is never overwritten), and every mutating call
+  (requests, delegate, revoke, set_authority) returns UNAVAILABLE `authority_history_unresolved` with zero effects. Replay/explain
+  keep answering VERIFIED/TAMPERED/UNRESOLVED from the stored artifacts. Ledger-recovery errors under a history set the same fault.
+  Vendored Engine code is untouched. Tests: test_pal_g2_fix1.py::test_e7_* (5 TamperView primitives x 2 authority records).
+- E-8: `G2Mixin.finish` envelopes every OK/DENIED/INVALID operation decision except schema-INVALID, decided by
+  `schema_problem` from the ops-spec input schema (unknown/missing/null/scalar-type), never from reason text or existence.
+  Existence/precondition/rule INVALID and every DENIED are governed (reason falls back to the gate name). delegate/revoke keep their
+  PROT-H24 s2 shape rule. Tests: test_pal_g2_fix1.py::test_e8_* (direct and call_tool; OK/DENIED/rule/existence/schema x3).
