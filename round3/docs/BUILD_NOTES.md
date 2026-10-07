@@ -263,3 +263,6 @@ Binding spec: spec/protections/PROT-H23-A8.md. Everything below is variant-neutr
 - corpus.crash_coverage: deterministic seeded per-domain/agent pass over all crash rules so required labels never depend on the random draw. The project domain has no approval-needing operation, so crash_appr scenarios exist only in manufacturing.
 - Test fakes persist approvals durably; known negatives (tests/test_h23_r6.py) lose or double-consume them.
 - Dev run exp-h23-dev5 (seed 13, 1000 sequences, 300 concurrency): both variants SUPPORTED, zero classes, differential 0/9684. Evidence copied to the scratchpad; experiment directory deleted.
+
+## P10 Conventional
+Approval/idempotency fingerprint now binds `on_behalf_of` literally (service.py; `canonical_obo` removed from policy.py). New tests in tests/conventional/test_p10_approval_binding.py (10; 6 fail on the old code). Note: tests/test_h23_p9.py::test_override_on_a_non_dev_experiment_id_exits_2_known_negative failed once in a full-suite run (and 20 errors in another), but passes alone and on the pre-change baseline - appears load/flake related.

@@ -107,11 +107,6 @@ class PolicyEngine:
         ok, _ = self._self_allowed(on_behalf_of, op, resources)
         return d(ok, "allowed" if ok else "delegator_not_allowed")
 
-    def canonical_obo(self, subject: str, on_behalf_of: str | None) -> str | None:
-        """A delegate's request is the same request with or without on_behalf_of=<its delegator>."""
-        p = self._principals.get(subject)
-        return p["delegated_by"] if p and p["delegated_by"] and on_behalf_of in (None, p["delegated_by"]) else on_behalf_of
-
     def effective_principal(self, subject: str) -> str:
         """The principal business rules see: the delegator for a delegate, else the subject itself."""
         p = self._principals.get(subject)

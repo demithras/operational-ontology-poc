@@ -188,7 +188,7 @@ class Service:
             raise _Abort("INVALID", {"reason": exc.reason, "detail": exc.detail}) from exc
         res = tuple((model.RESOURCES[n], v) for n, v in inputs.items() if n in model.RESOURCES)
         bound = BoundRequest(sub, obo, operation, MappingProxyType(inputs), res, request_id, self._policy.version,
-                             store.fingerprint(sub, self._policy.canonical_obo(sub, obo), operation, inputs))
+                             store.fingerprint(sub, obo, operation, inputs))  # on_behalf_of bound LITERALLY (P10)
         h = self._factory(WRITER)
         try:
             # unsynchronized_commit BUG: no lock above and no world transaction here, so check-then-act interleaves
@@ -296,7 +296,7 @@ class Service:
                     with h.transaction():
                         if self._armed == "before_commit":
                             raise self._crash_now()
-                        store.approval_add(h, store.fingerprint(requester, self._policy.canonical_obo(requester, on_behalf_of), operation, inputs), approver)
+                        store.approval_add(h, store.fingerprint(requester, on_behalf_of, operation, inputs), approver)
                 finally:
                     h.close()
                 if self._armed == "after_commit":
