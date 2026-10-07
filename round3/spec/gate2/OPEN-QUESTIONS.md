@@ -112,3 +112,9 @@ E-9 (2026-10-07, after G2 fix round 1, before any official G2 run) The schema-IN
     - revoke: edge_id is not a non-empty string. unknown_edge / not_revoker are governed.
     The oracle function r3_harness/h27/stream.py:oracle_schema_invalid implements exactly this; each variant envelopes
     exactly the complement; a shared conformance test compares them on generated edge cases.
+E-10 (2026-10-07, after G2 dev run 3, before any official G2 run) Replay re-evaluation (PROT-H27 s6): the AUTHORITY
+    decision is re-evaluated only for governed decisions whose recorded status is OK or DENIED. A governed decision whose
+    status is INVALID (existence/precondition/rule) did not necessarily reach an authority verdict (the frozen text does
+    not fix the order of the authority and existence checks); replay verifies its envelope, chain, anchor and bound
+    artifacts exactly as for any decision, but does not re-derive an authority verdict for it. The relative order of the
+    authority and existence checks stays variant-specific (both orders are safe: zero effects either way).
