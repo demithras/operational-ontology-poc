@@ -433,14 +433,17 @@ class Service(AuthorityOps):
                 if approver is None:
                     raise _Abort("DENIED", {"reason": "invalid_token"})
                 dc.subject = approver
-                if op is None or not op["approval"]:
-                    raise _Abort("INVALID", {"reason": "operation_takes_no_approval"})
+                if op is None:
+                    raise _Abort("INVALID", {"reason": "unknown_operation"})
                 dc.op = op
                 model = OPERATION_MODELS[operation]
                 try:
                     inputs = model.from_args(args).inputs()
                 except RequestInvalid as exc:
                     raise _Abort("INVALID", {"reason": exc.reason}) from exc
+                dc.governed = True  # E-9: a schema-valid approve is governed whatever its status
+                if not op["approval"]:
+                    raise _Abort("INVALID", {"reason": "operation_takes_no_approval"})
                 res = [(model.RESOURCES[n], v) for n, v in inputs.items() if n in model.RESOURCES]
                 dc.governed, dc.authority_doc = True, self._policy.doc
                 if not self._policy.can_approve(approver, requester, on_behalf_of, op["approval"]["approver_operation"], res,
