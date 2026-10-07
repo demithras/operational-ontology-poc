@@ -9,7 +9,10 @@ import json
 import sqlite3
 import time
 from pathlib import Path
+from contextlib import contextmanager
 from typing import Any, Callable
+
+from .worldlog import LOG_SCHEMA, Tx
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS canonical_objects(
@@ -55,16 +58,20 @@ def ref(type_: str, key: str) -> str:
 
 
 class WorldStore:
-    def __init__(self, path: str | Path):
+    def __init__(self, path: str | Path, clock=None, writers: frozenset[str] | None = None):
         self.path = str(path)
+        self.clock = clock  # LogicalClock | None: read once per write transaction (tx.tick)
+        self.writers = None if writers is None else frozenset(writers)
         con = _connect(self.path)
         con.execute("PRAGMA journal_mode=WAL")  # persistent in the file: every later connection is WAL
-        con.executescript(SCHEMA)
+        con.executescript(SCHEMA + LOG_SCHEMA)
         con.commit()
         con.close()
 
     def handle(self, writer: str) -> "WorldHandle":
-        return WorldHandle(self.path, writer)
+        if self.writers is not None and writer not in self.writers:
+            raise ValueError(f"writer {writer!r} is not in the writer allowlist")
+        return WorldHandle(self.path, writer, self.clock)
 
     def handle_factory(self) -> Callable[[str], "WorldHandle"]:
         return self.handle
@@ -76,69 +83,113 @@ class WorldStore:
 class WorldHandle:
     """Write+read access scoped by writer name. Autocommit per call; `transaction()` groups calls."""
 
-    def __init__(self, path: str, writer: str):
+    def __init__(self, path: str, writer: str, clock=None):
+        self._clock = clock
+        self._tx: Tx | None = None
         if not writer:
             raise ValueError("writer name required")
         self.writer = writer
         self._con = _connect(path, isolation_level=None, check_same_thread=False)  # PROT-H23-A8: callers may be threads; serialisation is the variant's job
         self._con.execute("PRAGMA synchronous=NORMAL")
-        self._in_tx = False
 
     def close(self) -> None:
         self._con.close()
 
-    def transaction(self):
-        h = self
-
-        class _Tx:
-            def __enter__(self):
-                h._con.execute("BEGIN IMMEDIATE")
-                h._in_tx = True
-
-            def __exit__(self, et, ev, tb):
-                h._con.execute("COMMIT" if et is None else "ROLLBACK")
-                h._in_tx = False
-                return False
-
-        return _Tx()
-
-    # -- canonical writes -------------------------------------------------------------------
-    def create(self, type_: str, key: str, props: dict) -> int:
+    @contextmanager
+    def transaction(self, tag: str | None = None):
+        """One world write transaction (BEGIN IMMEDIATE). Yields a Tx; nested use raises RuntimeError."""
+        if self._tx is not None:
+            raise RuntimeError("nested world transaction")
+        self._con.execute("BEGIN IMMEDIATE")
         try:
-            self._con.execute("INSERT INTO canonical_objects VALUES(?,?,?,1)", (type_, key, _j(props)))
-        except sqlite3.IntegrityError as exc:
-            raise WorldConflict(f"{ref(type_, key)} exists") from exc
+            self._con.execute("UPDATE world_meta SET v=v+1 WHERE k='tx'")
+            tid = self._con.execute("SELECT v FROM world_meta WHERE k='tx'").fetchone()[0]
+            tx = self._tx = Tx(self, tid, tag, self._clock.now() if self._clock is not None else 0)
+            yield tx
+        except BaseException:
+            if self._con.in_transaction:
+                self._con.execute("ROLLBACK")
+            raise
+        else:
+            self._con.execute("COMMIT")
+        finally:
+            if self._tx is not None:
+                self._tx._open = False
+            self._tx = None
+
+    @contextmanager
+    def _scope(self):
+        """The open Tx, or (autocommit write) a fresh single-write transaction with tag NULL."""
+        if self._tx is not None:
+            yield self._tx
+        else:
+            with self.transaction() as tx:
+                yield tx
+
+    def _append(self, tx: Tx, kind: str, ref_: str, data: dict) -> int:
+        cur = self._con.execute(
+            "INSERT INTO world_log(tx,tag,tick,writer,kind,ref,data_json) VALUES(?,?,?,?,?,?,?)",
+            (tx.id, tx.tag, tx.tick, self.writer, kind, ref_, _j(data)))
+        return int(cur.lastrowid)
+
+    # -- canonical writes (each also appends one world_log row in the same transaction) -----
+    def create(self, type_: str, key: str, props: dict) -> int:
+        with self._scope() as tx:
+            try:
+                self._con.execute("INSERT INTO canonical_objects VALUES(?,?,?,1)", (type_, key, _j(props)))
+            except sqlite3.IntegrityError as exc:
+                raise WorldConflict(f"{ref(type_, key)} exists") from exc
+            self._append(tx, "create", ref(type_, key), {"props": props, "version": 1})
         return 1
 
     def update(self, type_: str, key: str, props: dict, expected_version: int | None = None) -> int:
-        row = self._con.execute("SELECT props_json, version FROM canonical_objects WHERE type=? AND key=?",
-                                (type_, key)).fetchone()
-        if row is None:
-            raise WorldConflict(f"{ref(type_, key)} missing")
-        if expected_version is not None and row[1] != expected_version:
-            raise WorldConflict(f"{ref(type_, key)} version {row[1]} != expected {expected_version}")
-        merged = {**json.loads(row[0]), **props}
-        self._con.execute("UPDATE canonical_objects SET props_json=?, version=? WHERE type=? AND key=?",
-                          (_j(merged), row[1] + 1, type_, key))
+        with self._scope() as tx:
+            row = self._con.execute("SELECT props_json, version FROM canonical_objects WHERE type=? AND key=?",
+                                    (type_, key)).fetchone()
+            if row is None:
+                raise WorldConflict(f"{ref(type_, key)} missing")
+            if expected_version is not None and row[1] != expected_version:
+                raise WorldConflict(f"{ref(type_, key)} version {row[1]} != expected {expected_version}")
+            merged = {**json.loads(row[0]), **props}
+            self._con.execute("UPDATE canonical_objects SET props_json=?, version=? WHERE type=? AND key=?",
+                              (_j(merged), row[1] + 1, type_, key))
+            self._append(tx, "update", ref(type_, key), {"patch": props, "props": merged, "version": row[1] + 1})
         return row[1] + 1
 
     def delete(self, type_: str, key: str) -> None:
-        n = self._con.execute("DELETE FROM canonical_objects WHERE type=? AND key=?", (type_, key)).rowcount
-        if n == 0:
-            raise WorldConflict(f"{ref(type_, key)} missing")
+        with self._scope() as tx:
+            row = self._con.execute("SELECT props_json FROM canonical_objects WHERE type=? AND key=?",
+                                    (type_, key)).fetchone()
+            if row is None:
+                raise WorldConflict(f"{ref(type_, key)} missing")
+            self._con.execute("DELETE FROM canonical_objects WHERE type=? AND key=?", (type_, key))
+            self._append(tx, "delete", ref(type_, key), {"props": json.loads(row[0])})
 
     def link(self, link_type: str, src: str, dst: str) -> None:
-        self._con.execute("INSERT OR IGNORE INTO canonical_links VALUES(?,?,?)", (link_type, src, dst))
+        with self._scope() as tx:  # a no-op re-link changes nothing and logs nothing
+            n = self._con.execute("INSERT OR IGNORE INTO canonical_links VALUES(?,?,?)", (link_type, src, dst)).rowcount
+            if n:
+                self._append(tx, "link", "|".join((link_type, src, dst)), {"link_type": link_type, "src": src, "dst": dst})
 
     def unlink(self, link_type: str, src: str, dst: str) -> None:
-        self._con.execute("DELETE FROM canonical_links WHERE link_type=? AND src=? AND dst=?", (link_type, src, dst))
+        with self._scope() as tx:
+            n = self._con.execute("DELETE FROM canonical_links WHERE link_type=? AND src=? AND dst=?",
+                                  (link_type, src, dst)).rowcount
+            if n:
+                self._append(tx, "unlink", "|".join((link_type, src, dst)),
+                             {"link_type": link_type, "src": src, "dst": dst})
 
     # -- external effect write (an adapter's committed effect on an outside system) ----------
     def external_write(self, adapter: str, target: str, payload: dict, idempotency_key: str | None = None) -> int:
-        cur = self._con.execute(
-            "INSERT INTO external_effects(adapter,target,payload_json,idempotency_key,writer) VALUES(?,?,?,?,?)",
-            (adapter, target, _j(payload), idempotency_key, self.writer))
-        return int(cur.lastrowid)
+        with self._scope() as tx:
+            cur = self._con.execute(
+                "INSERT INTO external_effects(adapter,target,payload_json,idempotency_key,writer) VALUES(?,?,?,?,?)",
+                (adapter, target, _j(payload), idempotency_key, self.writer))
+            eseq = int(cur.lastrowid)
+            self._append(tx, "external", f"{adapter}:{target}#{eseq}",
+                         {"adapter": adapter, "target": target, "payload": payload,
+                          "idempotency_key": idempotency_key, "effect_seq": eseq})
+        return eseq
 
     # -- reads (variants may read their own truth) --------------------------------------------
     def get(self, type_: str, key: str) -> dict | None:
@@ -205,7 +256,15 @@ class WorldReader:
             "SELECT type,key,props_json,version FROM canonical_objects ORDER BY type,key")}
         links = [list(r) for r in self._con.execute(
             "SELECT link_type,src,dst FROM canonical_links ORDER BY link_type,src,dst")]
-        return {"objects": objs, "links": links, "effects": _effects(self._con)}
+        head = self._con.execute("SELECT COALESCE(MAX(seq),0) FROM world_log").fetchone()[0]
+        return {"objects": objs, "links": links, "effects": _effects(self._con), "log_head": head}
+
+    def log(self, after_seq: int = 0) -> list[dict]:
+        """world_log rows with seq > after_seq, in seq order (data_json parsed into `data`)."""
+        rows = self._con.execute("SELECT seq,tx,tag,tick,writer,kind,ref,data_json FROM world_log WHERE seq>? "
+                                 "ORDER BY seq", (after_seq,)).fetchall()
+        return [{"seq": s_, "tx": t, "tag": g, "tick": k, "writer": w, "kind": kd, "ref": r, "data": json.loads(d)}
+                for s_, t, g, k, w, kd, r, d in rows]
 
 
 def diff(before: dict, after: dict) -> list[dict]:
