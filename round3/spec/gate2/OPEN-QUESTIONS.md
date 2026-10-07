@@ -73,3 +73,17 @@ E-2 validate_strict (P1d-3) does not check the root-edge delegable-grant rule or
 E-3 (2026-10-07, after the G2 variant builds, before any H24/H27 measurement) delegate/revoke/authority_used while a v1
     authority spec is in force: treat it exactly as a v2 document with `capabilities: []`, `revoked: []` and
     `max_delegation_depth: 8` (PROT-H24 s1 frozen maximum). Never an uncaught exception (every call returns a CallResult).
+E-4 (2026-10-07, after the G2 builds, before any H27 measurement) Envelope encoding details PROT-H27 s1-s2 left open.
+    The oracle's forms (r3_oracle/provenance.py at r3-g2-h27-harness) are binding for both variants:
+    - `operation`: the operation name for call_tool/direct/approve; null for delegate/revoke.
+    - `args_digest` = sha256(canonical_bytes(X)) with X = the args dict exactly as passed for call_tool/direct; for approve
+      the approved request's `args` dict (not a wrapper); the edge dict for delegate; the edge_id STRING for revoke.
+    - `decision_id`: the request_id for call_tool/direct/delegate/revoke; for approve a variant-chosen id unique within
+      the stream (the oracle reads it from the envelope).
+    - `effect_digest` = sha256(canonical_bytes([row...])) over ALL world_log rows of the decision's transaction (marks
+      included), seq order, each row with all columns; [] for refusals.
+    - `world_seq`/`tick`: the transaction's `commit` mark seq/tick; else the last effect row; else the world_log head and
+      clock read when deciding.
+    - `newest` evidence tie-break: greatest field value, then the smallest ref.
+    - policy artifact = canonical {"config", "business_rules", "approval"}; contract artifact = canonical(op minus
+      business_rules/approval, plus "helpers" and "spec") - exactly PROT-H27 s1.
