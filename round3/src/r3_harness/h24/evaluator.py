@@ -151,7 +151,8 @@ def _evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_sequences=No
     support = (others == 0 and equality is not None and equality >= t["required_oracle_equality"]
                and kill_rate is not None and kill_rate >= t["required_mutation_kill_rate"])
     if reject:
-        reasons.append("reject: " + ", ".join(f"{k}={n[k]}" for k in VIOLATIONS if n[k]))
+        falsifiers = ("scope_amplification", "cycle_grant", "linearizability_violation", *STALE)
+        reasons.append("reject: " + ", ".join(f"{k}={n[k]}" for k in falsifiers if n[k]))
     elif not support:
         reasons.append(f"support conditions unmet: violations={ {k: n[k] for k in VIOLATIONS if n[k]} } "
                        f"equality={equality} kill_rate={kill_rate}")
