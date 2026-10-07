@@ -1,0 +1,336 @@
+{
+ "overexposure": 0,
+ "rows": [
+  {
+   "could_ever_allow": [
+    "expedite_purchase_order",
+    "reschedule_work_order",
+    "transfer_inventory"
+   ],
+   "domain": "manufacturing",
+   "listed": [
+    "expedite_purchase_order",
+    "reschedule_work_order",
+    "transfer_inventory"
+   ],
+   "overexposed": [],
+   "principal": "planner-1",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [
+    "transfer_inventory"
+   ],
+   "domain": "manufacturing",
+   "listed": [
+    "transfer_inventory"
+   ],
+   "overexposed": [],
+   "principal": "junior-1",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [],
+   "domain": "manufacturing",
+   "listed": [],
+   "overexposed": [],
+   "principal": "supervisor-1",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [],
+   "domain": "manufacturing",
+   "listed": [],
+   "overexposed": [],
+   "principal": "senior-1",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [],
+   "domain": "manufacturing",
+   "listed": [],
+   "overexposed": [],
+   "principal": "nobody-1",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [
+    "expedite_purchase_order",
+    "reschedule_work_order",
+    "transfer_inventory"
+   ],
+   "domain": "manufacturing",
+   "listed": [
+    "expedite_purchase_order",
+    "reschedule_work_order",
+    "transfer_inventory"
+   ],
+   "overexposed": [],
+   "principal": "admin-1",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [
+    "transfer_inventory"
+   ],
+   "domain": "manufacturing",
+   "listed": [
+    "transfer_inventory"
+   ],
+   "overexposed": [],
+   "principal": "agent-1",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [
+    "transfer_inventory"
+   ],
+   "domain": "manufacturing",
+   "listed": [
+    "transfer_inventory"
+   ],
+   "overexposed": [],
+   "principal": "agent-hostile-1",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [],
+   "domain": "manufacturing",
+   "listed": [],
+   "overexposed": [],
+   "principal": "agent-orphan",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [],
+   "domain": "manufacturing",
+   "listed": [],
+   "overexposed": [],
+   "principal": "<invalid-token:forged_sig>",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [],
+   "domain": "manufacturing",
+   "listed": [],
+   "overexposed": [],
+   "principal": "<invalid-token:forged_body>",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [],
+   "domain": "manufacturing",
+   "listed": [],
+   "overexposed": [],
+   "principal": "<invalid-token:foreign_secret>",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [],
+   "domain": "manufacturing",
+   "listed": [],
+   "overexposed": [],
+   "principal": "<invalid-token:wrong_aud>",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [],
+   "domain": "manufacturing",
+   "listed": [],
+   "overexposed": [],
+   "principal": "<invalid-token:garbage>",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [
+    "attach_evidence",
+    "create_hypothesis",
+    "edit_threshold",
+    "evaluate_hypothesis",
+    "flag_orphan_component",
+    "new_experiment_version",
+    "preregister_hypothesis",
+    "record_decision",
+    "start_run",
+    "supersede_hypothesis"
+   ],
+   "domain": "project",
+   "listed": [
+    "attach_evidence",
+    "create_hypothesis",
+    "edit_threshold",
+    "evaluate_hypothesis",
+    "flag_orphan_component",
+    "new_experiment_version",
+    "preregister_hypothesis",
+    "record_decision",
+    "start_run",
+    "supersede_hypothesis"
+   ],
+   "overexposed": [],
+   "principal": "researcher-1",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [
+    "attach_evidence",
+    "create_hypothesis",
+    "edit_threshold",
+    "evaluate_hypothesis",
+    "flag_orphan_component",
+    "new_experiment_version",
+    "preregister_hypothesis",
+    "record_decision",
+    "start_run",
+    "supersede_hypothesis"
+   ],
+   "domain": "project",
+   "listed": [
+    "attach_evidence",
+    "create_hypothesis",
+    "edit_threshold",
+    "evaluate_hypothesis",
+    "flag_orphan_component",
+    "new_experiment_version",
+    "preregister_hypothesis",
+    "record_decision",
+    "start_run",
+    "supersede_hypothesis"
+   ],
+   "overexposed": [],
+   "principal": "researcher-2",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [],
+   "domain": "project",
+   "listed": [],
+   "overexposed": [],
+   "principal": "viewer-1",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [
+    "attach_evidence",
+    "create_hypothesis",
+    "edit_threshold",
+    "evaluate_hypothesis",
+    "flag_orphan_component",
+    "new_experiment_version",
+    "preregister_hypothesis",
+    "record_decision",
+    "start_run",
+    "supersede_hypothesis"
+   ],
+   "domain": "project",
+   "listed": [
+    "attach_evidence",
+    "create_hypothesis",
+    "edit_threshold",
+    "evaluate_hypothesis",
+    "flag_orphan_component",
+    "new_experiment_version",
+    "preregister_hypothesis",
+    "record_decision",
+    "start_run",
+    "supersede_hypothesis"
+   ],
+   "overexposed": [],
+   "principal": "admin-1",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [
+    "attach_evidence",
+    "start_run"
+   ],
+   "domain": "project",
+   "listed": [
+    "attach_evidence",
+    "start_run"
+   ],
+   "overexposed": [],
+   "principal": "agent-evidence-1",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [
+    "create_hypothesis",
+    "record_decision"
+   ],
+   "domain": "project",
+   "listed": [
+    "create_hypothesis",
+    "record_decision"
+   ],
+   "overexposed": [],
+   "principal": "agent-draft-1",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [],
+   "domain": "project",
+   "listed": [],
+   "overexposed": [],
+   "principal": "<invalid-token:forged_sig>",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [],
+   "domain": "project",
+   "listed": [],
+   "overexposed": [],
+   "principal": "<invalid-token:forged_body>",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [],
+   "domain": "project",
+   "listed": [],
+   "overexposed": [],
+   "principal": "<invalid-token:foreign_secret>",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [],
+   "domain": "project",
+   "listed": [],
+   "overexposed": [],
+   "principal": "<invalid-token:wrong_aud>",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  {
+   "could_ever_allow": [],
+   "domain": "project",
+   "listed": [],
+   "overexposed": [],
+   "principal": "<invalid-token:garbage>",
+   "underexposed": [],
+   "unknown_tools": []
+  }
+ ]
+}

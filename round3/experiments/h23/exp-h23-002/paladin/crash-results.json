@@ -1,0 +1,143 @@
+{
+ "crash_approval_lost": 0,
+ "crash_approval_reuse": 0,
+ "crash_duplicate_effect": 0,
+ "crash_state_mismatch": 0,
+ "crash_unsupported": 0,
+ "labels": {
+  "crash_after:armed": {
+   "calls": 1312,
+   "classes": {},
+   "triggered": 1312
+  },
+  "crash_after:replay-new": {
+   "calls": 1312,
+   "classes": {},
+   "triggered": 0
+  },
+  "crash_after:replay-same": {
+   "calls": 1312,
+   "classes": {},
+   "triggered": 0
+  },
+  "crash_after:unavailable": {
+   "calls": 1312,
+   "classes": {},
+   "triggered": 0
+  },
+  "crash_appr_after:approve": {
+   "calls": 145,
+   "classes": {},
+   "triggered": 0
+  },
+  "crash_appr_after:armed": {
+   "calls": 145,
+   "classes": {},
+   "triggered": 145
+  },
+  "crash_appr_after:replay-new": {
+   "calls": 145,
+   "classes": {},
+   "triggered": 0
+  },
+  "crash_appr_after:replay-same": {
+   "calls": 145,
+   "classes": {},
+   "triggered": 0
+  },
+  "crash_appr_after:unavailable": {
+   "calls": 145,
+   "classes": {},
+   "triggered": 0
+  },
+  "crash_appr_before:approve": {
+   "calls": 147,
+   "classes": {},
+   "triggered": 0
+  },
+  "crash_appr_before:armed": {
+   "calls": 147,
+   "classes": {},
+   "triggered": 147
+  },
+  "crash_appr_before:replay-new": {
+   "calls": 147,
+   "classes": {},
+   "triggered": 0
+  },
+  "crash_appr_before:replay-same": {
+   "calls": 147,
+   "classes": {},
+   "triggered": 0
+  },
+  "crash_appr_before:unavailable": {
+   "calls": 147,
+   "classes": {},
+   "triggered": 0
+  },
+  "crash_before:armed": {
+   "calls": 1346,
+   "classes": {},
+   "triggered": 1346
+  },
+  "crash_before:replay-new": {
+   "calls": 1346,
+   "classes": {},
+   "triggered": 0
+  },
+  "crash_before:replay-same": {
+   "calls": 1346,
+   "classes": {},
+   "triggered": 0
+  },
+  "crash_before:unavailable": {
+   "calls": 1346,
+   "classes": {},
+   "triggered": 0
+  },
+  "crash_idle:continue": {
+   "calls": 1339,
+   "classes": {},
+   "triggered": 0
+  },
+  "crash_idle:pre": {
+   "calls": 1339,
+   "classes": {},
+   "triggered": 0
+  },
+  "crash_idle:replay-same": {
+   "calls": 1339,
+   "classes": {},
+   "triggered": 0
+  },
+  "crash_idle:unavailable": {
+   "calls": 1339,
+   "classes": {},
+   "triggered": 0
+  }
+ },
+ "required": [
+  "crash_before:armed",
+  "crash_before:unavailable",
+  "crash_before:replay-same",
+  "crash_before:replay-new",
+  "crash_after:armed",
+  "crash_after:unavailable",
+  "crash_after:replay-same",
+  "crash_after:replay-new",
+  "crash_idle:pre",
+  "crash_idle:unavailable",
+  "crash_idle:replay-same",
+  "crash_idle:continue",
+  "crash_appr_before:approve",
+  "crash_appr_before:armed",
+  "crash_appr_before:unavailable",
+  "crash_appr_before:replay-same",
+  "crash_appr_before:replay-new",
+  "crash_appr_after:approve",
+  "crash_appr_after:armed",
+  "crash_appr_after:unavailable",
+  "crash_appr_after:replay-same",
+  "crash_appr_after:replay-new"
+ ]
+}
