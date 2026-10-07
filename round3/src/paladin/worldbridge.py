@@ -142,3 +142,17 @@ class WorldGitAdapter:
 
 def jdump(x: Any) -> str:
     return json.dumps(x, sort_keys=True, separators=(",", ":"))
+
+
+# ---- Gate 2: reading the variant's own world_log (the handle has no accessor; read-only SQL on its own connection) -----
+def log_head(handle) -> int:
+    """world_log head (max seq) as the service handle sees it: the world_seq of a refusal (PROT-H27 s1)."""
+    return int(handle._con.execute("SELECT COALESCE(MAX(seq),0) FROM world_log").fetchone()[0])
+
+
+def tx_rows(handle, tx_id: int) -> list[dict]:
+    """The world_log rows written by transaction `tx_id`, in the WorldReader.log() row form (PROT-H27 s1 effect_digest)."""
+    rows = handle._con.execute("SELECT seq,tx,tag,tick,writer,kind,ref,data_json FROM world_log WHERE tx=? ORDER BY seq",
+                               (tx_id,)).fetchall()
+    return [{"seq": s, "tx": t, "tag": g, "tick": k, "writer": w, "kind": kd, "ref": r, "data": json.loads(d)}
+            for s, t, g, k, w, kd, r, d in rows]

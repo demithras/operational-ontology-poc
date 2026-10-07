@@ -97,14 +97,14 @@ class Ledger:
         return out
 
     # ---- approvals (single use, durable) ------------------------------------------------------
-    def add_approval(self, fp: str, approver: str) -> None:
+    def add_approval(self, fp: str, approver: str, decision_id: str | None = None) -> None:
         with self._lock:
             if self.volatile:
                 self._mem_appr.append({"fp": fp, "approver": approver})
                 return
             self._con.execute("INSERT INTO approvals(fp,approver) VALUES(?,?)", (fp, approver))
 
-    def claim_approval(self, fp: str, rid: str) -> str | None:
+    def claim_approval(self, fp: str, rid: str, verify=None) -> str | None:
         """Claim the oldest unused approval for this exact request fingerprint; returns the approver pid."""
         with self._lock:
             if self.volatile:
@@ -129,6 +129,20 @@ class Ledger:
         with self._lock:
             if not self.volatile:
                 self._con.execute("UPDATE approvals SET claimed_by=NULL WHERE claimed_by=?", (rid,))
+
+    def commit_row(self, rid: str, fp: str, sub: str, obo: Any, op: str, status: str, body: dict) -> None:
+        """Gate 2: a request whose effect is the authority change itself (delegate/revoke): COMMITTED row, no PREPARED phase."""
+        with self._lock:
+            self._con.execute("INSERT OR REPLACE INTO requests(rid,fp,state,pre,sub,obo,op,status,body_json) "
+                              "VALUES(?,?,?,?,?,?,?,?,?)", (rid, fp, "COMMITTED", None, sub, obo, op, status,
+                                                            json.dumps(body, sort_keys=True)))
+
+    def drop(self, rid: str) -> None:
+        with self._lock:
+            self._con.execute("DELETE FROM requests WHERE rid=?", (rid,))
+
+    def claimed_record(self, rid: str) -> dict | None:
+        return None
 
     # ---- authority in force ---------------------------------------------------------------------
     def put_meta(self, k: str, v: Any) -> None:
