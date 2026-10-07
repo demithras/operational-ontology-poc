@@ -85,3 +85,14 @@ def test_clock_is_thread_safe():
     [t.start() for t in ts]
     [t.join() for t in ts]
     assert clock.now() == 4000
+
+
+def test_autocommit_write_joins_a_raw_transaction_opened_on_the_connection(tmp_path):
+    """H23 leak test opens BEGIN IMMEDIATE on the raw connection, then writes: must not raise, and still logs."""
+    st = WorldStore(tmp_path / "w.db")
+    h, r = st.handle("leaker"), st.reader()
+    h._con.execute("BEGIN IMMEDIATE")
+    h.create("t", "k", {"a": 1})
+    assert r.log() == [] and r.snapshot()["objects"] == {}   # uncommitted: invisible to readers
+    h._con.execute("COMMIT")
+    assert [x["kind"] for x in r.log()] == ["create"] and r.snapshot()["objects"]["t:k"]["props"] == {"a": 1}

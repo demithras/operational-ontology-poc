@@ -7,7 +7,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable, Iterable, Literal, Protocol, runtime_checkable
 
+from .anchor import AnchorClient
 from .clock import LogicalClock
+from .histstore import HistoryStore
 from .identity import TokenVerifier
 from .world import WorldHandle
 
@@ -30,6 +32,19 @@ class CallResult:
     def __post_init__(self):
         if self.status not in STATUSES:
             raise ValueError(f"bad status {self.status!r}")
+
+
+@dataclass(frozen=True)
+class ReplayResult:
+    """PROT-H27 s6. artifacts: digest -> bytes, only when status == VERIFIED (envelope is then non-None)."""
+    status: Literal["VERIFIED", "TAMPERED", "UNRESOLVED"]
+    reason: str
+    envelope: dict | None = None
+    artifacts: dict[str, bytes] = field(default_factory=dict)
+
+    def __post_init__(self):
+        if self.status not in ("VERIFIED", "TAMPERED", "UNRESOLVED"):
+            raise ValueError(f"bad replay status {self.status!r}")
 
 
 WorldHandleFactory = Callable[[str], WorldHandle]
@@ -80,6 +95,24 @@ class Deployment(Protocol):
     def restart(self) -> None:
         """Rebuild from the world store + state_dir ONLY. A committed request_id never produces a second effect."""
 
+    # ---- Gate 2 (PROTOCOL-P1d P1d-4). A variant that has not built these raises
+    # NotImplementedError("not implemented yet - G2"); the harness labels that `unsupported` (verdict INCONCLUSIVE).
+    def delegate(self, token: str, edge: dict, request_id: str) -> CallResult:
+        """PROT-H24 s2. OK body {"edge_id"}. Mutating: thread-safe, arm_crash applies, request_id idempotent (R5)."""
+
+    def revoke(self, token: str, edge_id: str, request_id: str) -> CallResult:
+        """PROT-H24 s5. Mutating, same rules as delegate."""
+
+    def authority_used(self, request_id: str) -> CallResult:
+        """PROT-H24 R24-6. OK body {"authority_version","world_seq","tick","path":[edge ids],"on_behalf_of"};
+        INVALID {"reason": "unknown_request"} if the request_id never committed."""
+
+    def replay(self, decision_id: str) -> ReplayResult:
+        """PROT-H27 s6: verify the decision's provenance against the anchor on a FRESH deployment."""
+
+    def explain(self, decision_id: str) -> ReplayResult:
+        """PROT-H27 R27-7: equals replay's verified envelope or carries the same TAMPERED/UNRESOLVED status."""
+
 
 @runtime_checkable
 class Variant(Protocol):
@@ -90,6 +123,25 @@ class Variant(Protocol):
 
     def deploy(self, domain: str, world_handle_factory: WorldHandleFactory, verifier: TokenVerifier,
                ops_spec: dict, auth_spec: dict, clock: LogicalClock,
-               state_dir: str | None = None) -> Deployment:
+               state_dir: str | None = None, history: HistoryStore | None = None,
+               anchor: AnchorClient | None = None) -> Deployment:
         """state_dir: a private directory that survives crash()/restart() (the world store survives too);
-        everything held in memory is lost on crash."""
+        everything held in memory is lost on crash.
+        history (H27 runs): every durable variant record other than the world store (envelopes, receipts, artifacts,
+        approvals, idempotency ledger, authority versions) lives in it and state_dir is then None. anchor None ->
+        H27 APIs return UNRESOLVED `no_anchor`. Both None = H23/H24 behaviour, unchanged."""
+
+
+G2_METHODS = ("delegate", "revoke", "authority_used", "replay", "explain")
+G2_MISSING = "not implemented yet - G2"
+
+
+def g2_call(deployment, method: str, *args, **kwargs):
+    """Harness entry for the Gate 2 methods: a deployment that lacks one (variant not built yet) raises
+    NotImplementedError("not implemented yet - G2"), which the harness labels `unsupported` (never SUPPORTED)."""
+    if method not in G2_METHODS:
+        raise ValueError(f"not a Gate 2 method: {method}")
+    fn = getattr(deployment, method, None)
+    if not callable(fn):
+        raise NotImplementedError(G2_MISSING)
+    return fn(*args, **kwargs)

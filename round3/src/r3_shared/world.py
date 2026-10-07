@@ -122,6 +122,10 @@ class WorldHandle:
         """The open Tx, or (autocommit write) a fresh single-write transaction with tag NULL."""
         if self._tx is not None:
             yield self._tx
+        elif self._con.in_transaction:  # a caller opened a raw transaction on the connection (H23 leak test): join it
+            self._con.execute("UPDATE world_meta SET v=v+1 WHERE k='tx'")
+            tid = self._con.execute("SELECT v FROM world_meta WHERE k='tx'").fetchone()[0]
+            yield Tx(self, tid, None, self._clock.now() if self._clock is not None else 0)
         else:
             with self.transaction() as tx:
                 yield tx

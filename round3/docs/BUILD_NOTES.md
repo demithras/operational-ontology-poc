@@ -276,3 +276,20 @@ Approval/idempotency fingerprint now binds `on_behalf_of` literally (service.py;
   past JOIN_S (daemon) can keep a lock while the harness snapshots.
 - Fix: world.py WAL on every connection, busy_timeout 15s, reader = one read txn with bounded retry -> WorldLockTimeout; Env/concurrency
   classify `world_lock_timeout`; mutant runs count it as detection; evaluator adds "world unreadable N times" and denies SUPPORTED.
+
+## P1d - Gate 2 shared protocol (r3_shared only; variants/oracle/harness untouched)
+- world_log (src/r3_shared/world.py + worldlog.py): additive table; every WorldHandle write appends one row in the same SQLite txn.
+  Autocommit write = own tx id, tag NULL. `transaction(tag)` yields `Tx(id, tag, tick, mark())`; nested use and mark-after-close raise
+  RuntimeError. `WorldStore(path, clock, writers)`: `handle()` refuses writers outside the allowlist. `WorldReader.log(after_seq)`;
+  snapshot gains `log_head`. A no-op `link`/`unlink` (nothing changed) appends no row. Update row data = {patch, props(merged), version}.
+- LogicalClock: threading.Lock around now()/advance().
+- authority v2: schemas/authority-spec-v2.schema.json, src/r3_shared/authgraph.py (scope_covers, scope_subset, edge_path,
+  authority_document/digest, validate_graph), `authspec.validate_strict` dispatches on `spec`. Root-edge delegable-grant coverage and
+  `redelegable` are runtime issuance rules (PROT-H24 s2.4/2.5), not static checks (P1d-3 lists neither).
+- variant.py: ReplayResult, Deployment.delegate/revoke/authority_used/replay/explain, deploy(history=, anchor=), `g2_call()` (missing
+  method -> NotImplementedError("not implemented yet - G2")).
+- histstore.py (HistoryStore, TamperView), anchor.py (AnchorClient, start_anchor, verify_anchor_log, close_anchor) and anchor_server.py
+  (separate process; HMAC chain; key revealed to KEY.revealed + HEAD.final at close). scripts/run_sandboxed.sh runs a command under
+  sandbox-exec with file-write* denied on the anchor dir (tests/test_p1d_sandbox.py: known-negative + known-positive + non-sandbox control).
+- Import scan: paladin/conventional may not import r3_shared.anchor_server or TamperView (tests/test_import_boundaries.py).
+- Fakes: tests/fakes/fake_g2.py (G2Mixin on FakeDeployment). Edited existing test: tests/test_mutants.py (ALL was asserted == H23 list).

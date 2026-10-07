@@ -9,20 +9,22 @@ from pathlib import Path
 from r3_shared.identity import TokenError
 from r3_shared.mutants import validate
 from r3_shared.variant import CallResult, ToolDescriptor
+from tests.fakes.fake_g2 import G2Mixin
 
 
-class FakeDeployment:
+class FakeDeployment(G2Mixin):
     """Correct fake (PROT-H23-A8): request_id ledger is durable in state_dir, written before the world commit
     and after the before_commit crash point; a lock serialises authorize->commit."""
     durable_ledger = True
 
-    def __init__(self, domain, factory, verifier, clock, auth_spec=None, state_dir=None):
+    def __init__(self, domain, factory, verifier, clock, auth_spec=None, state_dir=None, history=None, anchor=None):
         self.auth_spec = auth_spec or {}
         self.domain, self.verifier, self.clock = domain, verifier, clock
         self.factory, self.state_dir = factory, state_dir
         self.world = factory("fake-service")
         self.crashed, self._armed, self._lock = False, None, threading.Lock()
         self._mem_ledger = set()
+        self._g2_init(history, anchor)
 
     # --- ledger -------------------------------------------------------------
     def _ledger_path(self):
@@ -63,24 +65,30 @@ class FakeDeployment:
                 return CallResult("DENIED", {"reason": "bad token"})
             if request_id is not None and request_id in self._ledger():
                 return CallResult("OK", {"replayed": True})
-            return self._commit(sub, args, request_id)
+            return self._commit(sub, args, request_id, on_behalf_of)
 
-    def _commit(self, sub, args, request_id):
+    def _commit(self, sub, args, request_id, obo=None):
         armed, self._armed = self._armed, None
         if armed == "before_commit":
             self.crashed = True
             return CallResult("UNKNOWN", {"reason": "crashed"})
         if request_id is not None:
             self._record(request_id)
-        rec = self.world.get(args["type"], args["key"])
-        if rec is None:
-            self.world.create(args["type"], args["key"], {"by": sub, "n": 1})
-        else:
-            self.world.update(args["type"], args["key"], {"by": sub, "n": rec["props"].get("n", 1) + 1})
+        with self.world.transaction(tag="effect") as tx:
+            rec = self.world.get(args["type"], args["key"])
+            if rec is None:
+                self.world.create(args["type"], args["key"], {"by": sub, "n": 1})
+            else:
+                self.world.update(args["type"], args["key"], {"by": sub, "n": rec["props"].get("n", 1) + 1})
+            seq = tx.mark("commit", {"request_id": request_id, "kind": "direct", "authority_version": self.authority_version()})
+        if request_id is not None:
+            self.g2["used"][request_id] = {"authority_version": self.authority_version(), "world_seq": seq,
+                                           "tick": tx.tick, "path": [], "on_behalf_of": obo}
+            self._g2_save()
         if armed == "after_commit":
             self.crashed = True
             return CallResult("UNKNOWN", {"reason": "crashed"})
-        return CallResult("OK", {})
+        return self._g2_anchor(request_id, "direct", sub, seq, tx.tick, {}) if request_id is not None else CallResult("OK", {})
 
     def read(self, token, operation, args):
         rec = self.world.get(args["type"], args["key"])
@@ -116,6 +124,7 @@ class FakeDeployment:
     def restart(self):
         self.crashed, self._armed, self._mem_ledger = False, None, set()
         self.world = self.factory("fake-service")
+        self._g2_init(self.history, self.anchor)
 
 
 class FakeVolatileLedger(FakeDeployment):
@@ -131,8 +140,9 @@ class FakeVariant:
 
     deployment_class = FakeDeployment
 
-    def deploy(self, domain, world_handle_factory, verifier, ops_spec, auth_spec, clock, state_dir=None):
-        return self.deployment_class(domain, world_handle_factory, verifier, clock, auth_spec, state_dir)
+    def deploy(self, domain, world_handle_factory, verifier, ops_spec, auth_spec, clock, state_dir=None,
+               history=None, anchor=None):
+        return self.deployment_class(domain, world_handle_factory, verifier, clock, auth_spec, state_dir, history, anchor)
 
 
 class FakeVolatileVariant(FakeVariant):

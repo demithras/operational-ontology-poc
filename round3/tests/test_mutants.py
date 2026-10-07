@@ -7,7 +7,7 @@ from tests.fakes.fake_variant import FakeVariant
 def test_known_and_validate():
     assert mutants.KNOWN["H23"] == ["identity_substitution", "mutable_gated_input", "backstop_bypass", "tool_overexposure",
                                     "ledger_after_commit_volatile", "unsynchronized_commit"]
-    assert mutants.ALL == frozenset(mutants.KNOWN["H23"])
+    assert frozenset(mutants.KNOWN["H23"]) <= mutants.ALL  # Gate 2 appends H24/H27 keys (see test_p1d_misc)
     assert mutants.validate(["backstop_bypass"]) == frozenset({"backstop_bypass"})
     assert mutants.validate(()) == frozenset()
     with pytest.raises(ValueError):
