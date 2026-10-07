@@ -19,6 +19,7 @@ from .rows import VIOLATIONS, approver_for, input_digest, mirror_apply, mirror_d
 
 TYPES = ("RV", "RA", "EX", "SA", "DP", "AP", "CR", "UN", "SEQ")
 JOIN_S = 30.0
+JITTER_S = 0.0015
 
 
 def _scope(ops, op_list, args_list, rng):
@@ -72,7 +73,11 @@ class Race:
 
     def threads(self, fns, jitter=True):
         bar, ths, out = threading.Barrier(len(fns)), [], [None] * len(fns)
-        delays = [self.rng.random() * 0.0015 if jitter else 0.0 for _ in fns]
+        cap = JITTER_S
+        recent = sorted(c["lat_ms"] for c in self.env.calls[-8:] if c.get("lat_ms"))
+        if recent:  # jitter varies the order but must stay well inside a call's own duration, or fast variants never overlap
+            cap = min(JITTER_S, 0.25 * recent[len(recent) // 2] / 1000.0)
+        delays = [self.rng.random() * cap if jitter else 0.0 for _ in fns]  # same RNG draws as before: corpus unchanged
 
         def wrap(k, f, d):
             def go():
