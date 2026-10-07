@@ -109,6 +109,10 @@ class AuthorityOps:
             # E-4: args_digest covers the edge dict (delegate) / the edge_id string (revoke), operation is null
             dc = DecisionCtx(kind, request_id, sub, None, kind, args["edge"] if kind == "delegate" else args["edge_id"],
                              governed=True)
+            if kind == "delegate":  # E-9: an edge failing the v2 edge schema is schema-INVALID -> no envelope
+                dc.governed = authdoc.edge_schema_ok(args["edge"])
+            else:  # E-9: revoke with a non-string / empty edge_id is schema-INVALID -> no envelope
+                dc.governed = isinstance(args["edge_id"], str) and args["edge_id"].strip() != ""
             dc.authority_doc, dc.evidence = self._policy.doc, []
             h = self._factory("conventional-service")
             try:
@@ -126,7 +130,7 @@ class AuthorityOps:
                     return raise_.result
                 if res.body.get("replayed"):
                     res = CallResult(res.status, {k: v for k, v in res.body.items() if k != "replayed"})
-                elif self.prov is not None and res.status in ("OK", "DENIED", "INVALID"):
+                elif self.prov is not None and dc.governed and res.status in ("OK", "DENIED", "INVALID"):
                     dc.authority_doc = self._policy.doc  # authority in force at the commit point (after the mutation)
                     res = self.prov.finalize(h, dc, res)
                 return res
