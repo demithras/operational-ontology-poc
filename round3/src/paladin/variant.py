@@ -16,6 +16,6 @@ class PaladinVariant:
         self.mutants = _mutants.validate(mutants)
 
     def deploy(self, domain, world_handle_factory, verifier, ops_spec, auth_spec, clock,
-               state_dir=None) -> PaladinDeployment:
+               state_dir=None, history=None, anchor=None) -> PaladinDeployment:
         return self.deployment_class(domain, world_handle_factory, verifier, ops_spec, auth_spec, clock, self.mutants,
-                                     state_dir)
+                                     state_dir, history, anchor)

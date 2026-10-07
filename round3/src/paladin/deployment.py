@@ -6,11 +6,15 @@ import json
 import tempfile
 import threading
 
+from paladin import evid, replay as _replay
+from paladin.authreplay import Reauth
 from paladin.core import AUDIENCE, Core, Crash, fingerprint, plain
 from paladin.engine import CapabilityError, InvalidRequest, Principal
+from paladin.prov import HISTORY_LAYOUT, stream_for
 from paladin.surface import SurfaceFactory, UnknownTool, who_of
 from paladin.worldbridge import state_from_world
-from r3_shared.variant import CallResult, ToolDescriptor
+from r3_shared.evidence import canonical_bytes
+from r3_shared.variant import CallResult, ReplayResult, ToolDescriptor
 
 _JSON = {"integer": "integer", "string": "string", "resource": "string", "json": None, "boolean": "boolean"}
 
@@ -26,10 +30,15 @@ def _schema(op: dict) -> dict:
 
 class PaladinDeployment:
     audience = AUDIENCE
+    HISTORY_LAYOUT = {**HISTORY_LAYOUT, "authority_version": "auth/"}  # every durable record kind kept in the HistoryStore
 
-    def __init__(self, domain, factory, verifier, ops_spec, auth_spec, clock, mutants=frozenset(), state_dir=None):
+    def __init__(self, domain, factory, verifier, ops_spec, auth_spec, clock, mutants=frozenset(), state_dir=None,
+                 history=None, anchor=None):
         self._args = (domain, factory, verifier, ops_spec, auth_spec, clock, mutants)
-        self._state_dir = state_dir or tempfile.mkdtemp(prefix="paladin-state-")
+        self.history, self.anchor, self.mutants = history, anchor, frozenset(mutants)
+        self.stream = stream_for(history, anchor, domain) if history is not None else None
+        self.reauth = Reauth(domain, ops_spec)
+        self._state_dir = None if history is not None else (state_dir or tempfile.mkdtemp(prefix="paladin-state-"))
         self._meta = threading.Lock()   # crash flags
         self._tl = threading.local()    # the armed crash point of THIS thread's request
         self._armed = None
@@ -40,9 +49,9 @@ class PaladinDeployment:
     # ---- crash / restart (PROT-H23-A8) ------------------------------------------------------
     def _build(self, restart: bool) -> None:
         d, f, v, ops, auth, clk, mut = self._args
-        self._c = Core(d, f, v, ops, auth, clk, mut, self._state_dir, self._fire, restart)
+        self._c = Core(d, f, v, ops, auth, clk, mut, self._state_dir, self._fire, restart, self.history, self.anchor, self.stream)
         self._surfaces = SurfaceFactory(self._c.booted.ir)
-        self._auth_version = self._digest(self._c.auth)
+        self._auth_version = self._c.version()
 
     def _fire(self, point: str) -> None:
         if getattr(self._tl, "point", None) == point:
@@ -101,19 +110,15 @@ class PaladinDeployment:
         with self._meta:
             self._crashed = False
 
-    @staticmethod
-    def _digest(spec) -> str:
-        return hashlib.sha256(json.dumps(spec, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-
     # ---- authority management ---------------------------------------------------------------
     def set_authority(self, auth_spec: dict) -> None:
         c = self._c
         if c is None:
             raise RuntimeError("deployment is crashed; restart() first")
         with c.lock:
-            c.set_authority(auth_spec)
+            c.replace_authority(auth_spec)  # one world transaction with the `authority` mark (PROT-H24 s4)
             self._surfaces = SurfaceFactory(c.booted.ir)
-            self._auth_version = self._digest(c.auth)
+            self._auth_version = c.version()
 
     def authority_version(self) -> str:
         """sha256 hex of the canonical JSON of the spec in force (r3_shared protocol)."""
@@ -167,7 +172,8 @@ class PaladinDeployment:
             return CallResult("INVALID", {"gate": "inputs", "reason": "args must be an object"})
         who = self._c.principal(sub, on_behalf_of, name)
         if isinstance(who, CallResult):
-            return who
+            return self._c.refuse(sub, on_behalf_of, name, args, request_id, who, "call_tool") \
+                if who.body.get("gate") == "delegation" else who
         if "tool_overexposure" in self._c.mutants:
             return self._c.run(sub, on_behalf_of, name, args, request_id, "tool")
         box: dict = {}
@@ -181,7 +187,8 @@ class PaladinDeployment:
             return surf
         tool = self._surfaces.tool_of_op[name]
         if name not in self._surfaces.granted_operations(surf):
-            return CallResult("DENIED", {"gate": "surface", "reason": "operation not granted to this principal"})  # absent from its surface
+            return self._c.refuse(sub, on_behalf_of, name, args, request_id, CallResult(
+                "DENIED", {"gate": "surface", "reason": "operation not granted to this principal"}), "call_tool")  # absent from its surface
         try:
             surf.call(tool, idempotency_key=request_id, **args)
         except UnknownTool:
@@ -244,10 +251,60 @@ class PaladinDeployment:
         clean = c.check_shape(operation, args, "approval")
         if isinstance(clean, CallResult):
             return clean
-        if sub in c.chain_pids(requester):
-            return CallResult("DENIED", {"gate": "approval", "reason": "approver is in the requester's delegation chain"})
+        d = c.new_decision("approve", sub, on_behalf_of, operation, clean, None)
         with c.lock:
+            if sub in c.excluded_approvers(requester, on_behalf_of):  # static chain + every edge issuer from the root to the requester
+                return c.finish(d, CallResult("DENIED", {"gate": "approval", "reason": "approver is in the requester's delegation chain"}))
             if not c.holds_approval(sub, operation, clean):
-                return CallResult("DENIED", {"gate": "approval", "reason": "approver holds no approval capability for this request"})
-            c.ledger.add_approval(fingerprint(requester, on_behalf_of, operation, clean), sub)
-        return CallResult("OK", {"approval": "recorded"})
+                return c.finish(d, CallResult("DENIED", {"gate": "approval", "reason": "approver holds no approval capability for this request"}))
+            res = c.finish(d, CallResult("OK", {"approval": "recorded"}))  # the approval is itself an anchored decision
+            if res.status == "OK":
+                c.ledger.add_approval(fingerprint(requester, on_behalf_of, operation, clean), sub, d["rid"])
+            return res
+
+    # ---- Gate 2: delegation, revocation, historical authority (PROT-H24) ---------------------------------------------
+    def delegate(self, token: str, edge: dict, request_id: str) -> CallResult:
+        return self._mutating(lambda: self._authority_call("delegate", token, edge, request_id))
+
+    def revoke(self, token: str, edge_id: str, request_id: str) -> CallResult:
+        return self._mutating(lambda: self._authority_call("revoke", token, {"edge_id": edge_id}, request_id))
+
+    def _authority_call(self, kind: str, token: str, payload, rid) -> CallResult:
+        c = self._c
+        sub = c.subject(token)
+        if sub is None or sub not in c.booted.principals:
+            return CallResult("DENIED", {"gate": "identity", "reason": "token"})
+        try:
+            payload = json.loads(json.dumps(payload))
+        except (TypeError, ValueError):
+            return CallResult("INVALID", {"reason": "schema"})
+        res = c.mutate_authority(kind, sub, payload, rid)
+        self._auth_version = c.version()
+        return res
+
+    def authority_used(self, request_id: str) -> CallResult:
+        if self._crashed:
+            return self._DOWN
+        with self._c.lock:
+            led, used = self._c.ledger.get(request_id), self._c.ledger.get_meta(f"used:{request_id}")
+        if led is None or led["state"] != "COMMITTED" or not used:
+            return CallResult("INVALID", {"reason": "unknown_request"})
+        return CallResult("OK", dict(used))
+
+    def authority_state(self) -> dict:
+        return json.loads(canonical_bytes(self._c.auth))
+
+    # ---- Gate 2: provenance (PROT-H27) ---------------------------------------------------------------------------------
+    def replay(self, decision_id: str) -> ReplayResult:
+        return _replay.replay(self, decision_id)
+
+    def explain(self, decision_id: str) -> ReplayResult:
+        return _replay.replay(self, decision_id)
+
+    def current_artifact(self, kind: str, op) -> bytes:
+        """The CURRENT spec's version of an artifact kind (used only by the fallback_to_current mutant)."""
+        ops = self._args[3]
+        c = self._c
+        if kind == "authority":
+            return canonical_bytes(c.auth if c is not None else self._args[4])
+        return canonical_bytes(evid.policy_of(ops, op) if kind == "policy" else evid.contract_of(ops, op))
