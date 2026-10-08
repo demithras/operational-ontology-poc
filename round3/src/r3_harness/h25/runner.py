@@ -57,7 +57,7 @@ def _safe(fn, *a, kind: str, i: int):
 
 def run_variant(factory, vname: str, out: Path, exp_id: str, seed: int, cases: int, races: int, nogov: int = 100,
                 mutation_cases: int = 120, mutation_races: int = 40, audit_cases: int = 1000, boundary_cases: int = 1000,
-                candidate_pkg: str | None = None, keep_roles=(), scan_sources=None) -> dict:
+                candidate_pkg: str | None = None, keep_roles=(), scan_sources=None, oracle_reference=None) -> dict:
     out.mkdir(parents=True, exist_ok=True)
     variant = factory(())
     n_races = -(-races * len(TYPES) // (len(TYPES) - 1))  # `races` concurrent cases + the SEQ controls
@@ -71,22 +71,18 @@ def run_variant(factory, vname: str, out: Path, exp_id: str, seed: int, cases: i
     mres = mutation.prove(factory, seed, mutation_cases, mutation_races, min(audit_cases, 60),
                           scan_pkg=(ROUND3 / "src" / candidate_pkg) if candidate_pkg else None, keep_roles=keep_roles,
                           scan_sources=scan_sources)
-    dba = domain_audit(variant, factory, seed, audit_cases, candidate_pkg, keep_roles, scan_sources, mres)
+    dba = domain_audit(variant, factory, seed, audit_cases, candidate_pkg, keep_roles, scan_sources, mres, oracle_reference)
     oba = boundary_audit(variant, seed, boundary_cases, out)
     return write_evidence(out, vname, exp_id, seed, cases, races, nogov, mres, dba, oba, candidate_pkg)
 
 
-def domain_audit(variant, factory, seed, n, candidate_pkg, keep_roles, scan_sources, mres) -> dict:
+def domain_audit(variant, factory, seed, n, candidate_pkg, keep_roles, scan_sources, mres, oracle_reference=None) -> dict:
     ren = audit.rename_audit(variant, seed, n, keep_roles=keep_roles)
     scan = audit.static_scan(pkg_dir=(ROUND3 / "src" / candidate_pkg) if candidate_pkg else None, sources=scan_sources)
-    oracle = {"cases": 0, "domain_branch": None, "note": "oracle reference unavailable"}
-    try:
-        sys.path.insert(0, str(ROUND3))
-        from tests.fakes import h25_fakes
-        r = audit.rename_audit(h25_fakes.load("fake-honest"), seed, 40, keep_roles=("admin",))
-        oracle = {"cases": r["cases"], "domain_branch": r["domain_branch"], "note": "FakeHonest (oracle-backed reference)"}
-    except Exception as exc:  # noqa: BLE001
-        oracle["note"] = f"oracle reference failed: {exc!r}"
+    oracle = {"cases": 0, "domain_branch": None, "note": "no oracle reference supplied"}
+    if oracle_reference is not None:  # the oracle-backed reference deployment (a harness test double), renamed like a variant
+        r = audit.rename_audit(oracle_reference, seed, 40, keep_roles=("admin",))
+        oracle = {"cases": r["cases"], "domain_branch": r["domain_branch"], "note": "oracle-backed reference deployment"}
     m = mres.get("domain_privilege_branch", {})
     return {"renaming": ren, "static_scan": scan, "cross_domain": {"domains": list(ren["by_domain"]), "by_domain": ren["by_domain"]},
             "domain_branch": ren["domain_branch"] + scan["hit_count"],

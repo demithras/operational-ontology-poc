@@ -43,8 +43,10 @@ def stray(g, cid, stage):
     r = g.rng.random()
     if r < 0.4 and pool:
         return cast(g, cid, stage, g.rng.choice(pool))
-    if r < 0.6 and el:
-        return cast(g, cid, stage, g.rng.choice(el), "dissent" if stage == "decision" else "overturn")  # maybe duplicate
+    done = [j["judge"] for j in c["judgments"] if j["stage"] == stage]
+    if r < 0.6 and (done or el):
+        who = g.rng.choice(done or el)  # a duplicate judge when someone already judged (already_judged / stage_closed)
+        return cast(g, cid, stage, who, "dissent" if stage == "decision" else "overturn")
     if r < 0.8:
         other = "review" if stage == "decision" else "decision"
         return cast(g, cid, other, g.rng.choice(g.principals()))

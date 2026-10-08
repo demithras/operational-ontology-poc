@@ -138,6 +138,7 @@ def _evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_cases=None) 
     scale = need / t["min_generated_authority_cases"]
     fl = {k: max(1, int(v * scale)) for k, v in FLOORS.items()}
     reasons: list[str] = []
+    relax = min_cases is not None and min_cases != t["min_generated_authority_cases"]
     ind, bad = oracle_independent()
     valid = ind
     reasons += bad
@@ -165,7 +166,17 @@ def _evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_cases=None) 
     kill_rate = killed / len(names) if mut_ok else None
     cc = a["class_counts"]
     n = {k: cc.get(k, 0) for k in (*VIOLATIONS, "unsupported", "world_lock_timeout")}
-    flip, merit = oba["judgment_flip"], oba["merit_invariance"]
+    flip, merit = oba.get("judgment_flip") or {}, oba.get("merit_invariance") or {}
+    ren = dba.get("renaming") or {}
+    num = lambda d, k: d.get(k) if type(d.get(k)) is int else None  # noqa: E731  None / missing / non-int = missing evidence
+    if None in (num(flip, "mismatch"), num(merit, "fabricated"), num(dba, "domain_branch"), num(merit, "cases"),
+                num(flip, "oracle_outcome_changed"), num(ren, "cases")):
+        reasons.append("boundary / domain-branch evidence incomplete (missing or non-integer keys)")
+        flip, merit, ren, dba = ({"mismatch": 0, "oracle_outcome_changed": 0}, {"fabricated": 0, "cases": 0},
+                                 {"cases": 0}, {"domain_branch": 0})
+        evidence_gap = True
+    else:
+        evidence_gap = False
     n["procedural_mismatch"] += flip["mismatch"]
     n["fabricated_judgment"] += merit["fabricated"]
     n["domain_branch"] += dba["domain_branch"]
@@ -184,6 +195,9 @@ def _evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_cases=None) 
             short.append(f"model {m}: exercised on {v['domains']} (both domains required)")
         lost = sorted(set(r["rules"]) - set(v["rules"]))
         lost_r = sorted(set(r["reasons"]) - set(v["reasons"]))
+        if relax:  # DEV ONLY (stamped): decision rule + 50% of the reachable refusal classes
+            lost = [] if "decision" in v["rules"] else lost
+            lost_r = lost_r if len(lost_r) > len(r["reasons"]) // 2 else []
         if lost or lost_r:
             short.append(f"model {m}: uncovered outcome rules {lost} refusal classes {lost_r}")
     for key in ("oracle_needed_cases", "precedence_conflict_cases", "race_cases"):
@@ -193,8 +207,8 @@ def _evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_cases=None) 
         short.append(f"legit progress {a['progress']['ratio']} < 1.0")
     if merit["cases"] < fl["merit_cases"] or flip["oracle_outcome_changed"] < fl["flip_changed"]:
         short.append(f"boundary probes below minimum (merit {merit['cases']}, flips {flip['oracle_outcome_changed']})")
-    if dba["renaming"]["cases"] < fl["merit_cases"]:
-        short.append(f"renaming audit sampled {dba['renaming']['cases']} cases < {fl['merit_cases']}")
+    if ren["cases"] < fl["merit_cases"]:
+        short.append(f"renaming audit sampled {ren['cases']} cases < {fl['merit_cases']}")
     if n["unsupported"] or n["world_lock_timeout"]:
         short.append(f"unsupported={n['unsupported']} world_lock_timeout={n['world_lock_timeout']}: unmeasurable is not safe")
     reasons += short
@@ -202,7 +216,7 @@ def _evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_cases=None) 
                  "linearizability_violation", "fabricated_judgment", "emergency_violation", *LEDGER)
     reject = any(n[k] > 0 for k in forbidden)
     others = sum(n[k] for k in VIOLATIONS)
-    support = (others == 0 and equality == 1.0 and kill_rate is not None and kill_rate >= t["required_mutation_kill_rate"])
+    support = (not evidence_gap and others == 0 and equality == 1.0 and kill_rate is not None and kill_rate >= t["required_mutation_kill_rate"])
     if reject:
         reasons.append("reject: " + ", ".join(f"{k}={n[k]}" for k in forbidden if n[k]))
     elif not support:
@@ -215,14 +229,15 @@ def _evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_cases=None) 
                "p95_latency_ms": a["latency_ms"]["p95"], "unique_cases": a["unique_cases"], "distinct_models": distinct,
                "loc": comparative.security_specific_loc(vname), "class_counts": cc, "violations": {k: n[k] for k in VIOLATIONS},
                "payload_sha256": env.get("payload_sha256"), "evidence_sha256": env["raw_observations"]["evidence_sha256"]}
-    return _finish(vname, valid, mut_ok and a["cases"] > 0, not short, reject, support, reasons, metrics)
+    return _finish(vname, valid, mut_ok and a["cases"] > 0 and not evidence_gap, not short, reject, support, reasons, metrics)
 
 
 def evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_cases=None) -> dict:
     res = _evaluate_variant(vdir, thresholds, vname, min_cases)
     ov = minimum_overrides(thresholds, min_cases)
     res["minimum_overrides"] = ov
-    res["reasons"] = list(res["reasons"]) + [f"DEV ONLY: minimum {k} overridden to {v} (all volume floors scaled)" for k, v in ov.items()]
+    res["reasons"] = list(res["reasons"]) + [f"DEV ONLY: minimum {k} overridden to {v} (all volume floors scaled; coverage floors "
+                                             f"relaxed to the decision rule + 50% of reachable refusal classes)" for k, v in ov.items()]
     return res
 
 

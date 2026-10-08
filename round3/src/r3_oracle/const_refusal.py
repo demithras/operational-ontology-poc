@@ -104,7 +104,7 @@ def check_refusals(calls, res, states, snaps, seqs, idx_of_call, committed_rid, 
             continue
         committable = any(e[0] == "COMMIT" for e in exps)
         act_kind = c["kind"] == "request" or (c.get("action") or {}).get("kind") in ("execute", "act")
-        if committable and all(e[0] == "COMMIT" for e in exps) and act_kind:
+        if committable and act_kind:  # the oracle could have committed this (in every or in one real-time order): lost progress
             r["classes"].append("progress_loss")
         else:
             r["classes"].append("procedural_mismatch")

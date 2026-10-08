@@ -47,6 +47,10 @@ def main() -> int:
     ap.add_argument("--out-root", default=str(ROUND3 / "experiments" / "h25"))
     a = ap.parse_args()
     fakes = load_fakes() if a.test_variants else None
+    try:
+        ref = (fakes or load_fakes()).load("fake-honest")
+    except Exception:  # noqa: BLE001 - no tests dir: the oracle self-test is then recorded as unavailable
+        ref = None
     for name in a.variants.split(","):
         keep, scan = (), None
         if name.startswith("fake-"):
@@ -68,7 +72,7 @@ def main() -> int:
             return 2
         t0 = time.perf_counter()
         r = run_variant(factory, name, out, a.exp_id, a.seed, a.cases, a.races, a.nogov, a.mutation_cases, a.mutation_races,
-                        a.audit_cases, a.boundary_cases, pkg, keep, scan)
+                        a.audit_cases, a.boundary_cases, pkg, keep, scan, ref)
         an = r["analysis"]
         print(f"{name}: cases={an['cases']} unique={an['unique_cases']} actions={an['actions']} races={an['race_cases']} "
               f"classes={an['class_counts']} elapsed={time.perf_counter() - t0:.1f}s")

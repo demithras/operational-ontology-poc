@@ -92,7 +92,7 @@ def acts(g, eid, op_name, grantees, outsiders, exp, gm):
 def noise_play(g):
     r = g.rng
     acts_ = [ordinary_governed, ordinary_free, ungoverned_propose, dup_case, unknown_case, bad_token, schema_junk,
-             revoke_then_execute, mid_case_governance, crash_retry, idempotent_retry, exec_by_other, exec_by_other]
+             revoke_then_execute, mid_case_governance, crash_retry, idempotent_retry, exec_by_other, exec_by_other, order_fuzz]
     for f in r.sample(acts_, r.randint(2, 5)):
         f(g)
 
@@ -208,3 +208,26 @@ def idempotent_retry(g):
     if ok:
         rec = g.rng.choice(ok)
         g.step(rec["actor"], rec["action"], rid=rec["rid"], replay=True)
+
+
+def order_fuzz(g):
+    """Check-order probes (C25-2): schema-valid actions on real/unknown cases by random principals with random fields,
+    so that several checks of PROT-H25 s3 fail at once; the oracle names the first one."""
+    r = g.rng
+    cases = list(g.cases) + [f"nope{g.i}-{g.n}"]
+    for _ in range(r.randint(3, 6)):
+        k = r.choice(["judge", "judge", "appeal", "execute", "end", "act"])
+        who = r.choice(g.principals())
+        cid = r.choice(cases)
+        if k == "judge":
+            st = r.choice(["decision", "review"])
+            a = {"kind": "judge", "case": cid, "stage": st, "value": r.choice(plays_a.VALUES[st] + ("abstain",)),
+                 "merit": g.merit()}
+        elif k in ("appeal", "execute"):
+            a = {"kind": k, "case": cid}
+        elif k == "end":
+            a = {"kind": "end", "emergency": f"em{g.i}-{r.randint(0, 9)}"}
+        else:
+            ops = [o["name"] for o in g.ops["operations"]]
+            a = {"kind": "act", "emergency": f"em{g.i}-{r.randint(0, 9)}", "operation": r.choice(ops), "args": {}}
+        g.step(who, a, bad_token=r.random() < 0.05)
