@@ -22,7 +22,7 @@ def main() -> int:
     for status, rows in (("unresolved", scan["hits"]), ("resolved", scan["resolved"])):
         for h in rows:
             print(json.dumps({"status": status, "variant": a.variant, "file": h["file"], "line": h["line"], "kind": h["kind"],
-                              "literal": h["literal"], "text": h["text"], "reason": h.get("reason"),
+                              "literal": h["literal"], "text": h["text"], "scope": h["scope"], "reason": h.get("reason"),
                               "key": list(audit.hit_key(a.variant, h))}, sort_keys=True))
     print(json.dumps({"summary": True, "variant": a.variant, "unresolved": scan["hit_count"], "resolved": scan["resolved_count"],
                       "domain_logic_modules": scan["domain_logic_modules"]}), file=sys.stderr)
