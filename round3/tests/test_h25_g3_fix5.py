@@ -94,10 +94,25 @@ def test_missing_resolution_file_means_no_resolutions(tmp_path):
 def test_domain_modules_are_read_from_variant_py_and_matched_by_path_prefix():
     assert audit.declared_domain_modules(audit.ROUND3 / "src" / "paladin")[0] == "src/paladin/domains/manufacturing/logic"
     assert audit.declared_domain_modules(audit.ROUND3 / "src" / "conventional") == []
+    # live package: no claim about the count inside domain modules (rules may live in data), only outside
     s = audit.static_scan(pkg_dir=audit.ROUND3 / "src" / "paladin", resolutions={})
-    dm = [h for h in s["hits"] if h["file"].startswith("src/paladin/domains/")]
-    assert dm and all(h["kind"] == "authority-vocabulary" for h in dm)
     assert all(h["kind"] != "authority-vocabulary" for h in s["hits"] if not h["file"].startswith("src/paladin/domains/"))
+
+
+def test_vocabulary_rule_on_synthetic_package(tmp_path):
+    pkg = tmp_path / "synpkg"
+    (pkg / "domains").mkdir(parents=True)
+    (pkg / "other").mkdir()
+    (pkg / "variant.py").write_text('DOMAIN_LOGIC_MODULES = ["synpkg/domains"]\n')
+    code = "def f(x):\n    return x.approval_state\n"
+    (pkg / "domains" / "logic.py").write_text(code)
+    (pkg / "other" / "plain.py").write_text(code)
+    assert audit.declared_domain_modules(pkg) == ["synpkg/domains"]
+    s = audit.static_scan(pkg_dir=pkg, resolutions={})
+    assert [(h["file"], h["kind"], h["literal"]) for h in s["hits"]] == \
+        [("synpkg/domains/logic.py", "authority-vocabulary", "approval_state")]
+    # same code outside the declared modules: no vocabulary hit
+    assert not [h for h in s["hits"] if h["file"].startswith("synpkg/other")]
 
 
 def test_discovery_cli_lists_hits_with_keys_for_both_variants():
