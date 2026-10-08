@@ -2,15 +2,13 @@
 
 transfer_inventory v3 -> policy package factory.inventory.transfer_v2:
   contracts/policies/v2/data.json (safety_stock_v2, default_safety_stock_v2)
-  contracts/actions/v3/transfer_inventory.yaml (approval_threshold_units, closure.max_evidence_freshness_s)
-expedite_purchase_order v1: contracts/actions/v1/expedite_purchase_order.yaml (approval_threshold_cost)
+  contracts/actions/v3/transfer_inventory.yaml (closure.max_evidence_freshness_s)
+approval thresholds and approver relations are NOT here: they are ops-spec rules (paladin.opsrules)
 """
 from __future__ import annotations
 
 SAFETY_STOCK_V2 = {("PX-17", "WH-B"): 60, ("PX-800501", "WH-B"): 60}
 DEFAULT_SAFETY_STOCK_V2 = 15
-APPROVAL_THRESHOLD_UNITS = 80
-APPROVAL_THRESHOLD_COST = 500
 MAX_EVIDENCE_FRESHNESS_S = 5
 
 TERMINAL_WO = ("DONE", "CANCELLED")

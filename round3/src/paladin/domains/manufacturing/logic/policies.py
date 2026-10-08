@@ -7,6 +7,11 @@ from __future__ import annotations
 
 from . import data, facts
 
+# Business rules that gate a request (relations, thresholds, field tests) are DATA of the ops spec this deployment was
+# booted with, evaluated by paladin.opsrules.RuleSet; nothing below names a relation or a threshold (G3-E29, fix6).
+OP_TRANSFER, OP_EXPEDITE, OP_RESCHEDULE = "transfer_inventory", "expedite_purchase_order", "reschedule_work_order"
+ROUTE_RULE = "transfer-protected-route"
+
 
 def _transfer_evidence(ctx) -> dict | None:
     """The policy input of contracts/policies/v2/transfer_inventory.rego, or None when invalid (valid_input false)."""
@@ -21,60 +26,12 @@ def _transfer_evidence(ctx) -> dict | None:
             "src_quality": lot["quality"], "dst_quality": "OK" if dlot is None else dlot["quality"], "quantity": q}
 
 
-def may_mitigate_high_priority(principal, src) -> bool:
-    """can_mitigate_high_priority = planner or supervisor on the source warehouse (contracts/authorization/v2/model.fga)."""
-    return facts.holds(principal, "Warehouse", src, "planner") or facts.holds(principal, "Warehouse", src, "supervisor")
-
-
-def _protection_denies(ctx) -> bool:
-    """ADR-0003 protected route: a transfer that mitigates a fresh HIGH-priority at-risk work order additionally needs
-    can_mitigate_high_priority. The Engine's authority gate never requests the IR capability
-    action:mitigate_high_priority, so this reads the principal's relations here (disclosed deviation, see
-    provenance-logic.md)."""
-    i = ctx.inputs
-    if not facts.protecting_work_orders(ctx.view, i["part"], i["source_warehouse"], i["destination_warehouse"]):
-        return False
-    return not may_mitigate_high_priority(ctx.principal, i["source_warehouse"])
-
-
-def transfer_hard_deny(ctx) -> bool:
-    ev = _transfer_evidence(ctx)
-    if ev is None or ev["freshness"] != "FRESH":
-        return True
-    if "QUARANTINE" in (ev["src_quality"], ev["dst_quality"]) or not ev["reservation_ok"]:
-        return True
-    if ev["on_hand"] - ev["reserved"] - ev["quantity"] < ev["safety_stock"]:
-        return True
-    return _protection_denies(ctx)
-
-
-def transfer_needs_approval(ctx) -> bool:
-    ev = _transfer_evidence(ctx)
-    return ev is not None and ev["quantity"] > data.APPROVAL_THRESHOLD_UNITS
-
-
-def transfer_decision(ctx) -> str:
-    if transfer_hard_deny(ctx):
-        return "deny"
-    return "require_approval" if transfer_needs_approval(ctx) else "allow"
-
-
 def _expedite_ev(ctx):
     po = ctx.view.get("PurchaseOrder", ctx.inputs["po_id"])
     fee = ctx.inputs["expedite_fee"]
     if po is None or po["props"].get("status") is None or not isinstance(fee, int) or isinstance(fee, bool):
         return None
     return {"status": po["props"]["status"], "fee": fee}
-
-
-def _expedite_hard_deny(ctx) -> bool:
-    ev = _expedite_ev(ctx)
-    return ev is None or ev["status"] in data.TERMINAL_PO
-
-
-def _expedite_needs_approval(ctx) -> bool:
-    ev = _expedite_ev(ctx)
-    return ev is not None and ev["status"] not in data.TERMINAL_PO and ev["fee"] > data.APPROVAL_THRESHOLD_COST
 
 
 def _reschedule_ev(ctx):
@@ -84,35 +41,69 @@ def _reschedule_ev(ctx):
     return wo["props"]
 
 
+def _expedite_hard_deny(ctx) -> bool:
+    ev = _expedite_ev(ctx)
+    return ev is None or ev["status"] in data.TERMINAL_PO
+
+
 def _reschedule_hard_deny(ctx) -> bool:
     ev = _reschedule_ev(ctx)
     return ev is None or ev["status"] in data.TERMINAL_WO
 
 
-def _reschedule_needs_approval(ctx) -> bool:
-    ev = _reschedule_ev(ctx)
-    return ev is not None and ev["status"] not in data.TERMINAL_WO and ev["priority"] == "HIGH"
-
-
-def _decided(hard, needs, valid):
+def _decided(hard, gated, valid):
     def decision(ctx):
         if hard(ctx):
             return "deny"
-        return "require_approval" if needs(ctx) else ("allow" if valid(ctx) else "deny")
+        return "require_approval" if gated(ctx) else ("allow" if valid(ctx) else "deny")
     return decision
 
 
-_expedite_decision = _decided(_expedite_hard_deny, _expedite_needs_approval, lambda c: _expedite_ev(c) is not None)
-_reschedule_decision = _decided(_reschedule_hard_deny, _reschedule_needs_approval, lambda c: _reschedule_ev(c) is not None)
+def make(rules) -> dict:
+    """Policy bindings for the ops spec behind ``rules`` (paladin.opsrules.RuleSet); every rule that names a relation
+    or a threshold is evaluated from that spec, so editing the spec edits the decision."""
+    def gate(op: str) -> str:  # the rule the spec says makes this operation need an approval
+        return rules.rule(op, rules.gating_rule(op))["id"]
 
-IMPLEMENTATIONS = {
-    "rego:factory.inventory.transfer_v2#hard_deny": transfer_hard_deny,
-    "rego:factory.inventory.transfer_v2#needs_approval": transfer_needs_approval,
-    "rego:factory.inventory.transfer_v2#allow": lambda c: transfer_decision(c) == "allow",
-    "rego:factory.purchase_order.expedite#hard_deny": _expedite_hard_deny,
-    "rego:factory.purchase_order.expedite#needs_approval": _expedite_needs_approval,
-    "rego:factory.purchase_order.expedite#allow": lambda c: _expedite_decision(c) == "allow",
-    "rego:factory.work_order.reschedule#hard_deny": _reschedule_hard_deny,
-    "rego:factory.work_order.reschedule#needs_approval": _reschedule_needs_approval,
-    "rego:factory.work_order.reschedule#allow": lambda c: _reschedule_decision(c) == "allow",
-}
+    def route_denies(ctx) -> bool:
+        return rules.matches(ctx, OP_TRANSFER, ROUTE_RULE)
+
+    def transfer_hard_deny(ctx) -> bool:
+        ev = _transfer_evidence(ctx)
+        if ev is None or ev["freshness"] != "FRESH":
+            return True
+        if "QUARANTINE" in (ev["src_quality"], ev["dst_quality"]) or not ev["reservation_ok"]:
+            return True
+        if ev["on_hand"] - ev["reserved"] - ev["quantity"] < ev["safety_stock"]:
+            return True
+        return route_denies(ctx)
+
+    def transfer_gated(ctx) -> bool:
+        return _transfer_evidence(ctx) is not None and rules.matches(ctx, OP_TRANSFER, gate(OP_TRANSFER))
+
+    def transfer_decision(ctx) -> str:
+        if transfer_hard_deny(ctx):
+            return "deny"
+        return "require_approval" if transfer_gated(ctx) else "allow"
+
+    def expedite_gated(ctx) -> bool:
+        ev = _expedite_ev(ctx)
+        return ev is not None and ev["status"] not in data.TERMINAL_PO and rules.matches(ctx, OP_EXPEDITE, gate(OP_EXPEDITE))
+
+    def reschedule_gated(ctx) -> bool:
+        ev = _reschedule_ev(ctx)
+        return ev is not None and ev["status"] not in data.TERMINAL_WO and rules.matches(ctx, OP_RESCHEDULE, gate(OP_RESCHEDULE))
+
+    expedite = _decided(_expedite_hard_deny, expedite_gated, lambda c: _expedite_ev(c) is not None)
+    reschedule = _decided(_reschedule_hard_deny, reschedule_gated, lambda c: _reschedule_ev(c) is not None)
+    return {
+        "rego:factory.inventory.transfer_v2#hard_deny": transfer_hard_deny,
+        "rego:factory.inventory.transfer_v2#needs_approval": transfer_gated,
+        "rego:factory.inventory.transfer_v2#allow": lambda c: transfer_decision(c) == "allow",
+        "rego:factory.purchase_order.expedite#hard_deny": _expedite_hard_deny,
+        "rego:factory.purchase_order.expedite#needs_approval": expedite_gated,
+        "rego:factory.purchase_order.expedite#allow": lambda c: expedite(c) == "allow",
+        "rego:factory.work_order.reschedule#hard_deny": _reschedule_hard_deny,
+        "rego:factory.work_order.reschedule#needs_approval": reschedule_gated,
+        "rego:factory.work_order.reschedule#allow": lambda c: reschedule(c) == "allow",
+    }

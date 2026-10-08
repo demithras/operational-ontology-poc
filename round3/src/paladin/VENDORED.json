@@ -50,10 +50,12 @@
    "vendored_sha256": "fab42916cc1174e3e27eb88e13cfab836ea4cc15882177f743f469c99426d565"
   },
   "domains/manufacturing/logic/__init__.py": {
-   "current_sha256": "67fcd89ae2478ef699b3ea9f215cb44cfc4dc1843f2572a9f672ef5fa1daf86b",
+   "current_sha256": "9fe3e75b1779ad2a12245e7ba978d9ae744e4ec3e9ee58339029e21b05344289",
    "original": "round2/domains/manufacturing/logic/__init__.py",
    "original_sha256": "99bcc51d819b10a2251331fa2297e76a640626aabb881bd275cc22c8d443b3d8",
-   "patches": [],
+   "patches": [
+    "D8"
+   ],
    "vendored_sha256": "67fcd89ae2478ef699b3ea9f215cb44cfc4dc1843f2572a9f672ef5fa1daf86b"
   },
   "domains/manufacturing/logic/actions.py": {
@@ -64,42 +66,51 @@
    "vendored_sha256": "f5b5a4e189cee27fd5183f2d7779ca228f518a59b72f036f0c2832ff336f0355"
   },
   "domains/manufacturing/logic/constraints.py": {
-   "current_sha256": "29834a8ae8522fc125126e38f3b251de67b87cd45443a0af054e0f7b938732be",
+   "current_sha256": "4c139386b2fec10b07bcfd2223706f8371f934c7f83b1cca8e3002bd22a5e2a6",
    "original": "round2/domains/manufacturing/logic/constraints.py",
    "original_sha256": "29834a8ae8522fc125126e38f3b251de67b87cd45443a0af054e0f7b938732be",
-   "patches": [],
+   "patches": [
+    "D8"
+   ],
    "vendored_sha256": "29834a8ae8522fc125126e38f3b251de67b87cd45443a0af054e0f7b938732be"
   },
   "domains/manufacturing/logic/data.py": {
-   "current_sha256": "b2cd446d2ed4239531fe77d817ea9ff7322b83520067abe8384bfffafb6aa726",
+   "current_sha256": "304cf9d965a632adc47ffa18f4138d3dae87a44806e1c0b41f4b4a87cd98535b",
    "original": "round2/domains/manufacturing/logic/data.py",
    "original_sha256": "b2cd446d2ed4239531fe77d817ea9ff7322b83520067abe8384bfffafb6aa726",
-   "patches": [],
+   "patches": [
+    "D8"
+   ],
    "vendored_sha256": "b2cd446d2ed4239531fe77d817ea9ff7322b83520067abe8384bfffafb6aa726"
   },
   "domains/manufacturing/logic/facts.py": {
-   "current_sha256": "b6edcf286f77fa1113de4ab22192fbb5cd11287cdce4e44cc5e1ebc7fa39dbd7",
+   "current_sha256": "537f4b9d36dae5b514a505fcd19bbef87f6876685bd38e6dc8e94c1da3d7382d",
    "original": "round2/domains/manufacturing/logic/facts.py",
    "original_sha256": "5d8c0416901de75b2923ee2d1a70efc890c5d49852902994d2801a9d6227afbd",
    "patches": [
     "D1",
     "D5",
-    "D6"
+    "D6",
+    "D8"
    ],
    "vendored_sha256": "71f856458173274a8eb2f54c69ed80b1839e4fc62044b2a393c7fc734cdae47d"
   },
   "domains/manufacturing/logic/functions.py": {
-   "current_sha256": "46b11425aed5d658e9fcee8c9ff48e6d6a17859d8e22730337178c3230bebd2b",
+   "current_sha256": "975fa07c0fa21986e83b72867b9009932cba2fd35cd5ad09709bf58501e7c6c7",
    "original": "round2/domains/manufacturing/logic/functions.py",
    "original_sha256": "47a05bc22c2d01020dc30cbc011382b5e8b2ada68c671a18fa763ffbb3151e3d",
-   "patches": [],
+   "patches": [
+    "D8"
+   ],
    "vendored_sha256": "46b11425aed5d658e9fcee8c9ff48e6d6a17859d8e22730337178c3230bebd2b"
   },
   "domains/manufacturing/logic/policies.py": {
-   "current_sha256": "1012075e4c54567f8b661d0fb97a7694b5eeec6193f2f561dfca4f2b83370a6b",
+   "current_sha256": "5d3ba446a6cfe64412fd6bf3c7c0ece8fd7e5d0500a1df429c0e61cf497725cc",
    "original": "round2/domains/manufacturing/logic/policies.py",
    "original_sha256": "1012075e4c54567f8b661d0fb97a7694b5eeec6193f2f561dfca4f2b83370a6b",
-   "patches": [],
+   "patches": [
+    "D8"
+   ],
    "vendored_sha256": "1012075e4c54567f8b661d0fb97a7694b5eeec6193f2f561dfca4f2b83370a6b"
   },
   "domains/manufacturing/seed.json": {

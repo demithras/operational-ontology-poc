@@ -44,22 +44,6 @@ def evidence_fresh(ctx) -> bool:
     return facts.freshness(ctx.view, ctx.now) == "FRESH"
 
 
-def transfer_below_threshold(ctx) -> bool:  # soft: a flag when the transfer needed approval
-    p = _planned(ctx, "WMS")
-    return p is not None and p["quantity"] <= data.APPROVAL_THRESHOLD_UNITS
-
-
-def expedite_below_threshold(ctx) -> bool:  # soft
-    p = _planned(ctx, "ERP")
-    return p is not None and p["expedite_fee"] <= data.APPROVAL_THRESHOLD_COST
-
-
-def reschedule_not_high(ctx) -> bool:  # soft
-    p = _planned(ctx, "MES")
-    wo = ctx.view.get("WorkOrder", p["$key"]) if p is not None else None
-    return wo is not None and wo["props"].get("priority") != "HIGH"
-
-
 def quantity_positive(ctx) -> bool:
     return all(r["props"].get("quantity") is None or r["props"]["quantity"] >= 1 for r in ctx.view.list("ActionExecution"))
 
@@ -88,7 +72,7 @@ def decision_hash_matches(ctx) -> bool:
     return True
 
 
-def no_effect_without_approval(ctx) -> bool:
+def effectless_statuses_hold(ctx) -> bool:
     for r in ctx.view.list("Decision"):
         if r["props"].get("status") in data.NO_EFFECT_STATUSES:
             if ctx.view.follow("Decision_actionExecution", "Decision", r["key"]):
@@ -96,7 +80,7 @@ def no_effect_without_approval(ctx) -> bool:
     return True
 
 
-IMPLEMENTATIONS = {
+STATIC = {
     "shacl:fac:InventoryLotShape#onHand minInclusive 0": lambda c: _all_lots(c, lambda x: x["on_hand"] >= 0),
     "shacl:fac:InventoryLotShape#reserved minInclusive 0": lambda c: _all_lots(c, lambda x: x["reserved"] >= 0),
     "invariant: onHand >= reserved": lambda c: _all_lots(c, lambda x: x["on_hand"] >= x["reserved"]),
@@ -109,11 +93,31 @@ IMPLEMENTATIONS = {
     "shacl:oo:ActionExecutionShape#sourceWarehouse disjoint destinationWarehouse": endpoints_disjoint,
     "invariant: actionExecutionId applied at most once": applied_at_most_once,
     "invariant: recomputed decision_content_hash equals the stored hash": decision_hash_matches,
-    "invariant: denial/pending statuses carry no execution or outcome": no_effect_without_approval,
+    "invariant: denial/pending statuses carry no execution or outcome": effectless_statuses_hold,
     "rego:factory.inventory.transfer_v2#remaining >= safety_stock": safety_stock_holds,
     "rego:factory.inventory.transfer_v2#no QUARANTINE on source or destination": quarantine_free,
     "closure.max_evidence_freshness_s <= 5": evidence_fresh,
-    "quantity <= approval_threshold_units (80) without approval": transfer_below_threshold,
-    "expedite_fee <= approval_threshold_cost (500) without approval": expedite_below_threshold,
-    "priority != HIGH without approval": reschedule_not_high,
 }
+
+
+def make(rules) -> dict:
+    """STATIC bindings plus the soft constraints that restate an ops-spec approval rule over the PLANNED effect payload:
+    the flag holds when the spec's gating rule does NOT match the payload (no threshold or relation is named here)."""
+    def below(target: str, op: str, arg_of):
+        def pred(ctx) -> bool:
+            p = _planned(ctx, target)
+            if p is None:
+                return False
+            if target == "MES" and ctx.view.get("WorkOrder", p["$key"]) is None:  # unknown work order: flag fails, as before
+                return False
+            return not rules.matches(ctx, op, rules.gating_rule(op), arg_of(p))
+        return pred
+    return {
+        **STATIC,
+        "quantity <= approval_threshold_units (80) without approval":
+            below("WMS", "transfer_inventory", lambda p: {"quantity": p["quantity"]}),
+        "expedite_fee <= approval_threshold_cost (500) without approval":
+            below("ERP", "expedite_purchase_order", lambda p: {"expedite_fee": p["expedite_fee"]}),
+        "priority != HIGH without approval":
+            below("MES", "reschedule_work_order", lambda p: {"work_order_id": p["$key"]}),
+    }
