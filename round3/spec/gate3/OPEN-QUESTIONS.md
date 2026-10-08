@@ -158,3 +158,20 @@ G3-E24 (orch, 2026-10-08, after dev1, before any official H25 run) A5(c) auditor
       the primary criterion; no resolution can excuse a renaming difference.
       Clarifies PROT-H23 R5 for constitutional `act` (no change, oracle already does this): a replay re-evaluates the
       authority in force now INCLUDING the emergency grant (active, unexpired, in scope), not base grants only.
+G3-E25 (orch, 2026-10-08, after dev1, before any official H26 run) Marker kinds (P1e-5 list actor|digest|edge|args):
+      args_digest redacts to {"redacted":"args"}; effect_digest, artifact digests and authority_version redact to
+      {"redacted":"digest"} (G3-E22's `{"redacted":"effect_digest"}` was a typo for "digest"). The oracle
+      (disclosure_prov) emits "args" for args_digest. Found in dev1: both variants already emitted "args".
+G3-E26 (orch, same) Public types (PROT-H26 1.2 public:true) grant existence, all fields and all links only. A decision is
+      low iff it is own, or every resource input is existence-visible AND covered by a disclosure rule whose provenance
+      is scalars|actors (s4.1, literal); public:true is not such a rule, so its provenance level is `none`.
+      Restates INTERP-2 for args_digest of a non-own decision: true only if the args are made only of existence-visible
+      resource refs (no scalar inputs present); "the scalar flows into a visible field" does not make args low.
+G3-E27 (orch, same) In principal provenance views, `reason` of a decision equals the `reason` of the public reply body of
+      the same request ("ok" for OK); internal gate codes are auditor-only (PROT-H27 auditor envelopes unchanged).
+      authority_used_as(token, rid) on an OWN request answers whenever prov_decision answers that rid: for a refused
+      request path = [] (no authority was used); both views must agree on whether the rid exists.
+G3-E28 (orch, same) H26 generated worlds (both members of a pair, after the high phase) satisfy every ops-spec invariant;
+      a draw whose predicted snapshot violates one is re-drawn. D4 probes target only operations the observer may call
+      directly (not governed, PROT-H25 s3.4) or carry the oracle's constitutional expectation. The exfiltration canary
+      scan ignores canary values present in the observer's own request.
