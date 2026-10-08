@@ -20,8 +20,13 @@ def load_governance(model: str, domain: str, root: Path = ROUND3) -> dict:
     return doc
 
 
+_SCHEMAS: dict[Path, dict] = {}
+
+
 def _schema(root: Path = ROUND3) -> dict:
-    return json.loads((root / "schemas" / "governance-spec.schema.json").read_text())
+    if root not in _SCHEMAS:
+        _SCHEMAS[root] = json.loads((root / "schemas" / "governance-spec.schema.json").read_text())
+    return _SCHEMAS[root]
 
 
 def validate_governance(doc: dict, auth_spec: dict, ops_spec: dict, root: Path = ROUND3) -> dict:

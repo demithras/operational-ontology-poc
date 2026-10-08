@@ -10,15 +10,20 @@ from r3_shared.identity import TokenError
 from r3_shared.mutants import validate
 from r3_shared.variant import CallResult, ToolDescriptor
 from tests.fakes.fake_g2 import G2Mixin
+from tests.fakes.fake_g3 import G3Mixin
 
 
-class FakeDeployment(G2Mixin):
+class FakeDeployment(G2Mixin, G3Mixin):
     """Correct fake (PROT-H23-A8): request_id ledger is durable in state_dir, written before the world commit
     and after the before_commit crash point; a lock serialises authorize->commit."""
     durable_ledger = True
 
-    def __init__(self, domain, factory, verifier, clock, auth_spec=None, state_dir=None, history=None, anchor=None):
+    def __init__(self, domain, factory, verifier, clock, auth_spec=None, state_dir=None, history=None, anchor=None,
+                 governance=None, ops_spec=None):
         self.auth_spec = auth_spec or {}
+        self.ops_spec = ops_spec
+        self.known_types = {t["name"] for t in (ops_spec or {}).get("resource_types", [])} or {"Part"}
+        self._g3_init(governance)
         self.domain, self.verifier, self.clock = domain, verifier, clock
         self.factory, self.state_dir = factory, state_dir
         self.world = factory("fake-service")
@@ -91,8 +96,12 @@ class FakeDeployment(G2Mixin):
         return self._g2_anchor(request_id, "direct", sub, seq, tx.tick, {}) if request_id is not None else CallResult("OK", {})
 
     def read(self, token, operation, args):
-        rec = self.world.get(args["type"], args["key"])
-        return CallResult("OK" if rec else "UNKNOWN", rec or {"reason": "absent"})
+        """Q12: get -> read_object, list -> list_objects, otherwise query (P1e-5 forms)."""
+        if operation == "get":
+            return self.read_object(token, f"{args['type']}:{args['key']}")
+        if operation == "list":
+            return self.list_objects(token, args["type"])
+        return self.query(token, operation, args)
 
     def approve(self, token, operation, args, requester, on_behalf_of=None):
         with self._lock:
@@ -141,8 +150,9 @@ class FakeVariant:
     deployment_class = FakeDeployment
 
     def deploy(self, domain, world_handle_factory, verifier, ops_spec, auth_spec, clock, state_dir=None,
-               history=None, anchor=None):
-        return self.deployment_class(domain, world_handle_factory, verifier, clock, auth_spec, state_dir, history, anchor)
+               history=None, anchor=None, governance=None):
+        return self.deployment_class(domain, world_handle_factory, verifier, clock, auth_spec, state_dir, history, anchor,
+                                     governance, ops_spec)
 
 
 class FakeVolatileVariant(FakeVariant):
