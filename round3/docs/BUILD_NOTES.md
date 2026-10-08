@@ -440,3 +440,32 @@ Edited only: `r3_oracle/{constitution,const_eval,const_static,const_judge,const_
   records their sha256 in `oracle-boundary-audit.json` and the evaluator compares them with disk (INVALID on change); the registry loads
   the pre-G3 paladin/conventional packages, which lack `deploy(governance=...)`: `tests/test_h25_conformance.py` SKIPs them with that reason
   and `run_h25.py` exits 2 "not implemented yet - G3".
+## G3 H26 harness (tag r3-g3-h26-harness)
+Variant-neutral. New: `r3_oracle/{lowproj,disclosure,disclosure_prov,disclosure_reads}.py` (oracle: canonical low projection, the
+low-view least fixpoint, decision/edge/case visibility + redacted provenance views, expected reads/tools/queries, canaries);
+`r3_harness/h26/` (sim, env, gen_auth, gen_vary, gen_plan, gen_pair, observe, judge, analyze, fuzz, mutation, runner, evaluator);
+`scripts/{run_h26.py,run_h26.sh,evaluate_h26.py,verify_h26.sh}`; tests `test_h26_{oracle,generators,fakes,scripts,conformance}.py`;
+fakes `tests/fakes/fake_h26.py` (oracle-backed FakeHonest + mutant/flag fakes via `--test-variants`).
+How to run (per variant, official counts are the defaults): `scripts/run_h26.sh --exp-id exp-h26-001 --variants paladin,conventional`
+(anchor service outside the sandbox as for H27, ruling Q10; `run_h26.py` alone runs without history/anchor), then
+`scripts/evaluate_h26.py exp-h26-001` and `scripts/verify_h26.sh exp-h26-001`. Dev ids (contain `-dev`) may lower counts with
+`--pairs/--aa/--fuzz-calls` (run) and `--min-*` (evaluate); the override is stamped in envelope and verdict, refused otherwise.
+Pipeline per pair: oracle-only generation (auth v3 perturbed with 2-8 principals + 2-6 rules; variation kinds F E L D C G M;
+D has modes args/swap/valdiff) -> low-equivalence of both worlds validated by the oracle BEFORE any variant runs (bounded 50
+re-draws, counted) -> D4 probes pre-simulated cumulatively -> both worlds executed through the variant (seed -> deploy ->
+subscribe -> high phase -> observation plan) -> canonical observations compared byte-for-byte; each observation also judged
+against the oracle (read mismatch, tools exposure, redacted provenance, canary scan, frozen forms). A/A controls run w1 twice.
+Fuzz: >= 20,000 single-world calls with hidden-key dictionary, identifier twins and canary scan.
+Runtime on the honest fake: ~2.6 min per 1,000 pairs (both worlds, generation included), ~1.7 s per 1,000 fuzz calls;
+5,000 pairs + 500 A/A + 20,000 fuzz + mutation proof ~ 15-20 min per variant on the fake (real variants will be slower).
+INTERP (frozen text left open; the oracle follows the first reading, tests pin the difference):
+ 1 via-rule coverage: s1.2 "a link connects" (not s2.1 "visible links"); on the project fixture 2 via rules (p-researcher-rival,
+   p-researcher-prediction) would never fire under the second reading (tests/test_h26_oracle.py).
+ 2 args_digest is low only if the decision is own or the args are ONLY existence-visible resource refs; effect_digest is low iff
+   every object/field/link the effect rows touch is in the low view.
+ 3 case members (s1.3 "competent or reviewing") = every member of every governance body (over-approximation; G pairs only use
+   observers outside all bodies, so the over-approximation never matters for a pair).
+ 4 prov_object of a hidden/absent ref = OK with no decisions; list_links of a hidden ref = OK with empty lists; query of an
+   unknown name is not judged (twin-compared only).
+Expected conformance failures: the real variants currently lack `deploy(governance=)` and the G3 methods (report: "not implemented
+yet - G3"); tests/test_h26_conformance.py FAILS for them on purpose and passes for the oracle-backed fake.
