@@ -79,6 +79,36 @@ class WorldStore:
     def reader(self) -> "WorldReader":
         return WorldReader(self.path)
 
+    SEED_WRITER = "harness-seed"
+
+    def seed(self, batches: list[list[dict]], writer: str = SEED_WRITER) -> list[int]:
+        """P1e-8, HARNESS ONLY (the writer must be in the allowlist; add it only for H26 runs). Each batch is applied as ONE
+        transaction tagged "seed" ending in one `seed` mark {"batch": i, "changes": n}, so paired worlds built from batch
+        lists of equal shape (same change counts) have identical seq/tick schedules. A change is one of
+        {"op":"create","type","key","props"} | {"op":"update","type","key","props"} | {"op":"delete","type","key"} |
+        {"op":"link"|"unlink","link_type","src","dst"}. Returns the seq of each batch's seed mark."""
+        h = self.handle(writer)
+        seqs: list[int] = []
+        try:
+            for i, batch in enumerate(batches):
+                with h.transaction(tag="seed") as tx:
+                    for c in batch:
+                        op = c["op"]
+                        if op == "create":
+                            h.create(c["type"], c["key"], c["props"])
+                        elif op == "update":
+                            h.update(c["type"], c["key"], c["props"])
+                        elif op == "delete":
+                            h.delete(c["type"], c["key"])
+                        elif op in ("link", "unlink"):
+                            getattr(h, op)(c["link_type"], c["src"], c["dst"])
+                        else:
+                            raise ValueError(f"unknown seed change op {op!r}")
+                    seqs.append(tx.mark("seed", {"batch": i, "changes": len(batch)}))
+        finally:
+            h.close()
+        return seqs
+
 
 class WorldHandle:
     """Write+read access scoped by writer name. Autocommit per call; `transaction()` groups calls."""

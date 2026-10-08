@@ -9,6 +9,9 @@ KNOWN: dict[str, list[str]] = {
            "ledger_after_commit_volatile", "unsynchronized_commit"],
     "H24": ["non_attenuating_delegation", "stale_authority_cache", "revoke_commit_reorder", "expiry_inclusive"],
     "H27": ["digest_omission", "fallback_to_current", "evidence_rebinding", "receipt_self_trust"],
+    "H25": ["precedence_inverted", "quorum_weakened", "emergency_no_expiry", "merit_autofill", "domain_privilege_branch"],
+    "H26": ["existence_status_split", "error_detail_leak", "hidden_tool_schema", "provenance_edge_retained",
+            "subscription_unfiltered", "redaction_fabrication"],
 }  # later gates append their own key
 
 ALL: frozenset[str] = frozenset(n for names in KNOWN.values() for n in names)

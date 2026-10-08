@@ -7,6 +7,7 @@ import json
 from typing import Iterable
 
 V2 = "r3-authority-2"
+V3 = "r3-authority-3"  # v2 + disclosure layer (P1e-6); capability-edge rules identical
 
 
 def scope_covers(scope: dict, op: str, resources: Iterable[tuple[str, str]]) -> bool:
@@ -46,7 +47,7 @@ def edge_path(spec: dict, edge_id: str) -> list[dict]:
 
 def authority_document(spec: dict) -> dict:
     """v2: capabilities in issuance (list) order, revoked sorted. v1 specs are returned unchanged."""
-    if spec.get("spec") != V2:
+    if spec.get("spec") not in (V2, V3):
         return spec
     return {**spec, "capabilities": list(spec["capabilities"]), "revoked": sorted(spec["revoked"])}
 

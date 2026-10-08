@@ -21,8 +21,9 @@ def load_auth_spec(domain: str, root: Path = ROUND3) -> dict:
 
 
 def validate_auth_spec(spec: dict, root: Path = ROUND3) -> None:
-    name = "authority-spec-v2.schema.json" if isinstance(spec, dict) and spec.get("spec") == "r3-authority-2" \
-        else "authority-spec.schema.json"
+    kind = spec.get("spec") if isinstance(spec, dict) else None
+    name = {"r3-authority-2": "authority-spec-v2.schema.json", "r3-authority-3": "authority-spec-v3.schema.json"}.get(
+        kind, "authority-spec.schema.json")
     jsonschema.validate(spec, json.loads((root / "schemas" / name).read_text()))
     ids = [p["id"] for p in spec["principals"]]
     if len(set(ids)) != len(ids):
@@ -119,7 +120,53 @@ def validate_strict(spec: dict, ops_spec: dict | None = None, root: Path = ROUND
             for o in d["operations"]:
                 if o not in names:
                     raise ValueError(f"delegation {d['agent']}->{d['on_behalf_of']}: operation {o!r} is not in the ops spec")
-    if spec["spec"] == "r3-authority-2":  # P1d-3: dispatch on `spec`; v1 behaviour above is unchanged
+    if spec["spec"] in ("r3-authority-2", "r3-authority-3"):  # P1d-3: dispatch on `spec`; v1 behaviour above is unchanged
         from .authgraph import validate_graph
         validate_graph(spec, ops_spec)
+    if spec["spec"] == "r3-authority-3":
+        _validate_disclosure(spec["disclosure"], pids, ops_spec)
     return spec
+
+
+def effective_disclosure(spec: dict, ops_spec: dict) -> dict:
+    """E-3 analogue (P1e-6): a spec below v3 behaves as v3 with every type and link type public and no rules."""
+    if spec.get("spec") == "r3-authority-3":
+        return spec["disclosure"]
+    return {"public_types": sorted(t["name"] for t in ops_spec["resource_types"]),
+            "public_links": sorted(l["name"] for l in ops_spec["link_types"]), "rules": []}
+
+
+def _validate_disclosure(d: dict, pids: set, ops_spec: dict | None) -> None:
+    ids = [r["id"] for r in d["rules"]]
+    if len(set(ids)) != len(ids):
+        raise ValueError(f"duplicate disclosure rule ids: {sorted({i for i in ids if ids.count(i) > 1})}")
+    for r in d["rules"]:
+        sel = r["principal"]
+        if "id" in sel and sel["id"] not in pids:
+            raise ValueError(f"disclosure rule {r['id']} names unknown principal {sel['id']}")
+    if ops_spec is None:
+        return
+    types = {t["name"]: {f["name"] for f in t["fields"]} for t in ops_spec["resource_types"]}
+    links = {l["name"] for l in ops_spec["link_types"]}
+    for t in d["public_types"]:
+        if t not in types:
+            raise ValueError(f"public type {t!r} is not in the ops spec")
+    for lt in d["public_links"]:
+        if lt not in links:
+            raise ValueError(f"public link type {lt!r} is not in the ops spec")
+    for r in d["rules"]:
+        o, rv = r["object"], r["reveals"]
+        if o["type"] not in types:
+            raise ValueError(f"rule {r['id']}: unknown type {o['type']!r}")
+        if o["via"] is not None:
+            if o["via"]["type"] not in types:
+                raise ValueError(f"rule {r['id']}: via.type {o['via']['type']!r} is not in the ops spec")
+            if o["via"]["link"] not in links:
+                raise ValueError(f"rule {r['id']}: unknown link type {o['via']['link']!r}")
+        if rv["fields"] != "*":
+            for f in rv["fields"]:
+                if f not in types[o["type"]]:
+                    raise ValueError(f"rule {r['id']}: unknown field {f!r} of {o['type']}")
+        for lt in rv["links"]:
+            if lt not in links:
+                raise ValueError(f"rule {r['id']}: unknown link type {lt!r}")
