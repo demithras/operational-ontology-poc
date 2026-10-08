@@ -35,6 +35,9 @@ def _deny(reason: str) -> Rollback:
 class G3Mixin:
     def g3_init(self, governance: dict | None) -> None:
         self._gov_default, self.book, self.gov_fault = governance, None, None
+        self.type_names = [t["name"] for t in self.ops_spec["resource_types"]]
+        self.link_names = [lk["name"] for lk in self.ops_spec["link_types"]]
+        self.subs, self._nsub = {}, 0
         self.g3_rebuild()
 
     # ---- governance in force, rebuilt from marks + meta ------------------------------------------------

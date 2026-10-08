@@ -134,9 +134,9 @@ def test_r4_approval_is_bound_to_the_exact_request(mfg):
 
 def test_r4_returned_records_are_copies(proj):
     res = proj.dep.read(proj.token("viewer-1"), "get", {"type": "Hypothesis", "key": "H-A"})
-    res.body["value"]["props"]["phase"] = "EVALUATED"
+    res.body["props"]["phase"] = "EVALUATED"
     before = proj.snap()
-    assert proj.dep.read(proj.token("viewer-1"), "get", {"type": "Hypothesis", "key": "H-A"}).body["value"]["props"]["phase"] == "DRAFT"
+    assert proj.dep.read(proj.token("viewer-1"), "get", {"type": "Hypothesis", "key": "H-A"}).body["props"]["phase"] == "DRAFT"
     assert proj.snap() == before
 
 

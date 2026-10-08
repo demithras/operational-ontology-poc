@@ -69,6 +69,7 @@ class GovAct:
 
     def __init__(self, core, sub: str, a: dict, refs):
         self.core, self.sub, self.a, self.refs, self.seq = core, sub, a, refs, None
+    late_schema = True
 
     def before(self, tx, d: dict) -> Principal:
         core, a, tick = self.core, self.a, tx.tick
@@ -84,6 +85,8 @@ class GovAct:
         real = core.booted.principals[self.sub]
         if a["operation"] == DECLARE or not core.pre_authority(real, a["operation"], a["args"], deny_only=True):
             raise refusal("DENIED", "no_authority")
+        if core.schema_problem(a["operation"], a["args"]) is not None:   # then PROT-H23 operation semantics: schema first
+            raise refusal("INVALID", "schema")
         return core.booted.shadow[self.sub]
 
     def after(self, tx, res: CallResult) -> None:

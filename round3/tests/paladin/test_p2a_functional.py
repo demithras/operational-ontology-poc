@@ -89,7 +89,7 @@ def test_reads(mfg, proj):
     assert mfg.dep.read(t, "available_quantity", {"lot": "LOT-B-PX17"}).body["value"] == 140
     assert mfg.dep.read(t, "work_order_risk", {"work_order": "WO-42"}).body["value"]["at_risk"] is True
     assert mfg.dep.read(t, "get", {"type": "Warehouse", "key": "WH-A"}).status == "OK"
-    assert mfg.dep.read(t, "no_such_read", {}).status == "UNKNOWN"
+    assert mfg.dep.read(t, "no_such_read", {}).status == "INVALID"  # G3: query form (PROT-H26 3.3)
     assert mfg.dep.read("garbage", "available_quantity", {"lot": "LOT-B-PX17"}).status == "DENIED"
     assert proj.dep.read(proj.token("viewer-1"), "evidence_count", {"hypothesis": "H-C"}).body["value"] == 1
     assert proj.dep.read(proj.token("viewer-1"), "find_orphan_components", {}).body["value"] == ["cmp-orphan"]

@@ -98,6 +98,16 @@ def effective_expiry(doc: dict, edge: dict) -> int | None:
     return min(xs) if xs else None
 
 
+def edge_visible(doc: dict, edge_id: str, pid: str) -> bool:
+    """PROT-H26 s1.3: C(e) is visible to the issuer and child of every edge on path(e) and of every edge BELOW e."""
+    by = {e["id"]: e for e in edges_of(doc)}
+    if edge_id not in by:
+        return False
+    below = {e["id"] for e in by.values() if edge_id in {x["id"] for x in (_path_ids(by, e["id"]) or [e])}}
+    on_path = {x["id"] for x in (_path_ids(by, edge_id) or [by[edge_id]])}
+    return any(pid in (by[i]["issuer"], by[i]["child"]) for i in on_path | below)
+
+
 def check_issue(doc: dict, edge: Any, subject: str, tick: int, principals: dict, mutants: Iterable[str] = ()) -> tuple:
     """PROT-H24 s2, first failure wins -> (status, reason) or None when the edge may be committed.
     `principals`: {pid: {"id","roles","relations","delegated_by"}} of the authority spec."""
@@ -108,6 +118,8 @@ def check_issue(doc: dict, edge: Any, subject: str, tick: int, principals: dict,
         return ("INVALID", "duplicate_edge")
     if edge["issuer"] != subject:
         return ("DENIED", "not_parent_holder")
+    if edge["parent"] is not None and edge["parent"] in by and not edge_visible(doc, edge["parent"], subject):
+        return ("INVALID", "unknown_parent")   # PROT-H26 s3.1: a hidden parent is answered exactly as an absent one
     parent = by.get(edge["parent"]) if edge["parent"] is not None else None
     ppath = _path_ids(by, parent["id"]) if parent is not None else []
     if edge["issuer"] == edge["child"] or (ppath and edge["child"] in {e["issuer"] for e in ppath}):
@@ -151,8 +163,8 @@ def check_revoke(doc: dict, edge_id: Any, subject: str) -> tuple | None:
     by = {e["id"]: e for e in edges_of(doc)}
     if not isinstance(edge_id, str) or edge_id == "":  # E-9: not a non-empty string is schema-INVALID (no envelope)
         return ("INVALID", "schema")
-    if edge_id not in by:
-        return ("INVALID", "unknown_edge")
+    if edge_id not in by or not edge_visible(doc, edge_id, subject):
+        return ("INVALID", "unknown_edge")   # PROT-H26 s3.1: a hidden edge is answered exactly as an absent one
     path = _path_ids(by, edge_id) or [by[edge_id]]
     if subject not in {e["issuer"] for e in path}:
         return ("DENIED", "not_revoker")

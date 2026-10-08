@@ -24,6 +24,8 @@ from paladin.engine import CapabilityError, InvalidRequest, Principal
 from paladin.engine import canon, gates
 from paladin.core_g2 import G2Mixin, Rollback
 from paladin.core_g3 import G3Mixin
+from paladin.sovchan import SovMixin
+from paladin.sovprov import SovProvMixin
 from paladin.histledger import HistLedger
 from paladin.ledger import Ledger
 from paladin.worldbridge import state_from_world, tx_rows
@@ -70,7 +72,7 @@ def plain(x: Any) -> Any:
     return copy.deepcopy(canon.to_plain(x))
 
 
-class Core(G3Mixin, G2Mixin):
+class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
     def __init__(self, domain, factory, verifier, ops_spec, auth_spec, clock, mutants, state_dir=None,
                  hook: Callable[[str], None] = lambda point: None, restart: bool = False, history=None, anchor=None,
                  stream=None, governance=None):
@@ -211,10 +213,11 @@ class Core(G3Mixin, G2Mixin):
         if self.auth_fault is not None:  # E-7: the authority history is unresolved - nothing mutates
             return CallResult("UNAVAILABLE", {"reason": "authority_history_unresolved"})
         kind = "direct" if via == "direct" else "call_tool"
-        clean = self.check_shape(op, args, rid)
+        late = getattr(gov, "late_schema", False)  # emergency act: PROT-H25 s3.5 puts the operation's own schema AFTER the procedure
+        clean = self.check_shape(op, args, rid) if not late else json.loads(json.dumps(args))
         if isinstance(clean, CallResult):
             return clean
-        if self.schema_problem(op, clean) is not None:  # PROT-H26 s3.2: token -> schema (E-9) -> authority -> existence/rules
+        if not late and self.schema_problem(op, clean) is not None:  # PROT-H26 s3.2: token -> schema (E-9) -> authority -> existence/rules
             return CallResult("INVALID", {"gate": "inputs", "reason": "schema"})
         who = self.principal(sub, obo, op)
         if isinstance(who, CallResult):

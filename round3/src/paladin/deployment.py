@@ -11,6 +11,7 @@ from paladin.authreplay import Reauth
 from paladin.core import AUDIENCE, Core, Crash, fingerprint, plain
 from paladin.engine import CapabilityError, InvalidRequest, Principal
 from paladin.prov import HISTORY_LAYOUT, stream_for
+from paladin.public import public
 from paladin.surface import SurfaceFactory, UnknownTool, who_of
 from paladin.worldbridge import state_from_world
 from r3_shared.evidence import canonical_bytes
@@ -162,11 +163,16 @@ class PaladinDeployment:
             names = set(self._c.ops)
         else:
             names = set(self._exposed(sub, None))  # a delegate is always surfaced as its delegator's delegate
-        return [ToolDescriptor(n, _schema(self._c.ops[n])) for n in sorted(names)]
+        with self._c.lock:  # P1e-5: descriptors use the frozen shared derivation verbatim (PROT-H26 3.4)
+            return self._c.tool_descriptors(sub, names)
 
     # ---- calls ------------------------------------------------------------------------------
+    def _pub(self, res: CallResult, rid, op=None, args=None) -> CallResult:
+        leak = (lambda: self._c.leak_detail(op, args)) if "error_detail_leak" in self.mutants else None
+        return public(res, rid, leak)
+
     def call_tool(self, token, name, args, on_behalf_of=None, request_id=None) -> CallResult:
-        return self._mutating(lambda: self._call_tool(token, name, args, on_behalf_of, request_id))
+        return self._mutating(lambda: self._pub(self._call_tool(token, name, args, on_behalf_of, request_id), request_id, name, args))
 
     def _call_tool(self, token, name, args, on_behalf_of, request_id) -> CallResult:
         sub = self._c.subject(token, args)
@@ -204,7 +210,7 @@ class PaladinDeployment:
         return box.get("r") or CallResult("INVALID", {"reason": "request was not issued"})
 
     def direct(self, token, operation, args, on_behalf_of=None, request_id=None) -> CallResult:
-        return self._mutating(lambda: self._direct(token, operation, args, on_behalf_of, request_id))
+        return self._mutating(lambda: self._pub(self._direct(token, operation, args, on_behalf_of, request_id), request_id, operation, args))
 
     def _direct(self, token, operation, args, on_behalf_of, request_id) -> CallResult:
         sub = self._c.subject(token, args)
@@ -213,10 +219,50 @@ class PaladinDeployment:
         return self._c.run(sub, on_behalf_of, operation, args, request_id, "direct")
 
     def read(self, token, operation, args) -> CallResult:
+        """P1e-5 / Q12: "get" -> read_object, "list" -> list_objects, otherwise query - every one over the low view."""
+        if operation in ("get", "list") and isinstance(args, dict):
+            if operation == "get":
+                return self._low(token, lambda c, s: c.read_object(s, f"{args.get('type')}:{args.get('key')}"))
+            return self._low(token, lambda c, s: c.list_objects(s, args.get("type")))
+        return self._low(token, lambda c, s: c.query(s, operation, args))
+
+    def _low(self, token, fn) -> CallResult:
+        """One low-channel call: token -> subject -> answer from the subject's low view under the Core lock."""
         if self._crashed:
             return self._DOWN
-        with self._c.lock:
-            return self._read(token, operation, args)
+        c = self._c
+        sub = c.subject(token)
+        if sub is None or sub not in c.booted.principals:
+            return CallResult("DENIED", {"reason": "token"})
+        with c.lock:
+            return fn(c, sub)
+
+    def read_object(self, token, ref) -> CallResult:
+        return self._low(token, lambda c, s: c.read_object(s, ref))
+
+    def list_objects(self, token, type_) -> CallResult:
+        return self._low(token, lambda c, s: c.list_objects(s, type_))
+
+    def list_links(self, token, ref, link_type) -> CallResult:
+        return self._low(token, lambda c, s: c.list_links(s, ref, link_type))
+
+    def query(self, token, name, args) -> CallResult:
+        return self._low(token, lambda c, s: c.query(s, name, args))
+
+    def subscribe(self, token, spec) -> CallResult:
+        return self._low(token, lambda c, s: c.subscribe(s, spec))
+
+    def poll(self, token, sub) -> CallResult:
+        return self._low(token, lambda c, s: c.poll(s, sub))
+
+    def prov_decision(self, token, decision_id) -> CallResult:
+        return self._low(token, lambda c, s: c.prov_decision(s, decision_id))
+
+    def prov_object(self, token, ref) -> CallResult:
+        return self._low(token, lambda c, s: c.prov_object(s, ref))
+
+    def authority_used_as(self, token, request_id) -> CallResult:
+        return self._low(token, lambda c, s: c.authority_used_as(s, request_id))
 
     def _read(self, token, operation, args) -> CallResult:
         sub = self._c.subject(token)
@@ -237,7 +283,7 @@ class PaladinDeployment:
 
     def approve(self, token, operation, args, requester, on_behalf_of=None) -> CallResult:
         # recording an approval commits nothing to the world: it never reaches a crash point and leaves an armed crash pending
-        return self._mutating(lambda: self._approve(token, operation, args, requester, on_behalf_of), arms=False)
+        return self._mutating(lambda: self._pub(self._approve(token, operation, args, requester, on_behalf_of), None, operation, args), arms=False)
 
     def _approve(self, token, operation, args, requester, on_behalf_of=None) -> CallResult:
         """Pre-approve the EXACT request (requester, delegator, operation, args). The Engine approval gate still decides
@@ -270,10 +316,10 @@ class PaladinDeployment:
 
     # ---- Gate 2: delegation, revocation, historical authority (PROT-H24) ---------------------------------------------
     def delegate(self, token: str, edge: dict, request_id: str) -> CallResult:
-        return self._mutating(lambda: self._authority_call("delegate", token, edge, request_id))
+        return self._mutating(lambda: self._pub(self._authority_call("delegate", token, edge, request_id), request_id))
 
     def revoke(self, token: str, edge_id: str, request_id: str) -> CallResult:
-        return self._mutating(lambda: self._authority_call("revoke", token, {"edge_id": edge_id}, request_id))
+        return self._mutating(lambda: self._pub(self._authority_call("revoke", token, {"edge_id": edge_id}, request_id), request_id))
 
     def _authority_call(self, kind: str, token: str, payload, rid) -> CallResult:
         c = self._c
@@ -299,7 +345,7 @@ class PaladinDeployment:
 
     # ---- Gate 3: constitutional authority (PROT-H25) ---------------------------------------------------------------
     def constitutional(self, token: str, action: dict, request_id: str) -> CallResult:
-        return self._mutating(lambda: self._constitutional(token, action, request_id))
+        return self._mutating(lambda: self._pub(self._constitutional(token, action, request_id), request_id))
 
     def _constitutional(self, token, action, request_id) -> CallResult:
         sub = self._c.subject(token)
