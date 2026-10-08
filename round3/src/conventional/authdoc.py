@@ -9,7 +9,7 @@ from __future__ import annotations
 import copy
 from typing import Callable
 
-from r3_shared.authgraph import V2, edge_path, scope_covers, scope_subset
+from r3_shared.authgraph import V2, V3, edge_path, scope_covers, scope_subset
 
 DEFAULT_MAX_DEPTH = 8
 EDGE_KEYS = {"id", "issuer", "child", "parent", "scope", "expires_at", "redelegable", "issued_at"}
@@ -17,7 +17,7 @@ Refusal = tuple[str, str]  # (status, reason)
 
 
 def is_v2(doc: dict) -> bool:
-    return doc.get("spec") == V2
+    return doc.get("spec") in (V2, V3)
 
 
 def upgraded(doc: dict) -> dict:

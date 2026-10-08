@@ -26,7 +26,9 @@ from .helpers_mfg import HELPERS as MFG
 from .helpers_proj import HELPERS as PROJ, ID_READS
 from .interp import Ctx, HelperError, ev
 from .models_gen import OPERATION_MODELS
+from .abort import _Abort
 from .authority_ops import AuthorityOps
+from .govsvc import GovernanceOps
 from .histledger import HistLedger, LedgerUnresolved
 from .pdp import Pdp
 from .provenance import DecisionCtx, Provenance, has_float
@@ -45,12 +47,6 @@ def _base(doc: dict) -> dict:
 _LINEAGE_ERRORS = (LedgerUnresolved, ValueError, KeyError, TypeError, AttributeError, IndexError)
 
 
-class _Abort(Exception):
-    def __init__(self, status: str, body: dict):
-        super().__init__(status)
-        self.result = CallResult(status, body)
-
-
 @dataclass(frozen=True)
 class BoundRequest:
     """The authorized request. Frozen: nothing the caller holds can alter what commits (R4)."""
@@ -64,10 +60,10 @@ class BoundRequest:
     fingerprint: str
 
 
-class Service(AuthorityOps):
+class Service(AuthorityOps, GovernanceOps):
     def __init__(self, domain: str, factory: Callable, verifier, ops_spec: dict, auth_spec: dict, clock,
                  audience: str = "conventional", mutant_switches: frozenset[str] = frozenset(),
-                 history=None, anchor=None):
+                 history=None, anchor=None, governance: dict | None = None):
         self.domain, self._factory, self._verifier, self._clock, self.audience = domain, factory, verifier, clock, audience
         self._spec = copy.deepcopy(ops_spec)
         self._ops = {o["name"]: o for o in self._spec["operations"]}
@@ -106,6 +102,12 @@ class Service(AuthorityOps):
         finally:
             h.close()
         self._policy = Pdp(doc, version, self._mutants)
+        h = factory(WRITER)
+        try:
+            self._has_gov = governance is not None
+            self._gov_init(h, governance)
+        finally:
+            h.close()
         self.stream = self._init_stream(domain)
         self.prov = Provenance(history, anchor, self.stream, self._spec, clock, self._mutants) \
             if history is not None and anchor is not None else None
@@ -156,6 +158,8 @@ class Service(AuthorityOps):
                 version, spec = got
                 self._policy = Pdp(spec, version, self._mutants)
                 self._authority_unresolved = None
+                if self._has_gov:
+                    self._gov_restore(h)
             except _LINEAGE_ERRORS as exc:  # E-7: restart over a damaged lineage stays up but refuses mutations
                 self._authority_unresolved = f"{type(exc).__name__}"
                 self._policy = Pdp(self._initial_spec, 1, self._mutants)
@@ -222,7 +226,7 @@ class Service(AuthorityOps):
             except _Abort as a:
                 res = a.result
             except (sqlite3.Error, ConnectionError) as exc:
-                return CallResult("UNAVAILABLE", {"reason": "dependency_unavailable", "detail": type(exc).__name__})
+                return CallResult("UNAVAILABLE", {"reason": "dependency_unavailable"})
             except LedgerUnresolved:
                 return CallResult("UNAVAILABLE", {"reason": "history_unresolved"})
             return self._provenance(dc, res)
@@ -274,15 +278,11 @@ class Service(AuthorityOps):
                     break
         dc.subject = sub
         op = self._ops.get(operation) if isinstance(operation, str) else None
-        if hidden:  # the tool layer found no such tool for this subject: a governed refusal (E-8), decided server-side
-            dc.op = op
-            raise _Abort("DENIED", {"reason": "tool_not_available"})
         if op is None:
-            raise _Abort("INVALID", {"reason": "unknown_operation"})
+            raise _Abort("DENIED", {"reason": "tool_not_available"}) if hidden \
+                else _Abort("INVALID", {"reason": "unknown_operation"})
         dc.op = op
-        if enforce and not self._policy.exposed_operations(sub, [operation]):  # coarse gate before parsing details
-            dc.governed = True
-            raise _Abort("DENIED", {"reason": "no_matching_allow"})
+        # PROT-H26 3.2 frozen order: token -> schema -> authority (world-independent) -> existence/rules/approvals
         if obo is not None and not isinstance(obo, str):
             raise _Abort("INVALID", {"reason": "bad_on_behalf_of"})
         if request_id is not None and (not isinstance(request_id, str) or not request_id.strip()):
@@ -291,9 +291,14 @@ class Service(AuthorityOps):
         try:
             inputs = model.from_args(args).inputs()
         except RequestInvalid as exc:
-            raise _Abort("INVALID", {"reason": exc.reason, "detail": exc.detail}) from exc
+            raise _Abort("INVALID", {"reason": exc.reason}) from exc
         if self.prov is not None and has_float(inputs):  # PROT-H27 s3: no floats in bound artifacts
             raise _Abort("INVALID", {"reason": "float_in_artifact"})
+        if hidden:  # the tool layer found no such tool for this subject: a governed refusal (E-8), decided server-side
+            raise _Abort("DENIED", {"reason": "tool_not_available"})
+        if enforce and not self._policy.exposed_operations(sub, [operation]):  # coarse gate before the commit
+            dc.governed = True
+            raise _Abort("DENIED", {"reason": "no_matching_allow"})
         res = tuple((model.RESOURCES[n], v) for n, v in inputs.items() if n in model.RESOURCES)
         bound = BoundRequest(sub, obo, operation, MappingProxyType(inputs), res, request_id, self._policy.version,
                              store.fingerprint(sub, obo, operation, inputs))  # on_behalf_of bound LITERALLY (P10)
@@ -318,6 +323,10 @@ class Service(AuthorityOps):
         finally:
             h.close()
 
+    def _case_exempt(self, b: BoundRequest) -> bool:
+        # BUG (domain_privilege_branch mutant): a domain/identity-keyed privilege in the decision path (R25-6 audit target)
+        return self.mutant("domain_privilege_branch") and self.domain == "project" and b.subject.endswith("-1")
+
     def _decide(self, b: BoundRequest, tick: int):
         """PDP decision. The cache key includes the authority digest and the commit tick (always fresh); the
         stale_authority_cache mutant keys on (subject, obo, op, resources) only and never invalidates."""
@@ -329,18 +338,22 @@ class Service(AuthorityOps):
             d = self._dcache[key] = pol.decide(b.subject, b.on_behalf_of, b.operation, list(b.resources), tick)
         return d
 
-    def _txn(self, h, tx, op: dict, model, b: BoundRequest, raw_args, enforce: bool, dc: DecisionCtx) -> CallResult:
+    def _txn(self, h, tx, op: dict, model, b: BoundRequest, raw_args, enforce: bool, dc: DecisionCtx, *,
+             pre=None, gate: bool = True) -> CallResult:
+        """pre: an already-made authority decision (constitutional execute/act); gate: the PROT-H25 case_required gate."""
         tick = tx.tick if tx is not None else self._clock.now()
         dc.authority_doc, dc.governed = self._policy.doc, True
         if self.prov is not None:
             dc.evidence = self.prov.collect(h, op, model.RESOURCES, dict(b.inputs))
         path: tuple = ()
         if enforce:
-            d = self._decide(b, tick)
+            d = pre if pre is not None else self._decide(b, tick)
             stale = self.mutant("stale_authority_cache")  # BUG: the cached decision's version is never compared
             if not d.allowed or (not stale and d.authority_version != self._policy.version):
                 raise _Abort("DENIED", {"reason": d.reason})
             path = d.path
+            if gate and self.governed(b.operation, list(b.resources)) and not self._case_exempt(b):
+                raise _Abort("DENIED", {"reason": "case_required"})  # PROT-H25 3.4: no fallback to base authority
         dc.path = path
         if b.request_id is not None:
             prior = self._mem_ledger.get(b.request_id) if self.mutant("ledger_after_commit_volatile") \
@@ -384,9 +397,9 @@ class Service(AuthorityOps):
                 self._consume_approval(h, tx, op, b, needs_approval)
             planned = effects.resolve(op["effects"], ctx)
         except HelperError as exc:
-            raise _Abort("INVALID", {"reason": "helper_error", "detail": str(exc)}) from exc
+            raise _Abort("INVALID", {"reason": "helper_error"}) from exc
         except effects.EffectRejected as exc:
-            raise _Abort("INVALID", {"reason": "effect_rejected", "detail": str(exc)}) from exc
+            raise _Abort("INVALID", {"reason": "effect_rejected"}) from exc
         if self._armed == "before_commit":  # authorized and validated, nothing written yet: the open transaction is lost
             raise self._crash_now()
         if self.mutant("unsynchronized_commit"):
@@ -394,9 +407,9 @@ class Service(AuthorityOps):
         try:
             n = effects.apply(h, planned, b.request_id, self.unavailable)
         except effects.EffectRejected as exc:
-            raise _Abort("INVALID", {"reason": "effect_rejected", "detail": str(exc)}) from exc
+            raise _Abort("INVALID", {"reason": "effect_rejected"}) from exc
         except ConnectionError as exc:
-            raise _Abort("UNAVAILABLE", {"reason": "dependency_unavailable", "detail": str(exc)}) from exc
+            raise _Abort("UNAVAILABLE", {"reason": "dependency_unavailable"}) from exc
         body = {"operation": b.operation, "effects": n, "request_id": b.request_id, "authority_version": b.authority_version}
         if tx is not None:  # PROT-H24 s4: every effect transaction carries one `commit` mark (the commit point)
             dc.tx_id, dc.tick = tx.id, tx.tick
@@ -508,4 +521,4 @@ class Service(AuthorityOps):
         except RequestInvalid as exc:
             return CallResult("INVALID", {"reason": exc.reason})
         except HelperError as exc:
-            return CallResult("INVALID", {"reason": "helper_error", "detail": str(exc)})
+            return CallResult("INVALID", {"reason": "helper_error"})
