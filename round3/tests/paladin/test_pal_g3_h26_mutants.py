@@ -17,9 +17,14 @@ def _exist(r, k):                       # world k=0: the probed hidden object EX
 
 
 def test_existence_status_split(tmp_path):
-    assert divergences(run_pair(tmp_path, _exist)) == []
-    killed = divergences(run_pair(tmp_path, _exist, mutants=["existence_status_split"]))
-    assert "read:Failure:cv-x2" in killed or "read:Failure:cv-x1" in killed
+    def hidden(r, k):                   # world 0: Component cv-x2 exists (hidden from viewer-1); world 1: it does not
+        seed(r).create("Component", f"cv-x{2 - k}", {"id": f"cv-x{2 - k}"})
+    probe = (("mutating-hidden", lambda r, tk: r.dep.direct(tk, "flag_orphan_component", {"component": "cv-x2"}, request_id="sp")),
+             ("read-hidden", lambda r, tk: r.dep.read_object(tk, "Component:cv-x2")))
+    clean = run_pair(tmp_path, hidden, extra=probe)
+    assert divergences(clean) == []
+    killed = divergences(run_pair(tmp_path, hidden, extra=probe, mutants=["existence_status_split"]))
+    assert "read-hidden" in killed and "mutating-hidden" in killed
 
 
 def test_error_detail_leak(tmp_path):

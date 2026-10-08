@@ -323,6 +323,9 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
                         bad = self.edge_check(edge[0], edge[1], op, args, tx.tick, d)
                         if bad is not None:
                             raise _Rollback(bad)
+                    if "existence_status_split" in self.mutants and any(
+                            self._svc.get(t, k) is None for t, k in self.refs_of(op, args)):   # MUTANT: existence is answered before authority
+                        raise _Rollback(CallResult("INVALID", {"gate": "inputs", "reason": "inputs gate refused: not found"}))
                     if who is not BYPASS:
                         if not self.pre_authority(who, op, args):  # authority is world-independent and precedes existence (H26 3.2)
                             raise _Rollback(CallResult("DENIED", {"gate": "authority", "reason": "authority gate refused"}))

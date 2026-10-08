@@ -108,7 +108,7 @@ def low_view(disc: dict, observer: dict, snap_objs: dict, snap_links: set, impli
             else:
                 deny_f |= fs
                 linkable -= set(rv["links"])
-                if rv["provenance"] != "none":
+                if LEVELS[rv["provenance"]]:   # a deny rule withholds provenance (level 0 = none)
                     lvl = "none"
         keep = (allow_f - deny_f) & set(props)
         out.objects[ref] = {f: props[f] for f in sorted(keep)}
