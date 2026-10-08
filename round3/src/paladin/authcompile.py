@@ -17,6 +17,9 @@ import copy
 from paladin.engine import Principal
 
 
+EM_ROLE, EMERGENCY_RULE = "gov:emergency", "gov-emergency"
+
+
 def _psel(sel: dict) -> str:
     if sel.get("any"):
         return "*"
@@ -59,6 +62,10 @@ def compile_ir(ir: dict, auth: dict, ops: dict) -> dict:
         rules.append({"id": rid, "principal_selector": _psel(g["principal"]), "capability": _capability(op),
                       "resource_selector": _rsel(g["resource"]), "effect": g["effect"],
                       "delegation_allowed": bool(g["delegable"])})
+    # PROT-H25 s3.5: the ONE generic emergency rule. Only the control plane builds a principal with this role (the shadow
+    # principal `gov:em:<pid>`, constructed after the procedural checks of an `act`); no token or spec can name it.
+    rules.append({"id": EMERGENCY_RULE, "principal_selector": f"role:{EM_ROLE}", "capability": "action:*",
+                  "resource_selector": "*", "effect": "allow", "delegation_allowed": False})
     out["authority_rules"] = rules
     approvals = {o["name"]: (o.get("approval") or {}).get("approver_operation") for o in ops["operations"]}
     for a in out["actions"]:
@@ -72,6 +79,12 @@ def principals(auth: dict) -> dict[str, Principal]:
     return {p["id"]: Principal(p["id"], frozenset(p["roles"]),
                                frozenset((r["type"], r["key"], r["relation"]) for r in p["relations"]))
             for p in auth["principals"]}
+
+
+def shadow_principals(static: dict) -> dict:
+    """Shadow identities used ONLY for an emergency `act` (PROT-H25 s3.5): the grantee's claims plus the emergency role.
+    Never a token subject (not in `principals`); non-delegable (no delegator)."""
+    return {p.pid: Principal("gov:em:" + p.pid, p.roles | {EM_ROLE}, p.relations) for p in static.values()}
 
 
 def delegation_table(auth: dict) -> dict[tuple[str, str], frozenset]:

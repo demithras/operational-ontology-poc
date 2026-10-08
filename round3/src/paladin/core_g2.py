@@ -21,7 +21,8 @@ from r3_shared.variant import CallResult
 
 # gate (of a refusal) -> reason code recorded in the decision; refusals from any other gate are not governed decisions
 GOVERNED = {"authority": "authority", "delegation": "delegation", "surface": "authority", "approval": "approval",
-            "policy": "policy", "gate_pass": "gate_pass", "preconditions": "preconditions", "hard_constraints": "constraints"}
+            "policy": "policy", "gate_pass": "gate_pass", "preconditions": "preconditions", "hard_constraints": "constraints",
+            "governance": "governance"}
 RULE_INVALID = {"preconditions", "constraints"}  # INVALID refusals that are rule verdicts (the rest are schema/engine faults)
 ISSUE_STATUS = {"INVALID": "INVALID", "DENIED": "DENIED"}
 
@@ -131,6 +132,11 @@ class G2Mixin:
         o = self.ops.get(op) if isinstance(op, str) else None
         if o is None:
             return None  # not an operation request (delegate / revoke carry their own shape checks)
+        return self.schema_problem_def(o, args)
+
+    @staticmethod
+    def schema_problem_def(o: dict, args: Any) -> str | None:
+        """The same E-8/E-9 verdict for any operation-shaped definition (also the emergency:declare pseudo-operation)."""
         if not isinstance(args, dict):
             return "args must be an object"
         names = {i["name"]: i for i in o["inputs"]}

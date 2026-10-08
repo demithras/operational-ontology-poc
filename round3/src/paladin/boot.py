@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
-from paladin.authcompile import compile_ir, principals
+from paladin.authcompile import compile_ir, principals, shadow_principals
 from paladin.engine import Engine, LogicBindings
 from paladin.engine.effects import AdapterRegistry
 from paladin.worldbridge import WorldExternalAdapter, WorldGitAdapter
@@ -43,6 +43,7 @@ class Booted:
     engine: Engine
     ir: dict
     principals: dict
+    shadow: dict | None = None
 
 
 def boot(domain: str, ops_spec: dict, auth_spec: dict, handle_factory: Callable, service_handle: Any,
@@ -71,6 +72,7 @@ def boot(domain: str, ops_spec: dict, auth_spec: dict, handle_factory: Callable,
     if domain == "project":
         git.attach(engine.model)
     pr = principals(auth_spec)
-    for p in pr.values():
+    sh = shadow_principals(pr)
+    for p in list(pr.values()) + list(sh.values()):
         engine.register_principal(p)
-    return Booted(engine, ir, pr)
+    return Booted(engine, ir, pr, sh)

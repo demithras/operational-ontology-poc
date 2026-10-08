@@ -14,6 +14,7 @@ from paladin.prov import HISTORY_LAYOUT, stream_for
 from paladin.surface import SurfaceFactory, UnknownTool, who_of
 from paladin.worldbridge import state_from_world
 from r3_shared.evidence import canonical_bytes
+from r3_shared.governance import validate_governance
 import functools
 
 from r3_shared.variant import CallResult, ReplayResult, ToolDescriptor
@@ -35,7 +36,10 @@ class PaladinDeployment:
     HISTORY_LAYOUT = {**HISTORY_LAYOUT, "authority_version": "auth/"}  # every durable record kind kept in the HistoryStore
 
     def __init__(self, domain, factory, verifier, ops_spec, auth_spec, clock, mutants=frozenset(), state_dir=None,
-                 history=None, anchor=None):
+                 history=None, anchor=None, governance=None):
+        if governance is not None:
+            validate_governance(governance, auth_spec, ops_spec)   # a caller error: ValueError, nothing deployed
+        self._governance = governance
         self._args = (domain, factory, verifier, ops_spec, auth_spec, clock, mutants)
         self.history, self.anchor, self.mutants = history, anchor, frozenset(mutants)
         self.stream = stream_for(history, anchor, domain) if history is not None else None
@@ -51,7 +55,7 @@ class PaladinDeployment:
     # ---- crash / restart (PROT-H23-A8) ------------------------------------------------------
     def _build(self, restart: bool) -> None:
         d, f, v, ops, auth, clk, mut = self._args
-        self._c = Core(d, f, v, ops, auth, clk, mut, self._state_dir, self._fire, restart, self.history, self.anchor, self.stream)
+        self._c = Core(d, f, v, ops, auth, clk, mut, self._state_dir, self._fire, restart, self.history, self.anchor, self.stream, self._governance)
         self._surfaces = SurfaceFactory(self._c.booted.ir)
         self._auth_version = self._c.version()
 
@@ -293,6 +297,26 @@ class PaladinDeployment:
             return CallResult("INVALID", {"reason": "unknown_request"})
         return CallResult("OK", dict(used))
 
+    # ---- Gate 3: constitutional authority (PROT-H25) ---------------------------------------------------------------
+    def constitutional(self, token: str, action: dict, request_id: str) -> CallResult:
+        return self._mutating(lambda: self._constitutional(token, action, request_id))
+
+    def _constitutional(self, token, action, request_id) -> CallResult:
+        sub = self._c.subject(token)
+        if sub is None:
+            return CallResult("DENIED", {"reason": "token"})
+        return self._c.constitutional(sub, action, request_id)
+
+    def set_governance(self, doc: dict) -> None:
+        c = self._c
+        if c is None:
+            raise RuntimeError("deployment is crashed; restart() first")
+        c.replace_governance(doc)
+
+    def case_state(self, case_id: str):
+        c = self._c
+        return None if c is None else c.case_state(case_id)
+
     def authority_state(self) -> dict:
         return json.loads(canonical_bytes(self._c.auth))
 
@@ -325,7 +349,7 @@ def _total(fn, fail):
 
 _CALL = lambda exc: CallResult("UNAVAILABLE", {"reason": f"internal_error: {type(exc).__name__}"})  # noqa: E731
 _REPLAY = lambda exc: ReplayResult("UNRESOLVED", f"internal_error: {type(exc).__name__}")  # noqa: E731
-for _n in ("call_tool", "direct", "read", "approve", "delegate", "revoke", "authority_used"):
+for _n in ("call_tool", "direct", "read", "approve", "delegate", "revoke", "authority_used", "constitutional"):
     setattr(PaladinDeployment, _n, _total(getattr(PaladinDeployment, _n), _CALL))
 for _n in ("replay", "explain"):
     setattr(PaladinDeployment, _n, _total(getattr(PaladinDeployment, _n), _REPLAY))

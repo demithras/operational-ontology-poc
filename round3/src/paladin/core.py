@@ -23,6 +23,7 @@ from paladin.boot import boot
 from paladin.engine import CapabilityError, InvalidRequest, Principal
 from paladin.engine import canon, gates
 from paladin.core_g2 import G2Mixin, Rollback
+from paladin.core_g3 import G3Mixin
 from paladin.histledger import HistLedger
 from paladin.ledger import Ledger
 from paladin.worldbridge import state_from_world, tx_rows
@@ -69,10 +70,10 @@ def plain(x: Any) -> Any:
     return copy.deepcopy(canon.to_plain(x))
 
 
-class Core(G2Mixin):
+class Core(G3Mixin, G2Mixin):
     def __init__(self, domain, factory, verifier, ops_spec, auth_spec, clock, mutants, state_dir=None,
                  hook: Callable[[str], None] = lambda point: None, restart: bool = False, history=None, anchor=None,
-                 stream=None):
+                 stream=None, governance=None):
         self.domain, self._factory, self._verifier, self.clock, self.mutants = domain, factory, verifier, clock, mutants
         self.hook = hook  # crash-injection point callback (before_commit fires inside the adapters, after_commit in run)
         self.lock = threading.RLock()  # the Engine State, the service connection and the ledger are single-writer
@@ -118,6 +119,7 @@ class Core(G2Mixin):
                 if history is None:
                     raise
                 self.auth_fault = self.auth_fault or f"ledger recovery: {type(exc).__name__}: {exc}"
+        self.g3_init(governance)  # governance in force: deploy-time document, then the set_governance marks (PROT-H25 R25-7)
 
     # ---- authority --------------------------------------------------------------------------
     def install(self, auth_spec: dict, persist: bool = True) -> None:
@@ -203,18 +205,22 @@ class Core(G2Mixin):
         except (TypeError, ValueError):
             return CallResult("INVALID", {"gate": "inputs", "reason": "args are not JSON values"})
 
-    def run(self, sub: str, obo: Any, op: str, args: Any, rid: Any, via: str) -> CallResult:
+    def run(self, sub: str, obo: Any, op: str, args: Any, rid: Any, via: str, gov=None) -> CallResult:
         if op not in self.ops:
             return CallResult("UNKNOWN", {"reason": "unknown operation"})
         if self.auth_fault is not None:  # E-7: the authority history is unresolved - nothing mutates
             return CallResult("UNAVAILABLE", {"reason": "authority_history_unresolved"})
         kind = "direct" if via == "direct" else "call_tool"
-        who = self.principal(sub, obo, op)
-        if isinstance(who, CallResult):
-            return self.refuse(sub, obo, op, args, rid, who, kind) if who.body.get("gate") == "delegation" else who
         clean = self.check_shape(op, args, rid)
         if isinstance(clean, CallResult):
             return clean
+        if self.schema_problem(op, clean) is not None:  # PROT-H26 s3.2: token -> schema (E-9) -> authority -> existence/rules
+            return CallResult("INVALID", {"gate": "inputs", "reason": "schema"})
+        who = self.principal(sub, obo, op)
+        if isinstance(who, CallResult):
+            if gov is None:
+                return self.refuse(sub, obo, op, args, rid, who, kind) if who.body.get("gate") == "delegation" else who
+            who = None  # constitutional execute/act: the procedural gates (and base authority) are decided in the transaction
         edge = obo is not None and self.delegator.get(sub) is None
         afp = fingerprint(sub, obo, op, clean)  # approval binding: on_behalf_of EXACTLY as supplied (P10; null != explicit delegator)
         obo_id = obo if edge else self.delegator.get(sub)  # request-id replay identity: the delegator (or edge root) in force
@@ -238,7 +244,7 @@ class Core(G2Mixin):
             self.ledger.prepare(rid, fp, self.world_digest(), sub, obo_id, op)  # durable BEFORE any world write
             d = self.new_decision(kind, sub, obo, op, clean, rid)
             try:
-                res = self._commit(BYPASS if bypass else who, op, clean, f"{rid}~{attempt}", afp, rid, True, (sub, obo) if edge else None, d)
+                res = self._commit(BYPASS if bypass else who, op, clean, f"{rid}~{attempt}", afp, rid, True, (sub, obo) if edge else None, d, gov)
                 if res.status == "OK":
                     self.hook("after_commit")  # crash here: world committed, ledger still PREPARED (recovered at restart)
                 res = self._anchor(d, res, rid)
@@ -300,7 +306,7 @@ class Core(G2Mixin):
                    for cap in pipeline.approval_capabilities(self.eng, spec))
 
     def _commit(self, who: Principal, op: str, args: dict, key: str, fp: str, rid: str, journaled: bool = True,
-                edge: tuple | None = None, d: dict | None = None) -> CallResult:
+                edge: tuple | None = None, d: dict | None = None, gov=None) -> CallResult:
         """Propose; if the Engine parks it for approval, consume a matching single-use pre-approval and let the Engine's
         approval gate run in the same world transaction; without one the request is refused (zero effects).
         ONE world write transaction per commit (PROT-H24 s4): the edge path, the evidence read, the Engine pipeline, the
@@ -311,10 +317,19 @@ class Core(G2Mixin):
             with th.transaction(tag="effect") as tx:
                 self.eng.store.current = state_from_world(self.eng.model, self._svc)
                 d["doc"] = self.auth
-                if edge is not None:  # freshness at the commit point: path validity is decided inside this transaction
-                    bad = self.edge_check(edge[0], edge[1], op, args, tx.tick, d)
-                    if bad is not None:
-                        raise _Rollback(bad)
+                if gov is not None:  # constitutional execute/act (PROT-H25 s3.4/3.5): procedure, then base authority, in this tx
+                    who = gov.before(tx, d)
+                else:
+                    if edge is not None:  # freshness at the commit point: path validity is decided inside this transaction
+                        bad = self.edge_check(edge[0], edge[1], op, args, tx.tick, d)
+                        if bad is not None:
+                            raise _Rollback(bad)
+                    if who is not BYPASS:
+                        if not self.pre_authority(who, op, args):  # authority is world-independent and precedes existence (H26 3.2)
+                            raise _Rollback(CallResult("DENIED", {"gate": "authority", "reason": "authority gate refused"}))
+                        if self.case_required(edge[0] if edge else who.pid, op, args):
+                            d["reason"] = "case_required"
+                            raise _Rollback(CallResult("DENIED", {"gate": "governance", "reason": "case_required"}))
                 d["evidence"] = self.evidence_for(op, args)
                 rec = self.eng.propose(op, args, who, idempotency_key=key)
                 if rec["state"] == "PENDING_APPROVAL":
@@ -325,9 +340,13 @@ class Core(G2Mixin):
                 res = self.map_record(rec)
                 if res.status != "OK":
                     raise _Rollback(res)  # nothing but an OK commit may touch the world (R7)
+                if gov is not None:
+                    gov.after(tx, res)  # the one `governance` mark of this transaction
                 seq = tx.mark("commit", {"request_id": d["rid"], "kind": d["kind"], "authority_version": self.version()})
                 d.update(world_seq=seq, tick=tx.tick, rows=tx_rows(th, tx.id))
             d["committed"] = True
+            if gov is not None:
+                gov.post(tx)
             self.ledger.put_meta(f"used:{d['rid']}", {"authority_version": self.version(), "world_seq": d["world_seq"],
                                                       "tick": d["tick"], "path": d["path"], "on_behalf_of": d["obo"]})
             if not journaled:
