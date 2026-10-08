@@ -41,8 +41,7 @@ REPL = {
                           '"rid": ev["rid"]}')]),
     "ignoresjudgments": ([('    yes = sum(j["value"] == YES[stage] for j in cnt)',
                            '    if cnt:\n        return ALLOW\n    yes = sum(j["value"] == YES[stage] for j in cnt)')], []),
-    "alwaysoracleneeded": ([], [('            return _r("DENIED", "not_requester")\n',
-                                 '            return _r("DENIED", "not_requester")\n        return _r("DENIED", "oracle_needed")\n')]),
+    "alwaysoracleneeded": ([], []),  # quirk of H25Dep: refuses every execute/act the oracle would commit
     "honest": ([], []),
 }
 
@@ -72,9 +71,9 @@ def mutated_constitution(name: str):
 
 class H25Dep(H24Dep):
     def __init__(self, domain, factory, verifier, ops, auth, clock, mutants=frozenset(), state_dir=None, governance=None,
-                 cons=Constitution):
+                 cons=Constitution, quirk=None):
         super().__init__(domain, factory, verifier, ops, to_v2(auth), clock, mutants, state_dir)
-        self.auth_v3, self.gov0, self.cons = copy.deepcopy(auth), copy.deepcopy(governance), cons
+        self.auth_v3, self.gov0, self.cons, self.quirk = copy.deepcopy(auth), copy.deepcopy(governance), cons, quirk
         self.C = cons.from_docs(auth, governance, ops)
         self.g3 = {"results": {}, "events": []}
         self._load_g3()
@@ -135,6 +134,8 @@ class H25Dep(H24Dep):
                             st = "INVALID" if out.kind in (ops_model.INVALID, ops_model.UNKNOWN_OP) else "DENIED"
                             raise _Abort(CallResult(st, {"reason": "approval_required" if out.kind == ops_model.NEEDS_APPROVAL
                                                          else out.detail}))
+                    if out is not None and self.quirk == "alwaysoracleneeded":
+                        raise _Abort(CallResult("DENIED", {"reason": "oracle_needed"}))
                     if armed == "before_commit":
                         self.crashed = True
                         raise _Abort(CallResult("UNKNOWN", {"reason": "crashed"}))
@@ -185,10 +186,11 @@ class H25Variant:
         self.name = name
         key = name.split("fake-", 1)[1]
         self.cons, self.sources = mutated_constitution(key)
+        self.quirk = key if key == "alwaysoracleneeded" else None
 
     def deploy(self, domain, factory, verifier, ops_spec, auth_spec, clock, state_dir=None, history=None, anchor=None,
                governance=None):
-        return H25Dep(domain, factory, verifier, ops_spec, auth_spec, clock, frozenset(), state_dir, governance, self.cons)
+        return H25Dep(domain, factory, verifier, ops_spec, auth_spec, clock, frozenset(), state_dir, governance, self.cons, self.quirk)
 
 
 NAMES = tuple("fake-" + k for k in REPL)

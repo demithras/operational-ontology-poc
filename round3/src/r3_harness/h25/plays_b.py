@@ -20,7 +20,7 @@ def _scope_for(g, op_name):
     return {"operations": [op_name], "resources": [{"type": t, "keys": None} for t in types]}
 
 
-def emergency_play(g):
+def emergency_play(g, with_acts=True):
     em, r = g.doc["emergency"], g.rng
     if not em:
         return
@@ -53,7 +53,8 @@ def emergency_play(g):
         rv = d["matter"]["review"] if d["matter"] else None
         if d["outcome"] != E.AWAIT and rv is not None:
             g.env.advance(rv["window"] + 1)
-    acts(g, eid, op_name, grantees, outsiders, exp, gm)
+    if with_acts:
+        acts(g, eid, op_name, grantees, outsiders, exp, gm)
 
 
 def acts(g, eid, op_name, grantees, outsiders, exp, gm):
