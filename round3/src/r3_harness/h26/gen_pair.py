@@ -55,6 +55,9 @@ def one(seed: int, idx: int, kind: str | None = None, domain: str | None = None,
     kind = kind or CYCLE[idx % len(CYCLE)]
     domain = domain or DOMAINS[idx % 2]
     stats = {"redraws": 0, "d4_attempted": 0, "d4_replaced": 0, "skipped": 0, "invariant_redraws": 0}
+    if kind in ("L", "F") and not V.kind_feasible(load(domain)[0], kind):  # G3-E30: no reachable variation of this kind here
+        stats["kind_substituted"] = f"{kind}->E"
+        kind = "E"
     for attempt in range(MAX_TRIES):
         rng = random.Random(f"{seed}:{idx}:{attempt}")
         p = _try(rng, seed, idx, kind, domain, stats, aa)
@@ -71,7 +74,8 @@ def _try(rng, seed, idx, kind, domain, stats, aa):
     observer = rng.choice([p["id"] for p in auth["principals"] if p["delegated_by"] is None])
     base = sim.apply_changes(sim.empty(), [c for b in sim.seed_batches(ops) for c in b])
     lv0 = low_view(base, auth, observer, ops)
-    kinds = [kind] if kind != "M" else rng.sample(V.KINDS, rng.randint(2, 4))
+    pool = [k for k in V.KINDS if V.kind_feasible(ops, k)]
+    kinds = [kind] if kind != "M" else rng.sample(pool, rng.randint(2, 4))
     d1, d2, info = V.empty(), V.empty(), {}
     for k in kinds:
         n = f"{idx}{k}"
