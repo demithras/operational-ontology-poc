@@ -78,12 +78,13 @@
    "vendored_sha256": "b2cd446d2ed4239531fe77d817ea9ff7322b83520067abe8384bfffafb6aa726"
   },
   "domains/manufacturing/logic/facts.py": {
-   "current_sha256": "6375b9da8acc8686cd8f8cefdfbb789b9ae484aa2649f34b3e0f49bc6ffd63b9",
+   "current_sha256": "b6edcf286f77fa1113de4ab22192fbb5cd11287cdce4e44cc5e1ebc7fa39dbd7",
    "original": "round2/domains/manufacturing/logic/facts.py",
    "original_sha256": "5d8c0416901de75b2923ee2d1a70efc890c5d49852902994d2801a9d6227afbd",
    "patches": [
     "D1",
-    "D5"
+    "D5",
+    "D6"
    ],
    "vendored_sha256": "71f856458173274a8eb2f54c69ed80b1839e4fc62044b2a393c7fc734cdae47d"
   },
@@ -151,19 +152,22 @@
    "vendored_sha256": "6c45a3920901676351ef8b3a39f65f707c6af97da0cb4430e1bcda3425c5c328"
   },
   "domains/project/logic/derive.py": {
-   "current_sha256": "86fe04d904d8fad5fce78fd33f03745eb3ec6b4426181b5323b1090e8d7bd6f6",
+   "current_sha256": "ea12f19b6ab39102e22d53f44bb5b8082cccff174368e315862448ae96f3db17",
    "original": "round2/domains/project/logic/derive.py",
    "original_sha256": "edfd043f9e7de48d984d3643974357e0a626291c212f427c49ba7662d5c235bc",
    "patches": [
-    "D4"
+    "D4",
+    "D7"
    ],
    "vendored_sha256": "4e0c3cfce946da777863d57c3420e2f29865efd321580cdb1f47363b5d5711bf"
   },
   "domains/project/logic/facts.py": {
-   "current_sha256": "e52d8f35301f48a41c364cae1919dec96534d55f85114bbc1dbab964b5a79f87",
+   "current_sha256": "cf885d241e5e657a73c8ce5bfc171adf085080f2231855ccbb613c3a5616b112",
    "original": "round2/domains/project/logic/facts.py",
    "original_sha256": "2f40511da0a88591e177e8f7312fc606c2f89cbd24db0980123e70069cf8ce3d",
-   "patches": [],
+   "patches": [
+    "D7"
+   ],
    "vendored_sha256": "e52d8f35301f48a41c364cae1919dec96534d55f85114bbc1dbab964b5a79f87"
   },
   "domains/project/logic/freeze.py": {
@@ -282,8 +286,7 @@
    "original": "round2/src/eoo_engine/gates.py",
    "original_sha256": "009c2c6fff52f3e7710a3f7a9b0f7f2e78deaab658964312c7a3ce138145fcd2",
    "patches": [
-    "V2",
-    "V3"
+    "V2"
    ],
    "vendored_sha256": "009c2c6fff52f3e7710a3f7a9b0f7f2e78deaab658964312c7a3ce138145fcd2"
   },

@@ -89,7 +89,9 @@ def latest_experiment(view, hid: Any) -> str | None:
         return None
 
     def vkey(item):
-        v = item[1]["version"]
+        v = item[1].get("version")   # a hidden version degrades like a null: sorts first, never raises
+        if v is None:
+            return (-1, 0, "")
         return (0, int(v), "") if str(v).isdigit() else (1, 0, str(v))
     return sorted(exps, key=vkey)[-1][0]
 

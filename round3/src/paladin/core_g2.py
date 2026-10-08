@@ -126,7 +126,7 @@ class G2Mixin:
         if err == "float_in_artifact":
             return CallResult("INVALID", {"reason": err})
         if not err:
-            self.note_decision(d)  # PROT-H26 s4: what the provenance views need about this anchored decision
+            self.note_decision(d, res)  # PROT-H26 s4: what the provenance views need about this anchored decision
         return CallResult("UNAVAILABLE", {"reason": err}) if err else res
 
     def schema_problem(self, op: Any, args: Any) -> str | None:

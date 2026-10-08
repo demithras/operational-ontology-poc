@@ -129,7 +129,7 @@ class Procedure:
         if crit == "specialis":
             def general(b):  # every matter b is competent in is a strict superset of another candidate's matter
                 mine = [m for m in cov if b in m["competent"]]
-                return all(any(n is not m and any(c != b for c in n["competent"]) and self._strict(n["scope"], m["scope"])
+                return all(any(n is not m and any(c != b and c in cands for c in n["competent"]) and self._strict(n["scope"], m["scope"])
                                for n in cov) for m in mine)
             return [b for b in cands if general(b) == inv]
         return cands

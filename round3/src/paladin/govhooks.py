@@ -90,6 +90,15 @@ class GovAct:
             raise refusal("INVALID", "schema")
         return core.booted.shadow[self.sub]
 
+    def in_force_now(self):
+        """Replay of a committed act (G3-E24 R5): re-evaluate the emergency now; None = still in force, else the refusal."""
+        try:
+            with self.core._svc.transaction(tag="governance") as tx:
+                self.before(tx, {})
+                raise Rollback(None)
+        except Rollback as r:
+            return r.result
+
     def after(self, tx, res: CallResult) -> None:
         self.seq = tx.mark("governance", governance_mark("act", emergency=self.a["emergency"], operation=self.a["operation"],
                                                          args=self.a["args"]))

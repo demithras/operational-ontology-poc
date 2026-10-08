@@ -120,6 +120,20 @@ class LowProv:
             return CallResult("OK", {"partial": True, "decisions": out})
         return self._low(token, go)
 
+    def _refused_used(self, sub: str, request_id: str) -> CallResult:
+        """G3-E27: an OWN request that left a decision record but no commit (refused) answers exactly when prov_decision
+        does, with path [] (no authority was used). Foreign or unknown ids stay indistinguishable."""
+        for idx in self._index_rows():
+            if idx["id"] != request_id:
+                continue
+            d = self._envelope(idx["seq"])
+            if d is None or d["subject"] != sub or d["status"] == "OK":
+                return UNKNOWN
+            return CallResult("OK", {"partial": True, "on_behalf_of": d["on_behalf_of"], "path": [],
+                                     "authority_version": marker("digest"), "world_seq": d["world_seq"],
+                                     "tick": d["tick"]})
+        return UNKNOWN
+
     def authority_used_as(self, token: str, request_id: str) -> CallResult:
         def go(sub, lv, world, h):
             if sub is None or not isinstance(request_id, str):
@@ -129,7 +143,9 @@ class LowProv:
                 prior = self._store.idem_get(h, request_id) if m is not None else None
             except (sqlite3.Error, LedgerUnresolved):
                 return UNKNOWN
-            if prior is None or prior[1]["used"].get("subject") != sub:
+            if prior is None:
+                return self._refused_used(sub, request_id)
+            if prior[1]["used"].get("subject") != sub:
                 return UNKNOWN  # only OWN requests; foreign/unknown are indistinguishable
             u = prior[1]["used"]
             av = u["authority_version"] if self.mutant("provenance_edge_retained") else marker("digest")

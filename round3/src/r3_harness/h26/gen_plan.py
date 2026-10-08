@@ -5,7 +5,7 @@ import copy
 
 from r3_harness.h23.chooser import RandChooser
 from r3_harness.h23.goodargs import random_args
-from r3_oracle import authority, ops_model
+from r3_oracle import authority, const_eval, ops_model
 from r3_oracle.disclosure import low_view
 
 from . import sim
@@ -21,7 +21,7 @@ def _typed_default(t: str):
     return {"integer": 1, "number": 1, "boolean": True}.get(t, "x")
 
 
-def build_plan(rng, ops, auth, observer, snaps, hidden_refs, own_rids, hid_rids, hid_edges, hid_cases, n_d4=3):
+def build_plan(rng, ops, auth, observer, snaps, hidden_refs, own_rids, hid_rids, hid_edges, hid_cases, n_d4=3, gov=None):
     """snaps: the two predicted end-of-high-phase snapshots (list of 2). Returns (plan, d4_attempted, d4_replaced)."""
     s = snaps[0]
     lv = low_view(s, auth, observer, ops)
@@ -43,15 +43,20 @@ def build_plan(rng, ops, auth, observer, snaps, hidden_refs, own_rids, hid_rids,
                 plan.append({"m": "query", "name": rd["name"], "args": args})
     plan.append({"m": "query", "name": rd_name(ops), "args": {}})
     plan.append({"m": "poll", "sub": 0})
+    def governed(op, args):  # G3-E28: an ordinary call of a governed request is DENIED case_required (PROT-H25 s3.4)
+        return bool(gov is not None and const_eval.covering(gov, op["name"], const_eval.resources_for(ops, op["name"], args)))
+
     cur = [copy.deepcopy(x) for x in snaps]  # cumulative oracle pre-simulation: every accepted write is applied to both worlds
     state = {"tried": 0, "replaced": 0}  # tried = committing candidates (real D4 write attempts); replaced = rejected by the D4 rule
 
     def probe(op, args, rid, via, want_write):
         """Add a mutating probe iff it is safe under the oracle: a refused call is always safe; a committing call must have an
         equal outcome in both predicted worlds and keep them low-equivalent (D4, s2.4); otherwise it is replaced (counted)."""
+        if want_write and governed(op, args):
+            return False  # D4 probes only on operations the observer may call directly
         outs = [ops_model.evaluate(ops, auth, observer, None, op["name"], args, sn, 0, frozenset(), rid) for sn in cur]
         commits = [o.commits for o in outs]
-        if not any(commits):
+        if not any(commits) or governed(op, args):
             if want_write:
                 return False
             plan.append({"m": "mutate", "op": op["name"], "args": args, "rid": rid, "via": via, "kind": "unauth"})

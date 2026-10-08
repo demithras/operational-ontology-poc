@@ -91,25 +91,27 @@ def low_view(disc: dict, observer: dict, snap_objs: dict, snap_links: set, impli
         t, _k = split(ref)
         props = snap_objs[ref]
         if t in pub_t:
-            out.objects[ref], out.level[ref] = dict(props), "actors"
+            out.objects[ref], out.level[ref] = dict(props), "none"  # G3-E26: public:true grants existence/fields/links, never provenance
             out.fields_of[ref] = frozenset(props)
             continue
-        allow_f, deny_f, lvl, linkable = set(), set(), "none", set()
-        for rule in rules:
+        allow_f, deny_f, alinks, dlinks, lvl, deny_prov = set(), set(), set(), set(), "none", False
+        for rule in rules:   # union allow - union deny: independent of rule order (PROT-H26 s1.2, deny overrides allow)
             if not covers(rule, ref, vis)[0]:
                 continue
             rv = rule["reveals"]
             fs = set(props) if rv["fields"] == "*" else set(rv["fields"])
             if rule["effect"] == "allow":
                 allow_f |= fs
-                linkable |= set(rv["links"])
+                alinks |= set(rv["links"])
                 if LEVELS[rv["provenance"]] > LEVELS[lvl]:
                     lvl = rv["provenance"]
             else:
                 deny_f |= fs
-                linkable -= set(rv["links"])
-                if LEVELS[rv["provenance"]]:   # a deny rule withholds provenance (level 0 = none)
-                    lvl = "none"
+                dlinks |= set(rv["links"])
+                deny_prov = deny_prov or bool(LEVELS[rv["provenance"]])
+        linkable = alinks - dlinks
+        if deny_prov:   # a deny rule withholds provenance (level 0 = none), whatever the rule order
+            lvl = "none"
         keep = (allow_f - deny_f) & set(props)
         out.objects[ref] = {f: props[f] for f in sorted(keep)}
         out.fields_of[ref] = frozenset(keep)

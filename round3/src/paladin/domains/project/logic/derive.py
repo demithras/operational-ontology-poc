@@ -32,7 +32,7 @@ class Deriver:
             return self._result(common, hid, None, [], h)
         e = {"id": eid, **facts.props(view, "Experiment", eid)}
         ev = [{"id": k, **facts.props(view, "Evidence", k)} for k in facts.evidence_of_experiment(view, eid)
-              if facts.props(view, "Evidence", k)["experiment_version"] == e["version"]]
+              if facts.props(view, "Evidence", k).get("experiment_version") == e.get("version")]
         if not ev:  # nothing attached to the latest experiment version: no evaluator is consulted, never SUPPORTED
             common = dict(protocol_valid=bool(h.get("freeze_hash")), required_evidence_complete=False,
                           sample_sufficient=False, reject_hit=False, support_hit=False)
@@ -55,7 +55,7 @@ class Deriver:
     @staticmethod
     def _result(common: dict, hid, e, ev: list, h: dict) -> dict:
         verdict = evaluate_common(CommonEvaluation(**common)).value
-        basis = {"hypothesis": hid, "experiment": None if e is None else [e["id"], e["version"], e["evaluator_ref"]],
+        basis = {"hypothesis": hid, "experiment": None if e is None else [e["id"], e.get("version"), e.get("evaluator_ref")],
                  "evidence": sorted((x["id"], x["payload_hash"]) for x in ev), "common": common,
                  "freeze_hash": h.get("freeze_hash")}
         return {"verdict": verdict, "common": common, "experiment": None if e is None else e["id"],

@@ -11,6 +11,7 @@ Mutants at the real sites: provenance_edge_retained (hidden edge ids / actors re
 from __future__ import annotations
 
 from paladin import capgraph, evid
+from paladin.public import refusal_code
 from paladin.sovview import split
 from r3_shared.disclosure import marker
 from r3_shared.variant import CallResult
@@ -46,7 +47,14 @@ class SovProvMixin:
                         out.append([e["type"], f])
         return out
 
-    def note_decision(self, d: dict) -> None:
+    def _has_scalars(self, op, args) -> bool:
+        """Is any non-resource (scalar) input present in the request? (G3-E26 INTERP-2)"""
+        o = self.ops.get(op) if isinstance(op, str) else None
+        if o is None or not isinstance(args, dict):
+            return bool(args)
+        return any(i["type"] != "resource" and i["name"] in args for i in o["inputs"])
+
+    def note_decision(self, d: dict, res=None) -> None:
         """Remember what the provenance views need about an anchored decision (ledger meta: durable, HistoryStore in H27 runs)."""
         sc = self.prov.decision_scalars(d)
         op, args = d["op"], d["args"]
@@ -56,7 +64,7 @@ class SovProvMixin:
         for r in d["rows"]:
             if r["kind"] in ("create", "update", "delete"):
                 data = r["data"]
-                fs = sorted(data.get("patch", data.get("props", {})) if r["kind"] == "update" else data.get("props", {}))
+                fs = sorted(set(data.get("props", {})) | set(data.get("patch", {})) if r["kind"] == "update" else set(data.get("props", {})))  # RC8: every property of the touched object
                 rows.append({"k": r["kind"], "r": r["ref"], "f": fs})
             elif r["kind"] in ("link", "unlink"):
                 rows.append({"k": r["kind"], "l": [r["data"]["link_type"], r["data"]["src"], r["data"]["dst"]]})
@@ -66,7 +74,8 @@ class SovProvMixin:
                 rows.append({"k": "mark", "r": r["ref"], "c": r["data"].get("case") if r["ref"] == "governance" else None,
                              "g": r["ref"] == "governance"})
         rec = {"s": sc, "refs": refs, "edges": [e["id"] for e in d["doc"].get("capabilities", ())], "rows": rows,
-               "flows": self.scalar_flows(op, args)}
+               "flows": self.scalar_flows(op, args), "sc": self._has_scalars(op, args),
+               "vr": ("ok" if res is None or res.status == "OK" else refusal_code(res.body))}   # G3-E27: the PUBLIC reply reason
         self.ledger.put_meta("dec:" + sc["decision_id"], rec)
         idx = self.ledger.get_meta("decidx") or []
         idx.append(sc["decision_id"])
@@ -85,15 +94,9 @@ class SovProvMixin:
         if self._own(sub, rec["s"]):
             return True
         refs = [f"{t}:{k}" for t, k in rec["refs"]]
-        if not all(r in view.objects for r in refs):
-            return False
-        for t, f in rec["flows"]:
-            same = [r for r in refs if split(r)[0] == t]
-            ok = all(f in view.fields_of.get(r, ()) for r in same) if same else any(
-                f in view.fields_of.get(r, ()) for r in view.objects if split(r)[0] == t)
-            if not ok:
-                return False
-        return True
+        # G3-E26 INTERP-2: a non-own decision's args are low only if they are made of existence-visible resource refs alone
+        # (no scalar inputs present); "the scalar flows into a field the observer sees" never makes them low.
+        return all(r in view.objects for r in refs) and not rec.get("sc", bool(rec["flows"]))
 
     def _eff_low(self, sub, rec, view) -> bool:
         # G3-E22: the own-decision exemption covers args_digest only; effect_digest covers the full rows (all props/patch
@@ -128,6 +131,7 @@ class SovProvMixin:
         refs = [f"{t}:{k}" for t, k in rec["refs"]]
         actors = self._own(sub, s) or retain or all(view.level.get(r) == "actors" for r in refs)
         out = dict(s)
+        out["reason"] = rec.get("vr", s["reason"])   # G3-E27: the public reply reason; gate codes stay auditor-only
         if not actors:
             for f in ("subject", "on_behalf_of"):
                 out[f] = "system" if "redaction_fabrication" in self.mutants else marker("actor")   # MUTANT: no marker
@@ -154,6 +158,11 @@ class SovProvMixin:
         led = self.ledger.get(rid) if isinstance(rid, str) else None
         used = self.ledger.get_meta(f"used:{rid}") if led is not None else None
         if led is None or led["state"] != "COMMITTED" or led["sub"] != sub or not used:
+            rec = self.ledger.get_meta("dec:" + rid) if isinstance(rid, str) else None
+            if rec is not None and self._own(sub, rec["s"]) and rec["s"]["status"] != "OK":   # G3-E27: own refused request
+                s = rec["s"]
+                return CallResult("OK", {"partial": True, "on_behalf_of": s["on_behalf_of"], "path": [],
+                                         "authority_version": marker("digest"), "world_seq": s["world_seq"], "tick": s["tick"]})
             return UNKNOWN
         retain = "provenance_edge_retained" in self.mutants
         path = [e if (retain or capgraph.edge_visible(self.auth, e, sub)) else marker("edge") for e in used["path"]]

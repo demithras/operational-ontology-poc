@@ -234,7 +234,7 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
             if led is not None:
                 if led["state"] != "COMMITTED":
                     return CallResult("UNAVAILABLE", {"reason": "request in flight"})
-                return self._replay(led, who, bypass, fp, sub, obo_id, op, clean, rid, edge)
+                return self._replay(led, who, bypass, fp, sub, obo_id, op, clean, rid, edge, gov)
             if "unsynchronized_commit" in self.mutants:  # MUTANT ONLY: hold the unlocked check->commit window open (deterministic race)
                 time.sleep(0.15)
                 _mx.enter_context(self._mutant_io)  # the storage layer is serialised; the CHECK above is still stale
@@ -278,11 +278,15 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
                 return CallResult("UNAVAILABLE", {"reason": "anchor_unavailable"})
         return out
 
-    def _replay(self, led, who, bypass, fp, sub, obo, op, clean, rid, edge=False) -> CallResult:
+    def _replay(self, led, who, bypass, fp, sub, obo, op, clean, rid, edge=False, gov=None) -> CallResult:
         if led["fp"] == fp:  # R5: same request -> never a second effect, decided against the authority in force NOW
             if led["status"] == "OK" and led["body"] == {"recovered": True} and self.prov is not None:
                 return CallResult("UNAVAILABLE", {"reason": "unanchored_after_crash"})  # never an OK without its anchor entry
-            if not edge and not bypass and not self.allowed_now(who, op, clean):  # edge requests: the stored result (PROT-H24 s4 retry)
+            if gov is not None and hasattr(gov, "in_force_now"):  # G3-E24 R5 for `act`: the authority in force now INCLUDES the
+                bad = gov.in_force_now()  # emergency grant (active, unexpired, in scope) - never the actor's base grants alone
+                if bad is not None:
+                    return bad
+            elif not edge and not bypass and not self.allowed_now(who, op, clean):  # edge requests: the stored result (PROT-H24 s4 retry)
                 return CallResult("DENIED", {"gate": "authority", "reason": "authority changed since commit"})
             return CallResult(led["status"], {**plain(led["body"]), "replayed": True})
         if "mutable_gated_input" in self.mutants and (led["sub"], led["obo"], led["op"]) == (sub, obo, op):
