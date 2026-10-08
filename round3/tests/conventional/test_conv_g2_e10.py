@@ -4,7 +4,7 @@ import json
 from conv_g2_util import make_g2, sha, tamper
 
 BAD = {"source_warehouse": "WH-B", "destination_warehouse": "WH-A", "part": "PX-17", "quantity": 1}
-NOPE = {**BAD, "quantity": 10 ** 6}  # existing targets, failing precondition (a nonexistent target is DENIED here)
+NOPE = {**BAD, "quantity": -1}  # existing targets, failing ONLY a precondition (G3-E17: a deny rule would answer DENIED)
 
 
 def _invalid(r, who, rid, body=None):

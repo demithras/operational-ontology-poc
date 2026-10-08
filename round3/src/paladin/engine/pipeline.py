@@ -86,11 +86,16 @@ def run_gates(eng, spec, rec: dict, principal: Any) -> dict:
         return _deny(eng, rec, gates.gate("authority", False, dec.to_plain()))
     rec["gates"].append(gates.gate("authority", True, dec.to_plain()))
     ctx = gates.make_ctx(eng, spec, rec)
+    # G3-E17: deny business rules -> existence (inputs gate, above) -> preconditions -> approvals. A clean policy DENY is
+    # decided before the preconditions; a policy evaluation ERROR still waits for them (V3).
+    verdict, pol = gates.evaluate_policies(eng, spec, ctx)
+    if verdict == "DENIED" and not pol["detail"]["errors"]:
+        rec["gates"].append(pol)
+        return eng.record(rec, "DENIED", note="denied at policy")
     pre = gates.run_logic_gate("preconditions", [(t, eng.bindings.get("precondition", t)) for t in spec.preconditions], ctx)
     if not pre["passed"]:
         return _deny(eng, rec, pre)
     rec["gates"].append(pre)
-    verdict, pol = gates.evaluate_policies(eng, spec, ctx)
     rec["gates"].append(pol)
     if verdict == "DENIED":
         return eng.record(rec, "DENIED", note="denied at policy")

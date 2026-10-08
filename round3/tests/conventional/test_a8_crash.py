@@ -51,8 +51,8 @@ def test_after_commit_crash_then_new_request_id_is_a_new_request_against_current
     proj.dep.restart()
     again = _send(proj, "p1", "researcher-1", "supersede_hypothesis", SUPERSEDE)
     assert again.status == "OK" and again.body.get("replayed") is True
-    fresh = _send(proj, "p2", "researcher-1", "supersede_hypothesis", SUPERSEDE)  # new id: precondition now fails
-    assert fresh.status == "INVALID"
+    fresh = _send(proj, "p2", "researcher-1", "supersede_hypothesis", SUPERSEDE)  # new id: the lifecycle deny rule now fires (G3-E17: rules precede preconditions)
+    assert fresh.status == "DENIED"
     assert diff(before, proj.snap()) == committed
 
 

@@ -51,7 +51,7 @@ def test_every_negative_carries_status_and_reason(mfg, proj):
         (mfg, lambda: mfg.dep.direct(mfg.token("planner-1"), "nope", {}, request_id="n8"), "UNKNOWN"),
         (proj, lambda: proj.dep.direct(proj.token("researcher-1"), "create_hypothesis", {"claim": "ephemeral: x"}, request_id="n9"), "DENIED"),
         (proj, lambda: proj.dep.direct(proj.token("viewer-1"), "create_hypothesis", {"claim": "x"}, request_id="n10"), "DENIED"),
-        (proj, lambda: proj.dep.direct(proj.token("researcher-1"), "start_run", {"hypothesis": "H-A"}, request_id="n11"), "INVALID"),
+        (proj, lambda: proj.dep.direct(proj.token("researcher-1"), "start_run", {"hypothesis": "H-A"}, request_id="n11"), "DENIED"),
     ]
     for rig, call, status in cases:
         res = zero(rig, call)

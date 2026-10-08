@@ -80,7 +80,7 @@ class SovMixin:
     def list_links(self, sub: str, ref, link_type) -> CallResult:
         view = self.view_for(sub)
         if not isinstance(ref, str) or ref not in view.objects:
-            return NOT_FOUND
+            return CallResult("OK", {"out": [], "in": []})   # G3-E19: absent == hidden == empty
         if link_type not in self.link_names:
             return CallResult("INVALID", {"reason": "unknown_link_type"})
         return CallResult("OK", {"out": sorted(b for lt, a, b in view.links if lt == link_type and a == ref),

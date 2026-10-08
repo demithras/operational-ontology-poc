@@ -53,7 +53,8 @@ SERIAL_LINKS = ([f"SUPERSEDED_BY|Hypothesis:H-D|Hypothesis:H-E"], [f"SUPERSEDED_
 def test_conflicting_supersedes_equal_some_serial_order(proj):
     before = proj.snap()
     res = _supersede_race(proj)
-    assert sorted(r.status for r in res) == ["INVALID"] * (THREADS - 1) + ["OK"]
+    # G3-E17: the later requests fail the deny rule (illegal lifecycle transition) before any precondition
+    assert sorted(r.status for r in res) == ["DENIED"] * (THREADS - 1) + ["OK"]
     eff = diff(before, proj.snap())
     assert _links(eff) in SERIAL_LINKS and len(eff) == 2
     phase = next(e for e in eff if e["ref"] == "Hypothesis:H-D")
