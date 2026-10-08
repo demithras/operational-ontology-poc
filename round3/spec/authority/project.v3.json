@@ -1,0 +1,704 @@
+{
+ "capabilities": [],
+ "delegation_note": "Every Round 2 project grant is delegation_allowed=false: on_behalf_of is never valid in this domain.",
+ "delegations": [],
+ "disclosure": {
+  "public_links": [
+   "GOVERNED_BY"
+  ],
+  "public_types": [
+   "Hypothesis",
+   "Metric",
+   "Threshold"
+  ],
+  "rules": [
+   {
+    "effect": "allow",
+    "id": "p-researcher-rival",
+    "object": {
+     "keys": null,
+     "type": "Rival",
+     "via": {
+      "dir": "in",
+      "link": "HAS_RIVAL",
+      "type": "Hypothesis"
+     }
+    },
+    "principal": {
+     "role": "researcher"
+    },
+    "reveals": {
+     "exists": true,
+     "fields": "*",
+     "links": [],
+     "provenance": "own"
+    }
+   },
+   {
+    "effect": "allow",
+    "id": "p-researcher-prediction",
+    "object": {
+     "keys": null,
+     "type": "Prediction",
+     "via": {
+      "dir": "in",
+      "link": "PREDICTS",
+      "type": "Hypothesis"
+     }
+    },
+    "principal": {
+     "role": "researcher"
+    },
+    "reveals": {
+     "exists": true,
+     "fields": "*",
+     "links": [],
+     "provenance": "own"
+    }
+   },
+   {
+    "effect": "allow",
+    "id": "p-researcher-experiment",
+    "object": {
+     "keys": null,
+     "type": "Experiment",
+     "via": null
+    },
+    "principal": {
+     "role": "researcher"
+    },
+    "reveals": {
+     "exists": true,
+     "fields": [
+      "id",
+      "version",
+      "evaluator_ref"
+     ],
+     "links": [
+      "MEASURES",
+      "PRODUCES"
+     ],
+     "provenance": "scalars"
+    }
+   },
+   {
+    "effect": "allow",
+    "id": "p-researcher-evidence-via-exp",
+    "object": {
+     "keys": null,
+     "type": "Evidence",
+     "via": {
+      "dir": "in",
+      "link": "PRODUCES",
+      "type": "Experiment"
+     }
+    },
+    "principal": {
+     "role": "researcher"
+    },
+    "reveals": {
+     "exists": true,
+     "fields": [
+      "id",
+      "payload_hash",
+      "experiment_version"
+     ],
+     "links": [
+      "SUPPORTS_OR_REFUTES",
+      "CAPTURED_AT"
+     ],
+     "provenance": "scalars"
+    }
+   },
+   {
+    "effect": "allow",
+    "id": "p-researcher-verdict",
+    "object": {
+     "keys": null,
+     "type": "Verdict",
+     "via": null
+    },
+    "principal": {
+     "role": "researcher"
+    },
+    "reveals": {
+     "exists": true,
+     "fields": "*",
+     "links": [
+      "EVALUATES"
+     ],
+     "provenance": "actors"
+    }
+   },
+   {
+    "effect": "allow",
+    "id": "p-viewer-verdict",
+    "object": {
+     "keys": null,
+     "type": "Verdict",
+     "via": null
+    },
+    "principal": {
+     "any": true
+    },
+    "reveals": {
+     "exists": true,
+     "fields": [
+      "id",
+      "value"
+     ],
+     "links": [],
+     "provenance": "none"
+    }
+   },
+   {
+    "effect": "allow",
+    "id": "p-evidence-agent-evidence",
+    "object": {
+     "keys": null,
+     "type": "Evidence",
+     "via": null
+    },
+    "principal": {
+     "role": "evidence-agent"
+    },
+    "reveals": {
+     "exists": true,
+     "fields": [
+      "id",
+      "payload_hash",
+      "git_commit"
+     ],
+     "links": [
+      "CAPTURED_AT"
+     ],
+     "provenance": "own"
+    }
+   },
+   {
+    "effect": "allow",
+    "id": "p-evidence-agent-commit-via",
+    "object": {
+     "keys": null,
+     "type": "Commit",
+     "via": {
+      "dir": "in",
+      "link": "CAPTURED_AT",
+      "type": "Evidence"
+     }
+    },
+    "principal": {
+     "role": "evidence-agent"
+    },
+    "reveals": {
+     "exists": true,
+     "fields": [
+      "sha"
+     ],
+     "links": [],
+     "provenance": "none"
+    }
+   },
+   {
+    "effect": "allow",
+    "id": "p-draft-agent-decision",
+    "object": {
+     "keys": null,
+     "type": "Decision",
+     "via": null
+    },
+    "principal": {
+     "role": "draft-agent"
+    },
+    "reveals": {
+     "exists": true,
+     "fields": "*",
+     "links": [
+      "CHANGES"
+     ],
+     "provenance": "actors"
+    }
+   },
+   {
+    "effect": "allow",
+    "id": "p-draft-agent-falsifier",
+    "object": {
+     "keys": null,
+     "type": "Falsifier",
+     "via": null
+    },
+    "principal": {
+     "role": "draft-agent"
+    },
+    "reveals": {
+     "exists": true,
+     "fields": [
+      "id"
+     ],
+     "links": [],
+     "provenance": "none"
+    }
+   },
+   {
+    "effect": "deny",
+    "id": "p-researcher-deny-freeze",
+    "object": {
+     "keys": null,
+     "type": "Experiment",
+     "via": null
+    },
+    "principal": {
+     "role": "researcher"
+    },
+    "reveals": {
+     "exists": false,
+     "fields": [
+      "freeze_hash"
+     ],
+     "links": [],
+     "provenance": "none"
+    }
+   },
+   {
+    "effect": "allow",
+    "id": "p-admin-contract",
+    "object": {
+     "keys": null,
+     "type": "ContractVersion",
+     "via": null
+    },
+    "principal": {
+     "role": "admin"
+    },
+    "reveals": {
+     "exists": true,
+     "fields": "*",
+     "links": [],
+     "provenance": "actors"
+    }
+   },
+   {
+    "effect": "allow",
+    "id": "p-admin-commit",
+    "object": {
+     "keys": null,
+     "type": "Commit",
+     "via": null
+    },
+    "principal": {
+     "role": "admin"
+    },
+    "reveals": {
+     "exists": true,
+     "fields": "*",
+     "links": [],
+     "provenance": "scalars"
+    }
+   },
+   {
+    "effect": "allow",
+    "id": "p-admin-component",
+    "object": {
+     "keys": null,
+     "type": "Component",
+     "via": null
+    },
+    "principal": {
+     "role": "admin"
+    },
+    "reveals": {
+     "exists": true,
+     "fields": "*",
+     "links": [
+      "EXISTS_FOR",
+      "VALIDATES"
+     ],
+     "provenance": "actors"
+    }
+   },
+   {
+    "effect": "allow",
+    "id": "p-admin-test",
+    "object": {
+     "keys": null,
+     "type": "Test",
+     "via": null
+    },
+    "principal": {
+     "role": "admin"
+    },
+    "reveals": {
+     "exists": true,
+     "fields": "*",
+     "links": [
+      "VALIDATES",
+      "DETECTED_BY"
+     ],
+     "provenance": "scalars"
+    }
+   },
+   {
+    "effect": "allow",
+    "id": "p-admin-failure",
+    "object": {
+     "keys": null,
+     "type": "Failure",
+     "via": null
+    },
+    "principal": {
+     "role": "admin"
+    },
+    "reveals": {
+     "exists": true,
+     "fields": "*",
+     "links": [
+      "DETECTED_BY"
+     ],
+     "provenance": "scalars"
+    }
+   },
+   {
+    "effect": "allow",
+    "id": "p-admin-decision",
+    "object": {
+     "keys": null,
+     "type": "Decision",
+     "via": null
+    },
+    "principal": {
+     "role": "admin"
+    },
+    "reveals": {
+     "exists": true,
+     "fields": "*",
+     "links": [
+      "CHANGES"
+     ],
+     "provenance": "actors"
+    }
+   }
+  ]
+ },
+ "domain": "project",
+ "grants": [
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "researcher-create-hypothesis",
+   "operation": "create_hypothesis",
+   "origin": "round2",
+   "principal": {
+    "role": "researcher"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "researcher-edit-threshold",
+   "operation": "edit_threshold",
+   "origin": "round2",
+   "principal": {
+    "role": "researcher"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "researcher-preregister-hypothesis",
+   "operation": "preregister_hypothesis",
+   "origin": "round2",
+   "principal": {
+    "role": "researcher"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "researcher-new-experiment-version",
+   "operation": "new_experiment_version",
+   "origin": "round2",
+   "principal": {
+    "role": "researcher"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "researcher-start-run",
+   "operation": "start_run",
+   "origin": "round2",
+   "principal": {
+    "role": "researcher"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "researcher-attach-evidence",
+   "operation": "attach_evidence",
+   "origin": "round2",
+   "principal": {
+    "role": "researcher"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "researcher-evaluate-hypothesis",
+   "operation": "evaluate_hypothesis",
+   "origin": "round2",
+   "principal": {
+    "role": "researcher"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "researcher-supersede-hypothesis",
+   "operation": "supersede_hypothesis",
+   "origin": "round2",
+   "principal": {
+    "role": "researcher"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "researcher-record-decision",
+   "operation": "record_decision",
+   "origin": "round2",
+   "principal": {
+    "role": "researcher"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "researcher-flag-orphan-component",
+   "operation": "flag_orphan_component",
+   "origin": "round2",
+   "principal": {
+    "role": "researcher"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "neutral-admin-all",
+   "operation": "*",
+   "origin": "neutral-extension",
+   "principal": {
+    "role": "admin"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "neutral-evidence-agent-run",
+   "operation": "start_run",
+   "origin": "neutral-extension",
+   "principal": {
+    "role": "evidence-agent"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "neutral-evidence-agent-attach",
+   "operation": "attach_evidence",
+   "origin": "neutral-extension",
+   "principal": {
+    "role": "evidence-agent"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "neutral-draft-agent-create",
+   "operation": "create_hypothesis",
+   "origin": "neutral-extension",
+   "principal": {
+    "role": "draft-agent"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "neutral-draft-agent-decision",
+   "operation": "record_decision",
+   "origin": "neutral-extension",
+   "principal": {
+    "role": "draft-agent"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "deny",
+   "id": "no-direct-verdict-write",
+   "operation": "write:Verdict.value",
+   "origin": "round2",
+   "principal": {
+    "any": true
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "deny",
+   "id": "no-threshold-edit-after-preregistration",
+   "operation": "update:Threshold",
+   "origin": "round2",
+   "principal": {
+    "any": true
+   },
+   "resource": {
+    "state": "governed hypothesis not DRAFT",
+    "type": "Threshold"
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "deny",
+   "id": "no-canonical-write-outside-operations",
+   "operation": "write:canonical-state",
+   "origin": "round2",
+   "principal": {
+    "any": true
+   },
+   "resource": {
+    "any": true
+   }
+  }
+ ],
+ "max_delegation_depth": 4,
+ "principals": [
+  {
+   "delegated_by": null,
+   "id": "researcher-1",
+   "kind": "human",
+   "relations": [],
+   "roles": [
+    "researcher"
+   ]
+  },
+  {
+   "delegated_by": null,
+   "id": "researcher-2",
+   "kind": "human",
+   "relations": [],
+   "roles": [
+    "researcher"
+   ]
+  },
+  {
+   "delegated_by": null,
+   "id": "viewer-1",
+   "kind": "human",
+   "relations": [],
+   "roles": []
+  },
+  {
+   "delegated_by": null,
+   "id": "admin-1",
+   "kind": "human",
+   "relations": [],
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "delegated_by": null,
+   "hostile": true,
+   "id": "agent-evidence-1",
+   "kind": "agent",
+   "note": "compromised evidence-collection agent: may only start runs and attach evidence",
+   "relations": [],
+   "roles": [
+    "evidence-agent"
+   ]
+  },
+  {
+   "delegated_by": null,
+   "hostile": false,
+   "id": "agent-draft-1",
+   "kind": "agent",
+   "note": "drafting agent: may only create hypotheses and record decisions",
+   "relations": [],
+   "roles": [
+    "draft-agent"
+   ]
+  }
+ ],
+ "provenance": "derived from round2 authority_rules/policies; 'origin' marks each grant as round2, neutral-fix or neutral-extension; v3 = v2 form + disclosure document (scripts/build_v3_authority.py, G3-E1)",
+ "revoked": [],
+ "semantics": [
+  "A request is allowed iff at least one allow grant matches (principal selector, resource selector, operation) and no deny grant matches. No matching allow means deny; deny overrides allow.",
+  "A principal selector {relation, on_type} matches when the principal holds that relation on EVERY input resource of type on_type, and at least one such input exists.",
+  "A resource selector {type: T} matches when some input resource conforms to T; {any: true} always matches.",
+  "Operation patterns: exact name, '*', or '<prefix>:*'. Approval operations are named 'approval:<name>'.",
+  "On-behalf-of: an agent acting for a delegator is allowed only if (a) the agent's own grants allow the operation, (b) the matching allow grant is delegable, and (c) the delegator would be allowed the same request. A deny matching the agent or any principal in its delegation chain denies.",
+  "An approver must be a different principal than the requester and outside the requester's delegation chain.",
+  "Direct canonical-state writes outside governed operations are denied for every principal (deny grant on 'write:canonical-state').",
+  "Possessing a token or knowing an operation name is never authorization; only the grants above are."
+ ],
+ "service_accounts": [
+  {
+   "id": "svc-core",
+   "kind": "service",
+   "operation_grants": [],
+   "purpose": "the deployed variant's own service identity",
+   "world_writers": [
+    "paladin-service",
+    "conventional-service"
+   ]
+  }
+ ],
+ "spec": "r3-authority-3"
+}

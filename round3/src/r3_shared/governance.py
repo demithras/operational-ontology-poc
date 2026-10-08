@@ -35,6 +35,8 @@ def validate_governance(doc: dict, auth_spec: dict, ops_spec: dict, root: Path =
         jsonschema.validate(doc, _schema(root))
     except jsonschema.ValidationError as exc:
         raise ValueError(f"governance document violates the schema: {exc.message}") from exc
+    if doc["domain"] != auth_spec.get("domain"):  # G3-E5
+        raise ValueError(f"governance domain {doc['domain']!r} != authority spec domain {auth_spec.get('domain')!r}")
     principals = {p["id"]: p for p in auth_spec["principals"]}
     bids = [b["id"] for b in doc["bodies"]]
     if len(set(bids)) != len(bids):
