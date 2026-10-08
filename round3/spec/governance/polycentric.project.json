@@ -1,0 +1,216 @@
+{
+  "bodies": [
+    {
+      "id": "jur-1",
+      "members": [
+        "viewer-1"
+      ],
+      "rank": 2,
+      "rule": {
+        "kind": "single"
+      }
+    },
+    {
+      "id": "jur-2",
+      "members": [
+        "researcher-1",
+        "researcher-2",
+        "admin-1"
+      ],
+      "rank": 2,
+      "rule": {
+        "k": 2,
+        "kind": "quorum",
+        "recuse": [
+          "requester"
+        ]
+      }
+    },
+    {
+      "id": "jur-3",
+      "members": [
+        "agent-draft-1"
+      ],
+      "rank": 1,
+      "rule": {
+        "kind": "single"
+      }
+    },
+    {
+      "id": "arbiter",
+      "members": [
+        "agent-evidence-1"
+      ],
+      "rank": 5,
+      "rule": {
+        "kind": "single"
+      }
+    }
+  ],
+  "domain": "project",
+  "emergency": {
+    "ceiling": {
+      "operations": [
+        "evaluate_hypothesis",
+        "edit_threshold"
+      ],
+      "resources": [
+        {
+          "keys": null,
+          "type": "Hypothesis"
+        },
+        {
+          "keys": null,
+          "type": "Threshold"
+        }
+      ]
+    },
+    "grantees_from": "jur-2",
+    "matter": "m-emerg",
+    "max_duration": 8
+  },
+  "matters": [
+    {
+      "competent": [
+        "jur-1"
+      ],
+      "concurrence": false,
+      "id": "m-1",
+      "on_absent": "await",
+      "review": {
+        "by": "arbiter",
+        "window": 4
+      },
+      "scope": {
+        "operations": [
+          "evaluate_hypothesis"
+        ],
+        "resources": [
+          {
+            "keys": null,
+            "type": "Hypothesis"
+          }
+        ]
+      }
+    },
+    {
+      "competent": [
+        "jur-2"
+      ],
+      "concurrence": false,
+      "id": "m-2",
+      "on_absent": {
+        "after": 5,
+        "lapse": "allow"
+      },
+      "review": {
+        "by": "arbiter",
+        "window": 4
+      },
+      "scope": {
+        "operations": [
+          "edit_threshold"
+        ],
+        "resources": [
+          {
+            "keys": null,
+            "type": "Threshold"
+          }
+        ]
+      }
+    },
+    {
+      "competent": [
+        "jur-1",
+        "jur-2"
+      ],
+      "concurrence": true,
+      "id": "m-x",
+      "on_absent": "await",
+      "review": {
+        "by": "arbiter",
+        "window": 4
+      },
+      "scope": {
+        "operations": [
+          "attach_evidence"
+        ],
+        "resources": [
+          {
+            "keys": null,
+            "type": "Hypothesis"
+          },
+          {
+            "keys": null,
+            "type": "Evidence"
+          }
+        ]
+      }
+    },
+    {
+      "competent": [
+        "jur-3"
+      ],
+      "concurrence": false,
+      "id": "m-3",
+      "on_absent": "await",
+      "review": {
+        "by": "arbiter",
+        "window": 4
+      },
+      "scope": {
+        "operations": [
+          "evaluate_hypothesis"
+        ],
+        "resources": [
+          {
+            "keys": [
+              "H-A"
+            ],
+            "type": "Hypothesis"
+          }
+        ]
+      }
+    },
+    {
+      "competent": [
+        "jur-1",
+        "jur-2"
+      ],
+      "concurrence": true,
+      "id": "m-emerg",
+      "on_absent": "await",
+      "review": null,
+      "scope": {
+        "operations": [
+          "emergency:declare"
+        ],
+        "resources": []
+      }
+    }
+  ],
+  "model": "polycentric",
+  "precedence": [
+    "specialis",
+    "rank"
+  ],
+  "spec": "r3-governance-1",
+  "superior": [
+    [
+      "jur-1",
+      "arbiter"
+    ],
+    [
+      "jur-2",
+      "arbiter"
+    ],
+    [
+      "jur-3",
+      "jur-1"
+    ],
+    [
+      "jur-3",
+      "jur-2"
+    ]
+  ]
+}

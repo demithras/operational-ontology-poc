@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Round 3 governance document r3-governance-1 (PROT-H25 s1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["spec", "model", "domain", "bodies", "superior", "matters", "precedence", "emergency"],
+  "properties": {
+    "spec": {"const": "r3-governance-1"},
+    "model": {"type": "string", "minLength": 1},
+    "domain": {"enum": ["manufacturing", "project"]},
+    "bodies": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/body"}},
+    "superior": {"type": "array", "items": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "string"}}},
+    "matters": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/matter"}},
+    "precedence": {"type": "array", "items": {"enum": ["specialis", "superior", "rank"]}},
+    "emergency": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/emergency"}]}
+  },
+  "$defs": {
+    "scope": {
+      "type": "object", "additionalProperties": false, "required": ["operations", "resources"],
+      "properties": {
+        "operations": {"type": "array", "items": {"type": "string"}},
+        "resources": {"type": "array", "items": {
+          "type": "object", "additionalProperties": false, "required": ["type", "keys"],
+          "properties": {"type": {"type": "string"},
+                         "keys": {"anyOf": [{"type": "null"}, {"type": "array", "items": {"type": "string"}}]}}}}
+      }
+    },
+    "rule": {
+      "oneOf": [
+        {"type": "object", "additionalProperties": false, "required": ["kind"], "properties": {"kind": {"const": "single"}}},
+        {"type": "object", "additionalProperties": false, "required": ["kind", "k", "recuse"],
+         "properties": {"kind": {"const": "quorum"}, "k": {"type": "integer", "minimum": 1},
+                        "recuse": {"type": "array", "maxItems": 1, "items": {"const": "requester"}}}}
+      ]
+    },
+    "body": {
+      "type": "object", "additionalProperties": false, "required": ["id", "members", "rule", "rank"],
+      "properties": {"id": {"type": "string", "minLength": 1},
+                     "members": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+                     "rule": {"$ref": "#/$defs/rule"}, "rank": {"type": "integer"}}
+    },
+    "matter": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "scope", "competent", "concurrence", "review", "on_absent"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1}, "scope": {"$ref": "#/$defs/scope"},
+        "competent": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "concurrence": {"type": "boolean"},
+        "review": {"anyOf": [{"type": "null"}, {
+          "type": "object", "additionalProperties": false, "required": ["by", "window"],
+          "properties": {"by": {"type": "string"}, "window": {"type": "integer", "minimum": 1}}}]},
+        "on_absent": {"oneOf": [
+          {"const": "await"},
+          {"type": "object", "additionalProperties": false, "required": ["lapse", "after"],
+           "properties": {"lapse": {"enum": ["allow", "deny"]}, "after": {"type": "integer", "minimum": 1}}}]}
+      }
+    },
+    "emergency": {
+      "type": "object", "additionalProperties": false,
+      "required": ["matter", "max_duration", "ceiling", "grantees_from"],
+      "properties": {"matter": {"type": "string"}, "max_duration": {"type": "integer", "minimum": 1},
+                     "ceiling": {"$ref": "#/$defs/scope"}, "grantees_from": {"type": "string"}}
+    }
+  }
+}

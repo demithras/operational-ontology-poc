@@ -1,0 +1,162 @@
+{
+  "bodies": [
+    {
+      "id": "board-a",
+      "members": [
+        "supervisor-1",
+        "senior-1",
+        "admin-1"
+      ],
+      "rank": 2,
+      "rule": {
+        "k": 2,
+        "kind": "quorum",
+        "recuse": [
+          "requester"
+        ]
+      }
+    },
+    {
+      "id": "board-b",
+      "members": [
+        "planner-1",
+        "junior-1",
+        "supervisor-1"
+      ],
+      "rank": 1,
+      "rule": {
+        "k": 2,
+        "kind": "quorum",
+        "recuse": []
+      }
+    },
+    {
+      "id": "panel",
+      "members": [
+        "senior-1",
+        "nobody-1",
+        "admin-1"
+      ],
+      "rank": 0,
+      "rule": {
+        "k": 2,
+        "kind": "quorum",
+        "recuse": []
+      }
+    }
+  ],
+  "domain": "manufacturing",
+  "emergency": {
+    "ceiling": {
+      "operations": [
+        "reschedule_work_order",
+        "expedite_purchase_order"
+      ],
+      "resources": [
+        {
+          "keys": null,
+          "type": "WorkOrder"
+        },
+        {
+          "keys": null,
+          "type": "PurchaseOrder"
+        }
+      ]
+    },
+    "grantees_from": "board-b",
+    "matter": "m-emerg",
+    "max_duration": 10
+  },
+  "matters": [
+    {
+      "competent": [
+        "board-a"
+      ],
+      "concurrence": false,
+      "id": "m-a",
+      "on_absent": "await",
+      "review": {
+        "by": "panel",
+        "window": 3
+      },
+      "scope": {
+        "operations": [
+          "reschedule_work_order"
+        ],
+        "resources": [
+          {
+            "keys": null,
+            "type": "WorkOrder"
+          }
+        ]
+      }
+    },
+    {
+      "competent": [
+        "board-b"
+      ],
+      "concurrence": false,
+      "id": "m-b",
+      "on_absent": "await",
+      "review": {
+        "by": "panel",
+        "window": 3
+      },
+      "scope": {
+        "operations": [
+          "reschedule_work_order"
+        ],
+        "resources": [
+          {
+            "keys": null,
+            "type": "WorkOrder"
+          }
+        ]
+      }
+    },
+    {
+      "competent": [
+        "board-b"
+      ],
+      "concurrence": false,
+      "id": "m-po",
+      "on_absent": "await",
+      "review": {
+        "by": "panel",
+        "window": 4
+      },
+      "scope": {
+        "operations": [
+          "expedite_purchase_order"
+        ],
+        "resources": [
+          {
+            "keys": null,
+            "type": "PurchaseOrder"
+          }
+        ]
+      }
+    },
+    {
+      "competent": [
+        "board-a"
+      ],
+      "concurrence": false,
+      "id": "m-emerg",
+      "on_absent": "await",
+      "review": null,
+      "scope": {
+        "operations": [
+          "emergency:declare"
+        ],
+        "resources": []
+      }
+    }
+  ],
+  "model": "collegial",
+  "precedence": [
+    "rank"
+  ],
+  "spec": "r3-governance-1",
+  "superior": []
+}

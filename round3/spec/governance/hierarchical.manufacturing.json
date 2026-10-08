@@ -1,0 +1,176 @@
+{
+  "bodies": [
+    {
+      "id": "office-lead",
+      "members": [
+        "supervisor-1"
+      ],
+      "rank": 1,
+      "rule": {
+        "kind": "single"
+      }
+    },
+    {
+      "id": "office-mid",
+      "members": [
+        "senior-1"
+      ],
+      "rank": 2,
+      "rule": {
+        "kind": "single"
+      }
+    },
+    {
+      "id": "office-top",
+      "members": [
+        "admin-1"
+      ],
+      "rank": 3,
+      "rule": {
+        "kind": "single"
+      }
+    },
+    {
+      "id": "responders",
+      "members": [
+        "planner-1"
+      ],
+      "rank": 1,
+      "rule": {
+        "kind": "single"
+      }
+    }
+  ],
+  "domain": "manufacturing",
+  "emergency": {
+    "ceiling": {
+      "operations": [
+        "reschedule_work_order",
+        "expedite_purchase_order"
+      ],
+      "resources": [
+        {
+          "keys": null,
+          "type": "WorkOrder"
+        },
+        {
+          "keys": null,
+          "type": "PurchaseOrder"
+        }
+      ]
+    },
+    "grantees_from": "responders",
+    "matter": "m-emerg",
+    "max_duration": 12
+  },
+  "matters": [
+    {
+      "competent": [
+        "office-lead"
+      ],
+      "concurrence": false,
+      "id": "m-narrow",
+      "on_absent": {
+        "after": 4,
+        "lapse": "deny"
+      },
+      "review": {
+        "by": "office-mid",
+        "window": 3
+      },
+      "scope": {
+        "operations": [
+          "reschedule_work_order"
+        ],
+        "resources": [
+          {
+            "keys": [
+              "WO-42"
+            ],
+            "type": "WorkOrder"
+          }
+        ]
+      }
+    },
+    {
+      "competent": [
+        "office-mid"
+      ],
+      "concurrence": false,
+      "id": "m-broad",
+      "on_absent": {
+        "after": 6,
+        "lapse": "deny"
+      },
+      "review": {
+        "by": "office-top",
+        "window": 5
+      },
+      "scope": {
+        "operations": [
+          "reschedule_work_order"
+        ],
+        "resources": [
+          {
+            "keys": null,
+            "type": "WorkOrder"
+          }
+        ]
+      }
+    },
+    {
+      "competent": [
+        "office-top"
+      ],
+      "concurrence": false,
+      "id": "m-po",
+      "on_absent": {
+        "after": 8,
+        "lapse": "deny"
+      },
+      "review": null,
+      "scope": {
+        "operations": [
+          "expedite_purchase_order"
+        ],
+        "resources": [
+          {
+            "keys": null,
+            "type": "PurchaseOrder"
+          }
+        ]
+      }
+    },
+    {
+      "competent": [
+        "office-top"
+      ],
+      "concurrence": false,
+      "id": "m-emerg",
+      "on_absent": "await",
+      "review": null,
+      "scope": {
+        "operations": [
+          "emergency:declare"
+        ],
+        "resources": []
+      }
+    }
+  ],
+  "model": "hierarchical",
+  "precedence": [
+    "specialis",
+    "superior"
+  ],
+  "spec": "r3-governance-1",
+  "superior": [
+    [
+      "office-lead",
+      "office-mid"
+    ],
+    [
+      "office-mid",
+      "office-top"
+    ]
+  ]
+}

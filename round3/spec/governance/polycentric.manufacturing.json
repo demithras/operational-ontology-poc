@@ -1,0 +1,220 @@
+{
+  "bodies": [
+    {
+      "id": "jur-1",
+      "members": [
+        "supervisor-1"
+      ],
+      "rank": 2,
+      "rule": {
+        "kind": "single"
+      }
+    },
+    {
+      "id": "jur-2",
+      "members": [
+        "planner-1",
+        "junior-1",
+        "senior-1"
+      ],
+      "rank": 2,
+      "rule": {
+        "k": 2,
+        "kind": "quorum",
+        "recuse": [
+          "requester"
+        ]
+      }
+    },
+    {
+      "id": "jur-3",
+      "members": [
+        "admin-1"
+      ],
+      "rank": 1,
+      "rule": {
+        "kind": "single"
+      }
+    },
+    {
+      "id": "arbiter",
+      "members": [
+        "nobody-1"
+      ],
+      "rank": 5,
+      "rule": {
+        "kind": "single"
+      }
+    }
+  ],
+  "domain": "manufacturing",
+  "emergency": {
+    "ceiling": {
+      "operations": [
+        "reschedule_work_order",
+        "expedite_purchase_order"
+      ],
+      "resources": [
+        {
+          "keys": null,
+          "type": "WorkOrder"
+        },
+        {
+          "keys": null,
+          "type": "PurchaseOrder"
+        }
+      ]
+    },
+    "grantees_from": "jur-2",
+    "matter": "m-emerg",
+    "max_duration": 8
+  },
+  "matters": [
+    {
+      "competent": [
+        "jur-1"
+      ],
+      "concurrence": false,
+      "id": "m-1",
+      "on_absent": "await",
+      "review": {
+        "by": "arbiter",
+        "window": 4
+      },
+      "scope": {
+        "operations": [
+          "reschedule_work_order"
+        ],
+        "resources": [
+          {
+            "keys": null,
+            "type": "WorkOrder"
+          }
+        ]
+      }
+    },
+    {
+      "competent": [
+        "jur-2"
+      ],
+      "concurrence": false,
+      "id": "m-2",
+      "on_absent": {
+        "after": 5,
+        "lapse": "allow"
+      },
+      "review": {
+        "by": "arbiter",
+        "window": 4
+      },
+      "scope": {
+        "operations": [
+          "expedite_purchase_order"
+        ],
+        "resources": [
+          {
+            "keys": null,
+            "type": "PurchaseOrder"
+          }
+        ]
+      }
+    },
+    {
+      "competent": [
+        "jur-1",
+        "jur-2"
+      ],
+      "concurrence": true,
+      "id": "m-x",
+      "on_absent": "await",
+      "review": {
+        "by": "arbiter",
+        "window": 4
+      },
+      "scope": {
+        "operations": [
+          "transfer_inventory"
+        ],
+        "resources": [
+          {
+            "keys": null,
+            "type": "Warehouse"
+          },
+          {
+            "keys": null,
+            "type": "Part"
+          },
+          {
+            "keys": null,
+            "type": "WorkOrder"
+          }
+        ]
+      }
+    },
+    {
+      "competent": [
+        "jur-3"
+      ],
+      "concurrence": false,
+      "id": "m-3",
+      "on_absent": "await",
+      "review": {
+        "by": "arbiter",
+        "window": 4
+      },
+      "scope": {
+        "operations": [
+          "reschedule_work_order"
+        ],
+        "resources": [
+          {
+            "keys": [
+              "WO-42"
+            ],
+            "type": "WorkOrder"
+          }
+        ]
+      }
+    },
+    {
+      "competent": [
+        "jur-1",
+        "jur-2"
+      ],
+      "concurrence": true,
+      "id": "m-emerg",
+      "on_absent": "await",
+      "review": null,
+      "scope": {
+        "operations": [
+          "emergency:declare"
+        ],
+        "resources": []
+      }
+    }
+  ],
+  "model": "polycentric",
+  "precedence": [
+    "specialis",
+    "rank"
+  ],
+  "spec": "r3-governance-1",
+  "superior": [
+    [
+      "jur-1",
+      "arbiter"
+    ],
+    [
+      "jur-2",
+      "arbiter"
+    ],
+    [
+      "jur-3",
+      "jur-1"
+    ],
+    [
+      "jur-3",
+      "jur-2"
+    ]
+  ]
+}
