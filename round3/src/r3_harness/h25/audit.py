@@ -125,10 +125,35 @@ def _norm(line: str) -> str:
     return " ".join(line.split())
 
 
+def _scope_map(tree) -> list[tuple[int, int, str]]:
+    """(start, end, qualname) for every class/function def; innermost = longest qualname containing the line."""
+    out = []
+
+    def walk(node, prefix):
+        for c in ast.iter_child_nodes(node):
+            if isinstance(c, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                q = f"{prefix}.{c.name}" if prefix else c.name
+                out.append((c.lineno, getattr(c, "end_lineno", c.lineno), q))
+                walk(c, q)
+            else:
+                walk(c, prefix)
+    walk(tree, "")
+    return out
+
+
+def _scope_of(scopes, line: int) -> str:
+    best = ""
+    for a, b, q in scopes:
+        if a <= line <= b and len(q) > len(best):
+            best = q
+    return best or "<module>"
+
+
 def scan_source(path: str, text: str, voc: set[str], domain_module: bool, active_mutants=()) -> list[dict]:
     hits = []
     lines = text.splitlines()
     tree = ast.parse(text)
+    scopes = _scope_map(tree)
     for n in _live_nodes(tree, set(active_mutants)):
         line = getattr(n, "lineno", 0)
         found = []
@@ -151,20 +176,24 @@ def scan_source(path: str, text: str, voc: set[str], domain_module: bool, active
             found = [("authority-vocabulary", nm) for nm in names if AUTH_WORDS.search(nm)]
         for kind, lit in found:
             src = _norm(lines[line - 1]) if 0 < line <= len(lines) else ""
-            hits.append({"file": path, "line": line, "kind": kind, "literal": lit, "text": src})
+            hits.append({"file": path, "line": line, "kind": kind, "literal": lit, "text": src,
+                         "scope": _scope_of(scopes, line)})
     return hits
 
 
-def hit_key(variant: str, hit: dict) -> tuple[str, str, str]:
-    return (variant, hit["file"], _norm(hit.get("text", "")))
+def hit_key(variant: str, hit: dict) -> tuple[str, str, str, str]:
+    """(variant, file, enclosing qualname or "<module>", normalised line text) - G3-E24 + fix6."""
+    return (variant, hit["file"], hit.get("scope") or "<module>", _norm(hit.get("text", "")))
 
 
 def load_resolutions(path: Path | None = None) -> dict:
-    """{(variant, file, normalised text): reason} from the frozen auditor review; a missing file means no resolutions."""
+    """{(variant, file, scope, normalised text): reason} from the frozen auditor review; missing file = no resolutions.
+    Entries without "scope" match nothing (fix6)."""
     p = Path(path) if path else RESOLUTIONS
     if not p.is_file():
         return {}
-    return {(r["variant"], r["file"], _norm(r["text"])): r.get("reason", "") for r in json.loads(p.read_text()).get("resolutions", [])}
+    return {(r["variant"], r["file"], r["scope"], _norm(r["text"])): r.get("reason", "")
+            for r in json.loads(p.read_text()).get("resolutions", []) if r.get("scope")}
 
 
 def _declared_in(f: Path) -> list[str]:

@@ -78,7 +78,7 @@ def test_resolutions_match_whitespace_normalised_and_split_resolved_from_counted
     plain = audit.static_scan(sources=srcs, variant="v", resolutions={})
     assert plain["hit_count"] == 2 and plain["resolved_count"] == 0
     p = tmp_path / "r.json"
-    p.write_text(json.dumps({"resolutions": [{"variant": "v", "file": "a.py", "text": "return   d == 'project'", "reason": "wiring"}]}))
+    p.write_text(json.dumps({"resolutions": [{"variant": "v", "file": "a.py", "scope": "f", "text": "return   d == 'project'", "reason": "wiring"}]}))
     res = audit.load_resolutions(p)
     r = audit.static_scan(sources=srcs, variant="v", resolutions=res)
     assert r["hit_count"] == 1 and r["resolved_count"] == 1 and r["resolved"][0]["reason"] == "wiring"
@@ -107,4 +107,4 @@ def test_discovery_cli_lists_hits_with_keys_for_both_variants():
         r = subprocess.run([sys.executable, str(audit.ROUND3 / "scripts" / "list_domain_hits.py"), "--variant", v],
                            capture_output=True, text=True, check=True)
         rows = [json.loads(x) for x in r.stdout.splitlines()]
-        assert rows and all(len(x["key"]) == 3 and x["key"][0] == v for x in rows)
+        assert rows and all(len(x["key"]) == 4 and x["key"][0] == v and x["key"][2] == x["scope"] for x in rows)
