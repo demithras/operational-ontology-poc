@@ -34,13 +34,58 @@ def _kf(ops, t):
     return next(x for x in ops["resource_types"] if x["name"] == t)
 
 
+def _effects(ops):
+    return [e for op in ops["operations"] for e in op["effects"]]
+
+
+def store_managed(ops) -> bool:
+    """True when some operation writes the store itself (create/update/link/unlink effects). In a domain whose operations
+    are all external (manufacturing: WMS/ERP/MES own the data) the store mirrors external systems and any in-type value is
+    an observable external state; invariants already bound it."""
+    return any(e["kind"] in ("create", "update", "link", "unlink") for e in _effects(ops))
+
+
+def reachable_link_types(ops) -> set:
+    """Link types some operation creates (kind link) or removes (kind unlink) - derived from the ops spec (G3-E30)."""
+    return {e["link_type"] for e in _effects(ops) if e["kind"] in ("link", "unlink")}
+
+
+def updatable_fields(ops) -> set:
+    """(type, field) pairs written by an update effect (an existing object's field can only change that way). A field
+    co-written with a literal lifecycle value (e.g. freeze_hash with phase=PREREGISTERED) is written once, at the
+    transition, so an object that already holds it cannot be re-written: excluded."""
+    return {(e["type"], f) for e in _effects(ops) if e["kind"] == "update" and not any("lit" in v for v in (e.get("props") or {}).values()
+                                                                                      if isinstance(v, dict) and not isinstance(v.get("lit"), bool))
+            for f in (e.get("props") or {})}
+
+
+def kind_feasible(ops, kind: str) -> bool:
+    if kind == "L":
+        return bool(reachable_link_types(ops))
+    if kind == "F":
+        return not store_managed(ops) or any(
+            f["type"] in ("string", "integer") and not f.get("enum") and not f.get("immutable") and (t["name"], f["name"]) in updatable_fields(ops)
+            for t in ops["resource_types"] for f in t["fields"])
+    return True
+
+
+def creatable(ops) -> dict:
+    """type -> {field: effect value expr} of the create effects; hidden creations may only carry these fields."""
+    out: dict = {}
+    for e in _effects(ops):
+        if e["kind"] == "create":
+            out.setdefault(e["type"], {}).update(e.get("props") or {})
+    return out
+
+
 def vary_F(rng, ops, lv, snap):
+    managed, upd = store_managed(ops), updatable_fields(ops)
     cand = []
     for ref, props in snap["objects"].items():
         t = ref.split(":", 1)[0]
         hid = [f["name"] for f in _kf(ops, t)["fields"] if f["name"] in props["props"]
                and f["name"] not in lv.objects.get(ref, {}) and not f.get("enum") and not f.get("immutable")
-               and f["type"] in ("string", "integer")]
+               and f["type"] in ("string", "integer") and (not managed or (t, f["name"]) in upd)]
         cand += [(ref, f, props["props"][f]) for f in hid]
     if not cand:
         return None
@@ -55,15 +100,19 @@ def vary_F(rng, ops, lv, snap):
 
 
 def vary_E(rng, ops, lv, snap):
-    hidden = sorted(r for r in snap["objects"] if r not in lv.objects)
+    managed, cr = store_managed(ops), creatable(ops)
+    hidden = sorted(r for r in snap["objects"] if r not in lv.objects and (not managed or r.split(":", 1)[0] in cr))
     if not hidden:
         return None
     ref = rng.choice(hidden)
     t, k = ref.split(":", 1)
     td = _kf(ops, t)
     props = snap["objects"][ref]["props"]
+    if managed:  # only fields the creating operation writes; literal-valued ones take the literal (e.g. phase DRAFT)
+        props = {f: (cr[t][f]["lit"] if "lit" in cr[t].get(f, {}) else v)
+                 for f, v in props.items() if f in cr[t] or f == td["key_field"]}
     cands = [f["name"] for f in td["fields"] if f["type"] == "string" and f["name"] != td["key_field"]
-             and not f.get("enum") and f["name"] in props]
+             and not f.get("enum") and f["name"] in props and (not managed or "lit" not in cr[t].get(f["name"], {}))]
     out, keys, cans = [], [canary_key(rng), canary_key(rng)], []
     for key in keys:
         p = dict(props)
@@ -78,7 +127,8 @@ def vary_E(rng, ops, lv, snap):
 def vary_L(rng, ops, lv, snap):
     """Link presence: w1 links (s1, d1), w2 links (s2, d2); both pairs are unlinked in the base and at least one endpoint is
     hidden from the observer, so the link itself is invisible. Equal batch shape (one link each)."""
-    lts = list(ops["link_types"])
+    ok = reachable_link_types(ops)
+    lts = [x for x in ops["link_types"] if x["name"] in ok]  # G3-E30: only link types some operation creates/removes
     rng.shuffle(lts)
     for l in lts:
         src = sorted(r for r in snap["objects"] if r.split(":", 1)[0] in (l.get("from_types") or [l["from"]]))
