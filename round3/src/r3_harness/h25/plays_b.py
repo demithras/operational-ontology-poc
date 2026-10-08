@@ -92,7 +92,7 @@ def acts(g, eid, op_name, grantees, outsiders, exp, gm):
 def noise_play(g):
     r = g.rng
     acts_ = [ordinary_governed, ordinary_free, ungoverned_propose, dup_case, unknown_case, bad_token, schema_junk,
-             revoke_then_execute, mid_case_governance, crash_retry, idempotent_retry]
+             revoke_then_execute, mid_case_governance, crash_retry, idempotent_retry, exec_by_other, exec_by_other]
     for f in r.sample(acts_, r.randint(2, 5)):
         f(g)
 
@@ -177,6 +177,19 @@ def mid_case_governance(g):
         g.ms += 1
         g.M = g.M.apply({"kind": "set_governance", "doc": doc, "seq": g.ms, "tick": g.tick()})
         g.doc = doc
+        if g.rng.random() < 0.7:
+            plays_a.decision_play(g)  # exercise the new document (precedence ties, changed quorums)
+
+
+def exec_by_other(g):
+    live = [c for c in g.cases if g.M.case(c)]
+    if not live:
+        return
+    cid = g.rng.choice(live)
+    c = g.M.case(cid)
+    vis = [p for p in g.principals() if p != c["requester"] and E.sees(g.M.doc, g.ops, c, p)]
+    if vis:
+        g.step(g.rng.choice(vis), {"kind": "execute", "case": cid})
 
 
 def crash_retry(g):

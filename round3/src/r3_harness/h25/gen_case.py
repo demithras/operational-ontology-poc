@@ -38,7 +38,7 @@ class Case:
         self.ch = RandChooser(self.rng)
         self.M, self.ms, self.n = self.env.C0, 0, 0
         self.redraws, self.cases, self.tags = self.inst["redraws"], [], set()
-        self.merit_log: list = []
+        self.prefix = "case"
 
     # -- ids and bookkeeping ----------------------------------------------------------------------------
     def rid(self, p="r"):
@@ -135,7 +135,7 @@ class Case:
             from .rows import row_of
             rows = [row_of(c, out["calls"][c["n"]]) for c in calls]
             cls = {k for r in rows for k in r["classes"]} | set(out["case_classes"])
-            return {"id": f"case-{self.seed}-{self.i}", "model": self.model, "domain": self.domain,
+            return {"id": f"{self.prefix}-{self.seed}-{self.i}", "model": self.model, "domain": self.domain,
                     "digest": input_digest(self.domain, self.model, self.env.calls), "calls": rows,
                     "case_classes": out["case_classes"], "classes": sorted(cls), "redraws": self.redraws,
                     "tags": sorted(self.tags), "n_actions": len(calls), "final": self._final_summary(out)}
@@ -181,6 +181,7 @@ class NoGov(Case):
 
     def __init__(self, variant, seed: int, i: int, **kw):
         super().__init__(variant, seed, i, tag="nogov", **kw)
+        self.prefix = "nogov"
         self.env.close()
         self.env = G3Env(variant, self.domain, self.ops, self.inst["auth"], None, f"nogov{seed}-{i}")
         self.env.committed = set()
