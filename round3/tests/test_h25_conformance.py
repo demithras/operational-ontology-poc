@@ -1,6 +1,6 @@
 """CONFORMANCE FIRST (Gate 2 lesson): generated edge cases run against BOTH real variants through the registry and are
-compared with the oracle's observable decisions (ORACLE-AND-HARNESS-G3 section C, C25-1..C25-5). The real variants may not
-be built yet: then those parametrisations SKIP with a stated reason (that is information, not green). `fake-honest`
+compared with the oracle's observable decisions (ORACLE-AND-HARNESS-G3 section C, C25-1..C25-5). Registered real variants
+NEVER skip: an unloadable variant or a missing Gate 3 surface FAILS (only fakes may lack it). `fake-honest`
 proves the test machinery itself (an oracle-backed reference must pass every item)."""
 import copy
 import inspect
@@ -25,12 +25,15 @@ CLEAN = {"ok", "race_refusal_ok"}
 def get(name):
     if name.startswith("fake-"):
         return fake(name)
+    # A REGISTERED real variant must never skip: a missing module / Gate 3 surface is a FAILURE (a silent skip made the
+    # conformance checker vacuous and order-dependent). Only fakes (handled above) may lack the surface.
     try:
         v = load_variant(name)
     except NotImplementedError as exc:
-        pytest.skip(f"variant {name} not implemented yet - G3 ({exc})")
+        pytest.fail(f"registered variant {name} cannot be loaded: {exc}")
     if "governance" not in inspect.signature(v.deploy).parameters:
-        pytest.skip(f"variant {name} lacks the Gate 3 surface (deploy(governance=...), constitutional): not implemented yet - G3")
+        pytest.fail(f"registered variant {name} lacks the Gate 3 surface (deploy(governance=...)); "
+                    f"deploy={getattr(v.deploy, '__qualname__', v.deploy)!r} module={type(v).__module__}")
     return v
 
 

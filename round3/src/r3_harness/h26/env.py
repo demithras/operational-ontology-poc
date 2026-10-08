@@ -30,12 +30,13 @@ def decision_rec(ops, subject, obo, op, args, rid, status, reason, eff, rows, he
     seq = commit["seq"] if commit else (rows[-1]["seq"] if rows else head)
     tick = commit["tick"] if commit else now
     eff = eff if status == "OK" else []
+    eff_rows = rows if (status == "OK" and rows) else []  # E-4: digest over the transaction's world_log rows, not diff rows
     sc = {"decision_id": rid, "kind": "direct", "subject": subject, "on_behalf_of": obo, "operation": op,
           "args_digest": pv.args_digest(args), "status": status, "reason": reason,
-          "effect_digest": pv.effect_digest(eff), "world_seq": seq, "tick": tick, "authority_path": []}
+          "effect_digest": pv.effect_digest(eff_rows), "world_seq": seq, "tick": tick, "authority_path": []}
     free = bool(opd) and all(i["type"] == "resource" for i in opd["inputs"] if i["name"] in args)
     return {"id": rid, "rid": rid, "subject": subject, "on_behalf_of": obo, "approver": None, "resources": refs,
-            "args_refs": refs, "args_scalar_free": free, "scalars": sc, "effects": eff, "edge_path": []}
+            "args_refs": refs, "args_scalar_free": free, "scalars": sc, "effects": eff, "effect_rows": eff_rows, "edge_path": []}
 
 
 class PWorld:
@@ -106,7 +107,7 @@ class PWorld:
     def _record_decision(self, subject, obo, op, args, rid, res, eff, head, head_before):
         rows = self.reader.log(head_before) if eff else []
         self.facts.decisions.append(decision_rec(self.ops, subject, obo, op, args, rid, res.status,
-                                                 res.body.get("reason", ""), eff, rows, head, self.clock.now()))
+                                                 res.body.get("reason") or ("ok" if res.status == "OK" else ""), eff, rows, head, self.clock.now()))
 
     def close(self) -> None:
         try:

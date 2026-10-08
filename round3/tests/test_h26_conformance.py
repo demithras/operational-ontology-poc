@@ -4,18 +4,43 @@ builders land - a red row is information (which clause, which variant), not a ha
 FAILS with its reason (never skipped)."""
 import collections
 import json
+import os
+import shutil
+import tempfile
 from pathlib import Path
 
 import pytest
 
 from r3_harness.h26 import fuzz, gen_pair, observe
 from r3_oracle import disclosure_reads as R, lowproj
+from r3_shared.anchor import start_anchor
 from r3_shared.registry import load_variant
 from tests.fakes import fake_h26
 
 ROOT = Path(__file__).resolve().parents[1]
 N_PAIRS = 12
 _cache: dict = {}
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _anchor():
+    """Ruling Q10: H26 worlds run WITH a HistoryStore + AnchorClient. When R3_ANCHOR_SOCK is unset start an anchor here
+    (short /tmp path: unix socket length limit)."""
+    if os.environ.get("R3_ANCHOR_SOCK"):
+        yield
+        return
+    d = tempfile.mkdtemp(prefix="h26a-", dir="/tmp")
+    ap = start_anchor(os.path.join(d, "anchor"), os.path.join(d, "s"))
+    os.environ["R3_ANCHOR_SOCK"] = ap.sock_path
+    _cache.clear()
+    try:
+        yield
+    finally:
+        os.environ.pop("R3_ANCHOR_SOCK", None)
+        try:
+            ap.close()
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
 
 
 def factory(name):  # noqa: D401

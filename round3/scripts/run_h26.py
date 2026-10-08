@@ -56,6 +56,26 @@ def main() -> int:
     if rec and "-dev" not in a.exp_id:
         print(f"refusing: counts below the frozen minimums are allowed only for dev ids (containing '-dev'): {rec}", file=sys.stderr)
         return 2
+    import os
+    import shutil
+    import tempfile
+    dev_anchor = None
+    if "-dev" in a.exp_id and not os.environ.get("R3_ANCHOR_SOCK"):  # ruling Q10: dev paths also run with history + anchor
+        from r3_shared.anchor import start_anchor
+        td = tempfile.mkdtemp(prefix="h26a-", dir="/tmp")
+        dev_anchor = (start_anchor(os.path.join(td, "anchor"), os.path.join(td, "s")), td)
+        os.environ["R3_ANCHOR_SOCK"] = dev_anchor[0].sock_path
+    try:
+        return _run(a, rec)
+    finally:
+        if dev_anchor:
+            try:
+                dev_anchor[0].close()
+            finally:
+                shutil.rmtree(dev_anchor[1], ignore_errors=True)
+
+
+def _run(a, rec) -> int:
     for name in a.variants.split(","):
         factory, pkg = factory_for(name, a.test_variants)
         out = Path(a.out_root) / a.exp_id / name

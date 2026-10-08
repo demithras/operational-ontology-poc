@@ -3,6 +3,8 @@ extra fault flags for the known-negative tests. Test-only, never registered. Vis
 the oracle; the test proves the HARNESS pipeline, not any variant)."""
 from __future__ import annotations
 
+import json
+
 import copy
 import hashlib
 
@@ -144,10 +146,11 @@ class H26Deployment(FakeDeployment):
                                 "on_behalf_of": obo}
         rows = self.world._con.execute("SELECT seq,tx,tag,tick,writer,kind,ref,data_json FROM world_log WHERE seq>? ORDER BY seq",
                                        (head0,)).fetchall()
-        rws = [{"seq": r[0], "tick": r[3], "kind": r[5], "ref": r[6]} for r in rows]
+        rws = [{"seq": r[0], "tx": r[1], "tag": r[2], "tick": r[3], "writer": r[4], "kind": r[5], "ref": r[6],
+                "data": json.loads(r[7])} for r in rows]
         head = rws[-1]["seq"] if rws else head0
         eff = world_diff(before, self._snap())
-        self.facts.decisions.append(decision_rec(self.ops_spec, sub, obo, operation, args, rid, "OK", "", eff, rws, head, tx.tick))
+        self.facts.decisions.append(decision_rec(self.ops_spec, sub, obo, operation, args, rid, "OK", "ok", eff, rws, head, tx.tick))
         return CallResult("OK", {})
 
     # -- hidden parents / edges / cases answer exactly like absent ones (PROT-H26 3.1) --------------------------

@@ -94,6 +94,8 @@ def _body_result(doc, bid, requester, js, stage) -> str:
     k, n = r["k"], len(el)
     if n < k:
         return AWAIT
+    if stage == "review":  # PROT-H25 2.4: overturn >= k -> OVERTURNED (no dissent > n-k shortcut)
+        return ALLOW if yes >= k else DENY if no >= k else AWAIT
     return ALLOW if yes >= k else DENY if no > n - k else AWAIT
 
 

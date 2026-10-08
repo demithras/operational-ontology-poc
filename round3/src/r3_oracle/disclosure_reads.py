@@ -42,33 +42,48 @@ def _jsonable(x):
     return x
 
 
+def _typed(t: str, v) -> bool:
+    if t == "integer":
+        return isinstance(v, int) and not isinstance(v, bool)
+    if t == "number":
+        return isinstance(v, (int, float)) and not isinstance(v, bool)
+    if t == "boolean":
+        return isinstance(v, bool)
+    return isinstance(v, str) and (t != "resource" or v.strip() != "")
+
+
 def expected_query(lv, name: str, args: dict):
     """(status, body) over the LOW view as the world (s3.3); None when the oracle has no frozen answer (unknown name,
     ill-formed args): such calls are only twin-compared by the harness, never counted as read mismatches."""
     rd = next((r for r in lv.ops_spec["reads"] if r["name"] == name), None)
     if rd is None or not isinstance(args, dict):
         return None
-    kw = {}
+    kw, bare = {}, {}
+    decl = {i["name"] for i in rd["inputs"]}
+    if any(k not in decl for k in args):  # G3-E20: unknown arg -> no frozen answer here (variants answer INVALID)
+        return None
     for i in rd["inputs"]:
         v = args.get(i["name"])
         if v is None and i.get("required"):
             return None
-        if i["type"] == "resource":
-            if not isinstance(v, str) or ":" not in v:
-                return None
-            t, k = v.split(":", 1)
-            v = (t, k)
+        if v is not None and not _typed(i["type"], v):
+            return None
+        bare[i["name"]] = v
+        if i["type"] == "resource" and v is not None:  # G3-E20: resource args are BARE keys, like operation inputs
+            v = (i["resource_type"], v)
         kw[i["name"]] = v
     view = View(lv.snapshot())
     try:
-        if "expr" in rd:
-            val = ev(rd["expr"], Ctx(rd, kw, view))
-        elif name in REGISTRY:
+        if name in REGISTRY:  # prose-defined helper semantics first ("missing counts as 0"); the expr AST fails closed to null
             val = REGISTRY[name](view, **kw)
+        elif "expr" in rd:
+            val = ev(rd["expr"], Ctx(rd, bare, view))
         else:
             return None
     except (HelperError, KeyError, TypeError, ValueError):
         return None
+    if name == "work_order_risk" and isinstance(val, dict):  # prose form is {work_order_id, shortage, at_risk}
+        val = {k: v for k, v in val.items() if k != "shorts"}
     return "OK", {"value": json.loads(json.dumps(_jsonable(val), sort_keys=True))}
 
 

@@ -17,6 +17,10 @@ def _pick(rng, xs, n):
     return xs if len(xs) <= n else sorted(rng.sample(xs, n))
 
 
+def _typed_default(t: str):
+    return {"integer": 1, "number": 1, "boolean": True}.get(t, "x")
+
+
 def build_plan(rng, ops, auth, observer, snaps, hidden_refs, own_rids, hid_rids, hid_edges, hid_cases, n_d4=3):
     """snaps: the two predicted end-of-high-phase snapshots (list of 2). Returns (plan, d4_attempted, d4_replaced)."""
     s = snaps[0]
@@ -33,7 +37,8 @@ def build_plan(rng, ops, auth, observer, snaps, hidden_refs, own_rids, hid_rids,
     for rd in ops["reads"]:
         rin = [i for i in rd["inputs"] if i["type"] == "resource"]
         for r in _pick(rng, vis + hid, 3):
-            args = {i["name"]: (r if i["type"] == "resource" else 1) for i in rd["inputs"]}
+            args = {i["name"]: (r.split(":", 1)[1] if i["type"] == "resource" else _typed_default(i["type"]))
+                    for i in rd["inputs"]}  # G3-E20: bare keys; other args typed per the ops spec
             if rin and r.split(":", 1)[0] == rin[0]["resource_type"]:
                 plan.append({"m": "query", "name": rd["name"], "args": args})
     plan.append({"m": "query", "name": rd_name(ops), "args": {}})
