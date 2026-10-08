@@ -102,8 +102,8 @@ class SovMixin:
             return CallResult("OK", {"value": plain(self.eng.call_function(name, json.loads(json.dumps(args)), principal=sub))})
         except InvalidRequest:
             return CallResult("INVALID", {"reason": "invalid_args"})
-        except Exception:  # noqa: BLE001 - a function that cannot run over the low view (missing hidden field): constant answer
-            return CallResult("INVALID", {"reason": "query_error"})
+        # no catch-all: a hidden field degrades inside the read function like a null (PROT-H26 s3.3); any other exception is a
+        # variant defect and propagates (the harness records variant_error) - never a guessed constant answer.
 
     def leak_detail(self, op, args) -> dict:
         """MUTANT error_detail_leak only: the failing request's object values (what a raw exception/rule detail would carry)."""

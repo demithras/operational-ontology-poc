@@ -57,6 +57,8 @@ def work_order(view, wo_id: Any) -> dict | None:
     reqs: dict = {}
     for b in view.follow("BomRequirement_workOrder", "WorkOrder", wo_id, "in"):
         part = _one(view, "BomRequirement_requiresPart", "BomRequirement", b["key"])
+        if part is None:   # the requiring link is hidden/absent: the requirement names no part (oracle loops over requiresPart links)
+            continue
         reqs[part] = reqs.get(part, 0) + b["props"].get("quantity", 0)
     p = r["props"]
     return {"id": wo_id, "status": p.get("status"), "priority": p.get("priority"),

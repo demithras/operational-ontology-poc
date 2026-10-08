@@ -504,3 +504,10 @@ assert the P1e-5 forms, and the G2 "edge holder has no tools" assertion follows 
   field of the decision's world_log rows is in the observer's low view (own decisions included). args_digest keeps its own exemption.
 - VENDORED.json: `engine/gates.py` patch list now `V2, V3`; V3 = G3-E17 post-authority order (gates.check_inputs `existence=False`
   stand-in, with the existence check re-run after deny rules in pipeline.py).
+
+## G3 fix5 - paladin (tag r3-g3-fix5-paladin)
+Fixes from the exp-h25-dev1 / exp-h26-dev1 attribution (variant-side root causes only):
+- H25 RC5: `Core._replay` re-evaluates a committed constitutional `act` through `GovAct.in_force_now()` (emergency active, unexpired, in scope, grantee; G3-E24 R5), never the actor's base grants. RC6: `CaseBook.basis` lists each counted judgment once (dedupe by rid, seq order).
+- H26 RC4/G3-E26: public types have provenance `none` (sovview). RC5/INTERP-2: `_args_low` = own, or all refs existence-visible and no scalar input present (rec["sc"]). RC6a (D6) `work_order` skips a requirement without a visible requiresPart link; RC6b (D7) hidden Experiment.version/Evidence.experiment_version degrade like null, and `query` no longer swallows exceptions into a constant (an unexpected exception is a harness variant_error); RC6c rule union allow - union deny, order-independent, also for provenance level and links. RC7/G3-E27: view `reason` = public reply reason (rec["vr"]; the anchored envelope keeps the auditor gate code). RC8: update effect rows = props | patch. RC9/G3-E27: authority_used_as on an own refused governed request = OK partial, path [].
+- Vendored patches recorded: D6, D7 (VENDORED.json via scripts/paladin_vendor_manifest.py, spec/protections/H23-paladin.md).
+- tests/paladin/test_pal_g3_h26_prov.py: the foreign-observer redaction tests now pin the view at `scalars` for Hypothesis (a public type is provenance `none` under G3-E26, so d1 is no longer low for researcher-2 on the live view).

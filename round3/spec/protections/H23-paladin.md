@@ -45,6 +45,8 @@ effect step. Authority is compiled from the neutral spec by `authcompile.py` (sr
 | `D2` | src/paladin/domains/project/logic/payloads.py:16 | `head_commit` reads integer `committed_at` ticks. |
 | `D3` | src/paladin/domains/project/logic/freeze.py:46 | `compute_freeze_hash` is the neutral stand-in defined in spec/ops/project.json (canonical JSON of evidence_schema_ref, evaluator_ref, thresholds), not git blobs. |
 | `D4` | src/paladin/domains/project/logic/derive.py:46 | The neutral evaluator `neutral:evidence-present-v1` needs `evidence_count`; it is passed as a plain value (and included in the derivation cache key). |
+| `D6` | src/paladin/domains/manufacturing/logic/facts.py:58 | G3 fix5 (H26 RC6a): `work_order()` skips a BOM requirement whose `requiresPart` link is absent from the (low) view, like the reference loop over `requiresPart` links, instead of adding a requirement for part `None`. |
+| `D7` | src/paladin/domains/project/logic/facts.py:92, derive.py:35 | G3 fix5 (H26 RC6b): a hidden `Experiment.version` / `Evidence.experiment_version` degrades like a null (`.get`, sorts lowest) instead of raising KeyError over a low view. |
 
 Not vendored / not used: Round 2 git store (`eoo_engine_git`), H15 evaluators, Round 2 domain packs' `build_pack` (replaced by `boot.py`).
 Structural protections (not compiled into rules): the spec's `deny write:canonical-state`, `deny write:Verdict.value`,

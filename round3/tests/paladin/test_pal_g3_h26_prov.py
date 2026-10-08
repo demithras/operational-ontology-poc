@@ -1,9 +1,12 @@
 """H26 s4 provenance redaction (R26-5): true value or explicit marker, `partial` constant, own-only authority_used_as."""
+from types import SimpleNamespace
+
 import pytest
 
 from g2_rig import new_anchor
 from g3_rig import G3Rig
 from r3_shared.disclosure import check_decision, is_marker, check_low_result
+from paladin.sovview import LowView
 from r3_shared.histstore import HistoryStore
 
 ATT = ("attach_evidence", {"hypothesis": "H-C", "evidence": "EV-C1"})
@@ -32,8 +35,19 @@ def test_own_view_is_true_and_complete(rig):
     assert not any(is_marker(v) for v in d.values() if not isinstance(v, list)) or d["effect_digest"] != d["args_digest"]
 
 
+def _scalars_view(rig, sub="researcher-2"):
+    """G3-E26: a public type (Hypothesis) has provenance `none`, so d1 is low for a foreign observer only if every resource
+    input is covered by a scalars|actors rule. Pin that situation on the real view: Hypothesis covered at `scalars`."""
+    core = rig.dep._c
+    real = core.view_for(sub)
+    real.level["Hypothesis:H-C"] = "scalars"
+    core.view_for = lambda s, snap=None, _v=real: _v
+    return real
+
+
 def test_foreign_low_view_redacts_actors_with_explicit_markers(rig):
-    res = rig.dep.prov_decision(rig.tok("researcher-2"), "d1")        # Evidence is visible with provenance `scalars` only
+    _scalars_view(rig)                                                  # Evidence/Hypothesis visible with provenance `scalars` only
+    res = rig.dep.prov_decision(rig.tok("researcher-2"), "d1")
     check_low_result("prov_decision", res)
     d = res.body["decision"]
     assert d["subject"] == {"redacted": "actor"} and d["on_behalf_of"] == {"redacted": "actor"}
@@ -50,7 +64,10 @@ def test_hidden_decision_is_answered_as_unknown(rig):
     assert (hid.status, hid.body) == (gone.status, gone.body) == ("OK", {"partial": True, "decisions": []})
     ll = rig.dep.list_links(rig.tok("viewer-1"), "Evidence:NO-SUCH", "HAS_RIVAL")
     assert (ll.status, ll.body) == ("OK", {"out": [], "in": []})
+    assert rig.dep.prov_object(rig.tok("researcher-2"), "Evidence:EV-C1").body["decisions"] == []   # G3-E26: public Hypothesis input -> not low
+    _scalars_view(rig)
     assert rig.dep.prov_object(rig.tok("researcher-2"), "Evidence:EV-C1").body["decisions"] == ["d1"]
+    assert rig.dep.prov_decision(rig.tok("researcher-2"), "d1").status == "OK"
 
 
 def test_authority_used_as_is_own_only_and_always_partial(rig):
@@ -65,5 +82,6 @@ def test_authority_used_as_is_own_only_and_always_partial(rig):
 def test_provenance_mutants(tmp_path, anchor, mut, expect):
     r = G3Rig(tmp_path, v3=True, mutants=[mut], history=HistoryStore(str(tmp_path / "h.sqlite")), anchor=anchor.client())
     r.dep.direct(r.tok("researcher-1"), *ATT, request_id="d1")
+    _scalars_view(SimpleNamespace(dep=r.dep))
     d = r.dep.prov_decision(r.tok("researcher-2"), "d1").body["decision"]
     assert d["subject"] == expect and not is_marker(d["subject"])            # the clean build returns the marker (test above)

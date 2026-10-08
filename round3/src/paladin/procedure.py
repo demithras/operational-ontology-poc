@@ -157,7 +157,7 @@ class CaseBook:
                 out += list(self.counted(c, "decision", b).values())
         if rule == "review" and self.review_body(c):
             out += list(self.counted(c, "review", self.review_body(c)).values())
-        return [j["rid"] for j in sorted(out, key=lambda j: j["seq"])]
+        return list(dict.fromkeys(j["rid"] for j in sorted(out, key=lambda j: j["seq"])))  # each counted judgment once (a judge in two bodies)
 
     # ---- applying committed events ---------------------------------------------------------------------
     def apply_propose(self, seq, tick, case, requester, obo, op, args, refs) -> Case:
