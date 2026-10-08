@@ -30,10 +30,10 @@ def load_ir(domain: str) -> dict:
     return json.loads((HERE / DOMAINS[domain]["ir"]).read_text())
 
 
-def bindings_for(domain: str, ir: dict) -> LogicBindings:
+def bindings_for(domain: str, ir: dict, ops_spec: dict) -> LogicBindings:
     if domain == "manufacturing":
         from paladin.domains.manufacturing.logic import build_bindings
-        return build_bindings()
+        return build_bindings(ops_spec, ir)
     from paladin.domains.project.logic import build_bindings
     return build_bindings(ir, {NEUTRAL_EVALUATOR: neutral_evaluator})
 
@@ -67,7 +67,7 @@ def boot(domain: str, ops_spec: dict, auth_spec: dict, handle_factory: Callable,
                     fields.setdefault((op["name"], e["kind"], e["type"]), set()).update(e["props"])
         git = WorldGitAdapter(service_handle, fields, pre_apply)
         adapters = {("git_change", "*"): git}
-    engine = Engine(ir, bindings_for(domain, ir), adapters, clock=clock)
+    engine = Engine(ir, bindings_for(domain, ir, ops_spec), adapters, clock=clock)
     holder["engine"] = engine
     if domain == "project":
         git.attach(engine.model)

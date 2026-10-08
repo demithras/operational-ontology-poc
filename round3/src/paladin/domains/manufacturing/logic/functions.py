@@ -22,7 +22,7 @@ def work_order_risk(view, args):  # reference_model.derive:work_order_risk (shor
     return {"work_order_id": r["work_order_id"], "shortage": r["shortage"], "at_risk": r["at_risk"]}
 
 
-def recommend_transfer(view, args):  # services.decision_service.planner (largest candidate, ties by candidate_id)
+def recommend_transfer(view, args):  # decision-service recommender (largest candidate, ties by candidate_id)
     wo_id = args["work_order"]
     r = facts.risk(view, wo_id)
     cands = facts.candidates(view, wo_id)
@@ -68,11 +68,13 @@ def resolve_canonical_id(view, args):  # reference_model.transitions.resolve_id:
     return sid
 
 
-IMPLEMENTATIONS = {
-    "reference_model.state:InventoryLot.available": available_quantity,
-    "reference_model.derive:_incoming_before": incoming_before,
-    "reference_model.derive:work_order_risk": work_order_risk,
-    "services.decision_service.planner:recommend_transfer_for_work_order": recommend_transfer,
-    "services.decision_service.hashing:decision_content_hash": decision_content_hash,
-    "reference_model.transitions:resolve_id": resolve_canonical_id,
+# keyed by the function name after ':' in the IR implementation_ref (the module path in front is a Round 2 import
+# location that carries no behaviour); __init__.build_bindings expands each name to the full refs the IR declares
+BY_NAME = {
+    "InventoryLot.available": available_quantity,
+    "_incoming_before": incoming_before,
+    "work_order_risk": work_order_risk,
+    "recommend_transfer_for_work_order": recommend_transfer,
+    "decision_content_hash": decision_content_hash,
+    "resolve_id": resolve_canonical_id,
 }

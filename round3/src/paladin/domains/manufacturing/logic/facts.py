@@ -132,8 +132,3 @@ def evidence_age_s(view, now: Any) -> float | None:
 def freshness(view, now: Any) -> str:
     age = evidence_age_s(view, now)
     return "FRESH" if age is not None and age <= data.MAX_EVIDENCE_FRESHNESS_S else "STALE"
-
-
-def holds(principal, obj_type: str, key: Any, relation: str) -> bool:
-    # P2a patch D5: a delegated request acts with its delegation chain (agent on behalf of P): any link may hold the relation
-    return any((obj_type, key, relation) in p.relations for p in principal.chain())
