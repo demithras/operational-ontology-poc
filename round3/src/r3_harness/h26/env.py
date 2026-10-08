@@ -36,7 +36,7 @@ def decision_rec(ops, subject, obo, op, args, rid, status, reason, eff, rows, he
           "effect_digest": pv.effect_digest(eff_rows), "world_seq": seq, "tick": tick, "authority_path": []}
     free = bool(opd) and all(i["type"] == "resource" for i in opd["inputs"] if i["name"] in args)
     return {"id": rid, "rid": rid, "subject": subject, "on_behalf_of": obo, "approver": None, "resources": refs,
-            "args_refs": refs, "args_scalar_free": free, "scalars": sc, "effects": eff, "edge_path": []}
+            "args_refs": refs, "args_scalar_free": free, "scalars": sc, "effects": eff, "effect_rows": eff_rows, "edge_path": []}
 
 
 class PWorld:

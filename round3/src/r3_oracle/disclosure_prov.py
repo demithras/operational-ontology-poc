@@ -72,14 +72,33 @@ def decision_low(lv, d: dict) -> bool:
     return own_decision(d, lv.observer) or _res_ok(lv, d, "scalars")
 
 
+def _rows_low(lv, rows: list) -> bool:
+    """Every field of every world_log row the effect digest covers is in the low view (rows without `data` are skipped)."""
+    for row in rows:
+        data = row.get("data") or {}
+        if row.get("kind") in ("link", "unlink", "mark") or not isinstance(data, dict):
+            continue
+        r = row.get("ref")
+        if r not in lv.objects:
+            return False
+        names = set(data.get("props") or ()) | set(data.get("patch") or ())
+        if not names <= set(lv.objects[r]):
+            return False
+    return True
+
+
 def _digest_low(lv, d: dict, kind: str) -> bool:
     """s4.2: a digest is true only if every byte it covers is low. INTERP-2: args bytes are low iff the decision is own,
     or the args are made ONLY of existence-visible resource refs (`args_scalar_free`); effect bytes are low iff every
     object/field/link the effect rows touch is in the low view."""
-    if own_decision(d, lv.observer):
-        return True
     if kind == "args":
+        if own_decision(d, lv.observer):
+            return True
         return bool(d.get("args_scalar_free")) and all(r in lv.objects for r in d.get("args_refs", []))
+    # G3-E21 / PROT-H26 s4.2: own decisions are NOT exempt for the effect digest - it covers the transaction's full world_log
+    # rows (E-4 form), whose `data.props` carry every property of the touched object, hidden ones included.
+    if not _rows_low(lv, d.get("effect_rows", [])):
+        return False
     for row in d.get("effects", []):
         if row["kind"] in ("link", "unlink"):
             lt, a, b = row["ref"].split("|", 2)
