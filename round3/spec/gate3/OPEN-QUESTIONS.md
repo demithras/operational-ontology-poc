@@ -133,3 +133,9 @@ G3-E20 query arguments: resource-typed args take the bare key exactly like opera
 G3-E21 Provenance digest/field lowness is decided only by the oracle (restates G3-E7 / PROT-H26 s4.2): a variant that
       redacts a value the oracle classifies as low commits over-redaction (s9 floor); own decisions are not exempt from the
       oracle's computation.
+G3-E22 (orch, 2026-10-08, clarification of s4.2 + G3-E21, before any H26 measurement) The own-decision exemption covers
+      args_digest only (the observer supplied those bytes). effect_digest covers the decision transaction's full world_log
+      rows (E-4 form, G3 H26-H), whose data.props/patch include every property of each touched object; it is true only if
+      every such object and field is in the observer's low view, else {"redacted": "effect_digest"} - own decisions
+      included. Found when the oracle-backed honest fake was REJECTED (divergence on pair p1-27: hidden `path` in the rows
+      of its own write); both variants answered the true digest and must redact (equal fix for both).
