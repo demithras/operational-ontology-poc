@@ -82,14 +82,16 @@ def test_r6_preconditions_use_the_canonical_world_at_commit(mfg):
 
 def test_r6_target_existence_and_stale_evidence(mfg, proj):
     t = mfg.token("planner-1")
-    assert zero(mfg, lambda: mfg.dep.direct(t, "transfer_inventory", {**TR, "part": "PX-NOPE"}, request_id=mfg.rid())).status == "INVALID"
+    assert zero(mfg, lambda: mfg.dep.direct(t, "transfer_inventory", {**TR, "part": "PX-NOPE"}, request_id=mfg.rid())).status == "DENIED"   # G3-E17: the no-evidence deny rule fires before target existence (oracle: DENIED_RULE)
     # G3 check order (PROT-H26 s3.2): authority is world-independent and precedes existence, so a nonexistent warehouse the
     # planner holds no relation on is DENIED (hidden == absent), not INVALID
     assert zero(mfg, lambda: mfg.dep.direct(t, "transfer_inventory", {**TR, "source_warehouse": "WH-NOPE"}, request_id=mfg.rid())).status == "DENIED"
     mfg.clock.advance(6)  # evidence snapshot was observed at tick 0: older than the 5-tick window
     assert zero(mfg, lambda: mfg.dep.direct(mfg.token("planner-1"), "transfer_inventory", TR, request_id="late")).status == "DENIED"  # stale-evidence policy
     assert zero(proj, lambda: proj.dep.direct(proj.token("researcher-1"), "start_run", {"hypothesis": "H-NOPE"},
-                                              request_id="p1")).status == "INVALID"
+                                              request_id="p1")).status == "DENIED"   # G3-E17: deny rule (freeze hash) before existence
+    assert zero(proj, lambda: proj.dep.direct(proj.token("researcher-1"), "evaluate_hypothesis", {"hypothesis": "H-NOPE"},
+                                              request_id="p2")).status == "INVALID"   # no deny rule fires: existence
 
 
 def test_r6_project_lifecycle_is_checked_against_world_state(proj):

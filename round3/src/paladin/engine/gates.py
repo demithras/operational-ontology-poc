@@ -55,8 +55,16 @@ def resources_of(eng, spec, inputs: dict) -> tuple:
     return tuple(out)
 
 
-def check_inputs(eng, spec, inputs: Any) -> list[str]:
-    return check_params(spec.inputs, inputs, eng.state(), f"action {spec.rid}")
+class _NoExistence:
+    """State stand-in whose references always resolve: input problems minus target existence (G3-E17)."""
+    @staticmethod
+    def resolve_problem(declared, key):
+        return None
+
+
+def check_inputs(eng, spec, inputs: Any, existence: bool = True) -> list[str]:
+    """Input problems; existence=False leaves out 'the referenced object does not exist' (checked after the deny rules)."""
+    return check_params(spec.inputs, inputs, eng.state() if existence else _NoExistence, f"action {spec.rid}")
 
 
 def run_logic_gate(name: str, items: list, ctx) -> dict:
