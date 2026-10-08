@@ -96,8 +96,8 @@ class SovProvMixin:
         return True
 
     def _eff_low(self, sub, rec, view) -> bool:
-        if self._own(sub, rec["s"]):
-            return True   # G3-E21 / H26-I: the oracle classifies an own decision's digests as low
+        # G3-E22: the own-decision exemption covers args_digest only; effect_digest covers the full rows (all props/patch
+        # fields of each touched object), so it is true only if every touched object and field is in the observer's low view.
         edges_hidden = any(not capgraph.edge_visible(self.auth, e, sub) for e in rec["edges"])
         for r in rec["rows"]:
             k = r["k"]
@@ -108,8 +108,7 @@ class SovProvMixin:
                 if tuple(r["l"]) not in view.links:
                     return False
             elif k == "external":
-                if not all(f"{t}:{key}" in view.objects for t, key in rec["refs"]):
-                    return False
+                return False   # the row's ref ("adapter:target#seq") is an outside-system effect, never an object in the low view
             elif r["r"] == "commit" and edges_hidden:   # the commit mark carries the authority_version digest
                 return False
             elif r["g"]:

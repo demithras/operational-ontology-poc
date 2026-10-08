@@ -282,7 +282,8 @@
    "original": "round2/src/eoo_engine/gates.py",
    "original_sha256": "009c2c6fff52f3e7710a3f7a9b0f7f2e78deaab658964312c7a3ce138145fcd2",
    "patches": [
-    "V2"
+    "V2",
+    "V3"
    ],
    "vendored_sha256": "009c2c6fff52f3e7710a3f7a9b0f7f2e78deaab658964312c7a3ce138145fcd2"
   },

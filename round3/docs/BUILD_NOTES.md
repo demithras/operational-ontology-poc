@@ -498,3 +498,9 @@ h26_prov, h26_surface (check order, forms, tools exactness, low-view rules, hidd
 Regression edits (Q9, frozen order supersedes E-10 freedom): 3 H23/G2 tests expected INVALID for an unauthorised caller naming a nonexistent
 target (now DENIED, authority first), one H24 test expected not_parent_holder for a hidden parent (now unknown_parent), reads/refusal bodies
 assert the P1e-5 forms, and the G2 "edge holder has no tools" assertion follows PROT-H26 3.4.
+
+### G3 fix3 paladin (effect_digest redaction, G3-E22)
+- `paladin/sovprov.py::_eff_low`: the own-decision exemption is removed; effect_digest is true only if every touched object and
+  field of the decision's world_log rows is in the observer's low view (own decisions included). args_digest keeps its own exemption.
+- VENDORED.json: `engine/gates.py` patch list now `V2, V3`; V3 = G3-E17 post-authority order (gates.check_inputs `existence=False`
+  stand-in, with the existence check re-run after deny rules in pipeline.py).
