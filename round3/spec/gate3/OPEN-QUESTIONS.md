@@ -185,3 +185,9 @@ G3-E29 (author decision 2026-10-08 + orch amendment of G3-E24(iii), after the fi
       field - P1e provenance levels none|own|scalars|actors, P1 delegation record keys agent|on_behalf_of|operations - and
       that is compared with / indexes that protocol field (never a principal's role or relation) is resolvable, even in
       disclosure or delegation code. It coincides with a fixture role name only by accident (roles `none`, `agent`).
+G3-E30 (orch, 2026-10-08, after dev2, before any official H26 run) Extends G3-E28: a hidden variation may only produce
+      state reachable through ops-spec operations. In particular vary_L only adds/removes link types that some ops-spec
+      operation creates or removes (project: TESTED_BY is created by none, so it is seed-only and never varied); invariants
+      the harness cannot evaluate on one snapshot do not excuse an unreachable variation. Found in dev2: pair p2601-97 added
+      TESTED_BY H-D -> E-F@v1, which made the stored verdict of H-D disagree with derive_verdict (verdict-machine-derived);
+      Paladin's state-level gate then refused every write in that world only. Attribution: reports/g3-attr3-p97-report.md.
