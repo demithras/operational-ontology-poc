@@ -33,7 +33,7 @@ def public(res: CallResult, rid=None, leak=None) -> CallResult:
             return CallResult(res.status, {**res.body, "detail": leak()})
         return CallResult(res.status, {"reason": refusal_code(res.body)})
     b = dict(res.body)
-    if isinstance(rid, str) and "execution" in b:
+    if isinstance(rid, str) and isinstance(b.get("execution"), str) and not b["execution"].startswith("x:"):
         b["execution"] = f"x:{rid}"
         b["effects"] = [f"x:{rid}/e{i}" for i, _ in enumerate(b.get("effects", ()))]
     return CallResult("OK", b)

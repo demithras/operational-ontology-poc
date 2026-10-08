@@ -40,8 +40,8 @@ def final_gate(core, c, tick: int):
 class GovExec:
     """execute {case}: the requester carries a final ALLOW case through the normal operation pipeline."""
 
-    def __init__(self, core, sub: str, case):
-        self.core, self.sub, self.c, self.seq = core, sub, case, None
+    def __init__(self, core, sub: str, case, rid: str):
+        self.core, self.sub, self.c, self.seq, self.rid = core, sub, case, None, rid
         self.rule = self.basis = None
 
     def before(self, tx, d: dict) -> Principal:
@@ -55,8 +55,9 @@ class GovExec:
 
     def after(self, tx, res: CallResult) -> None:
         from paladin.core import plain  # noqa: PLC0415
+        from paladin.public import public  # noqa: PLC0415
         self.seq = tx.mark("governance", governance_mark("execute", case=self.c.id, rule=self.rule, basis=self.basis))
-        self.stored = {"status": res.status, "body": plain(res.body)}
+        self.stored = {"status": res.status, "body": plain(public(res, self.rid).body)}   # the result a replay returns
         self.core.ledger.put_meta(f"exec:{self.c.id}", self.stored)
 
     def post(self, tx) -> None:

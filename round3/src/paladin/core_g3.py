@@ -293,7 +293,7 @@ class G3Mixin:
                 return (governance_mark("execute", case=c.id, rule=rule, basis=basis), [("exec:" + c.id, st)],
                         st["body"], post)
             return self._g_commit(sub, rid, fp, "execute", build)
-        return self.run(sub, c.obo, c.op, c.args, rid, "direct", GovExec(self, sub, c))
+        return self.run(sub, c.obo, c.op, c.args, rid, "direct", GovExec(self, sub, c, rid))
 
     def _g_act(self, sub, a, rid, fp):
         act = GovAct(self, sub, a, self.refs_of(a["operation"], a["args"]))
