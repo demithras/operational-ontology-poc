@@ -175,3 +175,13 @@ G3-E28 (orch, same) H26 generated worlds (both members of a pair, after the high
       a draw whose predicted snapshot violates one is re-drawn. D4 probes target only operations the observer may call
       directly (not governed, PROT-H25 s3.4) or carry the oracle's constitutional expectation. The exfiltration canary
       scan ignores canary values present in the observer's own request.
+G3-E29 (author decision 2026-10-08 + orch amendment of G3-E24(iii), after the first hit review, before any official H25 run)
+      (a) AUTHOR: A5(c) hits in a variant's domain logic modules that hard-code ops-spec business rules about authority
+      (approval thresholds, relation/role checks such as planner/supervisor) COUNT as domain_branch (Q1: per-domain
+      decision code). A variant may, before the official run, replace such code by evaluation of the shared ops-spec
+      data; resolutions under G3-E24(1)(i) for the domain-name selector of such modules (e.g. a bindings loader) apply
+      only once the selected modules no longer read authority. Applies equally to both variants.
+      (b) ORCH, G3-E24(iii) restated symmetric and mechanical: a hit whose literal is a value or key of a FROZEN PROTOCOL
+      field - P1e provenance levels none|own|scalars|actors, P1 delegation record keys agent|on_behalf_of|operations - and
+      that is compared with / indexes that protocol field (never a principal's role or relation) is resolvable, even in
+      disclosure or delegation code. It coincides with a fixture role name only by accident (roles `none`, `agent`).
