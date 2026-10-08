@@ -335,7 +335,7 @@ class GovernanceOps:
                 if c is None:
                     return None
                 rt = self._route(c)
-                now = h._con.execute("SELECT COALESCE(MAX(tick),0) FROM world_log").fetchone()[0]
+                now = self._clock.now()
                 tx = SimpleNamespace(tick=now)
                 fin = self._proc.final(c, rt, now, self._first_tx(h, tx)) if isinstance(rt, Route) else None
                 return {"case": c.id, "requester": c.requester, "operation": c.operation, "args": dict(c.args),
