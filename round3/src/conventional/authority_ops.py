@@ -78,7 +78,8 @@ class AuthorityOps:
         if edge["issuer"] != sub:
             return ("DENIED", "not_parent_holder"), None, None, None
         bad = authdoc.check_issue(doc, sub, edge, tick, pdp.known, pdp.is_static_delegate, pdp.root_may_delegate,
-                                  skip_attenuation=self.mutant("non_attenuating_delegation"))
+                                  skip_attenuation=self.mutant("non_attenuating_delegation"),
+                                  parent_visible=lambda eid: authdoc.edge_visible(doc, eid, sub))
         if bad:
             return bad, None, None, None
         new = authdoc.add_edge(doc, edge)
@@ -86,8 +87,8 @@ class AuthorityOps:
 
     def _plan_revoke(self, sub, args, doc, tick):
         eid = args["edge_id"]
-        if not isinstance(eid, str) or eid not in authdoc.by_id(doc):
-            return ("INVALID", "unknown_edge"), None, None, None
+        if not isinstance(eid, str) or eid not in authdoc.by_id(doc) or not authdoc.edge_visible(doc, eid, sub):
+            return ("INVALID", "unknown_edge"), None, None, None  # hidden == absent (PROT-H26 3.1)
         if not authdoc.revoker_ok(doc, sub, eid):
             return ("DENIED", "not_revoker"), None, None, None
         if eid in doc["revoked"]:
@@ -171,7 +172,8 @@ class AuthorityOps:
         tx.mark("authority", {**mark, "version": digest})
         seq = tx.mark("commit", {"request_id": rid, "kind": kind, "authority_version": digest})
         self._store.idem_put(h, rid, fp, {"status": "OK", "body": body,
-                                          "used": {"authority_version": digest, "path": [], "on_behalf_of": None}})
+                                          "used": {"authority_version": digest, "path": [], "on_behalf_of": None,
+                                                   "subject": sub}})
         return seq
 
     def _swap_policy(self, doc: dict) -> None:

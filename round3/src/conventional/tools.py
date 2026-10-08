@@ -4,18 +4,9 @@ from __future__ import annotations
 
 from r3_shared.variant import CallResult, ToolDescriptor
 
-from .models_gen import OPERATION_MODELS
+from r3_shared.disclosure import tool_schema
+
 from .service import Service
-
-_JSON_TYPE = {"integer": {"type": "integer"}, "resource": {"type": "string", "minLength": 1}, "string": {"type": "string"},
-              "json": {}}
-
-
-def input_schema(op: str) -> dict:
-    sch = OPERATION_MODELS[op].SCHEMA
-    return {"type": "object", "additionalProperties": False,
-            "properties": {n: dict(_JSON_TYPE[k]) for n, k, _ in sch},
-            "required": [n for n, _, r in sch if r]}
 
 
 class ToolSurface:
@@ -26,12 +17,14 @@ class ToolSurface:
         sub = self._svc.authenticate(token)
         if sub is None or self._svc.crashed:
             return []
-        if self._svc.mutant("tool_overexposure"):  # BUG: lists everything regardless of grants (service still enforces)
-            return self._svc.operations
-        return self._svc.policy.exposed_operations(sub, self._svc.operations)
+        if self._svc.mutant("tool_overexposure") or self._svc.mutant("hidden_tool_schema"):
+            return self._svc.operations  # BUG: lists everything regardless of grants/the subject (service still enforces)
+        ops = set(self._svc.policy.exposed_operations(sub, self._svc.operations)) | self._svc.emergency_ops(sub)
+        return [o for o in self._svc.operations if o in ops]
 
     def tools(self, token: str) -> list[ToolDescriptor]:
-        return [ToolDescriptor(op, input_schema(op)) for op in self.visible(token)]
+        defs = self._svc.op_defs
+        return [ToolDescriptor(op, tool_schema(defs[op])) for op in self.visible(token)]  # P1e-5: frozen derivation, verbatim
 
     def call_tool(self, token: str, name: str, args: dict, on_behalf_of: str | None = None,
                   request_id: str | None = None) -> CallResult:

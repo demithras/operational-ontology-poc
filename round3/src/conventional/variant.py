@@ -22,7 +22,7 @@ def _safe(fn):
         try:
             return fn(*a, **kw)
         except Exception as exc:  # noqa: BLE001
-            return CallResult("UNAVAILABLE", {"reason": "internal_error", "detail": type(exc).__name__})
+            return CallResult("UNAVAILABLE", {"reason": "internal_error"})
     return wrapper
 
 
@@ -48,6 +48,23 @@ class ConventionalDeployment:
     @_safe
     def read(self, token, operation, args) -> CallResult:
         return self.service.read(token, operation, args)
+
+    # -- Gate 3 low channels (PROT-H26): all answered from the observer's LowView ---------------------------------
+    @_safe
+    def read_object(self, token, ref) -> CallResult:
+        return self.service.read_object(token, ref)
+
+    @_safe
+    def list_objects(self, token, type_) -> CallResult:
+        return self.service.list_objects(token, type_)
+
+    @_safe
+    def list_links(self, token, ref, link_type) -> CallResult:
+        return self.service.list_links(token, ref, link_type)
+
+    @_safe
+    def query(self, token, name, args) -> CallResult:
+        return self.service.query(token, name, args)
 
     # -- operations beyond the neutral protocol (used by tests / harness drivers that know this variant) -----
     def set_authority(self, auth_spec: dict) -> None:
@@ -83,6 +100,37 @@ class ConventionalDeployment:
     def explain(self, decision_id) -> ReplayResult:
         return self.service.replayer.replay(decision_id)  # same code path: no prose fallback (R27-7)
 
+    # -- Gate 3: constitutional authority (PROT-H25) -----------------------------------------------------------
+    @_safe
+    def constitutional(self, token, action, request_id) -> CallResult:
+        return self.service.constitutional(token, action, request_id)
+
+    def set_governance(self, doc) -> None:
+        self.service.set_governance(doc)
+
+    def case_state(self, case_id):
+        return self.service.case_state(case_id)
+
+    @_safe
+    def subscribe(self, token, spec) -> CallResult:
+        return self.service.subscribe(token, spec)
+
+    @_safe
+    def poll(self, token, sub) -> CallResult:
+        return self.service.poll(token, sub)
+
+    @_safe
+    def prov_decision(self, token, decision_id) -> CallResult:
+        return self.service.prov_decision(token, decision_id)
+
+    @_safe
+    def prov_object(self, token, ref) -> CallResult:
+        return self.service.prov_object(token, ref)
+
+    @_safe
+    def authority_used_as(self, token, request_id) -> CallResult:
+        return self.service.authority_used_as(token, request_id)
+
     def set_dependency_down(self, adapter: str, down: bool = True) -> None:
         (self.service.unavailable.add if down else self.service.unavailable.discard)(adapter)
 
@@ -106,9 +154,9 @@ class ConventionalVariant:
         self.mutant_switches = shared_mutants.validate(mutants)
 
     def deploy(self, domain, world_handle_factory, verifier, ops_spec, auth_spec, clock, state_dir=None,
-               history=None, anchor=None) -> ConventionalDeployment:
+               history=None, anchor=None, governance=None) -> ConventionalDeployment:
         # state_dir is accepted but unused: all durable state (effects, idempotency ledger, approvals, the authority in
         # force) lives in the world DB, in the same transaction as the effects - atomic by construction. With a
         # HistoryStore (H27 runs) every record other than the world store lives there instead (histledger.py).
         return ConventionalDeployment(Service(domain, world_handle_factory, verifier, ops_spec, auth_spec, clock,
-                                              AUDIENCE, self.mutant_switches, history, anchor))
+                                              AUDIENCE, self.mutant_switches, history, anchor, governance))

@@ -469,3 +469,17 @@ INTERP (frozen text left open; the oracle follows the first reading, tests pin t
    unknown name is not judged (twin-compared only).
 Expected conformance failures: the real variants currently lack `deploy(governance=)` and the G3 methods (report: "not implemented
 yet - G3"); tests/test_h26_conformance.py FAILS for them on purpose and passes for the oracle-backed fake.
+## G3 conventional (H25 + H26; branch r3-conv, tag r3-g3-conventional)
+
+Module map (`round3/src/conventional/`, all new files < 250 lines):
+| Module | Purpose |
+|---|---|
+| `govproc.py` | generic governance PROCEDURE over the r3-governance-1 document (routing/precedence, eligibility, quorum, lapse, review, final+basis); pure, no ids |
+| `govsvc.py` | constitutional entry point (`constitutional`, `set_governance`, `case_state`, emergencies); one tx + one `governance` mark per OK action |
+| `govbook.py` / `govstore.py` | case book folded from committed marks + journal (request ids, args, stored results); document blobs by digest (world DB aux tables, or HistoryStore keys `gov/`, `govdoc/`) |
+| `lowview.py` | THE read-side authorization filter: observer LowView (fixpoint over the v3 disclosure document) |
+| `lowreads.py` `lowprov.py` `lowevents.py` | read_object/list_objects/list_links/query/read, provenance views + authority_used_as, subscribe/poll: all projections of the LowView |
+| `abort.py` | `_Abort` moved out of service.py (import cycle) |
+Changes to existing code: frozen check order in `service._execute` (schema before the coarse authority gate), `_txn(pre=, gate=)`, refusal bodies carry only `reason`, tools use `r3_shared.disclosure.tool_schema`, `read()` redefined onto the P1e-5 forms (old test expecting UNKNOWN for a missing object now expects INVALID not_found, Q12), hidden delegate parent/revoke edge -> `unknown_parent`/`unknown_edge` (one H24 test row changed accordingly, Q9), `authdoc.is_v2` accepts v3 documents, idempotency `used` record gains `subject` (own-request test for `authority_used_as`).
+Decisions/gaps reported to the orchestrator: see the "interpretation" lists in `spec/protections/H25-conventional.md` and `H26-conventional.md`. HISTORY_LAYOUT is unchanged (new history keys `decidx/`, `gov/`, `govdoc/`, `meta/gov_initial` are not declared to the H27 tamper harness).
+Tests: `tests/conventional/test_conv_g3_{h25,h26,mutants}.py`, helpers `conv_g3_util.py`.

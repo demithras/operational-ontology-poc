@@ -9,7 +9,7 @@ from __future__ import annotations
 import copy
 from typing import Callable
 
-from r3_shared.authgraph import V2, edge_path, scope_covers, scope_subset
+from r3_shared.authgraph import V2, V3, edge_path, scope_covers, scope_subset
 
 DEFAULT_MAX_DEPTH = 8
 EDGE_KEYS = {"id", "issuer", "child", "parent", "scope", "expires_at", "redelegable", "issued_at"}
@@ -17,7 +17,7 @@ Refusal = tuple[str, str]  # (status, reason)
 
 
 def is_v2(doc: dict) -> bool:
-    return doc.get("spec") == V2
+    return doc.get("spec") in (V2, V3)
 
 
 def upgraded(doc: dict) -> dict:
@@ -72,12 +72,14 @@ def effective_expiry(path: list[dict]) -> int | None:
 
 def check_issue(doc: dict, issuer: str, edge: dict, tick: int, known: Callable[[str], bool],
                 static_delegate: Callable[[str], bool], root_may_delegate: Callable[[str, list[str]], bool],
-                skip_attenuation: bool = False) -> Refusal | None:
+                skip_attenuation: bool = False, parent_visible: Callable[[str], bool] | None = None) -> Refusal | None:
     """PROT-H24 s2 steps 2-6 (token and schema are checked by the caller). First failure wins; None = acceptable."""
     caps = by_id(doc)
     if edge["id"] in caps:
         return "INVALID", "duplicate_edge"
     parent = caps.get(edge["parent"]) if edge["parent"] is not None else None
+    if parent is not None and parent_visible is not None and not parent_visible(parent["id"]):
+        parent = None  # PROT-H26 3.1: a hidden parent is answered exactly like an absent one (unknown_parent)
     ppath = path_to(doc, parent["id"]) if parent is not None else []
     if issuer == edge["child"] or (ppath and (edge["child"] in {e["issuer"] for e in ppath})):
         return "INVALID", "delegation_cycle"
@@ -119,6 +121,16 @@ def add_revocation(doc: dict, edge_id: str) -> dict:
     out = copy.deepcopy(doc)
     out["revoked"] = sorted(set(out["revoked"]) | {edge_id})
     return out
+
+
+def edge_visible(doc: dict, edge_id: str, who: str) -> bool:
+    """PROT-H26 1.3: C(e) is visible to the issuer and child of every edge on path(e) and of every edge below e."""
+    caps = by_id(doc)
+    if edge_id not in caps:
+        return False
+    group = path_to(doc, edge_id)
+    group += [c for c in caps.values() if c["id"] != edge_id and edge_id in {x["id"] for x in path_to(doc, c["id"])}]
+    return any(who in (e["issuer"], e["child"]) for e in group)
 
 
 def revoker_ok(doc: dict, who: str, edge_id: str) -> bool:

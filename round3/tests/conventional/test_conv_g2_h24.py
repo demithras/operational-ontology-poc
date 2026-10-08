@@ -140,7 +140,8 @@ def test_r24_3_revoke_is_durable_before_ok_and_marked(rig):
     (NOBODY, edge("c1", NOBODY, PLANNER, "e1"), "delegation_cycle", "INVALID"),            # child is the root issuer
     (NOBODY, edge("c2", NOBODY, NOBODY, "e1"), "delegation_cycle", "INVALID"),            # issuer == child
     (NOBODY, edge("c3", NOBODY, JUNIOR, "nope"), "unknown_parent", "INVALID"),
-    (JUNIOR, edge("c4", JUNIOR, SUPER, "e1"), "not_parent_holder", "DENIED"),             # junior does not hold e1
+    (JUNIOR, edge("c4", JUNIOR, SUPER, "e1"), "unknown_parent", "INVALID"),               # e1 is hidden from junior (Q9: hidden == absent)
+    (PLANNER, edge("c4b", PLANNER, SUPER, "e1"), "not_parent_holder", "DENIED"),          # planner sees e1 (its issuer) but does not hold it
     (NOBODY, edge("c5", NOBODY, "agent-1"), "static_delegate", "INVALID"),                 # H23 static delegates: disjoint
     (NOBODY, edge("c6", NOBODY, "ghost-9", "e1"), "unknown_principal", "INVALID"),
     (NOBODY, edge("e1", NOBODY, JUNIOR, "e1"), "duplicate_edge", "INVALID"),

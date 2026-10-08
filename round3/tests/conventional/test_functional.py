@@ -84,7 +84,7 @@ def test_large_transfer_needs_a_valid_independent_approval(mfg):
 def test_reads_return_values_and_missing_is_unknown(mfg):
     t = mfg.token("planner-1")
     assert mfg.dep.read(t, "get", {"type": "Warehouse", "key": "WH-A"}).body["props"]["warehouseId"] == "WH-A"
-    assert mfg.dep.read(t, "get", {"type": "Warehouse", "key": "nope"}).status == "UNKNOWN"
+    assert mfg.dep.read(t, "get", {"type": "Warehouse", "key": "nope"}).body == {"reason": "not_found"}  # P1e-5 / Q12
     assert mfg.dep.read(t, "resolve_canonical_id", {"source_local_id": "SKU-88429"}).body["value"] == "PX-17"
     assert mfg.dep.read("garbage", "get", {"type": "Warehouse", "key": "WH-A"}).status == "DENIED"
 
