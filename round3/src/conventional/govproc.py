@@ -166,12 +166,13 @@ class Procedure:
             return OVERTURNED
         return AWAITING
 
-    def _stage(self, case: Case, bodies: tuple[str, ...], stage: str, concurrence: bool) -> StageResult:
+    def _stage(self, case: Case, bodies: tuple[str, ...], stage: str, concurrence: bool,
+               deadline: int | None = None) -> StageResult:
         yes, no = ("concur", "dissent") if stage == "decision" else ("uphold", "overturn")
         elig = {b: self.eligible(b, case.requester) for b in bodies}
         votes: dict[str, dict[str, str]] = {b: {} for b in bodies}
         counted: list[str] = []
-        for j in (x for x in case.judgments if x.stage == stage):
+        for j in (x for x in case.judgments if x.stage == stage and (deadline is None or x.tick < deadline)):
             hit = False
             for b in bodies:
                 if j.judge in elig[b] and j.judge not in votes[b]:
@@ -193,14 +194,14 @@ class Procedure:
         bad = [o for o in outs if o in (DENY, OVERTURNED)]
         return bad[0] if bad else AWAITING
 
-    def decision(self, case: Case, route: Route, first_tx: FirstTx) -> StageResult:
-        res = self._stage(case, route.bodies, "decision", route.concurrence)
+    def decision(self, case: Case, route: Route, now_tick: int) -> StageResult:
         absent = route.matter["on_absent"]
         if absent == "await":
-            return res
-        pt = first_tx(case.tick + absent["after"])
-        if pt is not None and (res.outcome == AWAITING or res.seq > pt[0]):  # lapse fixed before any later judgment
-            return StageResult(DENY if absent["lapse"] == "deny" else ALLOW, pt[0], pt[1], (), True)
+            return self._stage(case, route.bodies, "decision", route.concurrence)
+        deadline = case.tick + absent["after"]  # G3-E14(2): lapse is fixed in pure logical time
+        res = self._stage(case, route.bodies, "decision", route.concurrence, deadline)
+        if res.outcome == AWAITING and now_tick >= deadline:
+            return StageResult(DENY if absent["lapse"] == "deny" else ALLOW, None, deadline, (), True)
         return res
 
     def review(self, case: Case, route: Route) -> StageResult:
@@ -210,8 +211,8 @@ class Procedure:
         return self._stage(case, (rv["by"],), "review", False)
 
     # -- final outcome (s2.6-2.7) --------------------------------------------------------------------------
-    def final(self, case: Case, route: Route, now_tick: int, first_tx: FirstTx) -> Final:
-        dec = self.decision(case, route, first_tx)
+    def final(self, case: Case, route: Route, now_tick: int) -> Final:
+        dec = self.decision(case, route, now_tick)
         if dec.outcome == AWAITING:
             if "merit_autofill" in self.mutants:  # BUG: a missing judgment defaults to yes
                 return Final(ALLOW, "decision", (f"autofill:{case.id}",), dec)

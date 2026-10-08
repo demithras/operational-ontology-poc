@@ -16,7 +16,7 @@ from r3_shared.variant import CallResult
 from . import store
 from .abort import _Abort
 from .govbook import CaseBook
-from .govproc import ALLOW, AWAITING, BIG, DENY, Procedure, Route
+from .govproc import ALLOW, AWAITING, DENY, Procedure, Route
 from .govstore import GovStore
 from .histledger import LedgerUnresolved
 from .models_gen import OPERATION_MODELS
@@ -57,15 +57,6 @@ class GovernanceOps:
             raise LedgerUnresolved("governance document blob missing")
         self._gov_use(doc)
 
-    def _first_tx(self, h, tx):
-        def f(bound: int):
-            r = h._con.execute("SELECT seq, tick FROM world_log WHERE kind='mark' AND tick>=? ORDER BY seq LIMIT 1",
-                               (bound,)).fetchone()
-            if r:
-                return (r[0], r[1])
-            return (BIG, tx.tick) if tx.tick >= bound else None
-        return f
-
     # -- helpers -----------------------------------------------------------------------------------------
     @staticmethod
     def _res(op: str, args) -> list[tuple[str, str]]:
@@ -83,11 +74,13 @@ class GovernanceOps:
     def _sees(self, case, sub: str) -> bool:
         if sub == case.requester:
             return True
-        rt = self._route(case)
-        if not isinstance(rt, Route):
-            return False
-        names = set(rt.bodies) | ({rt.matter["review"]["by"]} if rt.matter["review"] else set())
-        return any(sub in self._proc.bodies[b]["members"] for b in names if b in self._proc.bodies)
+        # G3-E18: members of every competent body of EVERY covering matter, plus each such matter's review.by
+        names: set[str] = set()
+        for m in self._proc.covering(case.operation, self._res(case.operation, case.args)):
+            names.update(m["competent"])
+            if m["review"]:
+                names.add(m["review"]["by"])
+        return any(sub in self._proc.bodies[x]["members"] for x in names if x in self._proc.bodies)
 
     def _case(self, g, a) -> object:
         c = self._book.cases.get(a["case"])
@@ -97,7 +90,7 @@ class GovernanceOps:
 
     def _fin(self, g, case):
         rt = self._route(case)
-        return rt, (self._proc.final(case, rt, g.tick, g.ft) if isinstance(rt, Route) else None)
+        return rt, (self._proc.final(case, rt, g.tick) if isinstance(rt, Route) else None)
 
     # -- entry points ------------------------------------------------------------------------------------
     def constitutional(self, token: str, action: dict, request_id: str) -> CallResult:
@@ -137,7 +130,7 @@ class GovernanceOps:
                 if prior["fp"] != fp:
                     raise _Abort("INVALID", {"reason": "idempotency_key_reuse"})
                 return CallResult(prior["status"], {**prior["body"], "replayed": True})
-            g = SimpleNamespace(h=h, tx=tx, sub=sub, rid=rid, tick=tx.tick, ft=self._first_tx(h, tx), fp=fp)
+            g = SimpleNamespace(h=h, tx=tx, sub=sub, rid=rid, tick=tx.tick, fp=fp)
             body, mark, extra = getattr(self, "_g_" + a["kind"])(g, a)
             if self._armed == "before_commit":
                 raise self._crash_now()
@@ -201,7 +194,7 @@ class GovernanceOps:
                 bodies = (rt.matter["review"]["by"],)
         if not any(g.sub in self._proc.eligible(b, c.requester) for b in bodies):
             raise _bad("not_eligible", "DENIED")
-        res = self._proc.decision(c, rt, g.ft) if stage == "decision" else self._proc.review(c, rt)
+        res = self._proc.decision(c, rt, g.tick) if stage == "decision" else self._proc.review(c, rt)
         if res.outcome != AWAITING:
             raise _bad("stage_closed")
         if any(j.stage == stage and j.judge == g.sub for j in c.judgments):
@@ -214,7 +207,7 @@ class GovernanceOps:
         rt = self._route(c)
         if not isinstance(rt, Route) or rt.matter["review"] is None:
             raise _bad("not_reviewable")
-        dec = self._proc.decision(c, rt, g.ft)
+        dec = self._proc.decision(c, rt, g.tick)
         if dec.outcome == AWAITING:
             raise _bad("not_decided")
         if g.sub != c.requester and not any(g.sub in self._proc.bodies[b]["members"] for b in rt.bodies):
@@ -268,7 +261,7 @@ class GovernanceOps:
         for c in self._book.cases.values():
             if c.operation == EMERGENCY_OP and c.args.get("emergency") == eid:
                 rt = self._proc.route(EMERGENCY_OP, [])
-                if isinstance(rt, Route) and self._proc.final(c, rt, g.tick, g.ft).outcome == ALLOW:
+                if isinstance(rt, Route) and self._proc.final(c, rt, g.tick).outcome == ALLOW:
                     return c, rt
         return None
 
@@ -305,7 +298,7 @@ class GovernanceOps:
         h = self._factory("conventional-service")
         try:
             self._book.refold(h, self._gstore)
-            g = SimpleNamespace(tick=self._clock.now(), ft=self._first_tx(h, SimpleNamespace(tick=self._clock.now())))
+            g = SimpleNamespace(tick=self._clock.now())
             out: set[str] = set()
             for c in self._book.cases.values():
                 if c.operation == EMERGENCY_OP and c.args["emergency"] not in self._book.ends:
@@ -358,7 +351,7 @@ class GovernanceOps:
                 rt = self._route(c)
                 now = self._clock.now()
                 tx = SimpleNamespace(tick=now)
-                fin = self._proc.final(c, rt, now, self._first_tx(h, tx)) if isinstance(rt, Route) else None
+                fin = self._proc.final(c, rt, now) if isinstance(rt, Route) else None
                 return {"case": c.id, "requester": c.requester, "operation": c.operation, "args": dict(c.args),
                         "stage_outcomes": {"decision": fin.decision.outcome if fin else AWAITING,
                                            "review": fin.review.outcome if fin and fin.review else None},

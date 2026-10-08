@@ -192,7 +192,7 @@ def test_e8_envelope_for_ok_denied_invalid_rule(hrig, kind):
         ("DENIED", JUNIOR, "transfer_inventory", {**TRANSFER, "quantity": 1}),  # authority (tool hidden / no grant)
         ("DENIED", NOBODY, "expedite_purchase_order", {"po_id": "PO-991", "expedite_fee": 1}),  # no grant at all
         ("DENIED", PLANNER, "expedite_purchase_order", {"po_id": "PO-NOPE", "expedite_fee": 1}),  # business rule
-        ("INVALID", PLANNER, "transfer_inventory", {**TRANSFER, "quantity": 10 ** 6}),  # precondition
+        ("INVALID", PLANNER, "transfer_inventory", {**TRANSFER, "quantity": 0}),  # precondition only (G3-E17)
         ("INVALID", "admin-1", "transfer_inventory", {**TRANSFER, "destination_warehouse": "NOPE"}),  # E-6 target
     ]
     for i, (want, who, op, args) in enumerate(cases):

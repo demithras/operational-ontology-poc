@@ -401,8 +401,13 @@ class Service(AuthorityOps, GovernanceOps, LowReads, LowProv, LowEvents):
         actor = b.on_behalf_of if path else self._policy.effective_principal(b.subject)
         try:
             ctx = self._ctx(h, inputs, model.RESOURCES, actor)
-            for name, kind, required in model.SCHEMA:  # R-2: a supplied optional ref must resolve at commit
-                if kind == "resource" and not required and name in inputs \
+            # G3-E17 order: deny business rules -> target existence (every supplied ref, R-2/E-6) -> preconditions
+            # -> approvals (identical to the neutral evaluation order)
+            for br in op["business_rules"]:
+                if br["decision"] == "deny" and ev(br["when"], ctx):
+                    raise _Abort("DENIED", {"reason": "business_rule", "rule": br["id"]})
+            for name, kind, required in model.SCHEMA:
+                if kind == "resource" and name in inputs \
                         and ctx.view.props(model.RESOURCES[name], inputs[name]) is None:
                     raise _Abort("INVALID", {"reason": "target_not_found", "input": name})
             for p in op["preconditions"]:
@@ -410,15 +415,8 @@ class Service(AuthorityOps, GovernanceOps, LowReads, LowProv, LowEvents):
                     raise _Abort("INVALID", {"reason": "precondition_failed", "rule": p["id"]})
             needs_approval = None
             for br in op["business_rules"]:
-                if br["decision"] == "classify" or not ev(br["when"], ctx):
-                    continue
-                if br["decision"] == "deny":
-                    raise _Abort("DENIED", {"reason": "business_rule", "rule": br["id"]})
-                needs_approval = needs_approval or br["id"]
-            for name, kind, required in model.SCHEMA:  # E-6: a supplied REQUIRED ref must resolve too (after the
-                if kind == "resource" and required and name in inputs \
-                        and ctx.view.props(model.RESOURCES[name], inputs[name]) is None:  # deny rules, as before)
-                    raise _Abort("INVALID", {"reason": "target_not_found", "input": name})
+                if br["decision"] == "require_approval" and ev(br["when"], ctx):
+                    needs_approval = needs_approval or br["id"]
             if needs_approval:
                 self._consume_approval(h, tx, op, b, needs_approval)
             planned = effects.resolve(op["effects"], ctx)
