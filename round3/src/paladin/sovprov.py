@@ -96,6 +96,8 @@ class SovProvMixin:
         return True
 
     def _eff_low(self, sub, rec, view) -> bool:
+        if self._own(sub, rec["s"]):
+            return True   # G3-E21 / H26-I: the oracle classifies an own decision's digests as low
         edges_hidden = any(not capgraph.edge_visible(self.auth, e, sub) for e in rec["edges"])
         for r in rec["rows"]:
             k = r["k"]
@@ -141,7 +143,7 @@ class SovProvMixin:
     def prov_object(self, sub: str, ref) -> CallResult:
         view = self.view_for(sub)
         if not isinstance(ref, str) or ref not in view.objects:
-            return CallResult("INVALID", {"reason": "not_found"})
+            return CallResult("OK", {"partial": True, "decisions": []})   # G3-E19: absent == hidden == empty
         out = []
         for did in self.ledger.get_meta("decidx") or []:
             rec = self.ledger.get_meta("dec:" + did)

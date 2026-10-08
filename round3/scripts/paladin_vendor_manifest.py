@@ -10,7 +10,7 @@ from pathlib import Path
 
 DST = Path(__file__).resolve().parents[1] / "src" / "paladin"
 PATCHES = {
-    "ir/validate.py": ["V0"], "engine/engine.py": ["V1"], "engine/gates.py": ["V2"],
+    "ir/validate.py": ["V0"], "engine/engine.py": ["V1"], "engine/gates.py": ["V2"], "engine/pipeline.py": ["V3"],
     "domains/manufacturing/logic/facts.py": ["D1", "D5"], "domains/project/logic/payloads.py": ["D2"],
     "domains/project/logic/freeze.py": ["D3"], "domains/project/logic/derive.py": ["D4"],
 }

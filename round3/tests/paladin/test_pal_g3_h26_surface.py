@@ -33,7 +33,7 @@ def test_check_order_on_mutating_calls(rig):
     c = d.direct(rig.tok("researcher-1"), "start_run", {"hypothesis": "H-NOPE"}, request_id="o6")
     assert (c.status, c.body) == ("INVALID", {"reason": "not_found"})
     e = d.direct(rig.tok("researcher-1"), "start_run", {"hypothesis": "H-A"}, request_id="o7")
-    assert (e.status, e.body) == ("INVALID", {"reason": "preconditions"})        # rules after existence; reason class only
+    assert (e.status, e.body) == ("DENIED", {"reason": "policy"})        # G3-E17: deny rules -> existence -> preconditions; here a deny rule fires
 
 
 def test_refusal_bodies_carry_only_a_reason(rig):

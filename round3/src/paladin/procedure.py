@@ -121,7 +121,8 @@ class CaseBook:
         if c.decided["decision"] is not None:
             return c.decided["decision"]
         x = self.lapse_due(c, tick)
-        return (x, None, tick, "lapse") if x is not None else None
+        # G3-E14(2): the lapse is fixed at propose_tick + after (pure logical time), not at the recording transaction
+        return (x, None, c.tick + self.governing(c).lapse_after, "lapse") if x is not None else None
 
     def settle(self, seq: int, tick: int) -> None:
         """Fix every due lapse at THIS transaction (s2.5): called before an event is applied."""
@@ -129,7 +130,7 @@ class CaseBook:
             if c.decided["decision"] is None:
                 d = self.decision(c, tick)
                 if d is not None:
-                    c.decided["decision"] = (d[0], seq, tick, "lapse")
+                    c.decided["decision"] = (d[0], seq, d[2], "lapse")
 
     def final(self, c: Case, tick: int):
         """(status, outcome, rule, stages) status in FINAL | AWAITING | NOT_FINAL (s2.6)."""
@@ -192,7 +193,7 @@ class CaseBook:
                 cur = c.decided[stage]
                 if o is None:
                     lap = self.lapse_due(c, tick) if stage == "decision" else None
-                    c.decided[stage] = (lap, seq, tick, "lapse") if lap is not None else None
+                    c.decided[stage] = (lap, seq, c.tick + self.governing(c).lapse_after, "lapse") if lap is not None else None
                 elif cur is None or cur[0] != o or cur[3] == "lapse":
                     c.decided[stage] = (o, seq, tick, "judge")
 

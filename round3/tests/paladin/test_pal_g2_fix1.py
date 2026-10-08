@@ -102,7 +102,7 @@ def test_e8_every_non_schema_decision_has_one_envelope(tmp_path, anchor, via):
     cases = [  # (rid, subject, args, expected status, envelope?)
         ("ok", "planner-1", {**TR, "quantity": 1}, "OK", True),
         ("denied", "ag-1", TR, "DENIED", True),                                  # authority
-        ("rule", "planner-1", {**TR, "quantity": 10 ** 9}, "INVALID", True),     # precondition / rule
+        ("rule", "planner-1", {**TR, "quantity": 10 ** 9}, "DENIED", True),      # deny rule outranks the failed precondition (G3-E17)
         ("exist", "planner-1", {**TR, "part": "NOPE"}, "INVALID", True),  # existence is not schema (G3: authority first, so the nonexistent ref must be one the caller is authorised for)
         ("missing", "planner-1", {k: v for k, v in TR.items() if k != "part"}, "INVALID", False),   # schema
         ("type", "planner-1", {**TR, "quantity": "many"}, "INVALID", False),                         # schema

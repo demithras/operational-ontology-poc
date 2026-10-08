@@ -315,10 +315,12 @@
    "vendored_sha256": "ce4c62dd3c7b0e20f98a29e64e10f9c06829cd6f7361cbee19a5723a91ecd463"
   },
   "engine/pipeline.py": {
-   "current_sha256": "74634e2e08f882b8c97484ba2fa93adf056eaef257f9cd3d297cf52f5871cac2",
+   "current_sha256": "25a324a25a47637e053c79d5fcd3fa847e7316ec129671d2016f8e0a15dbc651",
    "original": "round2/src/eoo_engine/pipeline.py",
    "original_sha256": "74634e2e08f882b8c97484ba2fa93adf056eaef257f9cd3d297cf52f5871cac2",
-   "patches": [],
+   "patches": [
+    "V3"
+   ],
    "vendored_sha256": "74634e2e08f882b8c97484ba2fa93adf056eaef257f9cd3d297cf52f5871cac2"
   },
   "engine/provenance.py": {
