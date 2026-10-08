@@ -483,3 +483,18 @@ Module map (`round3/src/conventional/`, all new files < 250 lines):
 Changes to existing code: frozen check order in `service._execute` (schema before the coarse authority gate), `_txn(pre=, gate=)`, refusal bodies carry only `reason`, tools use `r3_shared.disclosure.tool_schema`, `read()` redefined onto the P1e-5 forms (old test expecting UNKNOWN for a missing object now expects INVALID not_found, Q12), hidden delegate parent/revoke edge -> `unknown_parent`/`unknown_edge` (one H24 test row changed accordingly, Q9), `authdoc.is_v2` accepts v3 documents, idempotency `used` record gains `subject` (own-request test for `authority_used_as`).
 Decisions/gaps reported to the orchestrator: see the "interpretation" lists in `spec/protections/H25-conventional.md` and `H26-conventional.md`. HISTORY_LAYOUT is unchanged (new history keys `decidx/`, `gov/`, `govdoc/`, `meta/gov_initial` are not declared to the H27 tamper harness).
 Tests: `tests/conventional/test_conv_g3_{h25,h26,mutants}.py`, helpers `conv_g3_util.py`.
+## G3 paladin - H25 constitutional authority + H26 knowledge sovereignty (tag r3-g3-paladin)
+Protection maps: spec/protections/H25-paladin.md, H26-paladin.md (requirement -> file:line, mutant sites, every frozen-text interpretation).
+New modules (src/paladin): `govir.py` (governance document -> typed relations, precedence), `procedure.py` (the ONE generic CaseBook:
+stages, quorum/concurrence/review, lapse, final outcome, basis, emergencies), `govhooks.py` (execute/act hooks that run INSIDE the effect
+transaction), `core_g3.py` (constitutional actions, base-authority re-check, case_required, mark/meta rebuild at restart),
+`sovview.py` (low-view fixpoint), `sovchan.py` (read/list/links/query/tools/subscribe/poll), `sovprov.py` (provenance views),
+`public.py` (the public form of every mutating result). Changed: `core.py` (frozen check order: schema -> authority over DECLARED
+resources -> case_required -> existence; `gov=` hook), `core_g2.py` (decision log call, schema helper), `capgraph.py` (hidden parent/edge),
+`authcompile.py`/`boot.py` (emergency role rule + shadow principals), `deployment.py`/`variant.py` (G3 methods, `governance=`).
+No vendored Engine/Toolchain file changed (VENDORED.json untouched).
+Tests (tests/paladin, prefix test_pal_g3_*): h25_core, h25_more, h25_mutants, h26_pairs (paired worlds F/E/L/D/G + A/A + non-vacuity), h26_mutants,
+h26_prov, h26_surface (check order, forms, tools exactness, low-view rules, hidden edges, determinism), domain_scan (static R25-6 scan).
+Regression edits (Q9, frozen order supersedes E-10 freedom): 3 H23/G2 tests expected INVALID for an unauthorised caller naming a nonexistent
+target (now DENIED, authority first), one H24 test expected not_parent_holder for a hidden parent (now unknown_parent), reads/refusal bodies
+assert the P1e-5 forms, and the G2 "edge holder has no tools" assertion follows PROT-H26 3.4.

@@ -69,7 +69,7 @@ def test_r24_2_revoked_expired_and_root_authority_loss(rig):
     assert rig.revoke("planner-1", "e0").status == "OK"  # revoking the parent invalidates the whole subtree
     h = head(rig)
     for sub in ("ag-1", "ag-4"):
-        assert rig.transfer(sub, "planner-1").body == {"gate": "delegation", "reason": "no_valid_path"}
+        assert rig.transfer(sub, "planner-1").body == {"reason": "no_valid_path"}  # G3: refusal bodies carry only the reason (PROT-H26 3.6)
     assert zero_change(rig, h)
     # expiry boundary: usable at tick 4, not at tick 5 (strict; the evidence rule keeps ticks small)
     rig.clock.advance(4)
@@ -144,7 +144,7 @@ def test_r24_4_explicit_reasons_and_no_fallback(rig):
              ("ag-1", edge("c4", "ag-1", "ag-3", "nope"), "INVALID", "unknown_parent"),
              ("planner-1", edge("c5", "planner-1", "agent-1"), "INVALID", "static_delegate"),
              ("planner-1", edge("c6", "planner-1", "ghost"), "INVALID", "unknown_principal"),
-             ("ag-3", edge("c7", "ag-3", "ag-4", "e1"), "DENIED", "not_parent_holder"),
+             ("ag-3", edge("c7", "ag-3", "ag-4", "e1"), "INVALID", "unknown_parent"),  # G3 (PROT-H26 s3.1, Q9): e1 is hidden from ag-3 -> answered as absent
              ("planner-1", {"id": "bad"}, "INVALID", "schema")]
     for who, e, st, why in cases:
         res = rig.delegate(who, e)
@@ -250,7 +250,7 @@ def test_edge_requests_through_the_generated_tool_surface(rig):
     tok = rig.token("ag-1")
     res, eff = rig.effects_of(lambda: rig.dep.call_tool(tok, "transfer_inventory", TR, on_behalf_of="planner-1", request_id="tool1"))
     assert res.status == "OK" and len(eff) == 1  # via the same commit path as direct()
-    assert rig.dep.tools(tok) == []  # holding an edge exposes nothing on its own: no ambient tools
+    assert [t.name for t in rig.dep.tools(tok)] == ["transfer_inventory"]  # G3 (PROT-H26 3.4): tools = operations the subject OR its live edges could be granted
     assert rig.revoke("planner-1", "e").status == "OK"
     res, eff = rig.effects_of(lambda: rig.dep.call_tool(tok, "transfer_inventory", {**TR, "quantity": 7}, on_behalf_of="planner-1",
                                                         request_id="tool2"))
