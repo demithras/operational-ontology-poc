@@ -61,7 +61,9 @@ def main() -> int:
             pkg, keep, scan = None, ("admin",), fakes.load(name).sources
         else:
             try:
-                load_variant(name)
+                import inspect
+                if "governance" not in inspect.signature(load_variant(name).deploy).parameters:
+                    raise NotImplementedError("deploy(governance=...) missing")
                 factory, pkg = (lambda m, n=name: load_variant(n, m)), name
             except NotImplementedError as exc:
                 print(f"not implemented yet - G3 ({exc})", file=sys.stderr)

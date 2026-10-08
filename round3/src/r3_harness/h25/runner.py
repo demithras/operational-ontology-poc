@@ -21,6 +21,8 @@ from .gen_race import TYPES, run_race
 ROUND3 = Path(__file__).resolve().parents[3]
 PROT = ROUND3 / "spec" / "protections" / "PROT-H25.md"
 GOV_FIXTURES = tuple(f"spec/governance/{m}.{d}.json" for m in AN.MODELS for d in ("manufacturing", "project"))
+MISMATCH = {"procedural_mismatch", "illegitimate_effect", "fabricated_judgment", "emergency_violation",
+            "linearizability_violation", "invalid_doc_accepted"}
 JUDGMENT_STREAM = "h25-judgment-<seed>-<i> (random.Random, seeded separately from h25-case/h25-model streams)"
 
 
@@ -103,9 +105,10 @@ def boundary_audit(variant, seed, n, out: Path) -> dict:
     return {"merit_invariance": {"cases": n, "judge_actions": sum(m["judge_actions"] for m in merit),
                                  "fabricated": sum(m["fabricated"] for m in merit), "first": next((m for m in merit if m["fabricated"]), None)},
             "judgment_flip": {"probed": len(flips), "oracle_outcome_changed": len(changed),
-                              "variant_followed_oracle": sum(1 for f in changed if not f["classes"]),
-                              "mismatch": sum(1 for f in changed if f["classes"]),
-                              "first": next((f for f in changed if f["classes"]), None)},
+                              "variant_followed_oracle": sum(1 for f in changed if not set(f["classes"]) & (MISMATCH | {"progress_loss"})),
+                              "mismatch": sum(1 for f in changed if set(f["classes"]) & MISMATCH),
+                              "progress_loss": sum(1 for f in changed if "progress_loss" in f["classes"]),
+                              "first": next((f for f in changed if set(f["classes"]) & MISMATCH), None)},
             "oracle_needed": {"expected_cases": exp, "observed_execute_rows": obs},
             "provenance": {"judgment_rng_stream": JUDGMENT_STREAM, "model_rng_streams": ["h25-model-*", "h25-case-*"],
                            "streams_distinct": True,

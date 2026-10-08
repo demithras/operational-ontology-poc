@@ -3,6 +3,7 @@ compared with the oracle's observable decisions (ORACLE-AND-HARNESS-G3 section C
 be built yet: then those parametrisations SKIP with a stated reason (that is information, not green). `fake-honest`
 proves the test machinery itself (an oracle-backed reference must pass every item)."""
 import copy
+import inspect
 import random
 
 import pytest
@@ -25,9 +26,12 @@ def get(name):
     if name.startswith("fake-"):
         return fake(name)
     try:
-        return load_variant(name)
+        v = load_variant(name)
     except NotImplementedError as exc:
         pytest.skip(f"variant {name} not implemented yet - G3 ({exc})")
+    if "governance" not in inspect.signature(v.deploy).parameters:
+        pytest.skip(f"variant {name} lacks the Gate 3 surface (deploy(governance=...), constitutional): not implemented yet - G3")
+    return v
 
 
 def _dirty(r):

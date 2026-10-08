@@ -53,7 +53,7 @@ def test_ignores_judgments_is_procedural_mismatch_and_flip_mismatch():
     v = fake("fake-ignoresjudgments")
     assert "procedural_mismatch" in got("fake-ignoresjudgments")
     flips = [boundary.flip_probe(v, 2, i) for i in range(60)]
-    assert sum(1 for f in flips if f["changed"] and f["classes"]) > 0
+    assert sum(1 for f in flips if f["changed"] and "procedural_mismatch" in f["classes"]) > 0
 
 
 def test_always_oracle_needed_is_only_progress_loss():

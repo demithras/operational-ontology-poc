@@ -106,3 +106,54 @@ def test_set_governance_registers_doc():
     d2["model"] = "other"
     c2 = c.apply({"kind": "set_governance", "doc": d2, "seq": 1, "tick": 0})
     assert c2.doc["model"] == "other" and c.doc["model"] == "hierarchical"
+
+
+def _declare(c, who, eid, ops_, exp, grantees, seq, tick, case="d1"):
+    scope = {"operations": ops_, "resources": [{"type": "WorkOrder", "keys": None}]}
+    a = {"kind": "propose", "case": case, "operation": "emergency:declare", "on_behalf_of": None,
+         "args": {"emergency": eid, "scope": scope, "expires_at": exp, "grantees": grantees}}
+    return a, c.decide_action(who, a, seq, tick)
+
+
+def test_emergency_lifecycle_and_bounds():
+    c, ops = _c("hierarchical")
+    a, v = _declare(c, "admin-1", "e1", ["transfer_inventory"], 5, ["planner-1"], 1, 0)
+    assert (v.status, v.reason) == ("DENIED", "scope_amplification")  # outside the ceiling
+    a, v = _declare(c, "admin-1", "e1", ["reschedule_work_order"], 100, ["planner-1"], 1, 0)
+    assert (v.status, v.reason) == ("INVALID", "emergency_too_long")
+    a, v = _declare(c, "admin-1", "e1", ["reschedule_work_order"], 5, ["supervisor-1"], 1, 0)
+    assert (v.status, v.reason) == ("DENIED", "not_grantee")  # not from the grantees_from body
+    a, v = _declare(c, "planner-1", "e1", ["reschedule_work_order"], 5, ["planner-1"], 1, 0)
+    assert (v.status, v.reason) == ("DENIED", "no_authority")  # no declare grant
+    a, v = _declare(c, "admin-1", "e1", ["reschedule_work_order"], 5, ["planner-1"], 1, 0)
+    assert v.status == "OK"
+    c, _ = _step(c, "admin-1", a, 1, 0, "r1")
+    act = {"kind": "act", "emergency": "e1", "operation": "reschedule_work_order",
+           "args": {"work_order": "WO-42", "new_start": 1, "new_end": 2}}
+    assert c.decide_action("planner-1", act, 2, 1).reason == "emergency_inactive"  # declared, not yet decided
+    j = {"kind": "judge", "case": "d1", "stage": "decision", "value": "concur", "merit": "m"}
+    c, _ = _step(c, "admin-1", j, 2, 1, "r2")
+    assert c.emergency_active("e1", 3, 1) is not None
+    assert c.decide_action("planner-1", act, 3, 2).status == "RUN"
+    assert c.decide_action("supervisor-1", act, 3, 2).reason == "not_grantee"
+    other = {**act, "operation": "expedite_purchase_order", "args": {"purchase_order": "PO-1"}}
+    assert c.decide_action("planner-1", other, 3, 2).reason in ("out_of_emergency_scope",)
+    assert c.decide_action("planner-1", act, 3, 5).reason == "emergency_expired"  # strict: tick >= expires_at
+    assert c.decide_action("planner-1", act, 3, 4).status == "RUN"
+    end = {"kind": "end", "emergency": "e1"}
+    assert c.decide_action("planner-1", end, 3, 2).status == "DENIED"  # not a member of the declaring body
+    c, _ = _step(c, "admin-1", end, 3, 2, "r3")
+    assert c.decide_action("planner-1", act, 4, 3).reason == "emergency_inactive"  # no residue after end
+
+
+def test_quorum_with_too_few_eligible_members_is_awaiting_forever():
+    c, ops = _c("collegial")
+    doc = copy.deepcopy(c.doc)
+    b = next(x for x in doc["bodies"] if x["id"] == "board-a")
+    b["members"], b["rule"]["k"] = ["supervisor-1", "senior-1"], 2
+    b["rule"]["recuse"] = ["requester"]
+    from r3_oracle import const_eval as E
+    case = {"requester": "supervisor-1", "judgments": [{"seq": 1, "tick": 0, "stage": "decision", "judge": "senior-1",
+                                                        "value": "dissent", "rid": "j"}]}
+    assert E._body_result(doc, "board-a", "supervisor-1", case["judgments"], "decision") == "AWAITING"  # n=1 < k=2
+    assert E._body_result(doc, "board-a", "nobody-x", case["judgments"], "decision") == "DENY"  # n=2,k=2: dissent 1 > n-k=0

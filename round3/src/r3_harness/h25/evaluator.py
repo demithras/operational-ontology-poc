@@ -178,6 +178,7 @@ def _evaluate_variant(vdir: Path, thresholds: dict, vname: str, min_cases=None) 
     else:
         evidence_gap = False
     n["procedural_mismatch"] += flip["mismatch"]
+    n["progress_loss"] += flip.get("progress_loss") or 0
     n["fabricated_judgment"] += merit["fabricated"]
     n["domain_branch"] += dba["domain_branch"]
     equality = (1 - sum(n[k] for k in EQUALITY) / a["actions"]) if a["actions"] else None
