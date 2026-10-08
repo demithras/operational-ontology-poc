@@ -34,6 +34,7 @@ class Case:
         self.ops, self.doc = self.inst["ops"], self.inst["doc"]
         self.env = G3Env(variant, self.domain, self.ops, self.inst["auth"], self.doc, f"{tag}{seed}-{i}")
         self.env.committed = set()
+        self.jrng = random.Random(f"h25-judgment-{seed}-{i}")  # judgment/merit stream, separate from the model/script stream
         self.ch = RandChooser(self.rng)
         self.M, self.ms, self.n = self.env.C0, 0, 0
         self.redraws, self.cases, self.tags = self.inst["redraws"], [], set()
@@ -45,7 +46,7 @@ class Case:
         return f"{p}{self.i}-{self.n}"
 
     def merit(self) -> str:
-        return self.rng.choice(MERITS)
+        return self.jrng.choice(MERITS)
 
     def tick(self) -> int:
         return self.env.clock.now()
@@ -71,7 +72,7 @@ class Case:
             self.M = self.M.apply({"kind": "action", "subject": actor, "action": action, "seq": self.ms, "tick": self.tick(),
                                    "rid": rid})
         self.tags.add(f"{action['kind']}:{v.status}:{v.reason}")
-        if action.get("kind") == "propose" and isinstance(action.get("args"), dict):
+        if action.get("kind") == "propose" and isinstance(action.get("args"), dict) and self.M.doc is not None:
             ms = E.covering(self.M.doc, action["operation"], E.resources_for(self.ops, action["operation"], action["args"]))
             if len({c for m in ms for c in m["competent"]}) > 1 and not (ms and ms[0]["concurrence"]):
                 self.tags.add("prec_conflict")
@@ -172,3 +173,35 @@ def input_digest(domain, model, calls) -> str:
 
 def run_case(variant, seed: int, i: int, **kw) -> dict:
     return Case(variant, seed, i, **kw).run()
+
+
+class NoGov(Case):
+    """Deployment without a governance document: every constitutional action is INVALID `no_governance` (after token and
+    schema), until a valid document is set; then ordinary operation resumes."""
+
+    def __init__(self, variant, seed: int, i: int, **kw):
+        super().__init__(variant, seed, i, tag="nogov", **kw)
+        self.env.close()
+        self.env = G3Env(variant, self.domain, self.ops, self.inst["auth"], None, f"nogov{seed}-{i}")
+        self.env.committed = set()
+        self.M = self.env.C0
+
+    def script(self):
+        r = self.rng
+        who = r.choice(self.principals())
+        prop = {"kind": "propose", "case": f"n{self.i}-1", "operation": r.choice(self.ops["operations"])["name"], "args": {},
+                "on_behalf_of": None}
+        self.step(who, {"kind": "execute", "case": "x"})
+        self.step(who, {"kind": "judge", "case": "x", "stage": "decision", "value": "concur", "merit": self.merit()})
+        self.step(who, {"kind": "execute", "case": "x"}, bad_token=True)
+        self.step(who, {"kind": "execute"})
+        self.step(who, prop)
+        rec = self.env.set_governance(self.doc)
+        if rec["status"] == "OK":
+            self.ms += 1
+            self.M = self.M.apply({"kind": "set_governance", "doc": self.doc, "seq": self.ms, "tick": self.tick()})
+            self.step(who, {"kind": "execute", "case": "x"})
+
+
+def run_nogov(variant, seed: int, i: int) -> dict:
+    return NoGov(variant, seed, i).run()

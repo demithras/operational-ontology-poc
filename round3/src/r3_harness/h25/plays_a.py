@@ -31,7 +31,7 @@ def members(g, cid, stage) -> list[str]:
 
 
 def cast(g, cid, stage, who, value=None):
-    value = value or g.rng.choice(VALUES[stage] + ("abstain",) if g.rng.random() < 0.15 else VALUES[stage])
+    value = value or g.jrng.choice(VALUES[stage] + ("abstain",) if g.jrng.random() < 0.15 else VALUES[stage])
     return g.step(who, {"kind": "judge", "case": cid, "stage": stage, "value": value, "merit": g.merit()})
 
 

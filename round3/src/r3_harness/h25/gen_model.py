@@ -70,6 +70,12 @@ def _mutate(doc: dict, pool: list[str], ops: dict, rng: random.Random) -> None:
             m["on_absent"] = {"lapse": rng.choice(["allow", "deny"]), "after": rng.randint(2, 9)}
     if doc["emergency"]:
         doc["emergency"]["max_duration"] = rng.randint(4, 14)
+    cand = [m for m in doc["matters"] if not (doc["emergency"] and m["id"] == doc["emergency"]["matter"])]
+    if cand and rng.random() < 0.08:  # a matter_conflict is reachable: same scope, opposite concurrence flag
+        m2 = copy.deepcopy(rng.choice(cand))
+        m2["id"] = m2["id"] + "-x"
+        m2["concurrence"] = not m2["concurrence"]
+        doc["matters"].append(m2)
 
 
 def _grant_declarers(auth: dict, doc: dict) -> None:

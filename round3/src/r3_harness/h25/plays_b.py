@@ -103,6 +103,7 @@ def ordinary_governed(g):
         who, op, args = req
         names = {t.name for t in g.env.dep.tools(g.env.token(who))} if hasattr(g.env.dep, "tools") else set()
         g.env.request(who, op, args, g.rid("q"), via="call_tool" if op in names and g.rng.random() < 0.5 else "direct")
+        g.tags.add("request:DENIED:case_required")
 
 
 def ordinary_free(g):
