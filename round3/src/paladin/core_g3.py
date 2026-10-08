@@ -93,7 +93,7 @@ class G3Mixin:
         self.book = book
 
     # ---- base authority (world-independent) -----------------------------------------------------------
-    def pre_authority(self, who: Principal, op: str, args: dict, deny_only: bool = False) -> bool:
+    def pre_authority(self, who: Principal, op: str, args: dict, deny_only: bool = False, capability: str | None = None) -> bool:
         """The Engine's authority decision over the DECLARED resources of the request (no world read): PROT-H26 s3.2 puts
         authority before existence. With deny_only: True iff no deny rule applies (emergency act, s3.5)."""
         spec = self.eng.model.get("actions", op)
@@ -104,7 +104,7 @@ class G3Mixin:
         res += [Resource(e.target, None, e.target) for e in spec.effects]
         view = self.eng.read_view(State(self.eng.model, {}, {}))
         dec = self.eng.dispatch("authority_rules", "decide", None, refs=spec.auth_refs, principal=who,
-                                capability=f"action:{op}", resources=tuple(res), view=view)
+                                capability=capability or f"action:{op}", resources=tuple(res), view=view)
         return (not dec.deny and not dec.errors) if deny_only else dec.allowed
 
     def base_denied(self, sub: str, obo, op: str, args, tick: int, d: dict | None = None) -> bool:

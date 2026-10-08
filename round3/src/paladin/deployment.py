@@ -296,6 +296,8 @@ class PaladinDeployment:
         clean = c.check_shape(operation, args, "approval")  # E-9: the request's own schema first; every later refusal of a valid one is governed
         if isinstance(clean, CallResult):
             return clean
+        if c.schema_problem(operation, clean) is not None:  # PROT-H26 s3.2: schema, then authority, then existence
+            return CallResult("INVALID", {"gate": "inputs", "reason": "schema"})
         d = c.new_decision("approve", sub, on_behalf_of, operation, clean, None)
         if not isinstance(requester, str) or requester not in c.booted.principals:
             return c.finish(d, CallResult("DENIED", {"gate": "approval", "reason": "unknown requester"}))

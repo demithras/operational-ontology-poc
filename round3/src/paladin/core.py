@@ -300,13 +300,9 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
     def holds_approval(self, approver: str, op: str, args: dict) -> bool:
         """Does the approver hold the approval capability of `op` for these inputs (same decision the Engine gate makes)."""
         from paladin.engine import pipeline
-        self.eng.store.current = state_from_world(self.eng.model, self._svc)
         spec = self.eng.model.get("actions", op)
-        res = gates.resources_of(self.eng, spec, args)
         who = self.booted.principals[approver]
-        return any(self.eng.dispatch("authority_rules", "decide", None, refs=spec.auth_refs, principal=who, capability=cap,
-                                     resources=res, view=self.eng.read_view()).allowed
-                   for cap in pipeline.approval_capabilities(self.eng, spec))
+        return any(self.pre_authority(who, op, args, capability=cap) for cap in pipeline.approval_capabilities(self.eng, spec))
 
     def _commit(self, who: Principal, op: str, args: dict, key: str, fp: str, rid: str, journaled: bool = True,
                 edge: tuple | None = None, d: dict | None = None, gov=None) -> CallResult:
