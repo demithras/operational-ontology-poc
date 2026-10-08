@@ -1,12 +1,12 @@
 {
   "recorded_at": "2026-10-08",
-  "note": "Gate 3 frozen design (tag r3-g3-freeze), recorded before any Gate 3 implementation. Evaluators compare against these hashes.",
+  "note": "Gate 3 frozen design (tag r3-g3-freeze), recorded before any Gate 3 implementation. Evaluators compare against these hashes. Updated 2026-10-08 for errata G3-E1..E11 (before any Gate 3 builder).",
   "files": {
     "spec/protections/PROT-H25.md": "65eb21b360da84a9d229cf2c500c473be6a1ad86aa6d1b8d56b9313e452e1a29",
     "spec/protections/PROT-H26.md": "e02d2a98eda47a5683b717de1d979d25f23efe9775a5646364f18c93dc0f393d",
     "spec/gate3/PROTOCOL-P1e.md": "35ec1fd155e58204cd89c05c73750d82274632032d15489dc2fa93c2b7080c17",
     "spec/gate3/ORACLE-AND-HARNESS-G3.md": "d56778d7edaf8ffd636f151d4f80b6f66bd618af300bb653560d86274261c566",
     "spec/gate3/EQUIVALENCE-G3.md": "74a5ef96a5b42b9a2d4ef47eba3ea0751df0e59a323b187e2441b6969f7b9eef",
-    "spec/gate3/OPEN-QUESTIONS.md": "6a3ab3fc31c3854e2bdf111ab9a68dcfee097216f009ab73089af559989c93db"
+    "spec/gate3/OPEN-QUESTIONS.md": "4c9d371fe5967f0be41ce1b010befad02f7766fb728b3cb9eddc0f19dadcd544"
   }
 }

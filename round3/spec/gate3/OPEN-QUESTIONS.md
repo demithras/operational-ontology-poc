@@ -77,3 +77,25 @@ existence; H23/H24/H27 suites + one H23 dev run as regression; official verdicts
 mutants domain_privilege_branch, subscription_unfiltered, redaction_fabrication); Q12 yes (read() in scope, redefined in
 P1e); Q14 yes (no grandfathering on set_governance); Q15 yes (parallel official runs; smoke run of 200 on the exact
 candidate first; dev runs at 10%).
+
+## Errata (2026-10-08, after P1e, before any Gate 3 builder)
+G3-E1 v3 authority fixtures `spec/authority/<domain>.v3.json` (P1e-6): created by a bounded shared step (P1e-b) before
+      any builder: v2 base + a disclosure document such that every fact kind of PROT-H26 s1.1 is protected from at least
+      one principal, at least one public type and one protected type exist, `via` rules are used, and every provenance
+      level (none/own/scalars/actors) occurs. Added to FREEZE_G3 when created.
+G3-E2 Meter attribution of `seed`-tagged world transactions (P1e-8) is implemented in r3_oracle by the Gate 3 harness
+      builder (seed transactions are setup, never a candidate effect).
+G3-E3 Public schema-level visibility: P1e-6 `public_types` / `public_links` lists are binding; PROT-H26 s1.2 "types with
+      public: true" means "types listed in public_types".
+G3-E4 tool_schema of a `json`-typed input is the empty schema `{}` (any value).
+G3-E5 Governance static rules: unknown body references (competent / review.by / grantees_from) -> invalid; duplicate
+      members allowed (set semantics); emergency matter with empty operations -> invalid; the governance document's
+      `domain` must equal the authority spec's domain -> otherwise invalid.
+G3-E6 Event form: link/unlink events carry `link` and `props: {}`; object events carry `ref` and `props` (low values only).
+G3-E7 Decision-view form check = the 12 exact keys; each value is either the true value or a valid marker. WHICH fields
+      are true vs redacted is decided only by the oracle (PROT-H26 s4.2); over-redaction is measured by the s9 floor.
+G3-E8 Constitutional action schemas: every listed key is required; `on_behalf_of` is required and may be null.
+G3-E9 Hierarchy kinds: chain = every body has <= 1 superior and <= 1 subordinate; tree = <= 1 superior; dag = some body
+      has >= 2 superiors; none = no superior relations.
+G3-E10 Static-rule parity (P1e-9) is checked against the real r3_oracle by the H25 harness builder as a conformance test.
+G3-E11 read() redefinition (ruling Q12): bodies follow the P1e-5 forms; existing H23 tests (reading body["props"]) remain valid.
