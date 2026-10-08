@@ -151,7 +151,7 @@ class Provenance:
             env = {"v": 1, "stream": self.stream, "seq": seq, "prev": prev, "decision": decision, "artifacts": arts}
             raw = canonical_bytes(env)
             receipt = self.anchor.append(self.stream, seq, decision["decision_id"], sha(raw))
-            self.history.put(f"decidx/{seq:010d}", canonical_bytes(self._index(dc, decision["decision_id"], seq)))
+            self.history.put(f"decidx/{seq:010d}", canonical_bytes(self._index(dc, decision["decision_id"], seq, ok)))
             self.history.put(f"receipt/{seq:010d}", canonical_bytes(receipt))
             self.history.put(f"env/{seq:010d}", raw)
             if "digest_omission" in self.mutants:
@@ -162,7 +162,7 @@ class Provenance:
         except (TypeError, ValueError):
             return CallResult("INVALID", {"reason": "unserialisable_decision"})
 
-    def _index(self, dc: DecisionCtx, did: str, seq: int) -> dict:
+    def _index(self, dc: DecisionCtx, did: str, seq: int, decision_ok: bool = True) -> dict:
         """Low-channel index (PROT-H26 s4): which resource objects / capability edge a decision touched. Not evidence."""
         from .models_gen import OPERATION_MODELS
         refs, edge, pure = [], None, False
@@ -178,7 +178,8 @@ class Provenance:
             edge = dc.args.get("id")
         elif dc.kind == "revoke" and isinstance(dc.args, str):
             edge = dc.args
-        return {"id": did, "seq": seq, "refs": refs, "edge": edge, "pure_refs": pure}
+        return {"id": did, "seq": seq, "refs": refs, "edge": edge, "pure_refs": pure,
+                "tx": dc.tx_id if decision_ok else None}
 
     def anchored(self, rid: str) -> bool:
         try:

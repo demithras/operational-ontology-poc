@@ -72,11 +72,35 @@ class LowProv:
                 view["subject"] = self._actor(sub, d["subject"], actors)
                 view["on_behalf_of"] = self._actor(sub, d["on_behalf_of"], actors)
                 view["args_digest"] = d["args_digest"] if args_ok else marker("args")
-                view["effect_digest"] = d["effect_digest"] if own else marker("digest")
+                view["effect_digest"] = d["effect_digest"] if self._effect_low(h, lv, idx) else marker("digest")
                 view["authority_path"] = self._path_view(sub, doc, d["authority_path"])
                 return CallResult("OK", {"partial": True, "decision": view})
             return UNKNOWN
         return self._low(token, go)
+
+    @staticmethod
+    def _effect_low(h, lv, idx: dict) -> bool:
+        """G3-E22: effect_digest covers the transaction's full world_log rows; it is true only if every object and every
+        property/patch field those rows touch (and every link) is in the observer's low view - own decisions included."""
+        tx = idx.get("tx")
+        if tx is None:
+            return True  # no committed effect rows: the digest covers nothing
+        rows = h._con.execute("SELECT kind,ref,data_json FROM world_log WHERE tx=? ORDER BY seq", (tx,)).fetchall()
+        for kind, ref, dj in rows:
+            if kind == "mark":
+                continue
+            if kind in ("link", "unlink"):
+                lt, a, b = ref.split("|", 2)
+                if (lt, a, b) not in lv.links:
+                    return False
+                continue
+            data = json.loads(dj) if dj else {}
+            if ref not in lv.vis:
+                return False
+            names = set((data.get("props") or {})) | set((data.get("patch") or {}))
+            if not names <= lv.fields.get(ref, set()):
+                return False
+        return True
 
     def _args_low(self, idx: dict, lv) -> bool:
         """args_digest covers the request args: low iff every byte of them is low. Plain (non-resource) input values are
