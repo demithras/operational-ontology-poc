@@ -382,3 +382,18 @@ methods wrapper). Tests: tests/paladin/test_pal_g2_e34.py. tests/paladin: 207 pa
 
 ## G2 fix1 - Paladin (E-5, E-7, E-8)
 Changes in src/paladin/core.py and core_g2.py only; see spec/protections/H24-paladin.md and H27-paladin.md "G2 fix1". Tests: tests/paladin/test_pal_g2_fix1.py (14, all red on 319e567).
+
+## P1e - Gate 3 shared protocol (governance, disclosure, low-channel forms)
+Variant-neutral additions (tag r3-p1e-protocol). New: `r3_shared/governance.py` (load/validate/structural_signature/
+structurally_distinct), `constitutional.py` (action schemas, `emergency:declare` pseudo-op, OK/refusal bodies, governance-mark
+builders), `disclosure.py` (`tool_schema`, markers, event/decision/low-response form checkers `check_low_result`), `schemas/
+governance-spec.schema.json`, `schemas/authority-spec-v3.schema.json`, six fixtures `spec/governance/<model>.<domain>.json`.
+Changed: `variant.py` (G3 methods, `G3_METHODS`/`g3_call`, `deploy(..., governance=None)`), `authspec.py` (v3 schema dispatch,
+`validate_strict` disclosure checks, `effective_disclosure` = E-3 analogue), `authgraph.py` (V3 treated like V2 in
+`authority_document`/digest), `mutants.py` (KNOWN H25/H26), `world.py` (`WorldStore.seed`, harness only).
+Read: legacy `read()` is documented as get->read_object, list->list_objects, else query (Q12); the fake implements it, the
+H23 tests that read bodies only use `body["props"]`, which the new form keeps (no H23 test needed editing).
+Tests: tests/test_p1e_*.py; fakes: tests/fakes/fake_g3.py (G3Mixin), generated docs: tests/p1e_gen.py (its `ref_static_ok` is the
+test-local reference the oracle's constitution.py static rules must also agree with). Expected conformance failures until the
+variants land: real variants lack the G3 methods (surface as NotImplementedError("not implemented yet - G3")) and their `deploy`
+has no `governance=` parameter.
