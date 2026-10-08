@@ -49,6 +49,23 @@ class ConventionalDeployment:
     def read(self, token, operation, args) -> CallResult:
         return self.service.read(token, operation, args)
 
+    # -- Gate 3 low channels (PROT-H26): all answered from the observer's LowView ---------------------------------
+    @_safe
+    def read_object(self, token, ref) -> CallResult:
+        return self.service.read_object(token, ref)
+
+    @_safe
+    def list_objects(self, token, type_) -> CallResult:
+        return self.service.list_objects(token, type_)
+
+    @_safe
+    def list_links(self, token, ref, link_type) -> CallResult:
+        return self.service.list_links(token, ref, link_type)
+
+    @_safe
+    def query(self, token, name, args) -> CallResult:
+        return self.service.query(token, name, args)
+
     # -- operations beyond the neutral protocol (used by tests / harness drivers that know this variant) -----
     def set_authority(self, auth_spec: dict) -> None:
         """Install a new authority version; every later decision (including replays) uses it."""

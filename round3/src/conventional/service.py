@@ -29,6 +29,7 @@ from .models_gen import OPERATION_MODELS
 from .abort import _Abort
 from .authority_ops import AuthorityOps
 from .govsvc import GovernanceOps
+from .lowreads import LowReads
 from .histledger import HistLedger, LedgerUnresolved
 from .pdp import Pdp
 from .provenance import DecisionCtx, Provenance, has_float
@@ -60,7 +61,7 @@ class BoundRequest:
     fingerprint: str
 
 
-class Service(AuthorityOps, GovernanceOps):
+class Service(AuthorityOps, GovernanceOps, LowReads):
     def __init__(self, domain: str, factory: Callable, verifier, ops_spec: dict, auth_spec: dict, clock,
                  audience: str = "conventional", mutant_switches: frozenset[str] = frozenset(),
                  history=None, anchor=None, governance: dict | None = None):
@@ -108,6 +109,7 @@ class Service(AuthorityOps, GovernanceOps):
             self._gov_init(h, governance)
         finally:
             h.close()
+        self._low_init()
         self.stream = self._init_stream(domain)
         self.prov = Provenance(history, anchor, self.stream, self._spec, clock, self._mutants) \
             if history is not None and anchor is not None else None
@@ -203,8 +205,8 @@ class Service(AuthorityOps, GovernanceOps):
             return None
 
     # -- context -------------------------------------------------------------------------------
-    def _ctx(self, h, inputs: dict, resources: dict, actor: str) -> Ctx:
-        view = WorldView.load(h, self._spec, self._clock.now())
+    def _ctx(self, h, inputs: dict, resources: dict, actor: str, view: WorldView | None = None) -> Ctx:
+        view = view or WorldView.load(h, self._spec, self._clock.now())
         return Ctx(view, self._spec["config"], self._link_types, resources, dict(inputs), self._helpers,
                    lambda t, k, r: self._policy.holds(actor, t, k, r),
                    tuple(rt["name"] for rt in self._spec["resource_types"]),
@@ -481,44 +483,3 @@ class Service(AuthorityOps, GovernanceOps):
             except (sqlite3.Error, LedgerUnresolved):
                 return CallResult("UNAVAILABLE", {"reason": "dependency_unavailable"})
             return self._provenance(dc, res_ok)
-
-    # -- reads ---------------------------------------------------------------------------------
-    def read(self, token: str, operation: str, args: dict) -> CallResult:
-        with self._lock:
-            if self.crashed:
-                return CallResult("UNAVAILABLE", {"reason": "crashed"})
-            sub = self.authenticate(token)
-            if sub is None or not self._policy.known(sub):
-                return CallResult("DENIED", {"reason": "invalid_token" if sub is None else "unknown_principal"})
-            try:
-                h = self._factory(WRITER)
-                try:
-                    return self._read(h, operation, args)
-                finally:
-                    h.close()
-            except sqlite3.Error:
-                return CallResult("UNAVAILABLE", {"reason": "dependency_unavailable"})
-
-    def _read(self, h, name: Any, args: Any) -> CallResult:
-        if name == "get":
-            try:
-                a = validate_inputs((("type", "string", True), ("key", "string", True)), args)
-            except RequestInvalid as exc:
-                return CallResult("INVALID", {"reason": exc.reason})
-            rec = h.get(a["type"], a["key"])
-            return CallResult("OK", copy.deepcopy(rec)) if rec else CallResult("UNKNOWN", {})
-        defs = {r["name"]: r for r in self._spec["reads"] + self._spec["helpers"]}
-        if not isinstance(name, str) or name not in defs or name not in self._helpers:
-            return CallResult("INVALID", {"reason": "unknown_read"})
-        sch = tuple((i["name"], "resource" if i["type"] == "resource" else i["type"], bool(i["required"]))
-                    for i in defs[name]["inputs"])
-        res = {i["name"]: i["resource_type"] for i in defs[name]["inputs"] if i["type"] == "resource"}
-        try:
-            vals = validate_inputs(sch, args)
-            ctx = self._ctx(h, vals, res, "")
-            kw = {k: (res[k], v) if k in res else v for k, v in vals.items()}
-            return CallResult("OK", {"value": copy.deepcopy(self._helpers[name](ctx, **kw))})
-        except RequestInvalid as exc:
-            return CallResult("INVALID", {"reason": exc.reason})
-        except HelperError as exc:
-            return CallResult("INVALID", {"reason": "helper_error"})
