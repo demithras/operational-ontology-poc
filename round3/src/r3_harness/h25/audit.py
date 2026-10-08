@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import copy
+import json
 import random
 import re
 from pathlib import Path
@@ -13,6 +14,7 @@ from .gen_case import Case
 from .rename import Renamer
 
 ROUND3 = Path(__file__).resolve().parents[3]
+RESOLUTIONS = ROUND3 / "spec" / "gate3" / "DOMAIN-AUDIT-RESOLUTIONS.json"
 AUTH_WORDS = re.compile(r"grant|principal|token|approval|governance|disclosure", re.I)
 
 
@@ -91,24 +93,53 @@ def _strs(node):
             yield n.value
 
 
-def scan_source(path: str, text: str, voc: set[str], domain_module: bool) -> list[dict]:
+def _mutant_names(node) -> set[str]:
+    """Mutant names switched on inside `node`: `"<name>" in self.mutants` / `self.mutant("<name>")` (G3-E24 s2)."""
+    out = set()
+    for n in ast.walk(node):
+        if isinstance(n, ast.Compare) and isinstance(n.left, ast.Constant) and isinstance(n.left.value, str) \
+                and any(isinstance(o, ast.In) for o in n.ops) \
+                and any(isinstance(c, ast.Attribute) and c.attr == "mutants" for c in n.comparators):
+            out.add(n.left.value)
+        elif isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and n.func.attr == "mutant" \
+                and n.args and isinstance(n.args[0], ast.Constant) and isinstance(n.args[0].value, str):
+            out.add(n.args[0].value)
+    return out
+
+
+def _live_nodes(tree, active: set[str]):
+    """Yield every AST node except code guarded by a mutant switch whose mutant is not active in this build."""
+    stack = [tree]
+    while stack:
+        n = stack.pop()
+        if isinstance(n, ast.If) and (_mutant_names(n.test) - active):
+            stack.extend(n.orelse)  # the guarded test + body belong to the mutant build only
+            continue
+        if isinstance(n, (ast.Return, ast.Assign, ast.Expr)) and (_mutant_names(n) - active):
+            continue
+        yield n
+        stack.extend(ast.iter_child_nodes(n))
+
+
+def _norm(line: str) -> str:
+    return " ".join(line.split())
+
+
+def scan_source(path: str, text: str, voc: set[str], domain_module: bool, active_mutants=()) -> list[dict]:
     hits = []
+    lines = text.splitlines()
     tree = ast.parse(text)
-    for n in ast.walk(tree):
+    for n in _live_nodes(tree, set(active_mutants)):
         line = getattr(n, "lineno", 0)
+        found = []
         if not domain_module:
             if isinstance(n, ast.Compare):
-                for s in _strs(n):
-                    if s in voc:
-                        hits.append({"file": path, "line": line, "kind": "compare", "literal": s})
+                found = [("compare", s) for s in _strs(n) if s in voc]
             elif isinstance(n, ast.Dict):
-                for k in n.keys:
-                    if isinstance(k, ast.Constant) and isinstance(k.value, str) and k.value in voc:
-                        hits.append({"file": path, "line": line, "kind": "dict-dispatch", "literal": k.value})
+                found = [("dict-dispatch", k.value) for k in n.keys
+                         if isinstance(k, ast.Constant) and isinstance(k.value, str) and k.value in voc]
             elif hasattr(ast, "MatchValue") and isinstance(n, ast.MatchValue):
-                for s in _strs(n):
-                    if s in voc:
-                        hits.append({"file": path, "line": line, "kind": "match", "literal": s})
+                found = [("match", s) for s in _strs(n) if s in voc]
         else:
             names = []
             if isinstance(n, ast.Name):
@@ -117,16 +148,28 @@ def scan_source(path: str, text: str, voc: set[str], domain_module: bool) -> lis
                 names = [n.attr]
             elif isinstance(n, (ast.Import, ast.ImportFrom)):
                 names = [getattr(n, "module", "") or ""] + [a.name for a in n.names]
-            for nm in names:
-                if AUTH_WORDS.search(nm):
-                    hits.append({"file": path, "line": line, "kind": "authority-vocabulary", "literal": nm})
+            found = [("authority-vocabulary", nm) for nm in names if AUTH_WORDS.search(nm)]
+        for kind, lit in found:
+            src = _norm(lines[line - 1]) if 0 < line <= len(lines) else ""
+            hits.append({"file": path, "line": line, "kind": kind, "literal": lit, "text": src})
     return hits
 
 
-def declared_domain_modules(pkg_dir: Path) -> list[str]:
-    init = pkg_dir / "__init__.py"
-    if init.is_file():
-        for n in ast.parse(init.read_text()).body:
+def hit_key(variant: str, hit: dict) -> tuple[str, str, str]:
+    return (variant, hit["file"], _norm(hit.get("text", "")))
+
+
+def load_resolutions(path: Path | None = None) -> dict:
+    """{(variant, file, normalised text): reason} from the frozen auditor review; a missing file means no resolutions."""
+    p = Path(path) if path else RESOLUTIONS
+    if not p.is_file():
+        return {}
+    return {(r["variant"], r["file"], _norm(r["text"])): r.get("reason", "") for r in json.loads(p.read_text()).get("resolutions", [])}
+
+
+def _declared_in(f: Path) -> list[str]:
+    if f.is_file():
+        for n in ast.parse(f.read_text()).body:
             if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "DOMAIN_LOGIC_MODULES" for t in n.targets):
                 try:
                     return list(ast.literal_eval(n.value))
@@ -135,14 +178,43 @@ def declared_domain_modules(pkg_dir: Path) -> list[str]:
     return []
 
 
-def static_scan(pkg_dir: Path | None = None, sources: dict[str, str] | None = None, domain_modules=()) -> dict:
+def declared_domain_modules(pkg_dir: Path) -> list[str]:
+    """DOMAIN_LOGIC_MODULES from the variant's declaration: variant.py, else the package __init__.py (G3-E24 s3)."""
+    return _declared_in(pkg_dir / "variant.py") or _declared_in(pkg_dir / "__init__.py")
+
+
+def _is_domain_module(rel_pkg: str, rel_root: str, modules) -> bool:
+    for m in modules:
+        m = m.strip("/")
+        if rel_root == m or rel_root.startswith(m + "/") or rel_pkg == m or rel_pkg.startswith(m + "/") \
+                or ("/" not in m and rel_pkg.endswith(m)):
+            return True
+    return False
+
+
+def static_scan(pkg_dir: Path | None = None, sources: dict[str, str] | None = None, domain_modules=(),
+                variant: str | None = None, active_mutants=(), resolutions=None) -> dict:
     voc = vocab()
-    files = {}
+    files, roots = {}, {}
     if pkg_dir is not None:
-        files = {str(p.relative_to(pkg_dir)): p.read_text() for p in sorted(pkg_dir.rglob("*.py"))}
+        pkg_dir = Path(pkg_dir)
+        try:
+            base = pkg_dir.resolve().relative_to(ROUND3.resolve())
+        except ValueError:
+            base = Path(pkg_dir.name)
+        for p in sorted(pkg_dir.rglob("*.py")):
+            rel = str(p.relative_to(pkg_dir))
+            roots[rel] = str(base / rel)
+            files[rel] = p.read_text()
         domain_modules = tuple(domain_modules) or tuple(declared_domain_modules(pkg_dir))
+        variant = variant or pkg_dir.name
     files.update(sources or {})
-    hits = []
+    res = load_resolutions() if resolutions is None else resolutions
+    hits, resolved = [], []
     for name, text in files.items():
-        hits += scan_source(name, text, voc, any(name == m or name.endswith(m) for m in domain_modules))
-    return {"files": len(files), "domain_logic_modules": list(domain_modules), "hits": hits, "hit_count": len(hits)}
+        rr = roots.get(name, name)
+        for h in scan_source(rr, text, voc, _is_domain_module(name, rr, domain_modules), active_mutants):
+            reason = res.get(hit_key(variant or "", h))
+            (resolved.append({**h, "reason": reason}) if reason is not None else hits.append(h))
+    return {"files": len(files), "domain_logic_modules": list(domain_modules), "hits": hits, "hit_count": len(hits),
+            "resolved": resolved, "resolved_count": len(resolved), "active_mutants": sorted(active_mutants)}

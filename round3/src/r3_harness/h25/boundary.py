@@ -42,10 +42,14 @@ def merit_probe(variant, seed: int, i: int) -> dict:
         g.env.close()
     rng = random.Random(f"h25-merit-alt-{seed}-{i}")
 
+    merits: dict = {}  # a replayed judge call carries the identical body: one merit per rid
+
     def tr(c):
         a = c.get("action")
         if isinstance(a, dict) and a.get("kind") == "judge":
-            a["merit"] = rng.choice(ALT) + str(rng.randrange(10 ** 6))
+            if c.get("rid") not in merits:
+                merits[c.get("rid")] = rng.choice(ALT) + str(rng.randrange(10 ** 6))
+            a["merit"] = merits[c.get("rid")]
         return c
     env, outs_b = RP.replay(variant, g.domain, g.ops, g.inst["auth"], g.inst["doc"], calls, f"merit2-{seed}-{i}", tr)
     try:

@@ -43,6 +43,15 @@ def _run(variant, name: str, n_cases: int, n_races: int, seed: int):
     return cnt, first
 
 
+def _mutant_hits(scan_pkg, scan_sources, name) -> dict:
+    """Static hits that exist ONLY in the build where `name` is active (hits of the normal build do not kill the mutant)."""
+    base = audit.static_scan(pkg_dir=scan_pkg, sources=scan_sources)
+    live = audit.static_scan(pkg_dir=scan_pkg, sources=scan_sources, active_mutants=(name,))
+    seen = {(h["file"], h["text"], h["kind"], h["literal"]) for h in base["hits"]}
+    new = [h for h in live["hits"] if (h["file"], h["text"], h["kind"], h["literal"]) not in seen]
+    return {"hit_count": len(new), "hits": new}
+
+
 def prove(factory, seed: int = 1, n_cases: int = 120, n_races: int = 40, n_audit: int = 60, scan_pkg=None,
           keep_roles=(), scan_sources=None) -> dict:
     out = {}
@@ -51,7 +60,7 @@ def prove(factory, seed: int = 1, n_cases: int = 120, n_races: int = 40, n_audit
         if name == "domain_privilege_branch":
             ctl = audit.rename_audit(factory(()), s, n_audit, domain="project", keep_roles=keep_roles)
             mut = audit.rename_audit(factory([name]), s, n_audit, domain="project", keep_roles=keep_roles)
-            scan = audit.static_scan(pkg_dir=scan_pkg, sources=scan_sources) if (scan_pkg or scan_sources) else {"hit_count": 0, "hits": []}
+            scan = _mutant_hits(scan_pkg, scan_sources, name) if (scan_pkg or scan_sources) else {"hit_count": 0, "hits": []}
             killed = mut["domain_branch"] > ctl["domain_branch"] or scan["hit_count"] > 0
             out[name] = {"killed": bool(killed), "killing_class": "domain_branch" if killed else None,
                          "killed_by": "audit", "control": {"domain_branch": ctl["domain_branch"]},
