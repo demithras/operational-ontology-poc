@@ -119,3 +119,17 @@ G3-E15 Both variants declare every new HistoryStore record prefix they add in Ga
       governance documents) in HISTORY_LAYOUT, so the H27 tamper discovery keeps full coverage.
 G3-E16 Scope note: the H25 renaming audit renames principal, body and model ids; relation names are ops-spec vocabulary
       and are not renamed (recorded in the H25 SUMMARY).
+G3-E17 (2026-10-08, after G3 conformance attribution g3-attr1, before any G3 measurement) Post-authority order for every
+      mutating call and for constitutional execute/act: deny business rules -> target existence (E-6) -> preconditions ->
+      approvals, exactly r3_oracle ops_model.evaluate. A request failing both a deny rule and a precondition answers DENIED.
+      (PROT-H25 s3.4 and PROT-H26 s3.2 group these steps without fixing their internal order.)
+G3-E18 Case visibility (PROT-H25 s3.1): a case is visible to its requester and to the members of every body listed in
+      `competent` of EVERY matter covering the case's operation/resources, and of each such matter's review.by - before
+      precedence is applied.
+G3-E19 list_links and prov_object on an absent OR hidden ref answer OK with empty lists ({"partial": true, "decisions": []}
+      for prov_object), identically (hidden == absent). read_object keeps not_found.
+G3-E20 query arguments: resource-typed args take the bare key exactly like operation inputs; other args are typed per the
+      ops spec `reads` definition; a wrongly typed or unknown arg -> INVALID (schema).
+G3-E21 Provenance digest/field lowness is decided only by the oracle (restates G3-E7 / PROT-H26 s4.2): a variant that
+      redacts a value the oracle classifies as low commits over-redaction (s9 floor); own decisions are not exempt from the
+      oracle's computation.
