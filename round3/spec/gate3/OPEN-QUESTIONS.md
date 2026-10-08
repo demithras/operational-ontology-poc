@@ -139,3 +139,7 @@ G3-E22 (orch, 2026-10-08, clarification of s4.2 + G3-E21, before any H26 measure
       every such object and field is in the observer's low view, else {"redacted": "effect_digest"} - own decisions
       included. Found when the oracle-backed honest fake was REJECTED (divergence on pair p1-27: hidden `path` in the rows
       of its own write); both variants answered the true digest and must redact (equal fix for both).
+G3-E23 (orch, 2026-10-08, before any H26 measurement) list_links with a link_type that is not in the ops spec answers
+      exactly as the oracle low view (r3_oracle/disclosure_reads.expected_list_links): OK {"out": [], "in": []}, never
+      INVALID. Link types are public, so either answer is noninterferent; one form is fixed for fairness (the oracle's).
+      Found in review: paladin answers OK (fix2), conventional INVALID unknown_link_type.
