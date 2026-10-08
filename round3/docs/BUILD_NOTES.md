@@ -397,3 +397,46 @@ Tests: tests/test_p1e_*.py; fakes: tests/fakes/fake_g3.py (G3Mixin), generated d
 test-local reference the oracle's constitution.py static rules must also agree with). Expected conformance failures until the
 variants land: real variants lack the G3 methods (surface as NotImplementedError("not implemented yet - G3")) and their `deploy`
 has no `governance=` parameter.
+
+## G3 H25 harness (variant-neutral; branch r3-harness, tag r3-g3-h25-harness)
+Edited only: `r3_oracle/{constitution,const_eval,const_static,const_judge,const_refusal}.py`, `r3_harness/h25/*`,
+`scripts/{run,evaluate}_h25.py` + `verify_h25.sh`, `tests/test_h25_*.py`, `tests/h25_util.py`, `tests/fakes/h25_fakes.py`.
+- **Oracle** (`Constitution`, pure immutable value; imports r3_shared forms + r3_oracle only): `from_docs`, `apply(event)`
+  (action / set_governance / authority), `decide_action(subject, action, seq, tick)` in the frozen PROT-H25 s3 order returning
+  `Verdict(status, reason|None, mark, body, run)` (`RUN` = evaluate the operation with the H23 ops model; emergency `act` uses the
+  caller's own deny grants plus a synthetic allow), `final/stage/basis/emergency_active`. Static rules are re-implemented in
+  `const_static.py` (parity with `validate_governance` on 1,500 generated docs: `tests/test_h25_oracle.py`, G3-E10).
+- **Judge** (`const_judge.py`, `const_refusal.py`): walks the world_log, claims each transaction to a harness call (commit-mark
+  request_id, else governance-mark keys), compares the governance mark byte-for-byte, measures effects by the H23 meter rules, and
+  judges calls that wrote nothing against the oracle at every real-time-consistent commit point (races). `seed`-tagged
+  transactions are attributed setup (G3-E2). Classes: procedural_mismatch, illegitimate_effect, fabricated_judgment,
+  emergency_violation, invalid_doc_accepted, linearizability_violation, progress_loss, race_refusal_ok, unattributed/writer/unlogged,
+  unsupported, world_lock_timeout, domain_branch (audit), ok.
+- **Generators**: `gen_model` (3 families x 2 domains, fresh principals, 8% `matter_conflict` variants, invalid docs 5%),
+  `gen_case` (decision / review / appeal / emergency / noise plays, crash+retry, mid-case set_governance and set_authority,
+  `NoGov` cases), `gen_race` (EA, EA_EDGE, EA_ADV, AE, AX, AX_EDGE, JJ, ES + SEQ controls). Judgment values and merit strings come from
+  a separate RNG stream (`h25-judgment-*`); the generator's oracle mirror is used for targeting only.
+- **Audits**: `audit.py` (consistent-renaming metamorphic test, static AST scan, mutant self-test), `boundary.py` (merit
+  invariance, judgment flip), `mutation.py` (KNOWN["H25"]; domain_privilege_branch killed by the audit). `evaluator.py` is 1:1
+  with the contract + thresholds + PROT-H25 s7; `runner.py` writes the A4 evidence files (+ `cases-h25.jsonl.gz`, `safe-progress.json`,
+  `envelope.json`).
+- **Run**: `scripts/run_h25.py --exp-id ID --variants paladin,conventional --seed N [--cases 9000 --races 1100 --nogov 100]`
+  (>= 10,000 unique cases; fakes only with `--test-variants`), `scripts/evaluate_h25.py ID [--min-cases N, dev ids only]`,
+  `scripts/verify_h25.sh ID`. Dev overrides are stamped in verdict.json and also relax the coverage floor to the decision rule
+  + 50% of reachable refusal classes; refused on non-dev ids.
+- **Runtime** (honest oracle-backed fake, one core): ~37 ms per sequential case (~37 s per 1,000 cases) before audits; the
+  official default (9,000 + ~1,240 races + 100 nogov, 1,000-case audits) is roughly 15-20 min per fake-speed variant; real variants are slower.
+- **Oracle choices where PROT-H25 is silent** (all in `const_eval.py` docstring; conformance failures here are information):
+  (1) `end` by a non-member of the declaring body -> DENIED with ANY reason (the text names no code); (2) a lapse is fixed at
+  propose_tick + after (not at the first later transaction); (3) `specialis` keeps a body iff SOME of its covering matters is not a strict
+  superset of another candidate's matter; (4) the deciding matter is the first covering matter (document order) that names the winner
+  (concurrence: the first covering matter); (5) a case that is no longer governed/resolved after set_governance is AWAITING (oracle_needed);
+  (6) `execute` of an `emergency:declare` case is UNDEFINED (never generated); (7) an ordinary governed request that is
+  schema-invalid or unauthorised accepts any DENIED/INVALID, a fully valid one must be `case_required`; (8) the commit point `seq` of an
+  action is its governance mark's seq; (9) a refusal where the oracle could have committed in some real-time order is `progress_loss`.
+- **Deviations/gaps**: relation names are not renamed by the renaming audit (ops-spec `actor_holds` rules key on them, same exemption as
+  operation/type names); marks are compared without `args_digest`/`version` in the renaming audit (digests of renamed ids differ by
+  construction); `protocol/FREEZE_G3.json` pins PROT-H25.md and the v3 authority fixtures but NOT `spec/governance/*.json` - the run
+  records their sha256 in `oracle-boundary-audit.json` and the evaluator compares them with disk (INVALID on change); the registry loads
+  the pre-G3 paladin/conventional packages, which lack `deploy(governance=...)`: `tests/test_h25_conformance.py` SKIPs them with that reason
+  and `run_h25.py` exits 2 "not implemented yet - G3".

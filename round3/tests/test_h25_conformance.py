@@ -40,7 +40,8 @@ def _dirty(r):
 
 # -- C25-1: schema edge cases ---------------------------------------------------------------------------------------
 def _mutations(rng):
-    base = [{"kind": "propose", "case": "c1", "operation": "x", "args": {}, "on_behalf_of": None},
+    base = [{"kind": "propose", "case": "c1", "operation": "reschedule_work_order",
+             "args": {"work_order": "WO-42", "new_start": 1, "new_end": 2}, "on_behalf_of": None},
             {"kind": "judge", "case": "c1", "stage": "decision", "value": "concur", "merit": "m"},
             {"kind": "judge", "case": "c1", "stage": "review", "value": "uphold", "merit": "m"},
             {"kind": "appeal", "case": "c1"}, {"kind": "execute", "case": "c1"},
@@ -69,13 +70,14 @@ def test_c25_1_schema_edge_cases(name):
     inst = make_instance("collegial", "manufacturing", 1)
     env = G3Env(v, "manufacturing", inst["ops"], inst["auth"], inst["doc"], "c251")
     try:
-        who = inst["auth"]["principals"][0]["id"]
+        who = "nobody-1"  # holds no grant: nothing here can commit, so the oracle's initial state stays valid
         bad = []
         for n, a in enumerate(_mutations(random.Random(7))):
             res = env.dep.constitutional(env.token(who), a, f"s{n}")
             is_schema = res.status == "INVALID" and res.body.get("reason") == "schema"
-            if is_schema != (K.check_action(a) is not None):
-                bad.append((a, res.status, res.body))
+            exp = env.C0.decide_action(who, a, 1, 0)
+            if is_schema != (exp.reason == "schema") or (not is_schema and (res.status, res.body.get("reason")) != (exp.status, exp.reason)):
+                bad.append((a, res.status, res.body, exp.status, exp.reason))
         assert not bad, bad[:5]
     finally:
         env.close()
