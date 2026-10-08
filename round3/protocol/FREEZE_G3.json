@@ -1,6 +1,6 @@
 {
   "recorded_at": "2026-10-08",
-  "note": "Gate 3 frozen design (tag r3-g3-freeze), recorded before any Gate 3 implementation. Evaluators compare against these hashes. Updated 2026-10-08 for errata G3-E1..E11 (before any Gate 3 builder). v3 authority fixtures (G3-E1, P1e-b b258924) added. Errata G3-E12..E16 and spec/governance fixtures added.",
+  "note": "Gate 3 frozen design (tag r3-g3-freeze), recorded before any Gate 3 implementation. Evaluators compare against these hashes. Updated 2026-10-08 for errata G3-E1..E11 (before any Gate 3 builder). v3 authority fixtures (G3-E1, P1e-b b258924) added. Errata G3-E12..E16 and spec/governance fixtures added. lowproj.py (H26 canonical low projection, ORACLE-AND-HARNESS-G3 B1) added at integration.",
   "files": {
     "spec/protections/PROT-H25.md": "65eb21b360da84a9d229cf2c500c473be6a1ad86aa6d1b8d56b9313e452e1a29",
     "spec/protections/PROT-H26.md": "e02d2a98eda47a5683b717de1d979d25f23efe9775a5646364f18c93dc0f393d",
@@ -15,6 +15,7 @@
     "spec/governance/hierarchical.manufacturing.json": "6ff92d4c387828ab90690dc587d843cc472acf3965f54f91a9ef7b5e7e95d78c",
     "spec/governance/hierarchical.project.json": "05f49b805a85aa9ba9bb42a041e915bf6bc71aae562c06c59ad4dce8d3b2f7d0",
     "spec/governance/polycentric.manufacturing.json": "12a73ccace473ce85ad82afe1ab2eac9f2cb3e09c5378d2332788b90ce35912c",
-    "spec/governance/polycentric.project.json": "6932d717bb02459bb4afada5bdadbc404e5591d8d6406c7b6f50524b063852bd"
+    "spec/governance/polycentric.project.json": "6932d717bb02459bb4afada5bdadbc404e5591d8d6406c7b6f50524b063852bd",
+    "src/r3_oracle/lowproj.py": "40a84107a8dfc2bcb4ee996221856fec68a256eb459066fb809bbbc03d002968"
   }
 }
