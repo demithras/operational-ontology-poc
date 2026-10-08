@@ -1,0 +1,84 @@
+{
+  "reviewed_by": "orchestrator (equivalence auditor), 2026-10-08",
+  "basis": "G3-E24, G3-E29",
+  "round3_commit_reviewed": "5ee1cc7",
+  "resolutions": [
+    {
+      "variant": "paladin",
+      "file": "src/paladin/boot.py",
+      "scope": "boot",
+      "text": "if domain == \"project\":",
+      "reason": "G3-E24(1)(i): domain-name dispatch wiring the effect adapters (manufacturing: external-call adapters built from the ops spec effects; project: git adapter attach); reads no authority."
+    },
+    {
+      "variant": "paladin",
+      "file": "src/paladin/boot.py",
+      "scope": "boot",
+      "text": "if domain == \"manufacturing\":",
+      "reason": "G3-E24(1)(i): domain-name dispatch wiring the effect adapters (manufacturing: external-call adapters built from the ops spec effects; project: git adapter attach); reads no authority."
+    },
+    {
+      "variant": "paladin",
+      "file": "src/paladin/boot.py",
+      "scope": "bindings_for",
+      "text": "if domain == \"manufacturing\":",
+      "reason": "G3-E24(1)(i) + G3-E29(a): selects which domain logic package to bind; since r3-g3-fix6-paladin (2bac298) those packages read no relation, threshold or principal (ops-spec rules evaluated as data by paladin.opsrules). Disclosed: constraints.no_effect_without_approval was renamed effectless_statuses_hold in that commit; reviewed - it checks only that DENIED/PENDING decisions have no ActionExecution link, no authority read."
+    },
+    {
+      "variant": "paladin",
+      "file": "src/paladin/boot.py",
+      "scope": "<module>",
+      "text": "DOMAINS = {\"manufacturing\": {\"ir\": \"domains/manufacturing/ir.json\"}, \"project\": {\"ir\": \"domains/project/ir.v3.json\"}}",
+      "reason": "G3-E24(1)(i): DOMAINS maps the domain name to its IR file path (data); reads no authority."
+    },
+    {
+      "variant": "paladin",
+      "file": "src/paladin/sovview.py",
+      "scope": "<module>",
+      "text": "LEVELS = {\"none\": 0, \"own\": 1, \"scalars\": 2, \"actors\": 3}",
+      "reason": "G3-E29(b): 'none' is the P1e provenance level, a key of the protocol LEVELS table, not a role."
+    },
+    {
+      "variant": "conventional",
+      "file": "src/conventional/lowview.py",
+      "scope": "ViewBuilder._reveal",
+      "text": "if rv[\"provenance\"] != \"none\":",
+      "reason": "G3-E29(b): compares a disclosure rule's provenance field with the P1e level 'none', not a role."
+    },
+    {
+      "variant": "conventional",
+      "file": "src/conventional/lowview.py",
+      "scope": "<module>",
+      "text": "PROV_RANK = {\"none\": 0, \"own\": 1, \"scalars\": 2, \"actors\": 3}",
+      "reason": "G3-E29(b): 'none' is the P1e provenance level, a key of the protocol PROV_RANK table, not a role."
+    },
+    {
+      "variant": "conventional",
+      "file": "src/conventional/policy.py",
+      "scope": "PolicyEngine.exposed_operations",
+      "text": "any(x[\"agent\"] == subject and x[\"on_behalf_of\"] == delegator and op in x[\"operations\"]",
+      "reason": "G3-E29(b): 'agent' is the P1 delegation record key x['agent'], not a role name."
+    },
+    {
+      "variant": "conventional",
+      "file": "src/conventional/policy.py",
+      "scope": "PolicyEngine.decide",
+      "text": "if not any(x[\"agent\"] == subject and x[\"on_behalf_of\"] == on_behalf_of and op in x[\"operations\"]",
+      "reason": "G3-E29(b): 'agent' is the P1 delegation record key x['agent'], not a role name."
+    },
+    {
+      "variant": "conventional",
+      "file": "src/conventional/service.py",
+      "scope": "Service._ctx",
+      "text": "ID_READS if self.domain == \"project\" else {})",
+      "reason": "G3-E24(1)(i): selects the project id-generator read config ID_READS={'new_experiment_id': 'Experiment'}; reads no authority."
+    },
+    {
+      "variant": "conventional",
+      "file": "src/conventional/service.py",
+      "scope": "Service.__init__",
+      "text": "self._helpers = {\"manufacturing\": MFG, \"project\": PROJ}[domain]",
+      "reason": "G3-E24(1)(i): selects the domain's ops-spec helper implementation module (helpers_mfg / helpers_proj: reads only, no authority vocabulary)."
+    }
+  ]
+}

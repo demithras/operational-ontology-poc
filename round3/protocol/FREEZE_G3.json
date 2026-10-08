@@ -16,6 +16,7 @@
     "spec/governance/hierarchical.project.json": "05f49b805a85aa9ba9bb42a041e915bf6bc71aae562c06c59ad4dce8d3b2f7d0",
     "spec/governance/polycentric.manufacturing.json": "12a73ccace473ce85ad82afe1ab2eac9f2cb3e09c5378d2332788b90ce35912c",
     "spec/governance/polycentric.project.json": "6932d717bb02459bb4afada5bdadbc404e5591d8d6406c7b6f50524b063852bd",
-    "src/r3_oracle/lowproj.py": "40a84107a8dfc2bcb4ee996221856fec68a256eb459066fb809bbbc03d002968"
+    "src/r3_oracle/lowproj.py": "40a84107a8dfc2bcb4ee996221856fec68a256eb459066fb809bbbc03d002968",
+    "spec/gate3/DOMAIN-AUDIT-RESOLUTIONS.json": "27fdded4bcd9cb3325602fdd8077ea60d19084297b5a62c3c062e7f1f8ccf958"
   }
 }
