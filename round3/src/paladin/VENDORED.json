@@ -278,11 +278,12 @@
    "vendored_sha256": "e19c31aa9ca81aab9deec4229c7ffbe1f31fbf00c876aeae71322340d60ccb02"
   },
   "engine/gates.py": {
-   "current_sha256": "d25c12d21a3286f257a5b1d9c167e724225f19c1288bcb43f98a5fc1cc2264e6",
+   "current_sha256": "10801b75903a839f46a2d82323a73acd06897fe4c768c601eb76b0e19c3c6470",
    "original": "round2/src/eoo_engine/gates.py",
    "original_sha256": "009c2c6fff52f3e7710a3f7a9b0f7f2e78deaab658964312c7a3ce138145fcd2",
    "patches": [
-    "V2"
+    "V2",
+    "V3"
    ],
    "vendored_sha256": "009c2c6fff52f3e7710a3f7a9b0f7f2e78deaab658964312c7a3ce138145fcd2"
   },
@@ -315,10 +316,12 @@
    "vendored_sha256": "ce4c62dd3c7b0e20f98a29e64e10f9c06829cd6f7361cbee19a5723a91ecd463"
   },
   "engine/pipeline.py": {
-   "current_sha256": "74634e2e08f882b8c97484ba2fa93adf056eaef257f9cd3d297cf52f5871cac2",
+   "current_sha256": "1af8f60e31c517123e7aabdb532e68c478e24459e3b8273f57fd8c2df7530ef6",
    "original": "round2/src/eoo_engine/pipeline.py",
    "original_sha256": "74634e2e08f882b8c97484ba2fa93adf056eaef257f9cd3d297cf52f5871cac2",
-   "patches": [],
+   "patches": [
+    "V3"
+   ],
    "vendored_sha256": "74634e2e08f882b8c97484ba2fa93adf056eaef257f9cd3d297cf52f5871cac2"
   },
   "engine/provenance.py": {

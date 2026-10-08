@@ -22,8 +22,8 @@ def anchor(tmp_path_factory):
 @pytest.fixture
 def inv(tmp_path, anchor):
     r = mk(tmp_path, history=True, anchor=anchor.client())
-    res = r.dep.direct(r.token("researcher-1"), "start_run", {"hypothesis": "H-NOPE"}, on_behalf_of=None, request_id="inv1")
-    assert res.status == "INVALID", res  # nonexistent target of an AUTHORISED caller: INVALID (G3 check order: authority is decided first, PROT-H26 s3.2)
+    res = r.dep.direct(r.token("researcher-1"), "evaluate_hypothesis", {"hypothesis": "H-NOPE"}, on_behalf_of=None, request_id="inv1")
+    assert res.status == "INVALID", res  # nonexistent target of an AUTHORISED caller, no deny rule fires: INVALID (G3-E17 order: deny rules -> existence)
     assert create(r, "researcher-1", None, "ok1").status == "OK"
     return r
 

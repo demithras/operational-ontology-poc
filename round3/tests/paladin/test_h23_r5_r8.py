@@ -77,27 +77,29 @@ def test_r6_preconditions_use_the_canonical_world_at_commit(mfg):
     mfg.store.handle("seed").update("InventoryLot", "LOT-C-PX900", {"qualityStatus": "QUARANTINE"})  # world changes under us
     assert zero(mfg, lambda: mfg.dep.direct(t, "transfer_inventory", {**TR, "quantity": 61}, request_id="r2")).status == "DENIED"  # policy hard deny (quarantine)
     mfg.store.handle("seed").update("InventoryLot", "LOT-C-PX900", {"qualityStatus": "OK", "onHand": 10})
-    assert zero(mfg, lambda: mfg.dep.direct(t, "transfer_inventory", {**TR, "quantity": 62}, request_id="r3")).status == "INVALID"
+    assert zero(mfg, lambda: mfg.dep.direct(t, "transfer_inventory", {**TR, "quantity": 62}, request_id="r3")).status == "DENIED"  # G3-E17: a deny rule outranks a failing precondition
 
 
 def test_r6_target_existence_and_stale_evidence(mfg, proj):
     t = mfg.token("planner-1")
-    assert zero(mfg, lambda: mfg.dep.direct(t, "transfer_inventory", {**TR, "part": "PX-NOPE"}, request_id=mfg.rid())).status == "INVALID"
+    assert zero(mfg, lambda: mfg.dep.direct(t, "transfer_inventory", {**TR, "part": "PX-NOPE"}, request_id=mfg.rid())).status == "DENIED"   # G3-E17: the no-evidence deny rule fires before target existence (oracle: DENIED_RULE)
     # G3 check order (PROT-H26 s3.2): authority is world-independent and precedes existence, so a nonexistent warehouse the
     # planner holds no relation on is DENIED (hidden == absent), not INVALID
     assert zero(mfg, lambda: mfg.dep.direct(t, "transfer_inventory", {**TR, "source_warehouse": "WH-NOPE"}, request_id=mfg.rid())).status == "DENIED"
     mfg.clock.advance(6)  # evidence snapshot was observed at tick 0: older than the 5-tick window
     assert zero(mfg, lambda: mfg.dep.direct(mfg.token("planner-1"), "transfer_inventory", TR, request_id="late")).status == "DENIED"  # stale-evidence policy
     assert zero(proj, lambda: proj.dep.direct(proj.token("researcher-1"), "start_run", {"hypothesis": "H-NOPE"},
-                                              request_id="p1")).status == "INVALID"
+                                              request_id="p1")).status == "DENIED"   # G3-E17: deny rule (freeze hash) before existence
+    assert zero(proj, lambda: proj.dep.direct(proj.token("researcher-1"), "evaluate_hypothesis", {"hypothesis": "H-NOPE"},
+                                              request_id="p2")).status == "INVALID"   # no deny rule fires: existence
 
 
 def test_r6_project_lifecycle_is_checked_against_world_state(proj):
     t = proj.token("researcher-1")
-    assert zero(proj, lambda: proj.dep.direct(t, "start_run", {"hypothesis": "H-A"}, request_id="p1")).status == "INVALID"  # DRAFT
+    assert zero(proj, lambda: proj.dep.direct(t, "start_run", {"hypothesis": "H-A"}, request_id="p1")).status == "DENIED"  # DRAFT: legal-lifecycle deny rule (G3-E17)
     assert proj.dep.direct(t, "preregister_hypothesis", {"hypothesis": "H-A", "freeze_hash": "a" * 64}, request_id="p2").status == "OK"
     proj.store.handle("seed").update("Hypothesis", "H-A", {"phase": "EVALUATED"})  # moved on behind our back
-    assert zero(proj, lambda: proj.dep.direct(t, "start_run", {"hypothesis": "H-A"}, request_id="p3")).status == "INVALID"
+    assert zero(proj, lambda: proj.dep.direct(t, "start_run", {"hypothesis": "H-A"}, request_id="p3")).status == "DENIED"  # EVALUATED: deny rule (G3-E17)
 
 
 # ---- R7 explicit outcomes ------------------------------------------------------------------------------------------

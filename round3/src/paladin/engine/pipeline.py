@@ -68,10 +68,9 @@ def run_gates(eng, spec, rec: dict, principal: Any) -> dict:
     rec["gates"].append(gates.gate("identity", True, who.pid))
     if spec.idempotency == "required" and idempotency_key is None:
         return _deny(eng, rec, gates.gate("request", False, "idempotency key required"))
-    problems = gates.check_inputs(eng, spec, plain_inputs)
+    problems = gates.check_inputs(eng, spec, plain_inputs, existence=False)   # G3-E17: target existence is checked after the deny rules
     if problems:
         return _deny(eng, rec, gates.gate("inputs", False, problems))
-    rec["gates"].append(gates.gate("inputs", True))
     resources = gates.resources_of(eng, spec, plain_inputs)
     st = eng.state()
     rec["base_versions"] = {repr((r.actual, r.key)): st.version(r.actual, r.key) for r in resources if r.key is not None
@@ -86,11 +85,20 @@ def run_gates(eng, spec, rec: dict, principal: Any) -> dict:
         return _deny(eng, rec, gates.gate("authority", False, dec.to_plain()))
     rec["gates"].append(gates.gate("authority", True, dec.to_plain()))
     ctx = gates.make_ctx(eng, spec, rec)
+    # G3-E17: deny business rules -> existence (inputs gate, above) -> preconditions -> approvals. A clean policy DENY is
+    # decided before the preconditions; a policy evaluation ERROR still waits for them (V3).
+    verdict, pol = gates.evaluate_policies(eng, spec, ctx)
+    if verdict == "DENIED" and not pol["detail"]["errors"]:
+        rec["gates"].append(pol)
+        return eng.record(rec, "DENIED", note="denied at policy")
+    problems = gates.check_inputs(eng, spec, plain_inputs)   # E-6 target existence (G3-E17: after deny rules, before preconditions)
+    if problems:
+        return _deny(eng, rec, gates.gate("inputs", False, problems))
+    rec["gates"].append(gates.gate("inputs", True))
     pre = gates.run_logic_gate("preconditions", [(t, eng.bindings.get("precondition", t)) for t in spec.preconditions], ctx)
     if not pre["passed"]:
         return _deny(eng, rec, pre)
     rec["gates"].append(pre)
-    verdict, pol = gates.evaluate_policies(eng, spec, ctx)
     rec["gates"].append(pol)
     if verdict == "DENIED":
         return eng.record(rec, "DENIED", note="denied at policy")

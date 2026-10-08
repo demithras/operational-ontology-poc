@@ -80,9 +80,7 @@ class SovMixin:
     def list_links(self, sub: str, ref, link_type) -> CallResult:
         view = self.view_for(sub)
         if not isinstance(ref, str) or ref not in view.objects:
-            return NOT_FOUND
-        if link_type not in self.link_names:
-            return CallResult("INVALID", {"reason": "unknown_link_type"})
+            return CallResult("OK", {"out": [], "in": []})   # G3-E19: absent == hidden == empty
         return CallResult("OK", {"out": sorted(b for lt, a, b in view.links if lt == link_type and a == ref),
                                  "in": sorted(a for lt, a, b in view.links if lt == link_type and b == ref)})
 
@@ -94,6 +92,11 @@ class SovMixin:
         view = self.view_for(sub)
         objects = {split(r): {"props": dict(p), "ver": 1} for r, p in view.objects.items()}
         links = {(lt, split(a), split(b)): {"props": {}, "ver": 1} for lt, a, b in view.links}
+        rd = next((r for r in self.ops_spec["reads"] if r["name"] == name), None)
+        for i in (rd["inputs"] if rd else ()):   # G3-E20/E19: an absent (== hidden) resource key answers as an object with no facts
+            v = args.get(i["name"])
+            if i["type"] == "resource" and isinstance(v, str) and v.strip() != "" and (i["resource_type"], v) not in objects:
+                objects[(i["resource_type"], v)] = {"props": {}, "ver": 1}
         self.eng.store.current = State(self.eng.model, objects, links)
         try:
             return CallResult("OK", {"value": plain(self.eng.call_function(name, json.loads(json.dumps(args)), principal=sub))})

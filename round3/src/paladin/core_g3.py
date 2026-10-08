@@ -138,6 +138,8 @@ class G3Mixin:
         fp = fingerprint(sub, "constitutional", action)
         with self._guard():
             led = self.ledger.get(rid)
+            if action["kind"] == "act" or (action["kind"] == "execute" and self._runs_via_core(sub, action)):
+                led = None   # H25-E: act/execute commit through run(), which stores its own fingerprint and replays itself (PROT-H23 R5)
             if led is not None:
                 if led["state"] != "COMMITTED":
                     return CallResult("UNAVAILABLE", {"reason": "request in flight"})
@@ -150,6 +152,10 @@ class G3Mixin:
                 return getattr(self, "_g_" + action["kind"])(sub, action, rid, fp)
             except Rollback as r:
                 return CallResult(r.result.status, {"reason": r.result.body["reason"]})
+
+    def _runs_via_core(self, sub: str, action: dict) -> bool:
+        c = self.book.cases.get(action["case"]) if self.book is not None else None
+        return c is not None and sub in self.book.seers(c) and c.op != DECLARE
 
     def _g_commit(self, sub, rid, fp, kind, build) -> CallResult:
         """One world transaction with exactly one `governance` mark; refusals (Rollback) write nothing."""

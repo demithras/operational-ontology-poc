@@ -30,10 +30,12 @@ def test_check_order_on_mutating_calls(rig):
     b = d.direct(rig.tok("viewer-1"), "start_run", {"hypothesis": "H-NOPE"}, request_id="o5")
     assert (a.status, a.body) == (b.status, b.body) == ("DENIED", {"reason": "authority"})
     # existence last, for an authorised caller
-    c = d.direct(rig.tok("researcher-1"), "start_run", {"hypothesis": "H-NOPE"}, request_id="o6")
+    c = d.direct(rig.tok("researcher-1"), "flag_orphan_component", {"component": "C-NOPE"}, request_id="o6")
     assert (c.status, c.body) == ("INVALID", {"reason": "not_found"})
+    c2 = d.direct(rig.tok("researcher-1"), "start_run", {"hypothesis": "H-NOPE"}, request_id="o6b")   # a deny rule fires on it first
+    assert (c2.status, c2.body) == ("DENIED", {"reason": "policy"})
     e = d.direct(rig.tok("researcher-1"), "start_run", {"hypothesis": "H-A"}, request_id="o7")
-    assert (e.status, e.body) == ("INVALID", {"reason": "preconditions"})        # rules after existence; reason class only
+    assert (e.status, e.body) == ("DENIED", {"reason": "policy"})        # G3-E17: deny rules -> existence -> preconditions; here a deny rule fires
 
 
 def test_refusal_bodies_carry_only_a_reason(rig):

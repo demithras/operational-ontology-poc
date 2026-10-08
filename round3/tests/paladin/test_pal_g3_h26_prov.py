@@ -45,7 +45,11 @@ def test_hidden_decision_is_answered_as_unknown(rig):
     hidden = rig.dep.prov_decision(rig.tok("viewer-1"), "d1")
     absent = rig.dep.prov_decision(rig.tok("viewer-1"), "no-such-decision")
     assert (hidden.status, hidden.body) == (absent.status, absent.body) == ("INVALID", {"reason": "unknown_decision"})
-    assert rig.dep.prov_object(rig.tok("viewer-1"), "Evidence:EV-C1").body == {"reason": "not_found"}
+    hid = rig.dep.prov_object(rig.tok("viewer-1"), "Evidence:EV-C1")   # G3-E19: hidden == absent == empty, OK
+    gone = rig.dep.prov_object(rig.tok("viewer-1"), "Evidence:NO-SUCH")
+    assert (hid.status, hid.body) == (gone.status, gone.body) == ("OK", {"partial": True, "decisions": []})
+    ll = rig.dep.list_links(rig.tok("viewer-1"), "Evidence:NO-SUCH", "HAS_RIVAL")
+    assert (ll.status, ll.body) == ("OK", {"out": [], "in": []})
     assert rig.dep.prov_object(rig.tok("researcher-2"), "Evidence:EV-C1").body["decisions"] == ["d1"]
 
 
