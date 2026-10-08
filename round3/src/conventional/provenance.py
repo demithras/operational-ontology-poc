@@ -151,6 +151,7 @@ class Provenance:
             env = {"v": 1, "stream": self.stream, "seq": seq, "prev": prev, "decision": decision, "artifacts": arts}
             raw = canonical_bytes(env)
             receipt = self.anchor.append(self.stream, seq, decision["decision_id"], sha(raw))
+            self.history.put(f"decidx/{seq:010d}", canonical_bytes(self._index(dc, decision["decision_id"], seq)))
             self.history.put(f"receipt/{seq:010d}", canonical_bytes(receipt))
             self.history.put(f"env/{seq:010d}", raw)
             if "digest_omission" in self.mutants:
@@ -160,6 +161,24 @@ class Provenance:
             return CallResult("UNAVAILABLE", {"reason": "anchor_unavailable"})
         except (TypeError, ValueError):
             return CallResult("INVALID", {"reason": "unserialisable_decision"})
+
+    def _index(self, dc: DecisionCtx, did: str, seq: int) -> dict:
+        """Low-channel index (PROT-H26 s4): which resource objects / capability edge a decision touched. Not evidence."""
+        from .models_gen import OPERATION_MODELS
+        refs, edge, pure = [], None, False
+        model = OPERATION_MODELS.get(dc.operation) if isinstance(dc.operation, str) else None
+        if dc.kind in ("call_tool", "direct", "approve") and model is not None:
+            try:
+                ins = model.from_args(dc.args).inputs()
+                refs = sorted(f"{model.RESOURCES[n]}:{v}" for n, v in ins.items() if n in model.RESOURCES)
+                pure = all(n in model.RESOURCES for n in ins)
+            except Exception:  # noqa: BLE001 - unparseable args: no resource refs
+                refs = []
+        elif dc.kind == "delegate" and isinstance(dc.args, dict):
+            edge = dc.args.get("id")
+        elif dc.kind == "revoke" and isinstance(dc.args, str):
+            edge = dc.args
+        return {"id": did, "seq": seq, "refs": refs, "edge": edge, "pure_refs": pure}
 
     def anchored(self, rid: str) -> bool:
         try:

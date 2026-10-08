@@ -298,6 +298,27 @@ class GovernanceOps:
         body = self._run_case_op(g, c, d)
         return body, K.governance_mark("act", emergency=eid, operation=op, args=args), {}
 
+    def emergency_ops(self, sub: str) -> set[str]:
+        """Operations an ACTIVE emergency lets `sub` perform now (part of the tools() upper bound, PROT-H26 3.4)."""
+        if self._proc is None or self.crashed:
+            return set()
+        h = self._factory("conventional-service")
+        try:
+            self._book.refold(h, self._gstore)
+            g = SimpleNamespace(tick=self._clock.now(), ft=self._first_tx(h, SimpleNamespace(tick=self._clock.now())))
+            out: set[str] = set()
+            for c in self._book.cases.values():
+                if c.operation == EMERGENCY_OP and c.args["emergency"] not in self._book.ends:
+                    em = self._emergency(g, c.args["emergency"])
+                    if em and sub in em[0].args["grantees"] and (g.tick < em[0].args["expires_at"]
+                                                                  or "emergency_no_expiry" in self._mutants):
+                        out |= set(em[0].args["scope"]["operations"])
+            return out
+        except (sqlite3.Error, LedgerUnresolved):
+            return set()
+        finally:
+            h.close()
+
     def _g_end(self, g, a):
         eid = a["emergency"]
         found = None if eid in self._book.ends else self._emergency(g, eid)

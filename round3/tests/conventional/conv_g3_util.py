@@ -37,6 +37,7 @@ class G3Rig:
     variant: object
     n: int = 0
     hist: object = None
+    anchor_proc: object = None
 
     def token(self, sub: str, ttl: int = 100000) -> str:
         return self.idp.issue(sub, AUDIENCE, ttl, self.clock)
@@ -82,8 +83,20 @@ def make_g3(tmp_path, model="hierarchical", domain="manufacturing", mutants=(), 
         h.link(lk["link_type"], lk["src"], lk["dst"])
     h.close()
     idp, variant = IdentityProvider("test-secret-123"), ConventionalVariant(mutants)
-    dep = variant.deploy(domain, store.handle_factory(), idp.verifier(), ops, auth, clock, None, None, None, gov)
-    return G3Rig(domain, store, store.reader(), clock, idp, dep, ops, auth, gov, variant)
+    hist = anc = proc = None
+    if history:
+        import os
+        import tempfile
+        from r3_shared.anchor import start_anchor
+        from r3_shared.histstore import HistoryStore
+        tmp = tempfile.mkdtemp(prefix="g3c")
+        hist = HistoryStore(str(tmp_path / "hist.db"))
+        proc = start_anchor(os.path.join(tmp, "anchor"), os.path.join(tmp, "s"))
+        anc = proc.client()
+    dep = variant.deploy(domain, store.handle_factory(), idp.verifier(), ops, auth, clock, None, hist, anc, gov)
+    rig = G3Rig(domain, store, store.reader(), clock, idp, dep, ops, auth, gov, variant, hist=hist)
+    rig.anchor_proc = proc
+    return rig
 
 
 def refused(res, status, reason):
@@ -96,3 +109,18 @@ def no_effect_refusal(rig, fn, status, reason):
     res = fn()
     refused(res, status, reason)
     assert diff(before, rig.snap()) == [] and len(rig.reader.log()) == head, "a refused action left world effects"
+
+
+def canon(res) -> str:
+    """Canonical bytes of one observation (status + full body); lists of descriptors/events are canonicalised too."""
+    if isinstance(res, list):
+        return json.dumps([{"name": t.name, "input_schema": t.input_schema} for t in res], sort_keys=True)
+    return json.dumps({"status": res.status, "body": res.body}, sort_keys=True)
+
+
+def vary(rig, ref: str, **props):
+    """Change protected facts in the world store as ONE autocommit transaction (equal schedule shape in paired worlds)."""
+    t, k = ref.split(":", 1)
+    h = rig.store.handle("seed")
+    h.update(t, k, props)
+    h.close()

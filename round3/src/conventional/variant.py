@@ -111,6 +111,26 @@ class ConventionalDeployment:
     def case_state(self, case_id):
         return self.service.case_state(case_id)
 
+    @_safe
+    def subscribe(self, token, spec) -> CallResult:
+        return self.service.subscribe(token, spec)
+
+    @_safe
+    def poll(self, token, sub) -> CallResult:
+        return self.service.poll(token, sub)
+
+    @_safe
+    def prov_decision(self, token, decision_id) -> CallResult:
+        return self.service.prov_decision(token, decision_id)
+
+    @_safe
+    def prov_object(self, token, ref) -> CallResult:
+        return self.service.prov_object(token, ref)
+
+    @_safe
+    def authority_used_as(self, token, request_id) -> CallResult:
+        return self.service.authority_used_as(token, request_id)
+
     def set_dependency_down(self, adapter: str, down: bool = True) -> None:
         (self.service.unavailable.add if down else self.service.unavailable.discard)(adapter)
 

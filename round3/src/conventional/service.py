@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import contextlib
 import copy
+import json
 import sqlite3
 import threading
 import time
@@ -29,6 +30,8 @@ from .models_gen import OPERATION_MODELS
 from .abort import _Abort
 from .authority_ops import AuthorityOps
 from .govsvc import GovernanceOps
+from .lowevents import LowEvents
+from .lowprov import LowProv
 from .lowreads import LowReads
 from .histledger import HistLedger, LedgerUnresolved
 from .pdp import Pdp
@@ -61,7 +64,7 @@ class BoundRequest:
     fingerprint: str
 
 
-class Service(AuthorityOps, GovernanceOps, LowReads):
+class Service(AuthorityOps, GovernanceOps, LowReads, LowProv, LowEvents):
     def __init__(self, domain: str, factory: Callable, verifier, ops_spec: dict, auth_spec: dict, clock,
                  audience: str = "conventional", mutant_switches: frozenset[str] = frozenset(),
                  history=None, anchor=None, governance: dict | None = None):
@@ -110,6 +113,7 @@ class Service(AuthorityOps, GovernanceOps, LowReads):
         finally:
             h.close()
         self._low_init()
+        self._ev_init()
         self.stream = self._init_stream(domain)
         self.prov = Provenance(history, anchor, self.stream, self._spec, clock, self._mutants) \
             if history is not None and anchor is not None else None
@@ -149,6 +153,7 @@ class Service(AuthorityOps, GovernanceOps, LowReads):
             self.crashed, self._armed = True, None
             self._mem_ledger = {}
             self._policy = None  # in-memory policy is lost
+            self._subs = {}
 
     def restart(self) -> None:
         with self._lock:
@@ -195,6 +200,10 @@ class Service(AuthorityOps, GovernanceOps, LowReads):
         return self._policy
 
     @property
+    def op_defs(self) -> dict:
+        return self._ops
+
+    @property
     def operations(self) -> list[str]:
         return list(self._ops)
 
@@ -231,7 +240,22 @@ class Service(AuthorityOps, GovernanceOps, LowReads):
                 return CallResult("UNAVAILABLE", {"reason": "dependency_unavailable"})
             except LedgerUnresolved:
                 return CallResult("UNAVAILABLE", {"reason": "history_unresolved"})
+            if self.mutant("error_detail_leak") and res.status in ("DENIED", "INVALID"):
+                res = self._leak_detail(res, operation, args)
             return self._provenance(dc, res)
+
+    def _leak_detail(self, res: CallResult, operation, args) -> CallResult:
+        """BUG (error_detail_leak mutant): the refusal body carries the underlying rule detail incl. the object's values."""
+        model = OPERATION_MODELS.get(operation) if isinstance(operation, str) else None
+        if model is None or not isinstance(args, dict):
+            return res
+        h = self._factory(WRITER)
+        try:
+            vals = {f"{model.RESOURCES[n]}:{v}": (h.get(model.RESOURCES[n], v) or {}).get("props")
+                    for n, v in args.items() if n in model.RESOURCES and isinstance(v, str)}
+        finally:
+            h.close()
+        return CallResult(res.status, {**res.body, "detail": json.dumps(vals, sort_keys=True)})
 
     def _schema_valid(self, dc: DecisionCtx) -> bool:
         """E-8: schema validity from the ops-spec input schema (never from a reason string)."""
@@ -421,7 +445,8 @@ class Service(AuthorityOps, GovernanceOps, LowReads):
             # request_id=None is accepted but has NO replay protection (documented, PROT-H23-A8 audit item b)
             self._store.idem_put(h, b.request_id, b.fingerprint, {
                 "status": "OK", "body": body,
-                "used": {"authority_version": self._policy.digest, "path": list(path), "on_behalf_of": b.on_behalf_of}})
+                "used": {"authority_version": self._policy.digest, "path": list(path), "on_behalf_of": b.on_behalf_of,
+                     "subject": b.subject}})
         return CallResult("OK", body)
 
     def _consume_approval(self, h, tx, op: dict, b: BoundRequest, rule: str) -> None:
