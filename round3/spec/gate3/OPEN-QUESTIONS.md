@@ -99,3 +99,23 @@ G3-E9 Hierarchy kinds: chain = every body has <= 1 superior and <= 1 subordinate
       has >= 2 superiors; none = no superior relations.
 G3-E10 Static-rule parity (P1e-9) is checked against the real r3_oracle by the H25 harness builder as a conformance test.
 G3-E11 read() redefinition (ruling Q12): bodies follow the P1e-5 forms; existing H23 tests (reading body["props"]) remain valid.
+G3-E12 (author decision 2026-10-08, before any G3 measurement) Declared low D5: capability-edge ids (PROT-H24 s1) are
+      caller-chosen in ONE public namespace. A delegate whose edge id collides with ANY existing edge (visible or hidden)
+      answers INVALID `duplicate_edge`; the set of occupied edge ids is low for every principal. Nothing else about a
+      hidden edge (issuer, child, parent, scope, expiry, revocation) is low. Recorded as a scope limit in the H26 SUMMARY.
+G3-E13 PROT-H26 via-rule coverage: s1.2 is binding - a via rule covers T:k when a link lt connects T:k to an
+      existence-visible T2 object, whether or not that link itself is visible; s2.1 "through visible links" is read as
+      "through links to already-visible objects". (Under the literal s2.1 reading two frozen project rules could never fire.)
+G3-E14 H25 points PROT-H25 leaves open - the oracle's choices (r3_oracle at r3-g3-h25-harness, listed in BUILD_NOTES
+      "G3 H25 harness") are binding: (1) `end` by a non-member of the declaring body -> DENIED (any reason); (2) a lapse is
+      fixed at propose_tick + after (pure logical time; the recording transaction may come later); (3) specialis across
+      multi-matter bodies as implemented by the oracle; (4) deciding matter = the first covering matter naming the
+      winner; (5) a case no longer governed after set_governance -> AWAITING; (6) execute of a declare case is undefined
+      and never generated; (7) an ordinary governed request: valid + authorised -> case_required, otherwise any refusal;
+      (8) commit point = the governance mark's seq; (9) a refusal that some real-time order would have let commit =
+      progress_loss (blocks SUPPORTED), not a mismatch. Variants align; reasons stay informational where the oracle
+      accepts "any reason".
+G3-E15 Both variants declare every new HistoryStore record prefix they add in Gate 3 (governance cases, decision index,
+      governance documents) in HISTORY_LAYOUT, so the H27 tamper discovery keeps full coverage.
+G3-E16 Scope note: the H25 renaming audit renames principal, body and model ids; relation names are ops-spec vocabulary
+      and are not renamed (recorded in the H25 SUMMARY).
