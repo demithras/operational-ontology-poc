@@ -143,3 +143,18 @@ G3-E23 (orch, 2026-10-08, before any H26 measurement) list_links with a link_typ
       exactly as the oracle low view (r3_oracle/disclosure_reads.expected_list_links): OK {"out": [], "in": []}, never
       INVALID. Link types are public, so either answer is noninterferent; one form is fixed for fairness (the oracle's).
       Found in review: paladin answers OK (fix2), conventional INVALID unknown_link_type.
+G3-E24 (orch, 2026-10-08, after dev1, before any official H25 run) A5(c) auditor review, made explicit and symmetric:
+      (1) The scan's hit list is reviewed by the equivalence auditor BEFORE the official run and the review is frozen as
+      spec/gate3/DOMAIN-AUDIT-RESOLUTIONS.json: entries keyed by (variant, file, normalised source text of the hit line),
+      each with a reason. A hit is resolvable only if it (i) dispatches on a DOMAIN NAME (never a model, body, principal,
+      role or relation id) to select which IR / ops-spec helper / adapter set to load, and (ii) neither the selector nor the
+      selected branch reads principals, roles, grants, tokens, approvals, governance, bodies or disclosure; or (iii) the
+      literal is a role/relation name that coincides with an unrelated vocabulary word and the code does not touch
+      authority (listed with that reason). Every unresolved hit counts as domain_branch; the resolution file cannot be
+      changed after the official run starts. (2) Code guarded by a mutant switch ("<name>" in self.mutants /
+      self.mutant("<name>")) is scanned only in the build where that mutant is active (the A5(d) self-test still runs on
+      the domain_privilege_branch build). (3) DOMAIN_LOGIC_MODULES is read from each variant's declaration where it is
+      declared (variant.py or package __init__), matched by path. (4) The renaming test (A5a) is unchanged and remains
+      the primary criterion; no resolution can excuse a renaming difference.
+      Clarifies PROT-H23 R5 for constitutional `act` (no change, oracle already does this): a replay re-evaluates the
+      authority in force now INCLUDING the emergency grant (active, unexpired, in scope), not base grants only.
