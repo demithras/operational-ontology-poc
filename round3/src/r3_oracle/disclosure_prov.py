@@ -126,7 +126,7 @@ def expected_decision(lv, d: dict) -> dict | None:
     if not actors:
         out["subject"], out["on_behalf_of"] = marker("actor"), marker("actor")
     if not _digest_low(lv, d, "args"):
-        out["args_digest"] = marker("digest")
+        out["args_digest"] = marker("args")  # G3-E25
     if not _digest_low(lv, d, "effect"):
         out["effect_digest"] = marker("digest")
     out["authority_path"] = [e if edge_visible(em, e, lv.observer) else marker("edge") for e in d.get("edge_path", [])]

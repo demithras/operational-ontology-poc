@@ -13,7 +13,7 @@ from r3_oracle.disclosure_prov import decision_low
 from r3_oracle.disclosure_reads import canaries_of
 from r3_shared.governance import load_governance
 
-from . import gen_vary as V, sim
+from . import gen_vary as V, invariants, sim
 from .gen_auth import perturb
 from .gen_plan import build_plan
 
@@ -54,7 +54,7 @@ def one(seed: int, idx: int, kind: str | None = None, domain: str | None = None,
     """Return (pair | None, stats). pair None = skipped after MAX_TRIES (stats counts it)."""
     kind = kind or CYCLE[idx % len(CYCLE)]
     domain = domain or DOMAINS[idx % 2]
-    stats = {"redraws": 0, "d4_attempted": 0, "d4_replaced": 0, "skipped": 0}
+    stats = {"redraws": 0, "d4_attempted": 0, "d4_replaced": 0, "skipped": 0, "invariant_redraws": 0}
     for attempt in range(MAX_TRIES):
         rng = random.Random(f"{seed}:{idx}:{attempt}")
         p = _try(rng, seed, idx, kind, domain, stats, aa)
@@ -89,6 +89,9 @@ def _try(rng, seed, idx, kind, domain, stats, aa):
     if aa:  # A/A control: the same world twice
         d2 = copy.deepcopy(d1)
     s = [_snap_after(base, d, ops, auth) for d in (d1, d2)]
+    if any(invariants.violations(ops, si) for si in s):  # G3-E28: both predicted worlds must be reachable states
+        stats["invariant_redraws"] = stats.get("invariant_redraws", 0) + 1
+        return None
     facts = [_facts(d, info) for d in (d1, d2)]
     lvs = [low_view(si, auth, observer, ops, f) for si, f in zip(s, facts)]
     if lvs[0].to_doc() != lvs[1].to_doc():
@@ -110,7 +113,8 @@ def _try(rng, seed, idx, kind, domain, stats, aa):
         info["D"]["visible"] = True
     hid_edges = [e["id"] for e in d1["edges"]]
     hid_cases = [c["action"]["case"] for c in d1["cases"]]
-    plan, tried, repl = build_plan(rng, ops, auth, observer, s, hidden_refs, own_rids, hid_rids, hid_edges, hid_cases)
+    plan, tried, repl = build_plan(rng, ops, auth, observer, s, hidden_refs, own_rids, hid_rids, hid_edges, hid_cases,
+                                   gov=gov if "G" in kinds else None)
     stats["d4_attempted"] += tried
     stats["d4_replaced"] += repl
     canaries = sorted(canaries_of([s[0], s[1], d1, d2, info]), key=str)

@@ -77,7 +77,7 @@ def run_world(variant, pair: dict, wi: int, tag: str = "w") -> dict:
 def _step(w, pair, tok, sub_id, i, item, record, run):
     m, obs_id = item["m"], pair["observer"]
     lv = w.view(obs_id)
-    prot = set(pair["canaries"]) - canaries_of(lv.to_doc())
+    prot = set(pair["canaries"]) - canaries_of(lv.to_doc()) - canaries_of(item)  # G3-E28: own request echo
     t0 = time.perf_counter()
     res = lab = None
     if m == "tools":

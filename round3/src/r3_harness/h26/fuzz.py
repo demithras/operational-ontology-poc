@@ -82,12 +82,14 @@ def _fuzz_world(w, ops, pair, rng, out, n):
         t = ref.split(":", 1)[0] if ":" in ref else types[0]
         twin = f"{t}:{canary_key(rng)}"
         is_h = ref in hidden
+        req_vals = [ref, twin]  # G3-E28: values the observer itself sent are not exfiltration
         if kind == "mutate":
             op = rng.choice(ops["operations"])
             res_in = [i for i in op["inputs"] if i["type"] == "resource"]
             args = {i["name"]: (ref.split(":", 1)[1] if ":" in ref else "x") if i["type"] == "resource" else rng.choice([1, "s", None, [], {"a": 1}])
                     for i in op["inputs"]}
             targs = {k: (twin.split(":", 1)[1] if v == (ref.split(":", 1)[1] if ":" in ref else "x") else v) for k, v in args.items()}
+            req_vals += [args, targs]
             a, b = [w.request(obs, op["name"], x, f"fz-{c}-{n_}", rng.choice(["direct"]))[0] for n_, x in enumerate((args, targs))]
             pair_res = (a, b) if res_in else None
             if pair_res and is_h and a is not None and b is not None:
@@ -110,7 +112,9 @@ def _fuzz_world(w, ops, pair, rng, out, n):
                         "junk": lambda: g3_call(w.dep, "read_object", tok, rng.choice([None, 5, [], {}]))}[kind]
             did, eid, cid = rng.choice(hid_ids), (w.facts.edges[0]["id"] if w.facts.edges else "hedge-0"), (next(iter(w.facts.cases), "hcase-0"))
             sd = rng.getrandbits(32)
+            req_vals += [did, eid, cid]
             tw = (f"nope-{sd:08x}", f"nope-e-{sd:08x}", f"nope-c-{sd:08x}")
+            req_vals += list(tw)
             state = rng.getstate()
             res, lab = _call(mk(ref, did, eid, cid))
             rng.setstate(state)
@@ -124,5 +128,5 @@ def _fuzz_world(w, ops, pair, rng, out, n):
                     out["existence_leak"].append({"m": kind, "a": _norm(res, ids[:4]), "b": _norm(res2, ids[4:])})
         out["calls"] += 1
         out["per_method"][kind] = out["per_method"].get(kind, 0) + 1
-        if res is not None and prot & canaries_of(res.body):
+        if res is not None and (prot - canaries_of(req_vals)) & canaries_of(res.body):
             out["value_exfiltration"].append({"m": kind})
