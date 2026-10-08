@@ -59,9 +59,9 @@ class LowReads:
 
     def list_links(self, token: str, ref: str, link_type: str) -> CallResult:
         def go(sub, lv, world, h):
-            if link_type not in {x["name"] for x in self._spec["link_types"]}:
-                return CallResult("INVALID", {"reason": "unknown_link_type"})
-            vis = isinstance(ref, str) and lv.has(ref)
+            # G3-E23: an unknown link type is public information; answer as an empty set (never INVALID)
+            known = link_type in {x["name"] for x in self._spec["link_types"]}
+            vis = known and isinstance(ref, str) and lv.has(ref)
             out = sorted(b for lt, a, b in lv.links if vis and lt == link_type and a == ref)
             inn = sorted(a for lt, a, b in lv.links if vis and lt == link_type and b == ref)
             return CallResult("OK", {"out": out, "in": inn})
