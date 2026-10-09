@@ -132,3 +132,8 @@ G4-E19 SUPERSEDES G4-E15 (which contradicted P1f-6 line "evidence = seqs of M (a
       audit.seq values of the matching audit rows A when the system's observability O == full; duplicates are kept (the two
       seq namespaces are not distinguished; oracle and variants compute the identical list); compared with the oracle in C28-2.
       G4-E7 reads: D1 evidence = the conflicting rows by the same rule; U keeps the previous evidence. G4-E6 and G4-E15 are void.
+G4-E20 (amends G4-E19 to match the frozen shared validator r3_shared.outcome.validate_outcome, which rejects repeated values):
+      `evidence` is the sorted list of DISTINCT positive ints from the same rows as G4-E19 (effects.seq of M, plus audit.seq of A
+      when O == full); a value present in both namespaces appears once. Everything else in G4-E19 stands.
+      Static audit note (PROT-H28 s6): the governance-in-adapter scan covers the adapter modules of the BUILD under test
+      (variant.adapter_modules for that build, incl. mutant-only modules such as paladin.extgate_mut), not only a module constant.
