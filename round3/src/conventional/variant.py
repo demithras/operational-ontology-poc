@@ -9,6 +9,7 @@ from r3_shared.variant import CallResult, ReplayResult, ToolDescriptor
 from r3_shared import mutants as shared_mutants
 
 from .histledger import HISTORY_LAYOUT
+from .models_dyn import ensure_models
 from .service import Service
 from .tools import ToolSurface
 
@@ -176,5 +177,6 @@ class ConventionalVariant:
         # state_dir is accepted but unused: all durable state (effects, idempotency ledger, approvals, the authority in
         # force) lives in the world DB, in the same transaction as the effects - atomic by construction. With a
         # HistoryStore (H27 runs) every record other than the world store lives there instead (histledger.py).
+        ensure_models(ops_spec)
         return ConventionalDeployment(Service(domain, world_handle_factory, verifier, ops_spec, auth_spec, clock,
                                               AUDIENCE, self.mutant_switches, history, anchor, governance, external))

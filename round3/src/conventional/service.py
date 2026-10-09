@@ -445,8 +445,11 @@ class Service(AuthorityOps, GovernanceOps, ExternalOps, LowReads, LowProv, LowEv
             n = effects.apply(h, [e for e in planned if not (self._ext is not None and e["kind"] == "external")],
                               b.request_id, self.unavailable)
             if ext_planned:  # P1f outbox: intent + per-effect cap are durable in THIS transaction; dispatch is post-commit
-                rid = b.request_id or extout.synthetic_request_id(tx.id if tx is not None else 0)
-                n += self._ext.enqueue(h, rid, ext_planned, tx.tick if tx is not None else self._clock.now(), approved)
+                if b.request_id is None and tx is not None:  # G4-E17: anon-tx<world_seq of THIS commit's mark>
+                    dc.world_seq = tx.mark("commit", {"request_id": None, "kind": dc.kind,
+                                                      "authority_version": self._policy.digest})
+                rid = b.request_id or extout.synthetic_request_id(dc.world_seq if dc.world_seq is not None else 0)
+                n += self._ext.enqueue(h, rid, ext_planned, self._clock.now(), approved)  # service clock: a world store may carry none
                 dc.extra["ext_rid"] = rid
         except effects.EffectRejected as exc:
             raise _Abort("INVALID", {"reason": "effect_rejected"}) from exc
@@ -455,8 +458,9 @@ class Service(AuthorityOps, GovernanceOps, ExternalOps, LowReads, LowProv, LowEv
         body = {"operation": b.operation, "effects": n, "request_id": b.request_id, "authority_version": b.authority_version}
         if tx is not None:  # PROT-H24 s4: every effect transaction carries one `commit` mark (the commit point)
             dc.tx_id, dc.tick = tx.id, tx.tick
-            dc.world_seq = tx.mark("commit", {"request_id": b.request_id, "kind": dc.kind,
-                                              "authority_version": self._policy.digest})
+            if not (b.request_id is None and dc.extra.get("ext_rid")):  # anon external commit marked early (above)
+                dc.world_seq = tx.mark("commit", {"request_id": b.request_id, "kind": dc.kind,
+                                                  "authority_version": self._policy.digest})
         if b.request_id is not None and not self.mutant("ledger_after_commit_volatile"):
             # request_id=None is accepted but has NO replay protection (documented, PROT-H23-A8 audit item b)
             self._store.idem_put(h, b.request_id, b.fingerprint, {

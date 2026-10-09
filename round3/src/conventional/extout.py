@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS conv_outbox(
   reply TEXT NOT NULL DEFAULT '', held INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(request_id, effect_index));
 CREATE TABLE IF NOT EXISTS conv_outcome(
   request_id TEXT NOT NULL, effect_index INTEGER NOT NULL, system TEXT NOT NULL, state TEXT NOT NULL,
-  confidence TEXT NOT NULL, evidence_json TEXT NOT NULL DEFAULT '[]', PRIMARY KEY(request_id, effect_index));
+  confidence TEXT NOT NULL, evidence_json TEXT NOT NULL DEFAULT '[]', wm INTEGER NOT NULL DEFAULT -1, PRIMARY KEY(request_id, effect_index));
 CREATE TRIGGER IF NOT EXISTS conv_outcome_monotone BEFORE UPDATE OF state ON conv_outcome
 WHEN OLD.state IN ('RECONCILED_SUCCESS','RECONCILED_FAILED','DIVERGED') AND NEW.state NOT IN (OLD.state,'DIVERGED')
 BEGIN SELECT RAISE(ABORT, 'outcome transition not allowed'); END;
@@ -39,9 +39,9 @@ def init(h) -> None:
     h._con.executescript(DDL)
 
 
-def synthetic_request_id(tx_id: int) -> str:
+def synthetic_request_id(world_seq: int) -> str:
     """Deterministic correlation base for a commit that carried no request_id (no replay protection either)."""
-    return f"anon-tx{tx_id}"
+    return f"anon-tx{world_seq}"
 
 
 class Outbox:
@@ -96,7 +96,7 @@ class Outbox:
         rows = h._con.execute("SELECT request_id,effect_index,system,state,confidence,evidence_json FROM conv_outcome "
                               "WHERE request_id=? ORDER BY effect_index", (rid,)).fetchall()
         return [{"request_id": a, "effect_index": b, "system": c, "state": d, "confidence": e,
-                 "evidence": extrecon.public_evidence(json.loads(f))} for a, b, c, d, e, f in rows]
+                 "evidence": json.loads(f)} for a, b, c, d, e, f in rows]
 
     # -- dispatch: AFTER the world commit ---------------------------------------------------------------------------------
     def _fresh_cap(self, it: dict) -> str:

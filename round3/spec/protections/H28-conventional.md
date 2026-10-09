@@ -32,7 +32,9 @@ Only P1f forms, caps crypto, ExternalWorld and the ObservationClient come from `
 | divergence_rewritten | `extrecon.py` `outcome_state(compare=False)` | `test_divergence_rewritten_misses_target_mutation` |
 
 ## Interpretations and open items (reported, not silently chosen)
-1. Public `OUTCOME.evidence` is `[]`: G4-E6 (namespaced strings) contradicts the frozen `outcome.validate_outcome` / schema (positive ints). Internal records keep E6 form (`extrecon.public_evidence` is the single switch).
+1. Public `OUTCOME.evidence` (G4-E19/E20, fix1): sorted DISTINCT positive ints = effects.seq of matching effect rows plus audit.seq of matching audit rows when observability == full (`extrecon._ev`); stored as such.
 2. Dispatch is inline after the decision AND via `dispatch_pending` (resubmission / crash recovery); `submitted` counts only dispatch_pending submits.
-3. A commit without request_id correlates as `anon-tx<N>` (the frozen text assumes a request_id).
-4. P1f-6's order alone can yield a forbidden transition if a later snapshot shows FEWER rows (decreasing watermark); `next_state` then keeps the previous state.
+3. A commit without request_id correlates as `anon-tx<world_seq of its commit mark>` (G4-E17; the mark is written before the enqueue for such commits).
+4. G4-E16: a reconcile with a watermark below the one already applied to an outcome is ignored (`conv_outcome.wm`); `next_state` additionally keeps a reconciled state from moving back to PENDING.
+5. G4-E23: `ExternalRequest.envelope_text` on non-crash cases is the byte-exact anchored envelope of the decision (`extsvc._envelope_text`).
+6. Fix1: commit tick for the outbox comes from the service clock; ops the spec declares but codegen has not seen (harness-injected GEN-NULL op) get a typed model at deploy (`models_dyn.ensure_models`).

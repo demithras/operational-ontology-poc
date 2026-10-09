@@ -562,3 +562,9 @@ Implements spec/gate4/PROTOCOL-P1f.md in r3_shared only; variant code, oracle, h
   tests/test_p1f_conformance.py::test_real_variant_adopts_the_seam_or_reports_not_implemented_g4[conventional]: it deploys with ops_spec={}/auth_spec={}
   and accepts only a successful deploy or NotImplementedError; now that the variant takes `external`, an empty spec fails like it does on the legacy path
   (KeyError 'operations'). Not editable from this role; the test must be updated by the orchestrator.
+
+### G4 fix round 1 (conventional)
+- Evidence now the public sorted distinct ints (G4-E19/E20); watermark monotone via `conv_outcome.wm` (E16); anon correlation uses the commit mark seq (E17);
+  envelope byte-equality tested (E23). Two defects found by running C28-1..6: (a) the outbox commit tick used `tx.tick`, which is 0 when the world store carries no
+  clock (harness) - now the service clock; (b) the harness-injected GEN-NULL operation had no typed model (`models_dyn.py`).
+- Tests: tests/conventional/test_conv_g4_fix1.py.

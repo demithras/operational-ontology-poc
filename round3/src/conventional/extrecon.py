@@ -22,7 +22,7 @@ def confidence_for(observability: str) -> str:
 
 def outcome_state(intent: dict, snap, prev: str, cls: str, observability: str, expiry: int, prev_ev=(), compare=True) -> tuple[str, str, list]:
     """intent: {operation, target, payload_digest, correlation}; snap: ObsSnapshot or None (observer unavailable = rule U).
-    Returns (state, confidence, evidence) where evidence is a sorted list of "E:<seq>" / "A:<seq>" strings (G4-E6)."""
+    Returns (state, confidence, evidence) where evidence is the sorted DISTINCT ints of P1f-6 / G4-E20."""
     conf = confidence_for(observability)
     if observability == "none":                                              # N: stop rule, for ever
         return "UNKNOWN", "low", []
@@ -32,10 +32,10 @@ def outcome_state(intent: dict, snap, prev: str, cls: str, observability: str, e
     key = (intent["operation"], intent["target"], intent["payload_digest"])
     applied = [r for r in snap.effects if r.correlation == intent["correlation"]]
     audited = [r for r in snap.audit if r.correlation == intent["correlation"]] if observability == "full" else []
-    ev = sorted([f"E:{r.seq}" for r in applied] + [f"A:{r.seq}" for r in audited])
+    ev = _ev(applied, audited)
     mismatch = [r for r in (*applied, *audited) if (r.operation, r.target, r.payload_digest) != key] if compare else []
     if prev == "DIVERGED" or mismatch:                                       # D1, D2 (evidence: the conflicting rows)
-        return "DIVERGED", conf, (sorted(_tag(r, applied) for r in mismatch) or ev)
+        return "DIVERGED", conf, (_ev([r for r in mismatch if r in applied], [r for r in mismatch if r not in applied]) or ev)
     if cls in KEEP_CLASSES and len(applied) > 1:                             # D3
         return "DIVERGED", conf, ev
     if len(applied) >= 1:                                                    # S
@@ -45,8 +45,9 @@ def outcome_state(intent: dict, snap, prev: str, cls: str, observability: str, e
     return "PENDING", conf, ev                                               # W
 
 
-def _tag(row, applied) -> str:
-    return ("E:" if row in applied else "A:") + str(row.seq)
+def _ev(applied, audited) -> list:
+    """G4-E19/E20: effects.seq of the effect rows plus audit.seq of the audit rows; sorted, DISTINCT, positive ints."""
+    return sorted({int(r.seq) for r in (*applied, *audited)})
 
 
 def initial_state(observability: str) -> tuple[str, str]:
@@ -57,9 +58,8 @@ def initial_state(observability: str) -> tuple[str, str]:
 
 
 def public_evidence(evidence: list) -> list:
-    """Public OUTCOME.evidence. G4-E6 (namespaced strings) contradicts the frozen outcome.validate_outcome / schema (positive
-    ints), so the public form is left empty until the frozen text is reconciled (reported gap). Internal records keep E6 form."""
-    return []
+    """Public OUTCOME.evidence (G4-E20): the stored sorted distinct ints, unchanged."""
+    return sorted({int(x) for x in evidence})
 
 
 def read_snapshot(observer, watermark: int):
@@ -92,14 +92,17 @@ def reconcile(h, intents: list[dict], observer, watermark: int, mutants=frozense
     coupled = "observation_coupled" in mutants
     snap = None if coupled else read_snapshot(observer, watermark)
     for it in intents:
-        cur = h._con.execute("SELECT state, confidence, evidence_json FROM conv_outcome WHERE request_id=? AND effect_index=?",
+        cur = h._con.execute("SELECT state, confidence, evidence_json, wm FROM conv_outcome WHERE request_id=? AND effect_index=?",
                              (it["request_id"], it["effect_index"])).fetchone()
         prev, prev_conf, prev_ev = cur[0], cur[1], json.loads(cur[2])
+        if watermark < cur[3]:  # G4-E16: a snapshot older than one already applied is ignored (state + evidence stay)
+            continue
         use = _adapter_snapshot(it, watermark) if coupled else snap
         intent = {"operation": it["operation"], "target": it["target"], "correlation": f"{it['request_id']}#{it['effect_index']}",
                   "payload_digest": payload_digest(json.loads(it["payload_json"]))}
         new, conf, ev = outcome_state(intent, use, prev, it["cls"], it["observability"], it["expiry"], prev_ev,
                                       compare="divergence_rewritten" not in mutants)
         new, conf, ev = next_state(prev, new, conf, ev, prev_conf, prev_ev)
-        h._con.execute("UPDATE conv_outcome SET state=?, confidence=?, evidence_json=? WHERE request_id=? AND effect_index=?",
-                       (new, conf, json.dumps(ev), it["request_id"], it["effect_index"]))
+        h._con.execute("UPDATE conv_outcome SET state=?, confidence=?, evidence_json=?, wm=? WHERE request_id=? AND effect_index=?",
+                       (new, conf, json.dumps(ev), watermark if snap is not None or coupled else cur[3],
+                        it["request_id"], it["effect_index"]))
