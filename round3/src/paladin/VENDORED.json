@@ -158,11 +158,12 @@
    "vendored_sha256": "7ca68ee6f9907423cbc3d5cdc60d71efb2904bc3df6681a168ea5f28b4caf277"
   },
   "domains/project/logic/constraints.py": {
-   "current_sha256": "f01f916c136f49d0b9f5ca4f0cd1147c27fbe1f1f528936748365e8cae820d04",
+   "current_sha256": "a2ee8c23cffacacb03f66907dfabe64752592abb2453b49743384f4ad6dd9176",
    "original": "round2/domains/project/logic/constraints.py",
    "original_sha256": "83edac23a41fd1ae9b62f6f17449d328ce5b3637d88c7d4810cc54a42b28694d",
    "patches": [
-    "F9"
+    "F9",
+    "G4a"
    ],
    "vendored_sha256": "6c45a3920901676351ef8b3a39f65f707c6af97da0cb4430e1bcda3425c5c328"
   },

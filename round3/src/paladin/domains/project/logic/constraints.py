@@ -130,8 +130,8 @@ def make(ir: dict, deriver) -> dict:
     def rebuild_hash(ctx):  # weak: no Git rebuild exists in the store-only Engine; order-independence of the hash only
         return state_hash(ctx.view) == state_hash(ctx.view, reverse=True)
 
-    def durable_are_git(ctx):
-        return all(p["operation"] == "git_change" for p in ctx.planned)
+    def durable_are_git(ctx):  # G4a: an external_call plans no durable ontology write (H28 overlay): only durable effects are judged
+        return all(p["operation"] in ("git_change", "external_call") for p in ctx.planned)
 
     def no_stale(ctx):
         for p in ctx.planned:
@@ -159,6 +159,8 @@ def make(ir: dict, deriver) -> dict:
 
     def ephemeral_marked(ctx):
         for p in ctx.planned:
+            if p["operation"] == "external_call":  # G4a: an external effect writes no ephemeral ontology state
+                continue
             fields = fields_of.get((ctx.action, p["index"]))
             allowed = {"$key", "$hypothesis", "$src", "$dst"} | set(fields or ())
             if fields is None and p["target"] in types:  # object effect with no declared fields: any declared property

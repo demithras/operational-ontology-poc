@@ -37,10 +37,10 @@ class PaladinDeployment:
     HISTORY_LAYOUT = {**HISTORY_LAYOUT, "authority_version": "auth/"}  # every durable record kind kept in the HistoryStore
 
     def __init__(self, domain, factory, verifier, ops_spec, auth_spec, clock, mutants=frozenset(), state_dir=None,
-                 history=None, anchor=None, governance=None):
+                 history=None, anchor=None, governance=None, external=None):
         if governance is not None:
             validate_governance(governance, auth_spec, ops_spec)   # a caller error: ValueError, nothing deployed
-        self._governance = governance
+        self._governance, self._external = governance, external
         self._args = (domain, factory, verifier, ops_spec, auth_spec, clock, mutants)
         self.history, self.anchor, self.mutants = history, anchor, frozenset(mutants)
         self.stream = stream_for(history, anchor, domain) if history is not None else None
@@ -56,7 +56,7 @@ class PaladinDeployment:
     # ---- crash / restart (PROT-H23-A8) ------------------------------------------------------
     def _build(self, restart: bool) -> None:
         d, f, v, ops, auth, clk, mut = self._args
-        self._c = Core(d, f, v, ops, auth, clk, mut, self._state_dir, self._fire, restart, self.history, self.anchor, self.stream, self._governance)
+        self._c = Core(d, f, v, ops, auth, clk, mut, self._state_dir, self._fire, restart, self.history, self.anchor, self.stream, self._governance, self._external)
         self._surfaces = SurfaceFactory(self._c.booted.ir)
         self._auth_version = self._c.version()
 
@@ -368,6 +368,38 @@ class PaladinDeployment:
     def authority_state(self) -> dict:
         return json.loads(canonical_bytes(self._c.auth))
 
+    # ---- Gate 4: external effects (PROT-H28) ------------------------------------------------------------------------
+    def _envelope_of(self, rid: str):
+        """The byte-exact H27 decision envelope text for `rid` ("" without history/anchor); None while it is not provable."""
+        return self._c.envelope_text(rid)
+
+    def dispatch_pending(self) -> CallResult:
+        return self._mutating(self._dispatch, arms=False)
+
+    def _dispatch(self) -> CallResult:
+        c = self._c
+        if c.ext is None:
+            return CallResult("OK", {"submitted": 0})
+        with c.lock:
+            return CallResult("OK", {"submitted": c.ext.dispatch(self._envelope_of)})
+
+    def reconcile(self, request_id: str, watermark: int) -> CallResult:
+        return self._mutating(lambda: self._reconcile(request_id, watermark), arms=False)
+
+    def _reconcile(self, request_id, watermark) -> CallResult:
+        c = self._c
+        with c.lock:
+            outs = c.ext.reconcile(request_id, watermark) if c.ext is not None and isinstance(request_id, str) else None
+        return CallResult("OK", {"outcomes": outs}) if outs else CallResult("INVALID", {"reason": "unknown_request"})
+
+    def outcome(self, request_id: str) -> CallResult:
+        if self._crashed:
+            return self._DOWN
+        c = self._c
+        with c.lock:
+            outs = c.ext.outcomes(request_id) if c.ext is not None and isinstance(request_id, str) else None
+        return CallResult("OK", {"outcomes": outs}) if outs else CallResult("INVALID", {"reason": "unknown_request"})
+
     # ---- Gate 2: provenance (PROT-H27) ---------------------------------------------------------------------------------
     def replay(self, decision_id: str) -> ReplayResult:
         return _replay.replay(self, decision_id)
@@ -397,7 +429,8 @@ def _total(fn, fail):
 
 _CALL = lambda exc: CallResult("UNAVAILABLE", {"reason": f"internal_error: {type(exc).__name__}"})  # noqa: E731
 _REPLAY = lambda exc: ReplayResult("UNRESOLVED", f"internal_error: {type(exc).__name__}")  # noqa: E731
-for _n in ("call_tool", "direct", "read", "approve", "delegate", "revoke", "authority_used", "constitutional"):
+for _n in ("call_tool", "direct", "read", "approve", "delegate", "revoke", "authority_used", "constitutional",
+           "dispatch_pending", "reconcile", "outcome"):
     setattr(PaladinDeployment, _n, _total(getattr(PaladinDeployment, _n), _CALL))
 for _n in ("replay", "explain"):
     setattr(PaladinDeployment, _n, _total(getattr(PaladinDeployment, _n), _REPLAY))

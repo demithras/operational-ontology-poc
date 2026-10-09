@@ -9,8 +9,9 @@ from typing import Any, Callable
 
 from paladin.authcompile import compile_ir, principals, shadow_principals
 from paladin.engine import Engine, LogicBindings
+from paladin import extops
 from paladin.engine.effects import AdapterRegistry
-from paladin.worldbridge import WorldExternalAdapter, WorldGitAdapter
+from paladin.worldbridge import OutboxAdapter, WorldExternalAdapter, WorldGitAdapter
 
 HERE = Path(__file__).resolve().parent
 DOMAINS = {"manufacturing": {"ir": "domains/manufacturing/ir.json"}, "project": {"ir": "domains/project/ir.v3.json"}}
@@ -33,9 +34,14 @@ def load_ir(domain: str) -> dict:
 def bindings_for(domain: str, ir: dict, ops_spec: dict) -> LogicBindings:
     if domain == "manufacturing":
         from paladin.domains.manufacturing.logic import build_bindings
-        return build_bindings(ops_spec, ir)
-    from paladin.domains.project.logic import build_bindings
-    return build_bindings(ir, {NEUTRAL_EVALUATOR: neutral_evaluator})
+        b = build_bindings(ops_spec, ir)
+    else:
+        from paladin.domains.project.logic import build_bindings
+        b = build_bindings(ir, {NEUTRAL_EVALUATOR: neutral_evaluator})
+    for kind, table in extops.bindings_for_missing(ir, ops_spec).items():   # ops the domain IR does not describe (H28 overlay)
+        for key, fn in table.items():
+            b.bind(kind, key, fn)
+    return b
 
 
 @dataclass
@@ -47,27 +53,36 @@ class Booted:
 
 
 def boot(domain: str, ops_spec: dict, auth_spec: dict, handle_factory: Callable, service_handle: Any,
-         clock: Callable[[], int], pre_apply: Callable[[], None] = lambda: None) -> Booted:
-    ir = compile_ir(load_ir(domain), auth_spec, ops_spec)
+         clock: Callable[[], int], pre_apply: Callable[[], None] = lambda: None, sink: list | None = None,
+         mutants=frozenset()) -> Booted:
+    """`sink` (Gate 4): given -> external effects are only PLANNED into it (OutboxAdapter); None -> legacy in-transaction path."""
+    base = load_ir(domain)
+    ir = compile_ir(extops.extend_ir(base, ops_spec), auth_spec, ops_spec)
     holder: dict = {}
-    if domain == "manufacturing":
-        specs: dict = {}
-        for op in ops_spec["operations"]:
-            for e in op["effects"]:
-                if e["kind"] == "external":
-                    specs.setdefault(e["adapter"], {})[op["name"]] = e
-        inputs_of = lambda xid: holder["engine"]._executions[xid]["inputs"]  # noqa: E731 - read-only adapter helper
+    specs: dict = {}
+    for op in ops_spec["operations"]:
+        for e in op["effects"]:
+            if e["kind"] == "external":
+                specs.setdefault(e["adapter"], {})[op["name"]] = e
+    inputs_of = lambda xid: holder["engine"]._executions[xid]["inputs"]  # noqa: E731 - read-only adapter helper
+    if sink is not None:
+        adapters = {("external_call", s): OutboxAdapter(s, per_action, inputs_of, sink, pre_apply) for s, per_action in specs.items()}
+    else:
         adapters = {("external_call", s): WorldExternalAdapter(s, handle_factory, per_action, inputs_of, pre_apply)
                     for s, per_action in specs.items()}
-    else:
+    if domain != "manufacturing":
         fields: dict = {}  # (action, kind, type) -> exactly the props the ops spec lists for that effect (R-3 creates; updates likewise)
         for op in ops_spec["operations"]:
             for e in op["effects"]:
                 if e["kind"] in ("create", "update"):
                     fields.setdefault((op["name"], e["kind"], e["type"]), set()).update(e["props"])
         git = WorldGitAdapter(service_handle, fields, pre_apply)
-        adapters = {("git_change", "*"): git}
-    engine = Engine(ir, bindings_for(domain, ir, ops_spec), adapters, clock=clock)
+        adapters[("git_change", "*")] = git
+    bind_spec = ops_spec
+    if "policy_gate_in_adapter" in mutants:     # MUTANT: the gating rules leave the decision plane (see extgate_mut)
+        import importlib
+        bind_spec = importlib.import_module("paladin.extgate_mut").strip(ops_spec)
+    engine = Engine(ir, bindings_for(domain, base, bind_spec), adapters, clock=clock)
     holder["engine"] = engine
     if domain == "project":
         git.attach(engine.model)

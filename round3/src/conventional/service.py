@@ -22,13 +22,14 @@ from r3_shared.variant import CallResult
 
 from r3_shared import mutants as shared_mutants
 
-from . import effects, store
+from . import effects, extout, extrecon, store
 from .helpers_mfg import HELPERS as MFG
 from .helpers_proj import HELPERS as PROJ, ID_READS
 from .interp import Ctx, HelperError, ev
 from .models_gen import OPERATION_MODELS
 from .abort import _Abort
 from .authority_ops import AuthorityOps
+from .extsvc import ExternalOps
 from .govsvc import GovernanceOps
 from .lowevents import LowEvents
 from .lowprov import LowProv
@@ -41,6 +42,7 @@ from .validation import RequestInvalid, validate_inputs
 from .worldview import WorldView
 
 WRITER = "conventional-service"
+MOVED_RULES = ("expedite-large-fee-needs-approval", "publish-public-needs-approval")  # policy_gate_in_adapter mutant
 IDENTITY_FIELDS = ("principal", "actor", "owner", "requested_by", "subject", "sub", "user")
 
 
@@ -64,10 +66,10 @@ class BoundRequest:
     fingerprint: str
 
 
-class Service(AuthorityOps, GovernanceOps, LowReads, LowProv, LowEvents):
+class Service(AuthorityOps, GovernanceOps, ExternalOps, LowReads, LowProv, LowEvents):
     def __init__(self, domain: str, factory: Callable, verifier, ops_spec: dict, auth_spec: dict, clock,
                  audience: str = "conventional", mutant_switches: frozenset[str] = frozenset(),
-                 history=None, anchor=None, governance: dict | None = None):
+                 history=None, anchor=None, governance: dict | None = None, external=None):
         self.domain, self._factory, self._verifier, self._clock, self.audience = domain, factory, verifier, clock, audience
         self._spec = copy.deepcopy(ops_spec)
         self._ops = {o["name"]: o for o in self._spec["operations"]}
@@ -77,6 +79,7 @@ class Service(AuthorityOps, GovernanceOps, LowReads, LowProv, LowEvents):
         validate_strict(auth_spec, self._spec)  # R-4: invalid authority spec -> ValueError, nothing deployed
         self.history, self.anchor = history, anchor
         self._store = HistLedger(history) if history is not None else store.AuxStore()
+        self._ext = extout.Outbox(external, self._mutants) if external is not None else None  # P1f seam; None = legacy
         self._pending: list = []  # revoke_commit_reorder mutant only
         self._dcache: dict = {}  # PDP decision cache (stale_authority_cache mutant lives here)
         self._lock = threading.RLock()
@@ -90,6 +93,8 @@ class Service(AuthorityOps, GovernanceOps, LowReads, LowProv, LowEvents):
         h = factory(WRITER)
         try:
             self._store.init(h)
+            if self._ext is not None:
+                extout.init(h)
             try:
                 got = None
                 if history is not None:  # a fresh deployment over an existing history continues its authority lineage
@@ -242,7 +247,7 @@ class Service(AuthorityOps, GovernanceOps, LowReads, LowProv, LowEvents):
                 return CallResult("UNAVAILABLE", {"reason": "history_unresolved"})
             if self.mutant("error_detail_leak") and res.status in ("DENIED", "INVALID"):
                 res = self._leak_detail(res, operation, args)
-            return self._provenance(dc, res)
+            return self._post_commit(dc, self._provenance(dc, res))
 
     def _leak_detail(self, res: CallResult, operation, args) -> CallResult:
         """BUG (error_detail_leak mutant): the refusal body carries the underlying rule detail incl. the object's values."""
@@ -417,7 +422,14 @@ class Service(AuthorityOps, GovernanceOps, LowReads, LowProv, LowEvents):
             for br in op["business_rules"]:
                 if br["decision"] == "require_approval" and ev(br["when"], ctx):
                     needs_approval = needs_approval or br["id"]
-            if needs_approval:
+            approved = True
+            if needs_approval and self._ext is not None and self.mutant("policy_gate_in_adapter") \
+                    and needs_approval in MOVED_RULES:  # BUG: this rule is no longer decided here (it moved adapter-side)
+                try:
+                    self._consume_approval(h, tx, op, b, needs_approval)
+                except _Abort:
+                    approved = False
+            elif needs_approval:
                 self._consume_approval(h, tx, op, b, needs_approval)
             planned = effects.resolve(op["effects"], ctx)
         except HelperError as exc:
@@ -429,7 +441,16 @@ class Service(AuthorityOps, GovernanceOps, LowReads, LowProv, LowEvents):
         if self.mutant("unsynchronized_commit"):
             time.sleep(0.05)  # the unprotected window between the precondition read and the write
         try:
-            n = effects.apply(h, planned, b.request_id, self.unavailable)
+            ext_planned = [e for e in planned if e["kind"] == "external"] if self._ext is not None else []
+            n = effects.apply(h, [e for e in planned if not (self._ext is not None and e["kind"] == "external")],
+                              b.request_id, self.unavailable)
+            if ext_planned:  # P1f outbox: intent + per-effect cap are durable in THIS transaction; dispatch is post-commit
+                if b.request_id is None and tx is not None:  # G4-E17: anon-tx<world_seq of THIS commit's mark>
+                    dc.world_seq = tx.mark("commit", {"request_id": None, "kind": dc.kind,
+                                                      "authority_version": self._policy.digest})
+                rid = b.request_id or extout.synthetic_request_id(dc.world_seq if dc.world_seq is not None else 0)
+                n += self._ext.enqueue(h, rid, ext_planned, self._clock.now(), approved)  # service clock: a world store may carry none
+                dc.extra["ext_rid"] = rid
         except effects.EffectRejected as exc:
             raise _Abort("INVALID", {"reason": "effect_rejected"}) from exc
         except ConnectionError as exc:
@@ -437,8 +458,9 @@ class Service(AuthorityOps, GovernanceOps, LowReads, LowProv, LowEvents):
         body = {"operation": b.operation, "effects": n, "request_id": b.request_id, "authority_version": b.authority_version}
         if tx is not None:  # PROT-H24 s4: every effect transaction carries one `commit` mark (the commit point)
             dc.tx_id, dc.tick = tx.id, tx.tick
-            dc.world_seq = tx.mark("commit", {"request_id": b.request_id, "kind": dc.kind,
-                                              "authority_version": self._policy.digest})
+            if not (b.request_id is None and dc.extra.get("ext_rid")):  # anon external commit marked early (above)
+                dc.world_seq = tx.mark("commit", {"request_id": b.request_id, "kind": dc.kind,
+                                                  "authority_version": self._policy.digest})
         if b.request_id is not None and not self.mutant("ledger_after_commit_volatile"):
             # request_id=None is accepted but has NO replay protection (documented, PROT-H23-A8 audit item b)
             self._store.idem_put(h, b.request_id, b.fingerprint, {

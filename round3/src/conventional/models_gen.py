@@ -254,6 +254,44 @@ class FlagOrphanComponentRequest:
         return {n: getattr(self, n) for n, _, _ in self.SCHEMA if getattr(self, n) is not None}
 
 
+@dataclass(frozen=True, kw_only=True)
+class PublishResultRequest:
+    OPERATION: ClassVar[str] = 'publish_result'
+    DOMAIN: ClassVar[str] = 'project'
+    SCHEMA: ClassVar[tuple] = (('verdict', 'resource', True), ('visibility', 'string', True))
+    RESOURCES: ClassVar[dict] = {'verdict': 'Verdict'}
+    GATED: ClassVar[tuple] = ('verdict', 'visibility')
+    APPROVAL: ClassVar[Any] = 'approval:publish_result'
+    verdict: str
+    visibility: str
+
+    @classmethod
+    def from_args(cls, args: dict) -> "PublishResultRequest":
+        return cls(**validate_inputs(cls.SCHEMA, args))
+
+    def inputs(self) -> dict:
+        return {n: getattr(self, n) for n, _, _ in self.SCHEMA if getattr(self, n) is not None}
+
+
+@dataclass(frozen=True, kw_only=True)
+class NotifyReviewerRequest:
+    OPERATION: ClassVar[str] = 'notify_reviewer'
+    DOMAIN: ClassVar[str] = 'project'
+    SCHEMA: ClassVar[tuple] = (('hypothesis', 'resource', True), ('reviewer', 'string', True))
+    RESOURCES: ClassVar[dict] = {'hypothesis': 'Hypothesis'}
+    GATED: ClassVar[tuple] = ('hypothesis', 'reviewer')
+    APPROVAL: ClassVar[Any] = None
+    hypothesis: str
+    reviewer: str
+
+    @classmethod
+    def from_args(cls, args: dict) -> "NotifyReviewerRequest":
+        return cls(**validate_inputs(cls.SCHEMA, args))
+
+    def inputs(self) -> dict:
+        return {n: getattr(self, n) for n, _, _ in self.SCHEMA if getattr(self, n) is not None}
+
+
 OPERATION_MODELS: dict[str, type] = {
     'transfer_inventory': TransferInventoryRequest,
     'expedite_purchase_order': ExpeditePurchaseOrderRequest,
@@ -268,4 +306,6 @@ OPERATION_MODELS: dict[str, type] = {
     'supersede_hypothesis': SupersedeHypothesisRequest,
     'record_decision': RecordDecisionRequest,
     'flag_orphan_component': FlagOrphanComponentRequest,
+    'publish_result': PublishResultRequest,
+    'notify_reviewer': NotifyReviewerRequest,
 }

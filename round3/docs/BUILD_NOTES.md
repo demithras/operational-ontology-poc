@@ -548,3 +548,38 @@ Implements spec/gate4/PROTOCOL-P1f.md in r3_shared only; variant code, oracle, h
   publish-public-needs-approval) + notify_reviewer (NOTIFY.notify); spec/authority/project.h28.v3.json = base v3 + three `h28-*` grants.
 - Schemas: external-systems, external-request, external-cap, external-ledger, external-outcome (+ strict validators with known negatives).
 - Tests: tests/test_p1f_*.py, tests/p1f_util.py, tests/fakes/{ext_ref,fake_g4,ext_rig}.py; conftest leak hygiene covers extworld_server.
+
+## G4 paladin (H28; branch r3-paladin, merged with round3 f13a68a)
+Seam: `external` given -> `boot(sink=...)` registers `worldbridge.OutboxAdapter` for every `external_call` system (plans only, no
+observation); `Core._commit` drains the plans after the world commit and `extdispatch.ExtPlane.register` stores intent + per-effect cap
++ PENDING outcome in the ledger meta store (`extoutbox.Outbox`); `Deployment.dispatch_pending` submits (cap, byte-exact decision envelope
+from the anchor/history); `reconcile` applies `extoutcome.outcome_state` (Paladin's own P1f-6) to `binding.observer.read(watermark)`.
+`world_digest` includes the world_log head in external mode so a crash after commit is recognised as committed (the world holds no
+external row). Project overlay: `extops.py` compiles overlay operations into IR actions + generic bindings; vendored patch `G4a`.
+Mutants live at: extdispatch (5), boot + extgate_mut (policy_gate_in_adapter), extoutcome (divergence_rewritten).
+Tests: tests/paladin/test_pal_g4_*.py (rig g4_rig.py, adapters g4_adapters.py). Spec: spec/protections/H28-paladin.md.
+
+## G4 fix round 1 - paladin
+- G4-E20: `paladin.extoutcome` evidence = sorted DISTINCT ints (effects.seq of M plus audit.seq of A when full); D1/D2/D3 evidence = the same matching rows (the C28-2 oracle's reading of G4-E7); rule U keeps previous evidence only for a FINAL state, else UNKNOWN with [] (oracle).
+- Intent tick (cap `not_after_tick`, expiry) = the injected deployment clock, not `tx.tick`: the H28 harness builds its WorldStore without a clock, so `tx.tick` was 0.
+- `authcompile._rsel`: resource selector `{"type": "*"}` compiles to `*` (harness GEN-NULL grants use it).
+- G4-E23 confirmed and tested (tests/paladin/test_pal_g4_fix1.py): every submitted request's envelope_text == canon_json of the auditor's replay envelope for its decision.
+## G4 conventional (H28)
+- Built from PROT-H28 + PROTOCOL-P1f + G4 errata only (no src/paladin). New modules: `extout.py` (outbox, per-effect cap attenuation, dispatcher),
+  `extrecon.py` (P1f-6 outcome function, reconciler), `extsvc.py` (post-commit dispatch, `dispatch_pending/reconcile/outcome`); `service.py`
+  `_txn`/`execute` hooks; `variant.py` `deploy(external=)` + `ADAPTER_MODULES` / `EXTERNAL_HISTORY_PREFIXES`; `codegen.py` now also generates models
+  for the H28 project overlay operations (`models_gen.py` regenerated).
+- Outbox + outcome tables (`conv_outbox`, `conv_outcome`) live in the world DB beside the idempotency table: atomic with the commit; no HistoryStore
+  prefix is added (EXTERNAL_HISTORY_PREFIXES = ()). With `external=None` nothing changes (legacy `external_write`).
+- Tests: tests/conventional/test_conv_g4_{decision,outcome,caps,mutants,audit,envelope}.py, helper conv_g4_util.py (real ExternalWorld process per rig).
+- Requirement map and mutant sites: spec/protections/H28-conventional.md.
+- Full sharded suite (8 shards): 1953 passed, 1 failed, 0 errors, 0 skipped. The one failure is the shared
+  tests/test_p1f_conformance.py::test_real_variant_adopts_the_seam_or_reports_not_implemented_g4[conventional]: it deploys with ops_spec={}/auth_spec={}
+  and accepts only a successful deploy or NotImplementedError; now that the variant takes `external`, an empty spec fails like it does on the legacy path
+  (KeyError 'operations'). Not editable from this role; the test must be updated by the orchestrator.
+
+### G4 fix round 1 (conventional)
+- Evidence now the public sorted distinct ints (G4-E19/E20); watermark monotone via `conv_outcome.wm` (E16); anon correlation uses the commit mark seq (E17);
+  envelope byte-equality tested (E23). Two defects found by running C28-1..6: (a) the outbox commit tick used `tx.tick`, which is 0 when the world store carries no
+  clock (harness) - now the service clock; (b) the harness-injected GEN-NULL operation had no typed model (`models_dyn.py`).
+- Tests: tests/conventional/test_conv_g4_fix1.py.
