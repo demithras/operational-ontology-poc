@@ -8,6 +8,7 @@ Nothing here imports the decision plane (authority / policy / approval / governa
 """
 from __future__ import annotations
 
+import importlib
 import json
 
 from r3_shared import extcap
@@ -58,15 +59,10 @@ class Outbox:
         return cav
 
     def _gate_hold(self, system: str, op: str, payload: dict, cleared: bool) -> bool:
-        """BUG (policy_gate_in_adapter): the approval rules `expedite-large-fee-needs-approval` and
-        `publish-public-needs-approval` live HERE, in adapter-side code, and block the submit - the decision plane commits OK."""
+        """BUG (policy_gate_in_adapter): the moved approval rules live in a mutant-only module, loaded by name only here."""
         if "policy_gate_in_adapter" not in self.mut or cleared:
             return False
-        if (system, op) == ("ERP", "expedite"):
-            return payload.get("expedite_fee", 0) > 500
-        if (system, op) == ("REGISTRY", "publish"):
-            return payload.get("visibility") == "public"
-        return False
+        return importlib.import_module("conventional.extgate_mut").holds(system, op, payload)
 
     def enqueue(self, h, rid: str, planned: list[dict], tick: int, cleared: bool = True) -> int:
         n = 0
