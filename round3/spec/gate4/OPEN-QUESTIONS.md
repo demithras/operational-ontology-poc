@@ -127,3 +127,8 @@ G4-E17 A commit without a request_id uses the deterministic correlation base `an
 G4-E18 Envelope byte-exactness (Q13) is measured on non-crash cases only; crash cases are judged on duplicate_effect and outcome
       equality (Q11). A redelivered request after a crash-after-commit may carry envelope_text "" and is not counted as a
       provenance violation.
+G4-E19 SUPERSEDES G4-E15 (which contradicted P1f-6 line "evidence = seqs of M (and of A when O == full)"): `evidence` is exactly
+      as frozen in P1f-6 - a sorted list of positive ints: the effects.seq values of the matching effect rows M, plus the
+      audit.seq values of the matching audit rows A when the system's observability O == full; duplicates are kept (the two
+      seq namespaces are not distinguished; oracle and variants compute the identical list); compared with the oracle in C28-2.
+      G4-E7 reads: D1 evidence = the conflicting rows by the same rule; U keeps the previous evidence. G4-E6 and G4-E15 are void.
