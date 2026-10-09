@@ -1,0 +1,97 @@
+{
+ "cross_domain": {
+  "by_domain": {
+   "manufacturing": 501,
+   "project": 499
+  },
+  "domains": [
+   "manufacturing",
+   "project"
+  ]
+ },
+ "domain_branch": 0,
+ "renaming": {
+  "by_domain": {
+   "manufacturing": 501,
+   "project": 499
+  },
+  "cases": 1000,
+  "domain_branch": 0,
+  "first": null
+ },
+ "self_test": {
+  "mutant_build_flagged": true,
+  "oracle_reference": {
+   "cases": 40,
+   "domain_branch": 0,
+   "note": "oracle-backed reference deployment"
+  }
+ },
+ "static_scan": {
+  "active_mutants": [],
+  "domain_logic_modules": [
+   "src/paladin/domains/manufacturing/logic",
+   "src/paladin/domains/project/logic"
+  ],
+  "files": 89,
+  "hit_count": 0,
+  "hits": [],
+  "resolved": [
+   {
+    "file": "src/paladin/boot.py",
+    "kind": "compare",
+    "line": 72,
+    "literal": "project",
+    "reason": "G3-E24(1)(i): domain-name dispatch wiring the effect adapters (manufacturing: external-call adapters built from the ops spec effects; project: git adapter attach); reads no authority.",
+    "scope": "boot",
+    "text": "if domain == \"project\":"
+   },
+   {
+    "file": "src/paladin/boot.py",
+    "kind": "compare",
+    "line": 53,
+    "literal": "manufacturing",
+    "reason": "G3-E24(1)(i): domain-name dispatch wiring the effect adapters (manufacturing: external-call adapters built from the ops spec effects; project: git adapter attach); reads no authority.",
+    "scope": "boot",
+    "text": "if domain == \"manufacturing\":"
+   },
+   {
+    "file": "src/paladin/boot.py",
+    "kind": "compare",
+    "line": 34,
+    "literal": "manufacturing",
+    "reason": "G3-E24(1)(i) + G3-E29(a): selects which domain logic package to bind; since r3-g3-fix6-paladin (2bac298) those packages read no relation, threshold or principal (ops-spec rules evaluated as data by paladin.opsrules). Disclosed: constraints.no_effect_without_approval was renamed effectless_statuses_hold in that commit; reviewed - it checks only that DENIED/PENDING decisions have no ActionExecution link, no authority read.",
+    "scope": "bindings_for",
+    "text": "if domain == \"manufacturing\":"
+   },
+   {
+    "file": "src/paladin/boot.py",
+    "kind": "dict-dispatch",
+    "line": 16,
+    "literal": "manufacturing",
+    "reason": "G3-E24(1)(i): DOMAINS maps the domain name to its IR file path (data); reads no authority.",
+    "scope": "<module>",
+    "text": "DOMAINS = {\"manufacturing\": {\"ir\": \"domains/manufacturing/ir.json\"}, \"project\": {\"ir\": \"domains/project/ir.v3.json\"}}"
+   },
+   {
+    "file": "src/paladin/boot.py",
+    "kind": "dict-dispatch",
+    "line": 16,
+    "literal": "project",
+    "reason": "G3-E24(1)(i): DOMAINS maps the domain name to its IR file path (data); reads no authority.",
+    "scope": "<module>",
+    "text": "DOMAINS = {\"manufacturing\": {\"ir\": \"domains/manufacturing/ir.json\"}, \"project\": {\"ir\": \"domains/project/ir.v3.json\"}}"
+   },
+   {
+    "file": "src/paladin/sovview.py",
+    "kind": "dict-dispatch",
+    "line": 24,
+    "literal": "none",
+    "reason": "G3-E29(b): 'none' is the P1e provenance level, a key of the protocol LEVELS table, not a role.",
+    "scope": "<module>",
+    "text": "LEVELS = {\"none\": 0, \"own\": 1, \"scalars\": 2, \"actors\": 3}"
+   }
+  ],
+  "resolved_count": 6
+ }
+}
