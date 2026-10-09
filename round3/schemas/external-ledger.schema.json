@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "r3-external-ledger-1",
+  "title": "ExternalWorld ledger rows and observation snapshot (P1f-2, P1f-5)",
+  "$defs": {
+    "effect_row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["seq", "tick", "system", "operation", "target", "payload_digest", "cap_chain", "correlation", "adapter_id"],
+      "properties": {
+        "seq": {"type": "integer", "minimum": 1}, "tick": {"type": "integer", "minimum": 0},
+        "system": {"type": "string", "minLength": 1}, "operation": {"type": "string", "minLength": 1},
+        "target": {"type": "string"}, "payload_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "cap_chain": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "correlation": {"type": "string", "minLength": 1},
+        "adapter_id": {"type": "string"}
+      }
+    },
+    "audit_row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["seq", "tick", "system", "operation", "target", "payload_digest", "cap_chain", "correlation", "adapter_id",
+                   "outcome", "reason"],
+      "properties": {
+        "seq": {"type": "integer", "minimum": 1}, "tick": {"type": "integer", "minimum": 0},
+        "system": {"type": "string"}, "operation": {"type": "string"}, "target": {"type": "string"},
+        "payload_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "cap_chain": {"type": "string", "pattern": "^([0-9a-f]{64})?$"}, "correlation": {"type": "string"},
+        "adapter_id": {"type": "string"},
+        "outcome": {"enum": ["applied", "refused"]},
+        "reason": {"enum": ["", "bad_signature", "unknown_root", "system_mismatch", "operation_mismatch", "target_mismatch",
+                            "payload_mismatch", "correlation_missing", "expired", "uses_exhausted"]}
+      }
+    },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["watermark", "effects", "audit", "complete_through_tick"],
+      "properties": {
+        "watermark": {"type": "integer", "minimum": 0},
+        "complete_through_tick": {"type": "integer", "minimum": -1},
+        "effects": {"type": "array", "items": {"$ref": "#/$defs/effect_row"}},
+        "audit": {"type": "array", "items": {"$ref": "#/$defs/audit_row"}}
+      }
+    }
+  },
+  "oneOf": [{"$ref": "#/$defs/snapshot"}]
+}

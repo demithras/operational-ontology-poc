@@ -530,3 +530,21 @@ Fixes from the exp-h25-dev1 / exp-h26-dev1 attribution (variant-side root causes
 - P-A (rows 466, flip 268): `payloads.new_experiment_ids` subscripted `["version"]` on an absent experiment; V4 turned the TypeError into DENIED policy, the oracle answers INVALID (its helper is total). Sweep of `domains/**/logic` for subscripts on possibly-absent objects, each made total: project `payloads.new_experiment_ids`, `new_experiment_version` (old row `.get`), `attach_evidence` (`ev` `.get`), `record_decision` (`d` `.get`); `policies.contract_complete` and `facts.latest_experiment` (absent experiment props = `{}`); `freeze.compute_freeze_hash` (absent experiment = null fields, as the oracle); manufacturing `decision_content_hash` (absent decision = explicit ValueError). Already total, untouched: manufacturing policies `_expedite_ev`/`_reschedule_ev`/`facts.risk`/`lot_for`. V4 unchanged (genuine helper errors still fail closed).
 - P-B (row 2509): G3-E32(a): a decision completed by `set_governance` re-evaluation takes the tick of the completing counted judgment (`Procedure.completing_tick`, judgments now store their tick), not the governance tick; the appeal window runs from there. Lapse branch unchanged.
 - Tests: tests/paladin/test_pal_g3_fix11.py (all 8 fail without the src change). Manifest: VENDORED.json current hashes refreshed, `F11` recorded (documented in spec/protections/H23-paladin.md).
+
+## P1f - Gate 4 shared protocol (tag r3-p1f-protocol, branch r3-p1f from r3-g4-freeze)
+Implements spec/gate4/PROTOCOL-P1f.md in r3_shared only; variant code, oracle, harness and frozen specs untouched.
+- New modules: `extcap` (macaroon-style HMAC caps; steps + signed step boundaries so `chain_id` = sha256(root nonce, first attenuation
+  step) is stable under narrowing), `extadapter` (ExternalRequest/AdapterReply/ActionAdapter, `payload_digest`, correlation helpers),
+  `extsystems` + `extsem` (frozen system declarations, pure state-update semantics), `extobs` (ObservationClient, SQLite mode=ro, own key,
+  faults), `extworld` (client, `start_external`, `require_external` runner guard) + `extworld_core` + `extworld_server` (the separate OS
+  process, data socket + `.ctl` control socket), `outcome` (vocabulary + validators; NO outcome function).
+- `variant.py`: `ExternalBinding`, `deploy(..., external=None)`, `Deployment.dispatch_pending/reconcile/outcome`, `g4_call`, `g4_deploy`
+  (a deploy() without `external` surfaces NotImplementedError("not implemented yet - G4")). `mutants.KNOWN["H28"]` added.
+- Ledger additions beyond the P1f text (clarifications, see report): `deployment` column on effects/audit (observer key is scoped to one
+  deployment), `meta` table, `issued` UNIQUE(system, deployment), deterministic root nonce, journal mode switched to DELETE at close() so a
+  closed ledger is readable read-only inside the sandbox.
+- Launcher env contract for the H28 runner: R3_EXT_SOCK (data), R3_EXT_CTL (control), R3_EXT_DIR; non-dev ids refuse without them.
+- Overlay (Q2): spec/ops/project.h28.json = base project ops + publish_result (REGISTRY.publish, approval rule
+  publish-public-needs-approval) + notify_reviewer (NOTIFY.notify); spec/authority/project.h28.v3.json = base v3 + three `h28-*` grants.
+- Schemas: external-systems, external-request, external-cap, external-ledger, external-outcome (+ strict validators with known negatives).
+- Tests: tests/test_p1f_*.py, tests/p1f_util.py, tests/fakes/{ext_ref,fake_g4,ext_rig}.py; conftest leak hygiene covers extworld_server.

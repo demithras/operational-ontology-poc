@@ -1,4 +1,4 @@
-"""Session-level hygiene: fail the session if anchor_server processes IT started are still alive at the end.
+"""Session-level hygiene: fail the session if anchor_server / extworld_server processes IT started are still alive at the end.
 Attribution is exact (never by ppid alone): at import time the session claims a private temp root and exports it as
 TMPDIR (inherited by every child process, so by every start_anchor() caller). An anchor is ours iff its command line
 names a --dir/--sock path inside that root (or inside pytest's own basetemp). Orphans of other sessions never match."""
@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 import time
 
-MARK = "r3_shared.anchor_server"
+MARKS = ("r3_shared.anchor_server", "r3_shared.extworld_server")  # H27 anchor + H28 ExternalWorld (P1f-2)
 _ROOT = os.path.realpath(tempfile.mkdtemp(prefix="r3s", dir="/tmp"))  # short path: AF_UNIX limit
 os.environ["TMPDIR"] = _ROOT
 tempfile.tempdir = _ROOT
@@ -19,12 +19,12 @@ _SHARD_LIST = os.environ.pop("R3_SHARD_FILES", None)
 
 
 def _anchors() -> dict:
-    """pid -> command line of every live anchor_server process (all sessions)."""
+    """pid -> command line of every live anchor_server / extworld_server process (all sessions)."""
     out = subprocess.run(["ps", "-axo", "pid=,command="], capture_output=True, text=True).stdout
     res = {}
     for line in out.splitlines():
         parts = line.split(None, 1)
-        if len(parts) == 2 and MARK in parts[1] and parts[0].isdigit() and int(parts[0]) != os.getpid():
+        if len(parts) == 2 and any(m in parts[1] for m in MARKS) and parts[0].isdigit() and int(parts[0]) != os.getpid():
             res[int(parts[0])] = parts[1]
     return res
 
@@ -74,7 +74,7 @@ def pytest_sessionfinish(session, exitstatus):
         except ProcessLookupError:
             pass
     if leaked:
-        print(f"\nANCHOR LEAK: {len(leaked)} r3_shared.anchor_server process(es) started by this session were still alive: "
+        print(f"\nANCHOR LEAK: {len(leaked)} r3_shared.anchor_server/extworld_server process(es) started by this session were still alive: "
               f"{sorted(leaked)} (killed)")
         for p, c in sorted(leaked.items()):
             print(f"  leaked {p}: {c[-160:]}")

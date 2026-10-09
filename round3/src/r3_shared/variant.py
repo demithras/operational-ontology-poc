@@ -9,6 +9,8 @@ from typing import Any, Callable, Iterable, Literal, Protocol, runtime_checkable
 
 from .anchor import AnchorClient
 from .clock import LogicalClock
+from .extadapter import ActionAdapter
+from .extobs import ObservationClient
 from .histstore import HistoryStore
 from .identity import TokenVerifier
 from .world import WorldHandle
@@ -48,6 +50,19 @@ class ReplayResult:
 
 
 WorldHandleFactory = Callable[[str], WorldHandle]
+
+
+@dataclass(frozen=True)
+class ExternalBinding:
+    """PROT-H28 / P1f-1. Built by the harness, handed to Variant.deploy(external=...). Everything a variant may know about
+    the outside world: the frozen system declarations, the harness-supplied adapters (honest or Byzantine; the variant calls
+    adapter.submit only, never wraps or replaces them), one ROOT cap per system (adapter-side code attenuates it per effect;
+    it never leaves adapter-side code), the read-only observer, and the frozen WINDOW in ticks."""
+    systems: dict
+    adapters: dict          # system name -> ActionAdapter
+    root_caps: dict         # system name -> root capability token issued by ExternalWorld for this deployment
+    observer: ObservationClient
+    window: int
 
 
 @runtime_checkable
@@ -115,6 +130,20 @@ class Deployment(Protocol):
     def explain(self, decision_id: str) -> ReplayResult:
         """PROT-H27 R27-7: equals replay's verified envelope or carries the same TAMPERED/UNRESOLVED status."""
 
+    # ---- Gate 4 (PROTOCOL-P1f P1f-1). Missing -> NotImplementedError("not implemented yet - G4") via g4_call.
+    def dispatch_pending(self) -> CallResult:
+        """Submit every durable, not-yet-submitted intent (and every resubmission R28-8 allows). OK {"submitted": n}.
+        A variant that dispatches inline answers {"submitted": 0}. Mutating rules of PROT-H23 apply."""
+
+    def reconcile(self, request_id: str, watermark: int) -> CallResult:
+        """Read `observer.read(watermark=watermark)` and update the outcome records of request_id by the variant's own outcome
+        function (PROT-H28 R28-5). OK {"outcomes": [OUTCOME...]} sorted by effect_index; INVALID {"reason":"unknown_request"}
+        if request_id never committed or has no external effect. ObserverUnavailable -> OK with P1f-6 rule U states."""
+
+    def outcome(self, request_id: str) -> CallResult:
+        """Self-report of the current outcome records WITHOUT reading the observer (harness cross-check ONLY, never ground
+        truth). OK {"outcomes": [...]}; INVALID unknown_request."""
+
     # ---- Gate 3 (PROTOCOL-P1e P1e-2, P1e-5). Missing -> NotImplementedError("not implemented yet - G3") via g3_call.
     def constitutional(self, token: str, action: dict, request_id: str) -> CallResult:
         """PROT-H25 s3. Mutating (thread-safe, arm_crash applies, request_id idempotent); one `governance` mark per OK."""
@@ -163,14 +192,19 @@ class Variant(Protocol):
     def deploy(self, domain: str, world_handle_factory: WorldHandleFactory, verifier: TokenVerifier,
                ops_spec: dict, auth_spec: dict, clock: LogicalClock,
                state_dir: str | None = None, history: HistoryStore | None = None,
-               anchor: AnchorClient | None = None, governance: dict | None = None) -> Deployment:
+               anchor: AnchorClient | None = None, governance: dict | None = None,
+               external: ExternalBinding | None = None) -> Deployment:
         """state_dir: a private directory that survives crash()/restart() (the world store survives too);
         everything held in memory is lost on crash.
         history (H27 runs): every durable variant record other than the world store (envelopes, receipts, artifacts,
         approvals, idempotency ledger, authority versions) lives in it and state_dir is then None. anchor None ->
         H27 APIs return UNRESOLVED `no_anchor`. Both None = H23/H24 behaviour, unchanged.
         governance (Gate 3, P1e-2): the r3-governance-1 document in force (validated with validate_governance);
-        None -> constitutional() returns INVALID `no_governance`."""
+        None -> constitutional() returns INVALID `no_governance`.
+        external (Gate 4, P1f-1): None -> the legacy in-transaction WorldHandle.external_write path, unchanged (H23-H27).
+        Given -> the variant MUST NOT call WorldHandle.external_write at all; every ops-spec `external` effect goes through the
+        adapter of its system AFTER the world commit (outbox: the intent - request_id, effect_index, I, cap - is durable
+        before dispatch so restart() can resubmit with the same cap). An adapter reply never changes the decision status."""
 
 
 G2_METHODS = ("delegate", "revoke", "authority_used", "replay", "explain")
@@ -202,3 +236,28 @@ def g3_call(deployment, method: str, *args, **kwargs):
     if not callable(fn):
         raise NotImplementedError(G3_MISSING)
     return fn(*args, **kwargs)
+
+
+G4_METHODS = ("dispatch_pending", "reconcile", "outcome")
+G4_MISSING = "not implemented yet - G4"
+
+
+def g4_call(deployment, method: str, *args, **kwargs):
+    """Harness entry for the Gate 4 methods: a deployment that lacks one raises NotImplementedError("not implemented yet -
+    G4"), which the harness labels `unsupported` (never SUPPORTED)."""
+    if method not in G4_METHODS:
+        raise ValueError(f"not a Gate 4 method: {method}")
+    fn = getattr(deployment, method, None)
+    if not callable(fn):
+        raise NotImplementedError(G4_MISSING)
+    return fn(*args, **kwargs)
+
+
+def g4_deploy(variant, *args, external: ExternalBinding, **kwargs):
+    """Harness entry for deploy(external=...): a variant whose deploy() does not take `external` yet raises
+    NotImplementedError("not implemented yet - G4") instead of a TypeError. With external=None callers use deploy() as before."""
+    import inspect
+    params = inspect.signature(variant.deploy).parameters
+    if "external" not in params and not any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values()):
+        raise NotImplementedError(G4_MISSING)
+    return variant.deploy(*args, external=external, **kwargs)

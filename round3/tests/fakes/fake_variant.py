@@ -11,15 +11,16 @@ from r3_shared.mutants import validate
 from r3_shared.variant import CallResult, ToolDescriptor
 from tests.fakes.fake_g2 import G2Mixin
 from tests.fakes.fake_g3 import G3Mixin
+from tests.fakes.fake_g4 import G4Mixin
 
 
-class FakeDeployment(G2Mixin, G3Mixin):
+class FakeDeployment(G2Mixin, G3Mixin, G4Mixin):
     """Correct fake (PROT-H23-A8): request_id ledger is durable in state_dir, written before the world commit
     and after the before_commit crash point; a lock serialises authorize->commit."""
     durable_ledger = True
 
     def __init__(self, domain, factory, verifier, clock, auth_spec=None, state_dir=None, history=None, anchor=None,
-                 governance=None, ops_spec=None):
+                 governance=None, ops_spec=None, external=None):
         self.auth_spec = auth_spec or {}
         self.ops_spec = ops_spec
         self.known_types = {t["name"] for t in (ops_spec or {}).get("resource_types", [])} or {"Part"}
@@ -30,6 +31,7 @@ class FakeDeployment(G2Mixin, G3Mixin):
         self.crashed, self._armed, self._lock = False, None, threading.Lock()
         self._mem_ledger = set()
         self._g2_init(history, anchor)
+        self._g4_init(external)
 
     # --- ledger -------------------------------------------------------------
     def _ledger_path(self):
@@ -86,14 +88,24 @@ class FakeDeployment(G2Mixin, G3Mixin):
             else:
                 self.world.update(args["type"], args["key"], {"by": sub, "n": rec["props"].get("n", 1) + 1})
             seq = tx.mark("commit", {"request_id": request_id, "kind": "direct", "authority_version": self.authority_version()})
+            if self.external is None:                                    # legacy in-transaction path (H23-H27), unchanged
+                for e in args.get("ext", []):
+                    self.world.external_write(e["system"], e["operation"], e["payload"], request_id)
         if request_id is not None:
             self.g2["used"][request_id] = {"authority_version": self.authority_version(), "world_seq": seq,
                                            "tick": tx.tick, "path": [], "on_behalf_of": obo}
             self._g2_save()
+        ext = args.get("ext") if self.external is not None else None
+        rid = request_id if request_id is not None else f"seq-{seq}"
+        if ext:                                                           # P1f outbox: durable intents AFTER the world commit
+            self._g4_record(rid, ext, self.clock.now())
         if armed == "after_commit":
             self.crashed = True
             return CallResult("UNKNOWN", {"reason": "crashed"})
-        return self._g2_anchor(request_id, "direct", sub, seq, tx.tick, {}) if request_id is not None else CallResult("OK", {})
+        res = self._g2_anchor(request_id, "direct", sub, seq, tx.tick, {}) if request_id is not None else CallResult("OK", {})
+        if ext and res.status == "OK":
+            res = CallResult("OK", {**res.body, "outcomes": self.outcome(rid).body["outcomes"]})
+        return res
 
     def read(self, token, operation, args):
         """Q12: get -> read_object, list -> list_objects, otherwise query (P1e-5 forms)."""
@@ -129,11 +141,13 @@ class FakeDeployment(G2Mixin, G3Mixin):
     def crash(self):
         self.crashed = True
         self._mem_ledger = set()
+        self.g4 = {"intents": [], "outcomes": {}}
 
     def restart(self):
         self.crashed, self._armed, self._mem_ledger = False, None, set()
         self.world = self.factory("fake-service")
         self._g2_init(self.history, self.anchor)
+        self._g4_init(self.external)
 
 
 class FakeVolatileLedger(FakeDeployment):
@@ -150,9 +164,9 @@ class FakeVariant:
     deployment_class = FakeDeployment
 
     def deploy(self, domain, world_handle_factory, verifier, ops_spec, auth_spec, clock, state_dir=None,
-               history=None, anchor=None, governance=None):
+               history=None, anchor=None, governance=None, external=None):
         return self.deployment_class(domain, world_handle_factory, verifier, clock, auth_spec, state_dir, history, anchor,
-                                     governance, ops_spec)
+                                     governance, ops_spec, external)
 
 
 class FakeVolatileVariant(FakeVariant):

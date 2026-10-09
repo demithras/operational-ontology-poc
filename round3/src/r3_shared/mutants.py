@@ -12,6 +12,8 @@ KNOWN: dict[str, list[str]] = {
     "H25": ["precedence_inverted", "quorum_weakened", "emergency_no_expiry", "merit_autofill", "domain_privilege_branch"],
     "H26": ["existence_status_split", "error_detail_leak", "hidden_tool_schema", "provenance_edge_retained",
             "subscription_unfiltered", "redaction_fabrication"],
+    "H28": ["adapter_success_trusted", "credential_scope_broadened", "policy_gate_in_adapter", "idempotency_disabled",
+            "observation_coupled", "divergence_rewritten"],
 }  # later gates append their own key
 
 ALL: frozenset[str] = frozenset(n for names in KNOWN.values() for n in names)
