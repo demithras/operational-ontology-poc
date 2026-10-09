@@ -548,3 +548,13 @@ Implements spec/gate4/PROTOCOL-P1f.md in r3_shared only; variant code, oracle, h
   publish-public-needs-approval) + notify_reviewer (NOTIFY.notify); spec/authority/project.h28.v3.json = base v3 + three `h28-*` grants.
 - Schemas: external-systems, external-request, external-cap, external-ledger, external-outcome (+ strict validators with known negatives).
 - Tests: tests/test_p1f_*.py, tests/p1f_util.py, tests/fakes/{ext_ref,fake_g4,ext_rig}.py; conftest leak hygiene covers extworld_server.
+
+## G4 paladin (H28; branch r3-paladin, merged with round3 f13a68a)
+Seam: `external` given -> `boot(sink=...)` registers `worldbridge.OutboxAdapter` for every `external_call` system (plans only, no
+observation); `Core._commit` drains the plans after the world commit and `extdispatch.ExtPlane.register` stores intent + per-effect cap
++ PENDING outcome in the ledger meta store (`extoutbox.Outbox`); `Deployment.dispatch_pending` submits (cap, byte-exact decision envelope
+from the anchor/history); `reconcile` applies `extoutcome.outcome_state` (Paladin's own P1f-6) to `binding.observer.read(watermark)`.
+`world_digest` includes the world_log head in external mode so a crash after commit is recognised as committed (the world holds no
+external row). Project overlay: `extops.py` compiles overlay operations into IR actions + generic bindings; vendored patch `G4a`.
+Mutants live at: extdispatch (5), boot + extgate_mut (policy_gate_in_adapter), extoutcome (divergence_rewritten).
+Tests: tests/paladin/test_pal_g4_*.py (rig g4_rig.py, adapters g4_adapters.py). Spec: spec/protections/H28-paladin.md.
