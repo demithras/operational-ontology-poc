@@ -64,3 +64,14 @@ def make(tmp_path):
         d.mkdir()
         return make_rig(d, domain, mutants, start)
     return _make
+
+
+@pytest.fixture(autouse=True)
+def _stop_g3_anchors():
+    """make_g3(history=True) starts a real anchor_server process per rig and nothing stops it: kill them after each test
+    (otherwise the session-level ANCHOR LEAK check fails, serial or sharded)."""
+    yield
+    import sys
+    mod = sys.modules.get("conv_g3_util")
+    if mod is not None:
+        mod.stop_live_anchors()

@@ -14,6 +14,8 @@ _ROOT = os.path.realpath(tempfile.mkdtemp(prefix="r3s", dir="/tmp"))  # short pa
 os.environ["TMPDIR"] = _ROOT
 tempfile.tempdir = _ROOT
 _extra_roots: list = []
+# Shard file list (scripts/run_tests_sharded.sh). Popped so nested pytest sessions / child processes don't inherit it.
+_SHARD_LIST = os.environ.pop("R3_SHARD_FILES", None)
 
 
 def _anchors() -> dict:
@@ -30,6 +32,22 @@ def _anchors() -> dict:
 def _ours(cmd: str) -> bool:
     roots = [_ROOT, _ROOT.replace("/private", "", 1)] + _extra_roots
     return any(f"{r.rstrip('/')}/" in cmd for r in roots)
+
+
+def pytest_collection_modifyitems(config, items):
+    """Sharding (scripts/run_tests_sharded.sh): the R3_SHARD_FILES env var names a file with one test-file path per line (relative to
+    round3/). Every shard collects the WHOLE suite exactly like a serial run (same conftest/import order) and deselects
+    items outside its list; collecting per-file args instead made fixtures from tests/conventional/conftest.py vanish."""
+    lst = _SHARD_LIST
+    if not lst:
+        return
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    mine = {os.path.join(root, l.strip()) for l in open(lst) if l.strip()}
+    keep = [i for i in items if str(i.path) in mine]
+    drop = [i for i in items if str(i.path) not in mine]
+    if drop:
+        config.hook.pytest_deselected(items=drop)
+    items[:] = keep
 
 
 def pytest_configure(config):
@@ -58,5 +76,7 @@ def pytest_sessionfinish(session, exitstatus):
     if leaked:
         print(f"\nANCHOR LEAK: {len(leaked)} r3_shared.anchor_server process(es) started by this session were still alive: "
               f"{sorted(leaked)} (killed)")
+        for p, c in sorted(leaked.items()):
+            print(f"  leaked {p}: {c[-160:]}")
         session.exitstatus = 1
     shutil.rmtree(_ROOT, ignore_errors=True)

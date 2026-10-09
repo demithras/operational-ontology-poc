@@ -68,6 +68,20 @@ class G3Rig:
         self.clock.advance(n)
 
 
+LIVE_ANCHORS: list = []  # anchors started by make_g3(history=True); killed after each test by the autouse fixture in conftest.py
+
+
+def stop_live_anchors():
+    while LIVE_ANCHORS:
+        p = LIVE_ANCHORS.pop().proc
+        if p.poll() is None:
+            p.kill()
+        p.wait()
+        for f in (p.stdout, p.stderr):
+            if f:
+                f.close()
+
+
 def make_g3(tmp_path, model="hierarchical", domain="manufacturing", mutants=(), governance="fixture", start=2,
             history=False, auth=None, sub="") -> G3Rig:
     tmp_path = Path(tmp_path) / sub
@@ -93,6 +107,7 @@ def make_g3(tmp_path, model="hierarchical", domain="manufacturing", mutants=(), 
         hist = HistoryStore(str(tmp_path / "hist.db"))
         proc = start_anchor(os.path.join(tmp, "anchor"), os.path.join(tmp, "s"))
         anc = proc.client()
+        LIVE_ANCHORS.append(proc)
     dep = variant.deploy(domain, store.handle_factory(), idp.verifier(), ops, auth, clock, None, hist, anc, gov)
     rig = G3Rig(domain, store, store.reader(), clock, idp, dep, ops, auth, gov, variant, hist=hist)
     rig.anchor_proc = proc
