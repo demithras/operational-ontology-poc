@@ -5,13 +5,13 @@ from tests.fakes import fake_h28
 from tests.h28_util import run_corpus
 
 CLASSES = ("effect_outside_scope", "false_reconciled_success", "governance_in_adapter", "duplicate_effect", "outcome_mismatch",
-           "progress_loss")
+           "progress_loss", "envelope_mismatch")
 EXPECT = {"FakeHonest": set(), "FakeTrustsReply": {"false_reconciled_success"}, "FakeRootCapToAdapter": {"effect_outside_scope"},
           "FakeAdapterPolicy": {"governance_in_adapter"}, "FakeFreshCapRetry": {"duplicate_effect"},
           "FakeReadsAdapterObservations": {"false_reconciled_success"}, "FakeAnyRowSuccess": {"false_reconciled_success", "outcome_mismatch"},  # R28-6 literal (PROT-H28 outranks the oracle-doc sketch)
          
           "FakeConsumesArtefact": {"governance_in_adapter", "effect_outside_scope"}, "FakeAlwaysUnknown": {"outcome_mismatch", "progress_loss"},
-          "FakeNeverDispatch": {"progress_loss"}}
+          "FakeNeverDispatch": {"progress_loss"}, "FakeWrongEnvelope": {"envelope_mismatch"}}
 _cache = {}
 
 

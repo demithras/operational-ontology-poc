@@ -111,9 +111,19 @@ class Player:
                 self.appr[akey] = self.appr.get(akey, 0) - 1
             if not st.get("replay"):
                 self.intents[r["i"]] = intents
+        if res is not None and res.status == "OK" and not st.get("replay") and intents:
+            self.rec.setdefault("auditor_env", {})[r["rid"]] = self._auditor_env(r["rid"])
         if res is not None and res.status == "OK" and not st.get("replay"):
             au, aerr = self.call("authority_used", lambda: self.dep.authority_used(r["rid"]))
             row["authority_used"] = {"status": au.status, "body": au.body} if au is not None else None
+
+    def _auditor_env(self, rid):
+        """G4-E23: the auditor envelope of the decision = the VERIFIED envelope of dep.replay(rid); None when replay yields none."""
+        try:
+            rp = self.dep.replay(rid)
+        except Exception:  # noqa: BLE001 - a variant without replay simply has no auditor envelope
+            return None
+        return rp.envelope if getattr(rp, "status", None) == "VERIFIED" and isinstance(rp.envelope, dict) else None
 
     def s_script(self, st):
         """Conformance C28-2: the HARNESS writes a scripted ledger row with its own broad cap (system+operation+correlation only)."""
@@ -144,6 +154,7 @@ class Player:
                 continue
             self.reconcile_one(r, fault)
         self.observer.fault = None
+        self.tick_to(self.clock.now() + 1)      # every read above is tick-complete: no later write can land at a tick <= its watermark
 
     def reconcile_one(self, r, fault):
         n0, now = len(self.observer.transcript), self.clock.now()

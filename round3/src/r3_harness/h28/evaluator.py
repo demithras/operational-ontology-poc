@@ -115,6 +115,9 @@ def evaluate_variant(vdir: Path, thresholds: dict, vname: str, is_dev: bool) -> 
     if not agg["sysstate"]["replay_equals_sysstate"]:
         valid = False
         reasons.append(f"ledger replay != ExternalWorld sysstate (harness fault): {agg['sysstate']['mismatching_keys']}")
+    if agg["harness"].get("ext_transcript_mismatch"):       # G4-E21: the observer transcript disagrees with the oracle replay -> the RUN is INVALID
+        valid = False
+        reasons.append(f"ext_transcript_mismatch in {agg['harness']['ext_transcript_mismatch']} row(s): observer transcript != oracle replay (harness fault)")
     stored = _read(vdir / FILES[1])["summary"]
     if stored.get("classes") != agg["classes"] or stored.get("detection") != agg["detection"]:
         valid = False
@@ -151,7 +154,7 @@ def _verdict(vdir, vname, t, is_dev, ov, agg, J, valid, reasons, man) -> dict:
     reject = (cnt("effect_outside_scope") > t["max_effects_outside_adapter_scope"]
               or cnt("false_reconciled_success") > t["max_false_reconciled_success"]
               or gov > t["max_hidden_governance_in_adapters"] or cnt("duplicate_effect") > t["max_duplicate_effects_beyond_contract"]
-              or (det_rate is not None and det_rate < 1.0))
+              or cnt("envelope_mismatch") > 0 or (det_rate is not None and det_rate < 1.0))
     eq = fl["outcome_equal"] == fl["outcome_points"] and fl["outcome_points"] > 0
     prog_ok = cnt("progress_loss") == 0 and fl["progress_checked"] > 0
     per_prim = all(n >= need["min_per_primitive"] for n in fl["per_primitive"].values())

@@ -13,7 +13,7 @@ from r3_shared import mutants as mutants_mod
 from r3_shared.extadapter import ExternalRequest, correlation, payload_digest
 from r3_shared.extobs import ObserverUnavailable
 from r3_shared.extsystems import idempotency, observability, render_target
-from r3_shared.variant import CallResult
+from r3_shared.variant import CallResult, ReplayResult
 from tests.fakes import fake_h28_adapt as A
 from tests.fakes import fake_h28_policy as P
 from tests.fakes.h23_fakes import FakeDep
@@ -115,7 +115,7 @@ class H28Dep(FakeDep):
                     it["cap"] = A.cap_for(b.root_caps[it["system"]], it, it["commit_tick"], b.window, fresh=it["attempts"])
                 n += 1
                 req = ExternalRequest(it["request_id"], it["effect_index"], it["system"], it["operation"], it["target"], it["payload"],
-                                      "", it["cap"])
+                                      self._env_text(it["request_id"]), it["cap"])
                 try:
                     reply = b.adapters[it["system"]].submit(req)
                     it["done"] = reply.status == "OK"                    # the reply only decides re-submission (R28-8)
@@ -126,6 +126,21 @@ class H28Dep(FakeDep):
                     pass
             self._g4_save()
             return CallResult("OK", {"submitted": n})
+
+    # ---- provenance envelope (G4-E23): a deterministic stand-in for the H27 envelope; replay() is the auditor's view of it ------
+    def _env(self, rid):
+        return {"v": 1, "stream": "fake-h28", "decision": {"decision_id": rid, "kind": "call"}}
+
+    def _env_text(self, rid):
+        env = self._env(rid)
+        if self.mode == "wrong_envelope":                      # known negative: the adapter is handed a different envelope than the auditor's
+            env = {**env, "decision": {**env["decision"], "decision_id": rid + "~forged"}}
+        return json.dumps(env, sort_keys=True)
+
+    def replay(self, decision_id):
+        if not any(it["request_id"] == decision_id for it in self.g4["intents"]):
+            return ReplayResult("UNRESOLVED", "unknown_decision")
+        return ReplayResult("VERIFIED", "ok", self._env(decision_id))
 
     def _outs(self, rid):
         return sorted((o for o in self.g4["outcomes"].values() if o["request_id"] == rid), key=lambda o: o["effect_index"])
@@ -196,7 +211,7 @@ NEGATIVES = {   # name -> (mode, mutants): the known-negative fakes of ORACLE-AN
     "FakeRootCapToAdapter": ("honest", ("credential_scope_broadened",)), "FakeAdapterPolicy": ("honest", ("policy_gate_in_adapter",)),
     "FakeFreshCapRetry": ("honest", ("idempotency_disabled",)), "FakeReadsAdapterObservations": ("honest", ("observation_coupled",)),
     "FakeAnyRowSuccess": ("honest", ("divergence_rewritten",)), "FakeConsumesArtefact": ("FakeConsumesArtefact", ()),
-    "FakeAlwaysUnknown": ("always_unknown", ()), "FakeNeverDispatch": ("never_dispatch", ()), "FakeLegacyWrite": ("legacy_write", ()),
+    "FakeAlwaysUnknown": ("always_unknown", ()), "FakeNeverDispatch": ("never_dispatch", ()), "FakeWrongEnvelope": ("wrong_envelope", ()), "FakeLegacyWrite": ("legacy_write", ()),
 }
 
 

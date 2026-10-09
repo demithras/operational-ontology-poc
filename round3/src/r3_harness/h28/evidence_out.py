@@ -62,7 +62,7 @@ def diff_file(J: dict, agg: dict) -> dict:
         B = J["recs"][r["case"]]["byz"]
         per.append({**{k: r[k] for k in ("case", "domain", "system", "prims", "classes", "harness", "detect", "dups", "points", "equal",
                                            "scope_rows", "observed_effects")},
-                    "gov": r["gov"], "mismatch": r["mismatch"], "false": r["false"], "progress": r["progress"],
+                    "gov": r["gov"], "mismatch": r["mismatch"], "false": r["false"], "progress": r["progress"], "envelope": r["envelope"],
                     "decisions": [{k: q.get(k) for k in ("rid", "i", "replay", "tick", "status", "reason", "oracle", "oracle_reason")} |
                                   {"intents": [i["correlation"] for i in q["intents"]]} for q in B["requests"]],
                     "oracle_final": {}, "ledger": {"effects": [{k: v for k, v in e.items() if k != "payload_json"} for e in J["ledger"]["effects"]

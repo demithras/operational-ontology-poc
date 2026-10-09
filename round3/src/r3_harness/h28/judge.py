@@ -10,7 +10,7 @@ from collections import defaultdict
 from r3_oracle import extoracle
 
 CLASSES = ("effect_outside_scope", "false_reconciled_success", "governance_in_adapter", "duplicate_effect", "outcome_mismatch",
-           "progress_loss")
+           "progress_loss", "envelope_mismatch")
 HARNESS = ("unsupported", "world_lock_timeout", "ext_transcript_mismatch", "generator_redraw_exhausted", "deploy_error")
 GOV_SUB = ("adapter_influenced_decision", "oracle_denied_variant_ok", "adapter_artefact_consumed", "static_unresolved")
 MARKERS = ("harness-fake",)           # authority artefacts the G2 adapter plants in its replies
@@ -142,11 +142,34 @@ def twin_diff(B: dict, T: dict) -> list[str]:
                 diffs.append(f"req{k}.{f}")
     if B.get("world_digest") != T.get("world_digest"):
         diffs.append("world")
-    env = lambda R: sorted((e["request_id"], e["effect_index"], json.dumps(_env_core(e["envelope_text"]), sort_keys=True))  # noqa: E731
-                           for log in R.get("recorder", {}).values() for e in log if e.get("envelope_text"))
+    env = lambda R: sorted({(e["request_id"], e["effect_index"], json.dumps(_env_core(e["envelope_text"]), sort_keys=True))  # noqa: E731
+                           for log in R.get("recorder", {}).values() for e in log if e.get("envelope_text")})   # a SET: the byz adapter may re-submit
     if env(B) != env(T):
         diffs.append("envelope")
     return diffs
+
+
+def envelope_mismatches(R: dict) -> list[dict]:
+    """G4-E23 (Q13, R28-1): on NON-CRASH cases every recorded request's envelope_text must equal the auditor envelope of its decision.
+    An absent auditor envelope counts as a mismatch only when the run had an anchor (history is then mandatory); crash cases are excluded (G4-E18)."""
+    if R.get("crash"):
+        return []
+    aud, out = R.get("auditor_env", {}), []
+    for s, log in sorted(R.get("recorder", {}).items()):
+        for e in log:
+            if e.get("request_id") not in aud:
+                continue
+            want = aud[e["request_id"]]
+            if want is None and not R.get("anchor"):
+                continue
+            try:
+                got = json.loads(e.get("envelope_text") or "")
+            except (TypeError, ValueError):
+                got = None
+            if want is None or got != want:
+                out.append({"rid": e["request_id"], "effect_index": e.get("effect_index"), "system": s,
+                            "why": "no auditor envelope" if want is None else "envelope_text != auditor envelope"})
+    return out
 
 
 def governance(B: dict, T: dict | None) -> list[dict]:
@@ -185,7 +208,7 @@ def progress(T: dict, finals: dict, crash: bool) -> list[dict]:
 def judge_case(B: dict, T: dict | None, led: LedgerIndex, systems: dict, scope_rows: list) -> dict:
     """B = byz (or control) record, T = honest twin record (None for controls)."""
     row = {"case": B["case"], "variant": B["variant"], "domain": B["domain"], "system": B["system"], "prims": B["prims"],
-           "classes": {}, "harness": [], "gov": [], "mismatch": [], "false": [], "progress": [], "detect": [0, 0], "dups": 0,
+           "classes": {}, "harness": [], "gov": [], "mismatch": [], "false": [], "progress": [], "envelope": [], "detect": [0, 0], "dups": 0,
            "points": 0, "equal": 0, "observed_effects": 0, "crash": bool(B.get("crash"))}
     recs = [B] + ([T] if T is not None else [])
     for R in recs:
@@ -203,6 +226,7 @@ def judge_case(B: dict, T: dict | None, led: LedgerIndex, systems: dict, scope_r
     if ob["transcript_bad"]:
         row["harness"].append("ext_transcript_mismatch")
     row["dups"] = count_duplicates(B, led)
+    row["envelope"] = envelope_mismatches(B) + (envelope_mismatches(T) if T is not None else [])
     row["detect"] = list(detection(B, ob["finals"], systems))
     row["gov"] = governance(B, T)
     tw = ob if T is None else eval_outcomes(T, led, systems)
@@ -229,4 +253,6 @@ def judge_case(B: dict, T: dict | None, led: LedgerIndex, systems: dict, scope_r
         c["outcome_mismatch"] = len(row["mismatch"])
     if row["progress"]:
         c["progress_loss"] = len(row["progress"])
+    if row["envelope"]:
+        c["envelope_mismatch"] = len(row["envelope"])
     return row

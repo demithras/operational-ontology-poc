@@ -83,6 +83,7 @@ def run_case(ctx: RunCtx, variant, case: dict, kind: str) -> dict:
         binding = ExternalBinding(systems, recs, roots, observer, systems["window"])
         rec["topology"] = independence.check(binding, ctx.sock_path, dep_id)
         kw = {"state_dir": None, "history": None, "anchor": None}
+        rec["anchor"] = bool(ctx.anchor_sock)      # G4-E23: with an anchor the auditor envelope is REQUIRED for the envelope check
         if ctx.anchor_sock:
             hist = HistoryStore(os.path.join(work, "hist.db"))
             kw.update(history=hist, anchor=AnchorClient(ctx.anchor_sock))
