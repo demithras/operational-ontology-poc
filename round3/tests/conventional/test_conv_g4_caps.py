@@ -99,3 +99,23 @@ def test_c28_6_crash_before_commit_leaves_no_intent(tmp_path):
     r.dep.call_tool(r.token("planner-1"), "expedite_purchase_order", EXPEDITE, request_id="x2")
     r.dep.restart()
     assert r.dep.dispatch_pending().body == {"submitted": 0} and r.dep.outcome("x2").status == "INVALID"
+
+
+def test_concurrent_requests_and_dispatch_never_double_apply(tmp_path):
+    import threading
+    r = make_g4(tmp_path)
+    errs = []
+
+    def go(i):
+        try:
+            for _ in range(2):   # same request_id twice: one commit, one replay
+                r.dep.call_tool(r.token("planner-1"), "expedite_purchase_order", EXPEDITE, request_id=f"th{i}")
+            r.dep.dispatch_pending()
+        except Exception as exc:  # noqa: BLE001
+            errs.append(exc)
+    ts = [threading.Thread(target=go, args=(i,)) for i in range(6)]
+    [t.start() for t in ts]
+    [t.join() for t in ts]
+    assert not errs
+    corr = [e["correlation"] for e in r.ledger()]
+    assert sorted(corr) == sorted(f"th{i}#0" for i in range(6)) == sorted(set(corr))

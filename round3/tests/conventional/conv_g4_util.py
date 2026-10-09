@@ -129,6 +129,7 @@ class G4Rig:
     variant: object
     ops: dict
     auth: dict
+    hist: object = None
 
     def token(self, sub, ttl=100_000):
         return self.idp.issue(sub, AUDIENCE, ttl, self.clock)
@@ -160,14 +161,23 @@ class G4Rig:
 
 
 _LIVE: list = []
+_ANCHORS: list = []
 
 
 def stop_all():
     while _LIVE:
         _LIVE.pop().stop()
+    while _ANCHORS:
+        p = _ANCHORS.pop().proc
+        if p.poll() is None:
+            p.kill()
+        p.wait()
+        for f in (p.stdout, p.stderr):
+            if f:
+                f.close()
 
 
-def make_g4(tmp_path, domain="manufacturing", mutants=(), adapters=None, default=Honest, fault=None, start=2):
+def make_g4(tmp_path, domain="manufacturing", mutants=(), adapters=None, default=Honest, fault=None, start=2, history=False):
     tmp = Path(tmp_path)
     tmp.mkdir(parents=True, exist_ok=True)
     systems = load_systems(domain)
@@ -193,8 +203,16 @@ def make_g4(tmp_path, domain="manufacturing", mutants=(), adapters=None, default
     binding = ExternalBinding(systems, recs, {s: ctl.issue_root("dep-1", s) for s in systems["systems"]}, observer,
                               systems["window"])
     variant = ConventionalVariant(mutants)
-    dep = variant.deploy(domain, store.handle_factory(), idp.verifier(), ops, auth, clock, external=binding)
-    rig = G4Rig(domain, tmp, proc, ctl, systems, store, store.reader(), clock, idp, recs, observer, binding, dep, variant, ops, auth)
+    hist = anc = None
+    if history:  # H27 envelope: a real anchor process + HistoryStore (Q13: ExternalRequest.envelope_text is the real envelope)
+        from r3_shared.anchor import start_anchor
+        from r3_shared.histstore import HistoryStore
+        d = tempfile.mkdtemp(prefix="g4c")
+        hist, aproc = HistoryStore(str(tmp / "hist.db")), start_anchor(os.path.join(d, "anchor"), os.path.join(d, "s"))
+        anc = aproc.client()
+        _ANCHORS.append(aproc)
+    dep = variant.deploy(domain, store.handle_factory(), idp.verifier(), ops, auth, clock, None, hist, anc, None, binding)
+    rig = G4Rig(domain, tmp, proc, ctl, systems, store, store.reader(), clock, idp, recs, observer, binding, dep, variant, ops, auth, hist)
     _LIVE.append(rig)
     return rig
 

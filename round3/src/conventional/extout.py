@@ -57,10 +57,10 @@ class Outbox:
             del cav["target"], cav["payload_digest"]
         return cav
 
-    def _gate_hold(self, system: str, op: str, payload: dict, approved: bool) -> bool:
+    def _gate_hold(self, system: str, op: str, payload: dict, cleared: bool) -> bool:
         """BUG (policy_gate_in_adapter): the approval rules `expedite-large-fee-needs-approval` and
         `publish-public-needs-approval` live HERE, in adapter-side code, and block the submit - the decision plane commits OK."""
-        if "policy_gate_in_adapter" not in self.mut or approved:
+        if "policy_gate_in_adapter" not in self.mut or cleared:
             return False
         if (system, op) == ("ERP", "expedite"):
             return payload.get("expedite_fee", 0) > 500
@@ -68,7 +68,7 @@ class Outbox:
             return payload.get("visibility") == "public"
         return False
 
-    def enqueue(self, h, rid: str, planned: list[dict], tick: int, approved: bool = True) -> int:
+    def enqueue(self, h, rid: str, planned: list[dict], tick: int, cleared: bool = True) -> int:
         n = 0
         for idx, e in enumerate(planned):
             system, op, payload = e["adapter"], e["target"], e["payload"]
@@ -79,7 +79,7 @@ class Outbox:
             h._con.execute("INSERT INTO conv_outbox(request_id,effect_index,system,operation,target,payload_json,cap,cls,"
                            "observability,commit_tick,expiry,held) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
                            (rid, idx, system, op, target, json.dumps(payload, sort_keys=True), cap, cls, obs, tick,
-                            tick + self.b.window, 1 if self._gate_hold(system, op, payload, approved) else 0))
+                            tick + self.b.window, 1 if self._gate_hold(system, op, payload, cleared) else 0))
             st, conf = extrecon.initial_state(obs)
             h._con.execute("INSERT INTO conv_outcome(request_id,effect_index,system,state,confidence) VALUES(?,?,?,?,?)",
                            (rid, idx, system, st, conf))
