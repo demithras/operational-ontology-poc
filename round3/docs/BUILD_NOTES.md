@@ -548,3 +548,13 @@ Implements spec/gate4/PROTOCOL-P1f.md in r3_shared only; variant code, oracle, h
   publish-public-needs-approval) + notify_reviewer (NOTIFY.notify); spec/authority/project.h28.v3.json = base v3 + three `h28-*` grants.
 - Schemas: external-systems, external-request, external-cap, external-ledger, external-outcome (+ strict validators with known negatives).
 - Tests: tests/test_p1f_*.py, tests/p1f_util.py, tests/fakes/{ext_ref,fake_g4,ext_rig}.py; conftest leak hygiene covers extworld_server.
+
+## G4 conventional (H28)
+- Built from PROT-H28 + PROTOCOL-P1f + G4 errata only (no src/paladin). New modules: `extout.py` (outbox, per-effect cap attenuation, dispatcher),
+  `extrecon.py` (P1f-6 outcome function, reconciler), `extsvc.py` (post-commit dispatch, `dispatch_pending/reconcile/outcome`); `service.py`
+  `_txn`/`execute` hooks; `variant.py` `deploy(external=)` + `ADAPTER_MODULES` / `EXTERNAL_HISTORY_PREFIXES`; `codegen.py` now also generates models
+  for the H28 project overlay operations (`models_gen.py` regenerated).
+- Outbox + outcome tables (`conv_outbox`, `conv_outcome`) live in the world DB beside the idempotency table: atomic with the commit; no HistoryStore
+  prefix is added (EXTERNAL_HISTORY_PREFIXES = ()). With `external=None` nothing changes (legacy `external_write`).
+- Tests: tests/conventional/test_conv_g4_{decision,outcome,caps,mutants,audit,envelope}.py, helper conv_g4_util.py (real ExternalWorld process per rig).
+- Requirement map and mutant sites: spec/protections/H28-conventional.md.
