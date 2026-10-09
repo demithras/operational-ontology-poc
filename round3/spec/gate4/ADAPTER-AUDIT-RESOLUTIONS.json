@@ -1,0 +1,6 @@
+{
+  "reviewed_by": "orchestrator (equivalence auditor), 2026-10-10",
+  "basis": "Gate 4 Q15, G4-E20, G4-E25(b)",
+  "note": "Reviewed at round3 7ee49da with the runner's own module resolution: paladin 0 hits; conventional 2 hits, both in the policy_gate_in_adapter mutant site inside conventional.extout (Outbox._gate_hold), which G4-E25(b) moves to a mutant-only module. No resolution is granted.",
+  "resolutions": []
+}
