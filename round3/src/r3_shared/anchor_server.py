@@ -58,6 +58,7 @@ class State:
 class Handler(socketserver.StreamRequestHandler):
     def handle(self):
         st: State = self.server.st
+        shutdown_after_reply = False
         try:
             r = json.loads(self.rfile.readline())
             with st.lock:
@@ -74,7 +75,7 @@ class Handler(socketserver.StreamRequestHandler):
                     out = {"entry": st.heads.get(r.get("stream"))}
                 elif op == "close":
                     out = st.close()
-                    threading.Thread(target=self.server.shutdown, daemon=True).start()
+                    shutdown_after_reply = True
                 elif op == "ping":
                     out = {"pid": os.getpid()}
                 else:
@@ -83,10 +84,16 @@ class Handler(socketserver.StreamRequestHandler):
         except Exception as exc:  # protocol-level refusal; never crash the service
             resp = {"ok": False, "error": str(exc)}
         self.wfile.write(canon(resp) + b"\n")
+        self.wfile.flush()
+        if shutdown_after_reply:
+            # Only now stop the server: shutting down before the reply was flushed let main() exit (daemon handler thread
+            # killed) so the client read an EMPTY close reply under load.
+            threading.Thread(target=self.server.shutdown, daemon=True).start()
 
 
 class Server(socketserver.ThreadingUnixStreamServer):
-    daemon_threads = True
+    daemon_threads = False  # server_close() joins handler threads: the close reply is fully sent before the process exits
+    block_on_close = True
 
 
 def main(argv=None) -> int:
