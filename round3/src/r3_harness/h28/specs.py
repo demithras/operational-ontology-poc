@@ -12,7 +12,7 @@ ROUND3 = Path(__file__).resolve().parents[3]
 DOMAINS = ("manufacturing", "project")
 OPS_FILE = {"manufacturing": "spec/ops/manufacturing.json", "project": "spec/ops/project.h28.json"}
 AUTH_FILE = {"manufacturing": "spec/authority/manufacturing.v3.json", "project": "spec/authority/project.h28.v3.json"}
-GEN_OP = "record_generated"
+GEN_OP = "record"
 _cache: dict = {}
 
 
@@ -38,7 +38,7 @@ def combined_systems() -> dict:
 
 
 def with_gen_null(ops: dict, auth: dict) -> tuple[dict, dict]:
-    """GEN-NULL cases (G4-E3: the harness synthesises these effects): add ONE operation `record_generated` whose only effect is an
+    """GEN-NULL cases (G4-E3: the harness synthesises these effects): add ONE operation `record` whose only effect is an
     external GEN-NULL.record, plus an allow grant for every non-agent role holder. Deterministic; identical for the twin."""
     ops, auth = copy.deepcopy(ops), copy.deepcopy(auth)
     tpl = next(o for o in ops["operations"] if any(e.get("kind") == "external" for e in o["effects"]))

@@ -64,7 +64,7 @@ def eval_outcomes(R: dict, led: LedgerIndex, systems: dict) -> dict:
         tick0, intents = ints[rid]
         unavailable = bool(fault) and fault["kind"] == "unavailable"
         lag = int(fault["k"]) if fault and fault["kind"] == "lagging" else 0
-        snap = None if unavailable else extoracle.observer_view(dl, dep, systems, rc["watermark"], lag)
+        snap = None if unavailable else extoracle.observer_view(dl, dep, systems, rc["watermark"], lag, rc["tick"])
         bad = rc["transcript"] if snap is None else [e for e in rc["transcript"] if not extoracle.transcript_matches(snap, e)]
         out["transcript_bad"] += len(bad)
         got = {o.get("effect_index"): o for o in rc["outcomes"]} if rc["status"] == "OK" and isinstance(rc["outcomes"], list) else None

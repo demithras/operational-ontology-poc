@@ -147,7 +147,7 @@ class Player:
 
     def reconcile_one(self, r, fault):
         n0, now = len(self.observer.transcript), self.clock.now()
-        wm = max(0, now - 1)      # strictly earlier than any future write: the observer snapshot at wm is tick-complete (exact oracle replay)
+        wm = now                  # G4-E24: the shared observer clamps complete_through_tick to the server tick
         res, err = self.call("reconcile", g4_call, self.dep, "reconcile", r["rid"], wm)
         self.rec["recon"].append({"i": r["i"], "rid": r["rid"], "tick": now, "watermark": wm, "fault": fault,
                                   "status": res.status if res else None, "reason": (res.body or {}).get("reason") if res else None,

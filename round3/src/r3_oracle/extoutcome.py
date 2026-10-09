@@ -52,10 +52,10 @@ def _outcome(intent: dict, snap: dict | None, prev: str | None, prev_evidence: l
     return "PENDING", conf, ev, "W"
 
 
-def observer_view(ledger: dict, deployment: str, systems: dict, watermark: int, lag: int = 0) -> dict:
+def observer_view(ledger: dict, deployment: str, systems: dict, watermark: int, lag: int = 0, server_tick: int | None = None) -> dict:
     """The snapshot an honest ObservationClient returns at `watermark` with `lag` (P1f-5): rows of this deployment with
     tick <= complete_through_tick, `none` systems omitted, audit only for `full` systems. ledger = extoracle.load_ledger()."""
-    ct = max(-1, watermark - lag)
+    ct = max(-1, watermark - lag if server_tick is None else min(watermark - lag, server_tick))   # G4-E8/E24
     sysd = systems["systems"]
     vis = {s for s, d in sysd.items() if d["observability"] != "none"}
     full = {s for s, d in sysd.items() if d["observability"] == "full"}

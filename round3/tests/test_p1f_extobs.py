@@ -149,3 +149,13 @@ def test_unreadable_ledger_is_unavailable_not_a_crash(tmp_path):
         o.read(1)
     with pytest.raises(ValueError):
         o.read(-1)
+
+
+def test_watermark_ahead_of_server_tick_is_clamped():
+    c = world()                      # server tick is 2
+    o = client(c)
+    s = o.read(50)
+    assert s.watermark == 50 and s.complete_through_tick == 2
+    assert o.transcript[-1]["complete_through_tick"] == 2
+    assert client(c, fault=ObserverFault.lagging(1)).read(50).complete_through_tick == 2
+    assert client(c, fault=ObserverFault.lagging(5)).read(4).complete_through_tick == -1

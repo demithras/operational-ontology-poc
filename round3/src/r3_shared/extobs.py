@@ -132,9 +132,10 @@ class ObservationClient:
         if f is not None and f.kind == "unavailable" and (not f.reads or idx in f.reads):
             raise ObserverUnavailable("injected: observer unavailable")
         lag = f.k if f is not None and f.kind == "lagging" else 0
-        ct = max(-1, watermark - lag)
         con = self._connect()
         try:
+            srv = int(con.execute("SELECT v FROM meta WHERE k='tick'").fetchone()[0])
+            ct = max(-1, min(watermark - lag, srv))   # G4-E8/E24: a watermark ahead of the server never overstates completeness
             dep = con.execute("SELECT deployment FROM obs_keys WHERE key_hash=?", (key_hash(self._key),)).fetchone()
             if dep is None:
                 raise ObserverAuthError("observation key not accepted")
