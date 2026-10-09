@@ -179,14 +179,14 @@ def make_g4(tmp_path, domain="manufacturing", mutants=(), adapters=None, default
     ops = json.loads((ROOT / "spec" / "ops" / f"{ops_name}.json").read_text())
     auth = json.loads((ROOT / "spec" / "authority" / "project.h28.v3.json").read_text()) if domain == "project" \
         else load_auth_spec(domain)
-    store = WorldStore(tmp / "w.db")
+    clock, idp = LogicalClock(start), IdentityProvider("test-secret-123")
+    store = WorldStore(tmp / "w.db", clock)
     h = store.handle("seed")
     for o in ops["seed"]["objects"]:
         h.create(o["type"], o["key"], o["props"])
     for l in ops["seed"]["links"]:
         h.link(l["link_type"], l["src"], l["dst"])
     h.close()
-    clock, idp = LogicalClock(start), IdentityProvider("test-secret-123")
     ctl.advance(clock.now())
     recs = {s: Recorder((adapters or {}).get(s, default)(ctl.data_only())) for s in systems["systems"]}
     observer = ObservationClient(str(tmp / "ext"), ctl.observer_key("dep-1"), systems, fault)
