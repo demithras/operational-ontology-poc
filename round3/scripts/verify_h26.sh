@@ -10,7 +10,7 @@ EXP="$OUTROOT/$ID"
 "$PY" - "$EXP" <<'PYEOF'
 import hashlib, json, pathlib, sys
 exp = pathlib.Path(sys.argv[1]); bad = 0
-for v in sorted(p for p in exp.iterdir() if p.is_dir()):
+for v in sorted(p for p in exp.iterdir() if p.is_dir() and not p.name.startswith(".")):
     env = json.loads((v / "envelope.json").read_text())
     for f, h in env["raw_observations"]["evidence_sha256"].items():
         got = hashlib.sha256((v / f).read_bytes()).hexdigest()

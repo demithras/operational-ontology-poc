@@ -59,3 +59,32 @@ def test_fuzz_seed_sweep_never_raises():
     for seed in range(2000):
         out = fuzz.run(v, seed, 1)
         assert out["calls"] >= 0 and "existence_leak" in out
+
+
+def test_full_chain_run_sh_evaluate_verify(tmp_path):
+    """run_h26.sh (anchor via run_sandboxed.sh) -> evaluate_h26.py -> verify_h26.sh; anchor dir must live outside the experiment dir."""
+    out = tmp_path / "root"
+    env = {**ENV, "PY": PY}
+    r = subprocess.run(["bash", "scripts/run_h26.sh", "--exp-id", "exp-h26-dev", "--variants", "fake-honest", "--test-variants", "--pairs", "10",
+                        "--aa", "3", "--fuzz-calls", "40", "--mutation-pairs", "2", "--out-root", str(out)],
+                       capture_output=True, text=True, cwd=ROOT, env=env)
+    assert r.returncode == 0, (r.stdout, r.stderr)
+    exp = out / "exp-h26-dev"
+    assert not [p for p in exp.iterdir() if p.name.startswith(".")], list(exp.iterdir())
+    assert (out / ".anchors" / "exp-h26-dev-fake-honest").is_dir()
+    ov = ["--min-pairs", "10", "--min-aa", "3", "--min-fuzz-calls", "40", "--min-per-kind", "1", "--min-per-channel", "1", "--min-probes", "1"]
+    e = sh(PY, "scripts/evaluate_h26.py", "exp-h26-dev", "--out-root", str(out), *ov)
+    assert e.returncode == 0, e.stderr
+    assert "required evidence missing" not in e.stdout and ".anchor" not in e.stdout
+    v = subprocess.run(["bash", "scripts/verify_h26.sh", "exp-h26-dev", *ov], capture_output=True, text=True, cwd=ROOT,
+                       env={**env, "R3_H26_OUT_ROOT": str(out)})
+    assert v.returncode == 0 and "evidence hashes ok" in v.stdout and "verdict reproduces" in v.stdout, (v.stdout, v.stderr)
+    print(r.stdout, e.stdout, v.stdout)
+
+
+def test_dot_dir_in_experiment_is_ignored_by_evaluator(tmp_path):
+    from r3_harness.h26.evaluator import evaluate_experiment
+    import json
+    (tmp_path / "exp-h26-dev" / ".anchor-x").mkdir(parents=True)
+    th = json.loads((ROOT / "protocol" / "thresholds.json").read_text())
+    assert evaluate_experiment(tmp_path / "exp-h26-dev", th)["variants"] == {}

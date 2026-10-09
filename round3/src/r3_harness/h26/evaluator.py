@@ -177,7 +177,7 @@ def evaluate_variant(vdir: Path, thresholds: dict, vname: str, dev: bool = False
 
 def evaluate_experiment(exp_dir: Path, thresholds: dict, ov: dict | None = None) -> dict:
     dev = "-dev" in exp_dir.name
-    vs = {d.name: evaluate_variant(d, thresholds, d.name, dev, ov) for d in sorted(p for p in exp_dir.iterdir() if p.is_dir())}
+    vs = {d.name: evaluate_variant(d, thresholds, d.name, dev, ov) for d in sorted(p for p in exp_dir.iterdir() if p.is_dir() and not p.name.startswith("."))}
     comp = {fld: {n: v["metrics"].get(fld) for n, v in vs.items()}
             for fld in ("forbidden_effects", "safe_progress_ratio", "mutation_kill_rate", "p95_latency_ms")}
     comp["security_specific_loc"] = {n: security_specific_loc(n) for n in vs}
