@@ -17,7 +17,7 @@ from r3_shared.identity import IdentityProvider
 from r3_shared.variant import ExternalBinding, g4_deploy
 from r3_shared.world import WorldStore
 
-from . import specs
+from . import independence, specs
 from .caseplay import Player
 from .adapters import Composite, Recorder, Scheduler
 
@@ -29,6 +29,8 @@ class RunCtx:
     def __init__(self, ctl, ext_dir: str, exp_id: str, vname: str, workroot: str, anchor_sock: str | None = None, start_tick: int = 100):
         self.ctl, self.ext_dir, self.exp_id, self.vname, self.workroot = ctl, ext_dir, exp_id, vname, workroot
         self.anchor_sock, self.tick, self.cap_pool = anchor_sock, start_tick, []
+        self.sock_path = getattr(ctl, "_sock", "")
+        self.observer_factory = None            # tests only: a factory building a (deliberately) non-independent observer
 
 
 
@@ -36,11 +38,15 @@ def _world_digest(snap: dict) -> str:
     return hashlib.sha256(canon_json({"objects": snap["objects"], "links": snap["links"]}).encode()).hexdigest()
 
 
+def _default_observer(ctx, dep_id, systems, recs):
+    return ObservationClient(ctx.ext_dir, ctx.ctl.observer_key(dep_id), systems, None)
+
+
 def run_case(ctx: RunCtx, variant, case: dict, kind: str) -> dict:
     prims = case["prims"] if kind == "byz" else []
     dep_id = f"{ctx.exp_id}:{ctx.vname}:{case['id']}:{kind}"
     rec = {"case": case["id"], "variant": ctx.vname, "kind": kind, "dep": dep_id, "domain": case["domain"], "system": case["system"],
-           "prims": prims, "start_tick": ctx.tick, "window": case["window"], "requests": [], "approvals": [], "dispatch": [],
+           "prims": prims, "crash": case.get("crash"), "idx": case["idx"], "start_tick": ctx.tick, "window": case["window"], "requests": [], "approvals": [], "dispatch": [],
            "recon": [], "unsupported": 0, "world_lock_timeout": 0, "errors": [], "deploy_error": None}
     ops, auth, systems = specs.load(case["domain"])
     if case["gen_null_ops"]:
@@ -73,8 +79,9 @@ def run_case(ctx: RunCtx, variant, case: dict, kind: str) -> dict:
                                  alt[s], ctx.cap_pool, case["k"], case["reps"])
             recs[s] = Recorder(comps[s], s, clock.now)
         roots = {s: ctx.ctl.issue_root(dep_id, s) for s in systems["systems"]}
-        observer = ObservationClient(ctx.ext_dir, ctx.ctl.observer_key(dep_id), systems, None)
+        observer = (ctx.observer_factory or _default_observer)(ctx, dep_id, systems, recs)
         binding = ExternalBinding(systems, recs, roots, observer, systems["window"])
+        rec["topology"] = independence.check(binding, ctx.sock_path, dep_id)
         kw = {"state_dir": None, "history": None, "anchor": None}
         if ctx.anchor_sock:
             hist = HistoryStore(os.path.join(work, "hist.db"))
