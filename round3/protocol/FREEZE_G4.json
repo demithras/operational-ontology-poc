@@ -1,0 +1,12 @@
+{
+  "recorded_at": "2026-10-09",
+  "note": "Gate 4 frozen design (tag r3-g4-freeze), recorded before any Gate 4 implementation. Evaluators compare against these hashes.",
+  "files": {
+    "spec/protections/PROT-H28.md": "260f53abaa15e6ec561eaf2232c7f1df4f6b6f7a170dbacbd621e07722964952",
+    "spec/gate4/PROTOCOL-P1f.md": "13daa209c824cee22933016f810b97f22253919f00e9bcfcb526c1b56c3f6ec3",
+    "spec/gate4/ORACLE-AND-HARNESS-G4.md": "5d69a06147eb4f5048406c9e5c4e3acddd134c520497e913497be322d1a19623",
+    "spec/gate4/EQUIVALENCE-G4.md": "3add2a2779c0ef4176749b9d4719a8e70e85ad5880a5cd0b0848c02ab7337182",
+    "spec/gate4/OPEN-QUESTIONS.md": "5c2c68e639ab38d02c3766905753585834944f921a39706cdda0bef1b3136cb6",
+    "protocol/AUTHOR_DECISIONS_2026-10-09.md": "2ada9daa0dc4176464c4430c8daff8848169c52ace07fec487a93fc469b5079b"
+  }
+}
