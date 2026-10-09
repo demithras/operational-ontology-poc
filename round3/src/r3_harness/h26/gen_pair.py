@@ -41,6 +41,20 @@ def _snap_after(base: dict, delta: dict, ops, auth, nows=0):
     return s
 
 
+def row_schedule(base: dict, delta: dict, ops, auth, nows=0) -> list:
+    """G3-E32(b): world_log rows appended per phase (each seed batch, then each hidden op incl. commit flag)."""
+    out, s = [], base
+    for b in delta["batches"]:
+        out.append(("batch", sim.change_rows(s, b)))
+        s = sim.apply_changes(s, b)
+    for h in delta["high"]:
+        o = ops_model.evaluate(ops, auth, h["actor"], None, h["op"], h["args"], s, nows, frozenset(), None)
+        out.append(("high", bool(o.commits), sim.effect_rows(s, o.effects) if o.commits else 0))
+        if o.commits:
+            s = sim.apply_effects(s, o.effects)
+    return out
+
+
 def _facts(delta: dict, info: dict) -> Facts:
     f = Facts()
     f.edges = [dict(e) for e in delta["edges"]]
@@ -95,6 +109,10 @@ def _try(rng, seed, idx, kind, domain, stats, aa):
     s = [_snap_after(base, d, ops, auth) for d in (d1, d2)]
     if any(invariants.violations(ops, si) for si in s):  # G3-E28: both predicted worlds must be reachable states
         stats["invariant_redraws"] = stats.get("invariant_redraws", 0) + 1
+        return None
+    sched = [row_schedule(base, d, ops, auth) for d in (d1, d2)]
+    if sched[0] != sched[1]:  # G3-E32(b): equal world_log schedule in every phase, or re-draw
+        stats["schedule_redraws"] = stats.get("schedule_redraws", 0) + 1
         return None
     facts = [_facts(d, info) for d in (d1, d2)]
     lvs = [low_view(si, auth, observer, ops, f) for si, f in zip(s, facts)]

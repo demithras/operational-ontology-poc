@@ -47,9 +47,7 @@ def compute_freeze_hash(view, eid, reader: BlobReader | None = None) -> str:
     """P2a patch D3: the NEUTRAL stand-in of spec/ops/project.json (helper compute_freeze_hash): sha256 of the canonical
     JSON of {evidence_schema_ref, evaluator_ref, thresholds: [[key, value], ...]} (reachable via MEASURES/GOVERNED_BY,
     sorted by key, de-duplicated). ``reader`` is accepted and ignored (Round 2 hashed committed git blobs)."""
-    e = view.get("Experiment", eid)
-    if e is None:
-        raise KeyError(f"unknown experiment {eid!r}")
+    e = view.get("Experiment", eid) or {"props": {}}  # total over an absent/hidden experiment (oracle: null fields)
     seen: dict = {}
     for m in view.follow("MEASURES", "Experiment", eid, "out"):
         for t in view.follow("GOVERNED_BY", "Metric", m["key"], "out"):

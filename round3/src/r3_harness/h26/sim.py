@@ -59,3 +59,26 @@ def seed_batches(ops: dict) -> list[list[dict]]:
     objs = [{"op": "create", "type": o["type"], "key": o["key"], "props": o["props"]} for o in ops["seed"]["objects"]]
     lks = [{"op": "link", "link_type": l["link_type"], "src": l["src"], "dst": l["dst"]} for l in ops["seed"]["links"]]
     return [objs, lks]
+
+
+def _same(a: dict, b: dict) -> bool:
+    return a["objects"] == b["objects"] and a["links"] == b["links"]
+
+
+def change_rows(snap: dict, changes: list[dict]) -> int:
+    """world_log rows a change batch appends: changes that are no-ops on the state they meet write no row (G3-E32)."""
+    n, cur = 0, snap
+    for c in changes:
+        nxt = apply_changes(cur, [c])
+        n += 0 if _same(cur, nxt) else 1
+        cur = nxt
+    return n
+
+
+def effect_rows(snap: dict, effects: list[dict]) -> int:
+    n, cur = 0, snap
+    for e in effects:
+        nxt = apply_effects(cur, [e])
+        n += 0 if _same(cur, nxt) else 1
+        cur = nxt
+    return n

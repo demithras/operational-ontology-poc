@@ -25,10 +25,12 @@ class DeploymentDeclares:
 def env(tmp_path_factory):
     d = tmp_path_factory.mktemp("h27lay")
     ap = start_anchor(d / "anchor", d / "sock")
-    var = DeploymentDeclares(fake_h27.load("fake-h27-honest"))
-    bases = corpus.build_bases(var, ap.client(), str(d / "w"), 7, 2, (10, 14))
-    yield {"var": var, "anchor": ap.client(), "bases": bases, "dir": d}
-    ap.close()
+    try:
+        var = DeploymentDeclares(fake_h27.load("fake-h27-honest"))
+        bases = corpus.build_bases(var, ap.client(), str(d / "w"), 7, 2, (10, 14))
+        yield {"var": var, "anchor": ap.client(), "bases": bases, "dir": d}
+    finally:
+        ap.close()
 
 
 def test_layout_declared_on_the_deployment_is_used(env):

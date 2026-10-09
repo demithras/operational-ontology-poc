@@ -29,9 +29,12 @@ def anchor():
         return
     sockdir = tempfile.mkdtemp(prefix="anc")
     ap = start_anchor(os.path.join(sockdir, "adir"), os.path.join(sockdir, "s"))
-    yield ap.client()
-    if ap.proc.poll() is None:
-        ap.proc.kill()
+    try:
+        yield ap.client()
+    finally:
+        if ap.proc.poll() is None:
+            ap.proc.kill()
+        ap.proc.wait(timeout=10)
     shutil.rmtree(sockdir, ignore_errors=True)
 
 

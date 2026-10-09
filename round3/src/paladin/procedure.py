@@ -169,11 +169,18 @@ class CaseBook:
     def apply_judge(self, seq, tick, case, stage, judge, value, rid) -> None:
         self.settle(seq, tick)
         c = self.cases[case]
-        c.judgments.append({"stage": stage, "judge": judge, "value": value, "rid": rid, "seq": seq})
+        c.judgments.append({"stage": stage, "judge": judge, "value": value, "rid": rid, "seq": seq, "tick": tick})
         if c.decided[stage] is None:
             o = self.stage_outcome(c, stage)
             if o is not None:
                 c.decided[stage] = (o, seq, tick, "judge")
+
+    def completing_tick(self, c: Case, stage: str, default: int) -> int:
+        """G3-E32(a): the tick of the counted judgment that first completes the stage (not the evaluation tick)."""
+        for j in c.judgments:
+            if j["stage"] == stage and self.stage_outcome(c, stage, j["seq"]) is not None:
+                return j["tick"]
+        return default
 
     def apply_appeal(self, seq, tick, case, by) -> None:
         self.settle(seq, tick)
@@ -195,7 +202,7 @@ class CaseBook:
                     lap = self.lapse_due(c, tick) if stage == "decision" else None
                     c.decided[stage] = (lap, seq, c.tick + self.governing(c).lapse_after, "lapse") if lap is not None else None
                 elif cur is None or cur[0] != o or cur[3] == "lapse":
-                    c.decided[stage] = (o, seq, tick, "judge")
+                    c.decided[stage] = (o, seq, self.completing_tick(c, stage, tick), "judge")
 
     # ---- emergencies (s3.5) ------------------------------------------------------------------------------
     def emergency(self, eid: str, tick: int):

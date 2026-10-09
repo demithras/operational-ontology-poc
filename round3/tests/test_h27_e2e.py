@@ -116,21 +116,25 @@ def test_anchor_writing_fake_without_the_sandbox_is_INVALID_E3_E4_E5_fire(tmp_pa
     out.mkdir(parents=True)
     sock = Path(tempfile.mkdtemp(prefix="r3s")) / "s"          # AF_UNIX paths are short
     ap = start_anchor(out / "anchor", sock)
-    env = {**os.environ, "R3_ANCHOR_SOCK": str(sock), "R3_ANCHOR_DIR": str(out / "anchor"),
-           "PYTHONPATH": str(ROUND3 / "src")}
-    base = [sys.executable, str(ROUND3 / "scripts" / "run_h27.py"), "{mode}", "--exp-id", "exp-h27-dev", "--variant",
-            "fake-h27-anchorwriter", "--out-root", str(tmp_path), *CFG]
-    p = subprocess.run([a.replace("{mode}", "run") for a in base], env=env, capture_output=True, text=True, timeout=300)
-    assert p.returncode == 0, p.stderr[-1500:]
-    closed = ap.close()
-    p = subprocess.run([a.replace("{mode}", "finalize") for a in base] + ["--closed-head", json.dumps(closed["head"])],
-                       env=env, capture_output=True, text=True, timeout=300)
-    assert p.returncode == 0, p.stderr[-1500:]
-    au = json.loads((out / "anchor-audit.json").read_text())
-    assert au["E3_holds"] is False and au["E4_all_denied"] is False and au["E3_enforcement"] == "none"
-    assert au["E5_log_integrity"] is False                                   # the scribbled line broke the chain
-    v = evaluator.evaluate_variant(out, TH, "fake-h27-anchorwriter", **DEV)
-    assert v["verdict"] == "INVALID" and any("E3/E4" in r for r in v["reasons"]) and any("E5" in r for r in v["reasons"])
+    try:
+        env = {**os.environ, "R3_ANCHOR_SOCK": str(sock), "R3_ANCHOR_DIR": str(out / "anchor"),
+               "PYTHONPATH": str(ROUND3 / "src")}
+        base = [sys.executable, str(ROUND3 / "scripts" / "run_h27.py"), "{mode}", "--exp-id", "exp-h27-dev", "--variant",
+                "fake-h27-anchorwriter", "--out-root", str(tmp_path), *CFG]
+        p = subprocess.run([a.replace("{mode}", "run") for a in base], env=env, capture_output=True, text=True, timeout=300)
+        assert p.returncode == 0, p.stderr[-1500:]
+        closed = ap.close()
+        p = subprocess.run([a.replace("{mode}", "finalize") for a in base] + ["--closed-head", json.dumps(closed["head"])],
+                           env=env, capture_output=True, text=True, timeout=300)
+        assert p.returncode == 0, p.stderr[-1500:]
+        au = json.loads((out / "anchor-audit.json").read_text())
+        assert au["E3_holds"] is False and au["E4_all_denied"] is False and au["E3_enforcement"] == "none"
+        assert au["E5_log_integrity"] is False                                   # the scribbled line broke the chain
+        v = evaluator.evaluate_variant(out, TH, "fake-h27-anchorwriter", **DEV)
+        assert v["verdict"] == "INVALID" and any("E3/E4" in r for r in v["reasons"]) and any("E5" in r for r in v["reasons"])
+    finally:
+        if ap.proc.poll() is None:
+            ap.close()
 
 
 # ---- evaluator edge cases on copies of the honest evidence ---------------------------------------------------

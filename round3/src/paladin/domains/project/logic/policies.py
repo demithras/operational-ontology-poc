@@ -19,7 +19,7 @@ def contract_complete(view, hid, freeze_hash=None) -> bool:
     for link in ("HAS_RIVAL", "PREDICTS", "FALSIFIED_BY"):
         if not facts.out(view, link, "Hypothesis", hid):
             return False
-    exps = [facts.props(view, "Experiment", e) for e in facts.experiments_of(view, hid)]
+    exps = [facts.props(view, "Experiment", e) or {} for e in facts.experiments_of(view, hid)]
     if not any(str(e.get("evidence_schema_ref", "")).strip() and str(e.get("evaluator_ref", "")).strip() for e in exps):
         return False
     return freeze_hash is None or bool(str(freeze_hash).strip())
