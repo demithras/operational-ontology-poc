@@ -558,3 +558,7 @@ Implements spec/gate4/PROTOCOL-P1f.md in r3_shared only; variant code, oracle, h
   prefix is added (EXTERNAL_HISTORY_PREFIXES = ()). With `external=None` nothing changes (legacy `external_write`).
 - Tests: tests/conventional/test_conv_g4_{decision,outcome,caps,mutants,audit,envelope}.py, helper conv_g4_util.py (real ExternalWorld process per rig).
 - Requirement map and mutant sites: spec/protections/H28-conventional.md.
+- Full sharded suite (8 shards): 1953 passed, 1 failed, 0 errors, 0 skipped. The one failure is the shared
+  tests/test_p1f_conformance.py::test_real_variant_adopts_the_seam_or_reports_not_implemented_g4[conventional]: it deploys with ops_spec={}/auth_spec={}
+  and accepts only a successful deploy or NotImplementedError; now that the variant takes `external`, an empty spec fails like it does on the legacy path
+  (KeyError 'operations'). Not editable from this role; the test must be updated by the orchestrator.
