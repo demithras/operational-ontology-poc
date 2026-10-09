@@ -25,8 +25,11 @@ def test_real_variant_adopts_the_seam_or_reports_not_implemented_g4(name, tmp_pa
         assert "not implemented yet" in str(exc)
         return
     clock, idp, store = LogicalClock(), IdentityProvider("secret-secret"), WorldStore(tmp_path / "w.db")
+    from r3_shared.authspec import load_auth_spec
+    from r3_shared.opsspec import load_ops_spec
     try:
-        dep = g4_deploy(v, "manufacturing", store.handle_factory(), idp.verifier(), {}, {}, clock, external=_binding(tmp_path))
+        dep = g4_deploy(v, "manufacturing", store.handle_factory(), idp.verifier(), load_ops_spec("manufacturing"),
+                        load_auth_spec("manufacturing"), clock, external=_binding(tmp_path))
     except NotImplementedError as exc:
         assert str(exc) == G4_MISSING
         return
