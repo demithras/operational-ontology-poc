@@ -3,7 +3,7 @@
 Total: any input form has a defined answer (absent -> explicit value, never an exception).
 Inputs: the intended effect I (dict), the observer snapshot X (dict form of ObsSnapshot, or None = observer unavailable),
 the previous state P, class C, observability O, cap expiry E. Order: N, U, D1, D2, D3, S, F, W.
-Evidence follows errata G4-E19 (P1f-6): sorted positive ints = effects.seq of M plus audit.seq of A when O == full, duplicates kept.
+Evidence follows errata G4-E19 (P1f-6): sorted positive ints = effects.seq of M plus audit.seq of A when O == full, distinct (G4-E20).
 G4-E16: a snapshot with a lower watermark than one already applied is ignored; a reconciled state never returns to PENDING.
 """
 from __future__ import annotations
@@ -17,7 +17,7 @@ def _key(r: dict) -> tuple:
 
 
 def evidence_of(rows_e, rows_a) -> list[str]:
-    return sorted([r["seq"] for r in rows_e] + [r["seq"] for r in rows_a])
+    return sorted({r["seq"] for r in rows_e} | {r["seq"] for r in rows_a})   # G4-E20: distinct
 
 
 def _outcome(intent: dict, snap: dict | None, prev: str | None, prev_evidence: list | None, cls: str, obs: str,

@@ -25,7 +25,10 @@ def run():
 
 def test_always_unknown_is_never_supported(run):
     v = run[1]["variants"]["fake-FakeAlwaysUnknown"]
-    assert v["verdict"] == "INCONCLUSIVE" and v["metrics"]["classes"]["outcome_mismatch"] > 0 and v["metrics"]["classes"]["progress_loss"] > 0
+    # never SUPPORTED. The oracle doc sketches INCONCLUSIVE; an always-UNKNOWN variant also misses every target mutation (detection < 1.0),
+    # which Q6 maps to REJECTED (precedence REJECTED > INCONCLUSIVE) - reported as a frozen-text tension.
+    assert v["verdict"] in ("REJECTED", "INCONCLUSIVE") and v["metrics"]["detection_rate"] == 0.0
+    assert v["metrics"]["classes"]["outcome_mismatch"] > 0 and v["metrics"]["classes"]["progress_loss"] > 0
 
 
 def test_never_dispatch_loses_progress(run):

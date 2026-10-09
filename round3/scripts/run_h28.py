@@ -126,7 +126,10 @@ def main() -> int:
     pre = json.loads((out / "run-pre.json").read_text())
     J = finalize.judge_all(out, str(out / "ext"), pre)
     agg = finalize.aggregate(J)
-    mods = a.adapter_modules.split(",") if a.adapter_modules else (audit.declared_adapter_modules(ROUND3 / "src" / pkg) if pkg else None)
+    inst = factory(())
+    built = getattr(inst, "adapter_modules", None)       # G4-E20: the adapter modules of the BUILD under test (incl. mutant-only modules)
+    mods = a.adapter_modules.split(",") if a.adapter_modules else (list(built) if built else
+           (audit.declared_adapter_modules(ROUND3 / "src" / pkg) if pkg else None))
     work = tempfile.mkdtemp(prefix="h28-fin-")
     st = None
     try:

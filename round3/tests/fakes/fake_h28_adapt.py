@@ -31,7 +31,7 @@ def outcome(intent, snap, prev, prev_ev, cls, obs, expiry, any_row_success=False
         return (prev, conf, list(prev_ev)) if prev in fin else ("UNKNOWN", conf, [])
     m = [r for r in snap.effects if r.correlation == intent["correlation"]]
     a = [r for r in snap.audit if r.correlation == intent["correlation"]] if obs == "full" else []
-    ev = sorted([r.seq for r in m] + [r.seq for r in a])
+    ev = sorted({r.seq for r in m} | {r.seq for r in a})
     same = lambda r: (r.operation, r.target, r.payload_digest) == (intent["operation"], intent["target"], intent["payload_digest"])  # noqa: E731
     if not any_row_success:
         if prev == "DIVERGED" or any(not same(r) for r in m) or any(not same(r) for r in a):

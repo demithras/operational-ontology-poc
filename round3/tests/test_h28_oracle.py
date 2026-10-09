@@ -46,7 +46,7 @@ def test_confidence_and_evidence_e19():
     s, c, ev = st(snap([row(4)], [row(4)]), obs="effects_only")
     assert (s, c) == ("RECONCILED_SUCCESS", "low") and ev == [4]                               # audit invisible/ignored when not full
     s, c, ev = st(snap([row(4)], [row(4), row(9)]))
-    assert c == "full" and ev == [4, 4, 9]                                                     # G4-E19: ints, duplicates kept, sorted
+    assert c == "full" and ev == [4, 9]                                                        # G4-E20: distinct sorted ints
     assert all(isinstance(x, int) for x in ev)
 
 

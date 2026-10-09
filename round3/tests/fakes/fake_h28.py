@@ -183,6 +183,8 @@ class H28Fake:
 
     def __init__(self, mode="honest", mutants=()):
         self.mode, self.mutants, self.name = mode, mutants_mod.validate(mutants), f"fake-h28-{mode}"
+        # adapter modules of THIS BUILD (G4-E20), incl. the mutant-only policy module
+        self.adapter_modules = ["tests.fakes.fake_h28_adapt"] + (["tests.fakes.fake_h28_policy"] if "policy_gate_in_adapter" in self.mutants else [])
 
     def deploy(self, domain, factory, verifier, ops_spec, auth_spec, clock, state_dir=None, history=None, anchor=None,
                governance=None, external=None):
