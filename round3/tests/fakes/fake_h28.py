@@ -146,7 +146,9 @@ class H28Dep(FakeDep):
                 st, conf, ev = A.outcome({"operation": it["operation"], "target": it["target"], "payload_digest": payload_digest(it["payload"]),
                                           "correlation": correlation(request_id, it["effect_index"])}, snap, o["state"], o["evidence"],
                                          it["class"], obs, it["commit_tick"] + self.external.window,
-                                         any_row_success="divergence_rewritten" in self.mutants)
+                                         any_row_success="divergence_rewritten" in self.mutants, prev_wm=o.get("_wm"))
+                if snap is not None:
+                    o["_wm"] = max(o.get("_wm", -1), snap.watermark)
                 rep = it.get("reply") or {}
                 if "adapter_success_trusted" in self.mutants and rep.get("status") == "OK":
                     st, conf = "RECONCILED_SUCCESS", ("full" if obs == "full" else "low")
@@ -156,7 +158,7 @@ class H28Dep(FakeDep):
                     st, conf = "UNKNOWN", "low"
                 o.update(state=st, confidence=conf, evidence=[x for x in ev if isinstance(x, int)])
             self._g4_save()
-            return CallResult("OK", {"outcomes": [dict(o) for o in self._outs(request_id)]})
+            return CallResult("OK", {"outcomes": [{k: v for k, v in o.items() if k != "_wm"} for o in self._outs(request_id)]})
 
     def outcome(self, request_id):
         outs = self._outs(request_id)
