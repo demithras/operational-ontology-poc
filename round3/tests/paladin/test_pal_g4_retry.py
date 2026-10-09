@@ -16,7 +16,7 @@ def test_r28_8_timeout_after_apply_is_resubmitted_with_the_same_cap_and_stays_on
         caps = [q.cap for q in r.recorders["ERP"].log]
         assert len(caps) == 3 and len({extcap.chain_id(c) for c in caps}) == 1 and len(set(caps)) == 1
         assert len(r.applied("r1#0")) == 1
-        assert [a["reason"] for a in r.ledger()["audit"] if a["outcome"] == "refused"] == ["uses_exhausted"]   # benign refused row
+        assert [a["reason"] for a in r.ledger()["audit"] if a["outcome"] == "refused"] == ["uses_exhausted"] * 2   # benign refused row
     finally:
         r.finish()
 
