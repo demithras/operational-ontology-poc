@@ -58,3 +58,6 @@ src. Vendored patch `G4a` (domains/project/logic/constraints.py): the two Round 
 3. Engine execution state in the OK body (`state`) is `OUTCOME_UNKNOWN` in external mode; the P1f outcome records are the only outcome truth.
 4. tests/test_p1f_conformance.py `test_real_variant_adopts_the_seam...` deploys with empty `{}` specs; the real Paladin deploy now raises
    KeyError there (the placeholder expected NotImplementedError G4 or a working deploy). Shared test, not edited.
+
+## Fix round 1 (G4-E20/E23)
+Outcome evidence is the sorted distinct seq set of the matching effect rows (and audit rows on `full` systems); D1/D2/D3 use the same set. Every non-crash ExternalRequest carries the byte-exact auditor envelope of its decision (test_pal_g4_fix1).

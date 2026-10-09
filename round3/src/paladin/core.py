@@ -360,7 +360,7 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
                 seq = tx.mark("commit", {"request_id": d["rid"], "kind": d["kind"], "authority_version": self.version()})
                 d.update(world_seq=seq, tick=tx.tick, rows=tx_rows(th, tx.id))
             if self.ext is not None and res.status == "OK" and self._plans:   # the intent is durable before any adapter is called
-                res = CallResult("OK", {**res.body, "outcomes": self.ext.register(d["rid"] or f"anon-tx{d['world_seq']}", d["tick"], list(self._plans))})   # G4-E17
+                res = CallResult("OK", {**res.body, "outcomes": self.ext.register(d["rid"] or f"anon-tx{d['world_seq']}", self.clock.now(), list(self._plans))})   # G4-E17; intent tick = the injected deployment clock (the world store may carry none: tx.tick 0)
             self._plans.clear()
             d["committed"] = True
             if gov is not None:

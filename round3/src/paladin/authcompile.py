@@ -33,7 +33,7 @@ def _psel(sel: dict) -> str:
 
 
 def _rsel(sel: dict) -> str:
-    if sel.get("any"):
+    if sel.get("any") or sel.get("type") == "*":
         return "*"
     if "type" in sel and "state" not in sel:
         return f"{sel['type']}:*"

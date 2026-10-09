@@ -144,6 +144,6 @@ def test_g4_e16_lower_watermark_is_ignored_and_reconciled_never_returns_to_pendi
         r.observer.fault = ObserverFault.lagging(30)                                  # a later read withholds every row
         assert r.dep.reconcile("r1", 11).body["outcomes"][0] == hi                    # same watermark, lagging view: still not PENDING
         assert r.dep.reconcile("r1", 2).body["outcomes"][0] == hi                     # lower watermark: ignored
-        assert hi["state"] == "RECONCILED_SUCCESS" and hi["evidence"] == [1, 1]       # E seq + A seq, duplicates kept (G4-E19)
+        assert hi["state"] == "RECONCILED_SUCCESS" and hi["evidence"] == [1]          # E seq == A seq, one value (G4-E20)
     finally:
         r.finish()

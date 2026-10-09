@@ -4,8 +4,8 @@ A pure function of (intent I, observer snapshot X or None = observer unavailable
 observability O, cap expiry E). The adapter reply is NOT an argument: this module never sees one. Rule order (frozen):
 N, U, D1, D2, D3, S, F, W.
 
-Evidence (G4-E19): sorted ints = effects.seq of the matching rows M plus audit.seq of the matching audit rows A (A only when the
-system is `full`), duplicates kept; D1/D2 evidence = the conflicting rows by the same rule; rule U keeps the previous evidence.
+Evidence (G4-E20, amends E19): sorted DISTINCT ints = effects.seq of the matching rows M plus audit.seq of the matching audit rows A (A only when the
+system is `full`), a value in both namespaces appears once; D1/D2/D3 evidence = ev, the matching rows M (+A when full) by the same rule (reading of G4-E7 aligned to the C28-2 oracle); rule U keeps the previous evidence of a final state (non-final -> UNKNOWN, no evidence).
 """
 from __future__ import annotations
 
@@ -38,16 +38,17 @@ def outcome_state(intent: dict, snap, prev: dict, mutants=frozenset()) -> dict:
     if obs == NO_OBSERVATION:                                                   # N
         return {"state": "UNKNOWN", "confidence": "low", "evidence": []}
     if snap is None:                                                    # U
-        return {"state": p if p in FINAL else "UNKNOWN", "confidence": conf, "evidence": list(prev["evidence"])}
+        return {"state": p, "confidence": conf, "evidence": list(prev["evidence"])} if p in FINAL else \
+            {"state": "UNKNOWN", "confidence": conf, "evidence": []}
     cor = intent["correlation"]
     m = [r for r in snap.effects if r.correlation == cor]
     a = [r for r in snap.audit if r.correlation == cor] if obs == "full" else []
-    ev = sorted([r.seq for r in m] + [r.seq for r in a])
+    ev = sorted({r.seq for r in m} | {r.seq for r in a})
     bad = [] if "divergence_rewritten" in mutants else [r for r in (*m, *a) if not _same(r, intent)]
     if p == "DIVERGED":                                                 # D1
-        return {"state": "DIVERGED", "confidence": conf, "evidence": sorted(r.seq for r in bad) or list(prev["evidence"])}
+        return {"state": "DIVERGED", "confidence": conf, "evidence": ev}
     if bad:                                                             # D2
-        return {"state": "DIVERGED", "confidence": conf, "evidence": sorted(r.seq for r in bad)}
+        return {"state": "DIVERGED", "confidence": conf, "evidence": ev}
     if intent["idempotency"] in AT_MOST and len(m) > 1 and "divergence_rewritten" not in mutants:   # D3
         return {"state": "DIVERGED", "confidence": conf, "evidence": ev}
     if m:                                                               # S

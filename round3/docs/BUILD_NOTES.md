@@ -558,3 +558,9 @@ from the anchor/history); `reconcile` applies `extoutcome.outcome_state` (Paladi
 external row). Project overlay: `extops.py` compiles overlay operations into IR actions + generic bindings; vendored patch `G4a`.
 Mutants live at: extdispatch (5), boot + extgate_mut (policy_gate_in_adapter), extoutcome (divergence_rewritten).
 Tests: tests/paladin/test_pal_g4_*.py (rig g4_rig.py, adapters g4_adapters.py). Spec: spec/protections/H28-paladin.md.
+
+## G4 fix round 1 - paladin
+- G4-E20: `paladin.extoutcome` evidence = sorted DISTINCT ints (effects.seq of M plus audit.seq of A when full); D1/D2/D3 evidence = the same matching rows (the C28-2 oracle's reading of G4-E7); rule U keeps previous evidence only for a FINAL state, else UNKNOWN with [] (oracle).
+- Intent tick (cap `not_after_tick`, expiry) = the injected deployment clock, not `tx.tick`: the H28 harness builds its WorldStore without a clock, so `tx.tick` was 0.
+- `authcompile._rsel`: resource selector `{"type": "*"}` compiles to `*` (harness GEN-NULL grants use it).
+- G4-E23 confirmed and tested (tests/paladin/test_pal_g4_fix1.py): every submitted request's envelope_text == canon_json of the auditor's replay envelope for its decision.
