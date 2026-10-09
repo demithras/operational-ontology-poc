@@ -191,3 +191,8 @@ G3-E30 (orch, 2026-10-08, after dev2, before any official H26 run) Extends G3-E2
       the harness cannot evaluate on one snapshot do not excuse an unreachable variation. Found in dev2: pair p2601-97 added
       TESTED_BY H-D -> E-F@v1, which made the stored verdict of H-D disagree with derive_verdict (verdict-machine-derived);
       Paladin's state-level gate then refused every write in that world only. Attribution: reports/g3-attr3-p97-report.md.
+G3-E31 (orch, 2026-10-09, after official exp-h25-001 / exp-h26-001, before exp-*-002) (a) Ops-spec business rules: the formal
+      `when` expression binds; the prose `text` is commentary (preregister/contract-complete: a blank freeze_hash is a
+      precondition failure -> INVALID, as the oracle answers, not a deny rule). (b) H26 official runs go through
+      scripts/run_h26.sh (HistoryStore + AnchorClient per ruling Q10); scripts/run_h26.py refuses a non-dev id without an
+      anchor. The smoke run uses the identical launcher. exp-h26-001 ran without an anchor (orchestrator launch fault).
