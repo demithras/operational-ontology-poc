@@ -91,7 +91,7 @@ def test_r6_target_existence_and_stale_evidence(mfg, proj):
     assert zero(proj, lambda: proj.dep.direct(proj.token("researcher-1"), "start_run", {"hypothesis": "H-NOPE"},
                                               request_id="p1")).status == "DENIED"   # G3-E17: deny rule (freeze hash) before existence
     assert zero(proj, lambda: proj.dep.direct(proj.token("researcher-1"), "evaluate_hypothesis", {"hypothesis": "H-NOPE"},
-                                              request_id="p2")).status == "INVALID"   # no deny rule fires: existence
+                                              request_id="p2")).status == "DENIED"   # G3-E17 + fix9: the legal-lifecycle-transition deny rule fires on an absent hypothesis (oracle DENIED_RULE, official exp-h25-001 case 3471)
 
 
 def test_r6_project_lifecycle_is_checked_against_world_state(proj):

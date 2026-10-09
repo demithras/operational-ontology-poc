@@ -37,10 +37,14 @@ class Deriver:
             common = dict(protocol_valid=bool(h.get("freeze_hash")), required_evidence_complete=False,
                           sample_sufficient=False, reject_hit=False, support_hit=False)
             return self._result(common, hid, e, ev, h)
+        if e.get("evaluator_ref") is None:  # a hidden/absent evaluator_ref behaves like null (PROT-H26 s3.3): nothing to consult
+            common = dict(protocol_valid=bool(h.get("freeze_hash")), required_evidence_complete=False,
+                          sample_sufficient=False, reject_hit=False, support_hit=False)
+            return self._result(common, hid, e, ev, h)
         evaluator = self.evaluators.get(e["evaluator_ref"])
         if evaluator is None:
             raise LookupError(f"no evaluator registered for {e['evaluator_ref']!r}")
-        key = canonical_json([e, sorted((x["id"], x["payload_hash"], x["git_commit"]) for x in ev), h.get("freeze_hash"),
+        key = canonical_json([e, sorted((x["id"], x.get("payload_hash"), x.get("git_commit")) for x in ev), h.get("freeze_hash"),
                               facts.evidence_count(view, hid)])
         if key not in self._cache:
             # P2a patch D4: the neutral evaluator needs evidence_count (SUPPORTS_OR_REFUTES links); passed as a plain value
@@ -56,7 +60,7 @@ class Deriver:
     def _result(common: dict, hid, e, ev: list, h: dict) -> dict:
         verdict = evaluate_common(CommonEvaluation(**common)).value
         basis = {"hypothesis": hid, "experiment": None if e is None else [e["id"], e.get("version"), e.get("evaluator_ref")],
-                 "evidence": sorted((x["id"], x["payload_hash"]) for x in ev), "common": common,
+                 "evidence": sorted((x["id"], str(x.get("payload_hash"))) for x in ev), "common": common,
                  "freeze_hash": h.get("freeze_hash")}
         return {"verdict": verdict, "common": common, "experiment": None if e is None else e["id"],
                 "evidence": [x["id"] for x in ev], "derivation_hash": sha256_hex(canonical_json(basis))}

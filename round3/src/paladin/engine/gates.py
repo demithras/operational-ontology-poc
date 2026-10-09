@@ -81,7 +81,7 @@ def run_logic_gate(name: str, items: list, ctx) -> dict:
 
 def evaluate_policies(eng, spec, ctx) -> tuple[str, dict]:
     """deny > require_approval > allow; referencing allow policies => default deny if none applies."""
-    results, errors, classified = [], [], []
+    results, errors, classified, deny_errors = [], [], [], []
     for text, pid in spec.policy_refs:
         try:
             if pid is None:
@@ -97,6 +97,9 @@ def evaluate_policies(eng, spec, ctx) -> tuple[str, dict]:
                 classified.append(pid)
         except Exception as exc:
             errors.append(f"{text}: {type(exc).__name__}: {exc}")
+            pol_obj = eng.model.get("policies", pid) if pid is not None else None
+            if pol_obj is not None and pol_obj.decision == DENY:   # V4: a deny rule that cannot be evaluated fails closed
+                deny_errors.append(text)
     applying = {r["decision"] for r in results if r["applies"]}
     allow_declared = any(r["decision"] == ALLOW and r["version"] is not None for r in results)
     if errors or DENY in applying:
@@ -107,7 +110,7 @@ def evaluate_policies(eng, spec, ctx) -> tuple[str, dict]:
         verdict = "DENIED"
     else:
         verdict = "APPROVED"
-    detail = {"results": results, "errors": errors, "classified": classified,
+    detail = {"results": results, "errors": errors, "deny_errors": deny_errors, "classified": classified,
               "default_deny": allow_declared and ALLOW not in applying and not errors and DENY not in applying
               and APPROVAL not in applying}
     return verdict, gate("policy", verdict != "DENIED", detail)

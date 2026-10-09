@@ -86,9 +86,11 @@ def run_gates(eng, spec, rec: dict, principal: Any) -> dict:
     rec["gates"].append(gates.gate("authority", True, dec.to_plain()))
     ctx = gates.make_ctx(eng, spec, rec)
     # G3-E17: deny business rules -> existence (inputs gate, above) -> preconditions -> approvals. A clean policy DENY is
-    # decided before the preconditions; a policy evaluation ERROR still waits for them (V3).
+    # decided before the preconditions (V3). V4: a DENY rule whose evaluation errors (e.g. on an absent target) fails closed
+    # right there, exactly as the ops-spec oracle (HelperError -> DENIED_RULE); an error in a non-deny policy still waits.
     verdict, pol = gates.evaluate_policies(eng, spec, ctx)
-    if verdict == "DENIED" and not pol["detail"]["errors"]:
+    other_errors = len(pol["detail"]["errors"]) - len(pol["detail"]["deny_errors"])
+    if verdict == "DENIED" and not other_errors:
         rec["gates"].append(pol)
         return eng.record(rec, "DENIED", note="denied at policy")
     problems = gates.check_inputs(eng, spec, plain_inputs)   # E-6 target existence (G3-E17: after deny rules, before preconditions)

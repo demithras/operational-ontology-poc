@@ -64,7 +64,7 @@ def start_run(ctx, deriver, reader):
 def experiment_of_evidence(view, hid, evidence_props):
     """The hypothesis' experiment whose version the evidence is pinned to (exactly one, else None)."""
     hits = [e for e in facts.experiments_of(view, hid)
-            if facts.props(view, "Experiment", e)["version"] == evidence_props["experiment_version"]]
+            if (facts.props(view, "Experiment", e) or {}).get("version") == (evidence_props or {}).get("experiment_version")]
     return hits[0] if len(hits) == 1 else None
 
 

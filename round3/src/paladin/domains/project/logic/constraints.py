@@ -105,7 +105,7 @@ def make(ir: dict, deriver) -> dict:
         for r in ctx.view.list("Evidence"):
             owners = facts.inn(ctx.view, "PRODUCES", "Evidence", r["key"])
             if owners and (any(_blank(r["props"].get(k)) for k in need) or any(
-                    facts.props(ctx.view, "Experiment", o)["version"] != r["props"]["experiment_version"] for o in owners)):
+                    (facts.props(ctx.view, "Experiment", o) or {}).get("version") != r["props"].get("experiment_version") for o in owners)):
                 return False
         return True
 

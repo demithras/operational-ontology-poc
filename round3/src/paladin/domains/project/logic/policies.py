@@ -26,13 +26,15 @@ def contract_complete(view, hid, freeze_hash=None) -> bool:
 
 
 def _incomplete(ctx) -> bool:
-    return not contract_complete(ctx.view, ctx.inputs["hypothesis"], ctx.inputs["freeze_hash"])
+    # G3-E31(a): the formal `when` binds - a blank freeze_hash is the precondition freeze-hash-present (INVALID), not a deny
+    return not contract_complete(ctx.view, ctx.inputs["hypothesis"])
 
 
 def _threshold_edit_denied(ctx) -> bool:
     if ctx.action == "edit_threshold":
         hy = facts.hypotheses(ctx.view)
-        return any(hy[h].get("phase") != "DRAFT" for h in facts.target_hypotheses(ctx))
+        targets = facts.target_hypotheses(ctx)  # ops-spec: not all_have(..., nonempty:true) - an empty/absent set denies
+        return not (targets and all(hy.get(h, {}).get("phase") == "DRAFT" for h in targets))
     new_id = payloads.new_experiment_ids(ctx.view, ctx.inputs)[1]  # a new version must be new, never an overwrite
     return ctx.view.get("Experiment", new_id) is not None
 
@@ -85,11 +87,11 @@ def make(deriver, reader) -> dict:
         if ctx.action == "attach_evidence":
             ev = facts.props(v, "Evidence", i["evidence"])
             owners = facts.inn(v, "PRODUCES", "Evidence", i["evidence"])
-            return any(facts.props(v, "Experiment", o)["version"] != ev["experiment_version"] for o in owners)
+            return any((facts.props(v, "Experiment", o) or {}).get("version") != (ev or {}).get("experiment_version") for o in owners)
         if ctx.action == "new_experiment_version":
             return v.get("ContractVersion", payloads.new_experiment_ids(v, i)[3]) is not None
         if ctx.action == "record_decision":
-            cv = facts.props(v, "ContractVersion", i["contract_version"])
+            cv = facts.props(v, "ContractVersion", i["contract_version"]) or {}  # absent target: empty facts (G3-E17/E20)
             return not str(cv.get("git_commit") or "").strip()  # an unbound contract version cannot be changed by a decision
         return False
 

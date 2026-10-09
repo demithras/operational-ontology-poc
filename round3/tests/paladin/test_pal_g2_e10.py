@@ -22,8 +22,8 @@ def anchor(tmp_path_factory):
 @pytest.fixture
 def inv(tmp_path, anchor):
     r = mk(tmp_path, history=True, anchor=anchor.client())
-    res = r.dep.direct(r.token("researcher-1"), "evaluate_hypothesis", {"hypothesis": "H-NOPE"}, on_behalf_of=None, request_id="inv1")
-    assert res.status == "INVALID", res  # nonexistent target of an AUTHORISED caller, no deny rule fires: INVALID (G3-E17 order: deny rules -> existence)
+    res = r.dep.direct(r.token("researcher-1"), "flag_orphan_component", {"component": "C-NOPE"}, on_behalf_of=None, request_id="inv1")
+    assert res.status == "INVALID", res  # nonexistent target of an AUTHORISED caller, no deny rule fires (flag_orphan_component: classify/stale/ephemeral only): INVALID (G3-E17 order: deny rules -> existence); evaluate_hypothesis on an absent target is a lifecycle DENY since fix9
     assert create(r, "researcher-1", None, "ok1").status == "OK"
     return r
 

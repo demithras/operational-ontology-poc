@@ -50,10 +50,10 @@ def decision_content_hash(view, args):  # services.decision_service.hashing.deci
         "actor_id": a["key"],
         "principal_actor_id": behalf[0]["key"] if behalf else None,
         "evidence_snapshot_id": snap[0]["key"],
-        "ontology_version": p["ontologyVersion"], "shape_set_version": p["shapeSetVersion"],
-        "authorization_model_version": p["authorizationModelVersion"],
-        "policy_bundle_version": p["policyBundleVersion"], "action_type": p["actionType"],
-        "action_version": p["actionVersion"], "parameters": json.loads(p.get("parametersJson") or "{}"),
+        "ontology_version": p.get("ontologyVersion"), "shape_set_version": p.get("shapeSetVersion"),
+        "authorization_model_version": p.get("authorizationModelVersion"),
+        "policy_bundle_version": p.get("policyBundleVersion"), "action_type": p.get("actionType"),
+        "action_version": p.get("actionVersion"), "parameters": json.loads(p.get("parametersJson") or "{}"),
     }
     return sha256_hex(canonical_json(payload))
 

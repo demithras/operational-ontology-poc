@@ -31,6 +31,6 @@ def test_e17_c_deny_rule_beats_nonexistent_target(mfg):
 
 def test_e17_nonexistent_target_without_a_deny_rule_is_still_not_found(proj):
     before = proj.snap()
-    res = proj.dep.direct(proj.token("researcher-1"), "evaluate_hypothesis", {"hypothesis": "H-NOPE"}, None, "e17-d")
+    res = proj.dep.direct(proj.token("researcher-1"), "flag_orphan_component", {"component": "C-NOPE"}, None, "e17-d")
     assert (res.status, res.body) == ("INVALID", {"reason": "not_found"})
     assert diff(before, proj.snap()) == []
