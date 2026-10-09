@@ -9,18 +9,23 @@ Evidence (G4-E6 vs schemas/external-outcome.schema.json disagree: namespaced str
 """
 from __future__ import annotations
 
+from r3_shared.extsystems import OBSERVABILITY
+from r3_shared.outcome import LOW_CONFIDENCE_OBSERVABILITY
+
+NO_OBSERVATION = OBSERVABILITY[-1]   # the frozen vocabulary order is (full, effects_only, none)
+
 FINAL = ("RECONCILED_SUCCESS", "RECONCILED_FAILED", "DIVERGED")
 AT_MOST = ("at_most_once", "exactly_once_required")
 
 
 def confidence_of(observability: str) -> str:
-    return "low" if observability in ("none", "effects_only") else "full"
+    return "low" if observability in LOW_CONFIDENCE_OBSERVABILITY else "full"
 
 
 def initial(intent: dict) -> dict:
     """The outcome record created when the intent becomes durable (decision committed, nothing observed yet)."""
     o = intent["observability"]
-    return {"state": "UNKNOWN" if o == "none" else "PENDING", "confidence": confidence_of(o), "evidence": []}
+    return {"state": "UNKNOWN" if o == NO_OBSERVATION else "PENDING", "confidence": confidence_of(o), "evidence": []}
 
 
 def _same(row, intent: dict) -> bool:
@@ -30,7 +35,7 @@ def _same(row, intent: dict) -> bool:
 def outcome_state(intent: dict, snap, prev: dict, mutants=frozenset()) -> dict:
     """Returns {"state","confidence","evidence"} (evidence: sorted ints)."""
     obs, conf, p = intent["observability"], confidence_of(intent["observability"]), prev["state"]
-    if obs == "none":                                                   # N
+    if obs == NO_OBSERVATION:                                                   # N
         return {"state": "UNKNOWN", "confidence": "low", "evidence": []}
     if snap is None:                                                    # U
         return {"state": p if p in FINAL else "UNKNOWN", "confidence": conf, "evidence": list(prev["evidence"])}

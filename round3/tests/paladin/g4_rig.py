@@ -28,7 +28,7 @@ TR = {"source_warehouse": "WH-C", "destination_warehouse": "WH-B", "part": "PX-9
 EXP = {"po_id": "PO-992", "expedite_fee": 100}
 BIGFEE = {"po_id": "PO-992", "expedite_fee": 900}
 RES = {"work_order_id": "WO-43", "new_planned_start": 55}
-PUB = {"verdict": "V-1", "visibility": "internal"}
+PUB = {"verdict": "verdict-H-D-1", "visibility": "internal"}
 
 
 class G4Rig:
@@ -95,6 +95,16 @@ class G4Rig:
             return {t: [dict(r) for r in con.execute(f"SELECT * FROM {t} ORDER BY seq")] for t in ("effects", "audit")}
         finally:
             con.close()
+
+    def settle(self, rid, extra=10):
+        """dispatch, move past the cap expiry, reconcile at a watermark beyond it: the outcome list of `rid`."""
+        self.dep.dispatch_pending()
+        t = self.tick(extra)
+        return self.dep.reconcile(rid, t + 1).body["outcomes"]
+
+    def applied(self, correlation=None):
+        rows = self.ledger()["effects"]
+        return [r for r in rows if correlation is None or r["correlation"] == correlation]
 
     def effects_of(self, fn):
         before = self.snap()
