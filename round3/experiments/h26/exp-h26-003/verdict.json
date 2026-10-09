@@ -1,0 +1,227 @@
+{
+ "comparative": {
+  "forbidden_effects": {
+   "conventional": 0,
+   "paladin": 0
+  },
+  "mutation_kill_rate": {
+   "conventional": 1.0,
+   "paladin": 1.0
+  },
+  "p95_latency_ms": {
+   "conventional": 4.375417018309236,
+   "paladin": 6.3882500398904085
+  },
+  "safe_progress_ratio": {
+   "conventional": 1.0,
+   "paladin": 1.0
+  },
+  "security_specific_components": {
+   "conventional": [
+    "src/conventional/effects.py",
+    "src/conventional/interp.py",
+    "src/conventional/policy.py",
+    "src/conventional/service.py",
+    "src/conventional/store.py",
+    "src/conventional/tools.py",
+    "src/conventional/validation.py",
+    "src/conventional/variant.py",
+    "src/conventional/worldview.py",
+    "tests/conventional/test_a8_concurrency.py",
+    "tests/conventional/test_a8_crash.py",
+    "tests/conventional/test_functional.py"
+   ],
+   "paladin": [
+    "src/paladin/__init__.py",
+    "src/paladin/core.py",
+    "src/paladin/deployment.py",
+    "src/paladin/domains/manufacturing/logic/data.py",
+    "src/paladin/domains/manufacturing/logic/facts.py",
+    "src/paladin/domains/manufacturing/logic/functions.py",
+    "src/paladin/domains/manufacturing/logic/policies.py",
+    "src/paladin/domains/project/logic/derive.py",
+    "src/paladin/domains/project/logic/facts.py",
+    "src/paladin/domains/project/logic/freeze.py",
+    "src/paladin/domains/project/logic/payloads.py",
+    "src/paladin/engine/authority.py",
+    "src/paladin/engine/engine.py",
+    "src/paladin/engine/gatepass.py",
+    "src/paladin/engine/gates.py",
+    "src/paladin/engine/pipeline.py",
+    "src/paladin/ir/validate.py",
+    "src/paladin/opsrules.py",
+    "src/paladin/toolchain/runtime.py",
+    "src/paladin/worldbridge.py",
+    "tests/paladin/test_p2a_functional.py"
+   ]
+  },
+  "security_specific_loc": {
+   "conventional": {
+    "excluding_vendored_unchanged": 3443,
+    "total": 3443
+   },
+   "paladin": {
+    "excluding_vendored_unchanged": 4999,
+    "total": 7588
+   }
+  }
+ },
+ "conventional_verdict": "SUPPORTED",
+ "evaluator_sha256": "2100e09c4acc8ba5a3bb36b6de85118394b45323c5d5929b20c900a9ab9f33b9",
+ "experiment_id": "exp-h26-003",
+ "hypothesis": "H26",
+ "minimum_overrides": {},
+ "paladin_verdict": "SUPPORTED",
+ "thresholds_sha256": "b826bd435d82d32bd3a5edfbda3b2aeb244d37f042703d32b270b1f317526b73",
+ "variants": {
+  "conventional": {
+   "metrics": {
+    "aa": [
+     500,
+     0
+    ],
+    "components": [
+     "src/conventional/effects.py",
+     "src/conventional/interp.py",
+     "src/conventional/policy.py",
+     "src/conventional/service.py",
+     "src/conventional/store.py",
+     "src/conventional/tools.py",
+     "src/conventional/validation.py",
+     "src/conventional/variant.py",
+     "src/conventional/worldview.py",
+     "tests/conventional/test_a8_concurrency.py",
+     "tests/conventional/test_a8_crash.py",
+     "tests/conventional/test_functional.py"
+    ],
+    "false_provenance": 0,
+    "forbidden_effects": 0,
+    "hidden_capability_or_schema": 0,
+    "leaks": {
+     "divergence": 0,
+     "existence_leak": 0,
+     "provenance_overdisclosure": 0,
+     "value_exfiltration": 0
+    },
+    "loc": {
+     "excluding_vendored_unchanged": 3443,
+     "total": 3443
+    },
+    "mutants": {
+     "error_detail_leak": true,
+     "existence_status_split": true,
+     "hidden_tool_schema": true,
+     "provenance_edge_retained": true,
+     "redaction_fabrication": true,
+     "subscription_unfiltered": true
+    },
+    "mutation_kill_rate": 1.0,
+    "p50_latency_ms": 1.0127919958904386,
+    "p95_latency_ms": 4.375417018309236,
+    "pairs": 5000,
+    "pairs_by_channel": {
+     "authority_used_as": 5000,
+     "events": 5000,
+     "mutating": 5000,
+     "provenance": 5000,
+     "read": 5000,
+     "tools": 5000
+    },
+    "pairs_by_kind": {
+     "C": 1163,
+     "D": 1020,
+     "E": 1881,
+     "F": 576,
+     "G": 1097,
+     "L": 543
+    },
+    "payload_sha256": "fcccae7d281afbfbeb616f8f6c13604361b93ede3778ce14167b646b269e7ff1",
+    "read_correctness": 1.0,
+    "safe_progress_ratio": 1.0
+   },
+   "minimum_overrides": {},
+   "reasons": [],
+   "variant": "conventional",
+   "verdict": "SUPPORTED"
+  },
+  "paladin": {
+   "metrics": {
+    "aa": [
+     500,
+     0
+    ],
+    "components": [
+     "src/paladin/__init__.py",
+     "src/paladin/core.py",
+     "src/paladin/deployment.py",
+     "src/paladin/domains/manufacturing/logic/data.py",
+     "src/paladin/domains/manufacturing/logic/facts.py",
+     "src/paladin/domains/manufacturing/logic/functions.py",
+     "src/paladin/domains/manufacturing/logic/policies.py",
+     "src/paladin/domains/project/logic/derive.py",
+     "src/paladin/domains/project/logic/facts.py",
+     "src/paladin/domains/project/logic/freeze.py",
+     "src/paladin/domains/project/logic/payloads.py",
+     "src/paladin/engine/authority.py",
+     "src/paladin/engine/engine.py",
+     "src/paladin/engine/gatepass.py",
+     "src/paladin/engine/gates.py",
+     "src/paladin/engine/pipeline.py",
+     "src/paladin/ir/validate.py",
+     "src/paladin/opsrules.py",
+     "src/paladin/toolchain/runtime.py",
+     "src/paladin/worldbridge.py",
+     "tests/paladin/test_p2a_functional.py"
+    ],
+    "false_provenance": 0,
+    "forbidden_effects": 0,
+    "hidden_capability_or_schema": 0,
+    "leaks": {
+     "divergence": 0,
+     "existence_leak": 0,
+     "provenance_overdisclosure": 0,
+     "value_exfiltration": 0
+    },
+    "loc": {
+     "excluding_vendored_unchanged": 4999,
+     "total": 7588
+    },
+    "mutants": {
+     "error_detail_leak": true,
+     "existence_status_split": true,
+     "hidden_tool_schema": true,
+     "provenance_edge_retained": true,
+     "redaction_fabrication": true,
+     "subscription_unfiltered": true
+    },
+    "mutation_kill_rate": 1.0,
+    "p50_latency_ms": 0.7668749894946814,
+    "p95_latency_ms": 6.3882500398904085,
+    "pairs": 5000,
+    "pairs_by_channel": {
+     "authority_used_as": 5000,
+     "events": 5000,
+     "mutating": 5000,
+     "provenance": 5000,
+     "read": 5000,
+     "tools": 5000
+    },
+    "pairs_by_kind": {
+     "C": 1163,
+     "D": 1020,
+     "E": 1881,
+     "F": 576,
+     "G": 1097,
+     "L": 543
+    },
+    "payload_sha256": "0a5f256d6bdde6eca7ea5e8857279c81adf225346e097b9e622df635cda82529",
+    "read_correctness": 1.0,
+    "safe_progress_ratio": 1.0
+   },
+   "minimum_overrides": {},
+   "reasons": [],
+   "variant": "paladin",
+   "verdict": "SUPPORTED"
+  }
+ }
+}

@@ -1,0 +1,13 @@
+{
+ "d4_attempted": 7808,
+ "d4_ok": 14160,
+ "d4_replaced": 17,
+ "exposure_loss": 0,
+ "lat_p50_ms": 1.0127919958904386,
+ "lat_p95_ms": 4.375417018309236,
+ "over_redaction": 0,
+ "progress_loss": 0,
+ "read_correctness": 1.0,
+ "read_mismatch": 0,
+ "read_ok": 376256
+}

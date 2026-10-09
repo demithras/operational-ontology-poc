@@ -1,0 +1,212 @@
+{
+ "domain_privilege_branch": {
+  "control": {
+   "domain_branch": 0
+  },
+  "first_killing_case": {
+   "calls": 12,
+   "case": "7002533-3",
+   "diffs": [
+    {
+     "call": 0,
+     "kind": "request",
+     "original": [
+      "DENIED",
+      "business_rule"
+     ],
+     "renamed": [
+      "DENIED",
+      "case_required"
+     ]
+    }
+   ],
+   "domain": "project",
+   "domain_branch": true,
+   "model": "hierarchical"
+  },
+  "killed": true,
+  "killed_by": "audit",
+  "killing_class": "domain_branch",
+  "mutated": {
+   "domain_branch": 6,
+   "static_hits": 1
+  },
+  "sub_corpus": {
+   "audit_cases": 60,
+   "domain": "project",
+   "seed": 7002533
+  }
+ },
+ "emergency_no_expiry": {
+  "control": {
+   "emergency_violation": 0,
+   "illegitimate_effect": 0,
+   "procedural_mismatch": 0,
+   "world_lock_timeout": 0
+  },
+  "first_killing_case": {
+   "calls": [
+    {
+     "action": "act",
+     "actor": "planner-1",
+     "classes": [
+      "emergency_violation",
+      "illegitimate_effect",
+      "procedural_mismatch"
+     ],
+     "kind": "constitutional",
+     "reason": null,
+     "seq": 74,
+     "status": "OK",
+     "tick": 3
+    }
+   ],
+   "case": "case-7002533-19",
+   "class": "emergency_violation"
+  },
+  "killed": true,
+  "killed_by": "corpus",
+  "killing_class": "emergency_violation",
+  "mutated": {
+   "emergency_violation": 23,
+   "illegitimate_effect": 23,
+   "procedural_mismatch": 31,
+   "world_lock_timeout": 0
+  },
+  "sub_corpus": {
+   "cases": 120,
+   "races": 40,
+   "seed": 7002533
+  }
+ },
+ "merit_autofill": {
+  "control": {
+   "fabricated_judgment": 0,
+   "world_lock_timeout": 0
+  },
+  "first_killing_case": {
+   "calls": [
+    {
+     "action": "execute",
+     "actor": "u52592-6",
+     "classes": [
+      "fabricated_judgment",
+      "illegitimate_effect",
+      "procedural_mismatch"
+     ],
+     "kind": "constitutional",
+     "reason": null,
+     "seq": 57,
+     "status": "OK",
+     "tick": 0
+    }
+   ],
+   "case": "case-7002533-0",
+   "class": "fabricated_judgment"
+  },
+  "killed": true,
+  "killed_by": "corpus",
+  "killing_class": "fabricated_judgment",
+  "mutated": {
+   "fabricated_judgment": 98,
+   "world_lock_timeout": 0
+  },
+  "sub_corpus": {
+   "cases": 120,
+   "races": 40,
+   "seed": 7002533
+  }
+ },
+ "precedence_inverted": {
+  "control": {
+   "illegitimate_effect": 0,
+   "procedural_mismatch": 0,
+   "progress_loss": 0,
+   "world_lock_timeout": 0
+  },
+  "first_killing_case": {
+   "calls": [
+    {
+     "action": "propose",
+     "actor": "admin-1",
+     "classes": [
+      "procedural_mismatch"
+     ],
+     "kind": "constitutional",
+     "reason": "precedence_unresolved",
+     "seq": null,
+     "status": "DENIED",
+     "tick": null
+    },
+    {
+     "action": "propose",
+     "actor": "u52592-6",
+     "classes": [
+      "procedural_mismatch"
+     ],
+     "kind": "constitutional",
+     "reason": "precedence_unresolved",
+     "seq": null,
+     "status": "DENIED",
+     "tick": null
+    }
+   ],
+   "case": "case-7002533-0",
+   "class": "procedural_mismatch"
+  },
+  "killed": true,
+  "killed_by": "corpus",
+  "killing_class": "procedural_mismatch",
+  "mutated": {
+   "illegitimate_effect": 1,
+   "procedural_mismatch": 360,
+   "progress_loss": 1,
+   "world_lock_timeout": 0
+  },
+  "sub_corpus": {
+   "cases": 120,
+   "races": 40,
+   "seed": 7002533
+  }
+ },
+ "quorum_weakened": {
+  "control": {
+   "fabricated_judgment": 0,
+   "illegitimate_effect": 0,
+   "procedural_mismatch": 0,
+   "world_lock_timeout": 0
+  },
+  "first_killing_case": {
+   "calls": [
+    {
+     "action": "execute",
+     "actor": "admin-1",
+     "classes": [
+      "procedural_mismatch"
+     ],
+     "kind": "constitutional",
+     "reason": "not_final",
+     "seq": null,
+     "status": "DENIED",
+     "tick": null
+    }
+   ],
+   "case": "case-7002533-1",
+   "class": "procedural_mismatch"
+  },
+  "killed": true,
+  "killed_by": "corpus",
+  "killing_class": "procedural_mismatch",
+  "mutated": {
+   "fabricated_judgment": 8,
+   "illegitimate_effect": 19,
+   "procedural_mismatch": 296,
+   "world_lock_timeout": 0
+  },
+  "sub_corpus": {
+   "cases": 120,
+   "races": 40,
+   "seed": 7002533
+  }
+ }
+}

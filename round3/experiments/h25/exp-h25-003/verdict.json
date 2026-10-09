@@ -1,0 +1,178 @@
+{
+ "comparative": {
+  "forbidden_effects": {
+   "conventional": 0,
+   "paladin": 0
+  },
+  "mutation_kill_rate": {
+   "conventional": 1.0,
+   "paladin": 1.0
+  },
+  "p95_latency_ms": {
+   "conventional": 2.411167020909488,
+   "paladin": 28.33429106976837
+  },
+  "safe_progress_ratio": {
+   "conventional": 1.0,
+   "paladin": 1.0
+  },
+  "security_specific_components": {
+   "conventional": [
+    "src/conventional/effects.py",
+    "src/conventional/interp.py",
+    "src/conventional/policy.py",
+    "src/conventional/service.py",
+    "src/conventional/store.py",
+    "src/conventional/tools.py",
+    "src/conventional/validation.py",
+    "src/conventional/variant.py",
+    "src/conventional/worldview.py",
+    "tests/conventional/test_a8_concurrency.py",
+    "tests/conventional/test_a8_crash.py",
+    "tests/conventional/test_functional.py"
+   ],
+   "paladin": [
+    "src/paladin/__init__.py",
+    "src/paladin/core.py",
+    "src/paladin/deployment.py",
+    "src/paladin/domains/manufacturing/logic/data.py",
+    "src/paladin/domains/manufacturing/logic/facts.py",
+    "src/paladin/domains/manufacturing/logic/functions.py",
+    "src/paladin/domains/manufacturing/logic/policies.py",
+    "src/paladin/domains/project/logic/derive.py",
+    "src/paladin/domains/project/logic/facts.py",
+    "src/paladin/domains/project/logic/freeze.py",
+    "src/paladin/domains/project/logic/payloads.py",
+    "src/paladin/engine/authority.py",
+    "src/paladin/engine/engine.py",
+    "src/paladin/engine/gatepass.py",
+    "src/paladin/engine/gates.py",
+    "src/paladin/engine/pipeline.py",
+    "src/paladin/ir/validate.py",
+    "src/paladin/opsrules.py",
+    "src/paladin/toolchain/runtime.py",
+    "src/paladin/worldbridge.py",
+    "tests/paladin/test_p2a_functional.py"
+   ]
+  },
+  "security_specific_loc": {
+   "conventional": {
+    "excluding_vendored_unchanged": 3443,
+    "total": 3443
+   },
+   "paladin": {
+    "excluding_vendored_unchanged": 4999,
+    "total": 7588
+   }
+  }
+ },
+ "conventional_verdict": "SUPPORTED",
+ "evaluator_sha256": "e88b5bf126b9538fbceaededb7a2701091603ee1414d1d959635c22415ea4c56",
+ "experiment_id": "exp-h25-003",
+ "hypothesis": "H25",
+ "minimum_overrides": {},
+ "paladin_verdict": "SUPPORTED",
+ "thresholds_sha256": "b4aacac3e724d40438449d739775479b117306415d7047e468b191035490e320",
+ "variants": {
+  "conventional": {
+   "metrics": {
+    "class_counts": {
+     "ok": 156216,
+     "race_refusal_ok": 291
+    },
+    "distinct_models": 3,
+    "domain_branches": 0,
+    "emergency_violations": 0,
+    "evidence_sha256": {
+     "authority-topology-corpus.json": "15f913aff421cc05bd7f156d7ce138d064f4cb75eb9da4395e423c3f0fab750d",
+     "cases-h25.jsonl.gz": "bc5c3d79b53e0d60d7b5c99a30bc309b04e0e72183ba5c3733aab13573ed6d30",
+     "domain-branch-audit.json": "7464b19662fdf7ac254e70906eacc4d23c3c26f8aa3a5e85023d4a6d9d72ed63",
+     "mutation-results.json": "577639b259d40c40cd88356f544ef101c7abf999b59a94bfaa49e8e0708b93ee",
+     "oracle-boundary-audit.json": "36d0342b7717e12c48334e17308fef49157c66c9719dd4d7eb2cc782b93de9ec",
+     "oracle-differential.json": "86e619d1881bd7d3823b01e6749fa90b31c7ca4deaa931011c894af31ca67bdf",
+     "safe-progress.json": "af308b0f211db52fdd743c0ca7ed6122d36f0cf6144b3a0089fc33b47f0cee8f"
+    },
+    "fabricated_judgments": 0,
+    "forbidden_effects": 0,
+    "loc": {
+     "excluding_vendored_unchanged": 3443,
+     "total": 3443
+    },
+    "mutation_kill_rate": 1.0,
+    "p50_latency_ms": 0.806541065685451,
+    "p95_latency_ms": 2.411167020909488,
+    "payload_sha256": "74544154af61834529884fd257be3589d6225dcf8ac59af7655608e980e0ee69",
+    "procedural_equality": 1.0,
+    "safe_progress_ratio": 1.0,
+    "unique_cases": 10338,
+    "violations": {
+     "domain_branch": 0,
+     "emergency_violation": 0,
+     "fabricated_judgment": 0,
+     "illegitimate_effect": 0,
+     "invalid_doc_accepted": 0,
+     "linearizability_violation": 0,
+     "procedural_mismatch": 0,
+     "progress_loss": 0,
+     "unattributed_write": 0,
+     "unlogged_write": 0,
+     "writer_violation": 0
+    }
+   },
+   "minimum_overrides": {},
+   "reasons": [],
+   "variant": "conventional",
+   "verdict": "SUPPORTED"
+  },
+  "paladin": {
+   "metrics": {
+    "class_counts": {
+     "ok": 156232,
+     "race_refusal_ok": 275
+    },
+    "distinct_models": 3,
+    "domain_branches": 0,
+    "emergency_violations": 0,
+    "evidence_sha256": {
+     "authority-topology-corpus.json": "79924bd76e3bf940c143a219f535befb4a9480535ca7c533814406d37cd1c64a",
+     "cases-h25.jsonl.gz": "0d5a8df50de0b73e8ba073ba993e1f5c5a616dc910535811c7c5f4e1a9d4f7af",
+     "domain-branch-audit.json": "7f7cf831b0636d8e525f68d05b6a0920daf5418a7fcde2e247cace4f33b9e6f1",
+     "mutation-results.json": "23b30e2d0b091f41c8da688f00adb9940674e7c0a6c3d59591ec5786f5bea8db",
+     "oracle-boundary-audit.json": "7294dd259885a464bde48f2246b9ee612f4a9300f54e64bc9176c635bb40d8f5",
+     "oracle-differential.json": "c86d6aa1f9b43d077822884b81e8fba2354e0f4e777bb83b3187f97e39d4a3ea",
+     "safe-progress.json": "8761fb74f7fea915356598bfae00a90660ce807175e5fb4e83954934dfc792f9"
+    },
+    "fabricated_judgments": 0,
+    "forbidden_effects": 0,
+    "loc": {
+     "excluding_vendored_unchanged": 4999,
+     "total": 7588
+    },
+    "mutation_kill_rate": 1.0,
+    "p50_latency_ms": 10.052083060145378,
+    "p95_latency_ms": 28.33429106976837,
+    "payload_sha256": "c863500dfe750dcf2090aa37b307c49dfcd4b51c87e31a333055f89f831bd002",
+    "procedural_equality": 1.0,
+    "safe_progress_ratio": 1.0,
+    "unique_cases": 10338,
+    "violations": {
+     "domain_branch": 0,
+     "emergency_violation": 0,
+     "fabricated_judgment": 0,
+     "illegitimate_effect": 0,
+     "invalid_doc_accepted": 0,
+     "linearizability_violation": 0,
+     "procedural_mismatch": 0,
+     "progress_loss": 0,
+     "unattributed_write": 0,
+     "unlogged_write": 0,
+     "writer_violation": 0
+    }
+   },
+   "minimum_overrides": {},
+   "reasons": [],
+   "variant": "paladin",
+   "verdict": "SUPPORTED"
+  }
+ }
+}
