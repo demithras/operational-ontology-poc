@@ -45,13 +45,16 @@ def eval_outcomes(R: dict, led: LedgerIndex, systems: dict) -> dict:
     """Replay every reconcile point with the oracle's outcome function; compare to what the variant returned."""
     dep, ints = R["dep"], _intents(R)
     dl = led.dep_ledger(dep)
-    out = {"points": 0, "equal": 0, "mismatch": [], "false": [], "transcript_bad": 0, "finals": {}, "oracle_finals": {}, "observed": 0}
+    out = {"points": 0, "equal": 0, "mismatch": [], "false": [], "transcript_bad": 0, "finals": {}, "oracle_finals": {}, "observed": 0, "rules": [], "evidence_bad": []}
     prev: dict = {}
+    prev_wm: dict = {}
     for rc in R["recon"]:
         rid, fault = rc["rid"], rc["fault"]
         if rc["error"] and rc["error"].startswith(("unsupported", "world_lock")):
             continue
         if rid not in ints:                                   # no external effect committed: reconcile must say unknown_request
+            if any(q["rid"] == rid and q["status"] == "OK" and q["oracle"] != "OK" for q in R["requests"]):
+                continue                                  # variant committed what the oracle denies: already governance_in_adapter
             out["points"] += 1
             if rc["status"] == "INVALID" and rc["reason"] == "unknown_request":
                 out["equal"] += 1
@@ -68,7 +71,9 @@ def eval_outcomes(R: dict, led: LedgerIndex, systems: dict) -> dict:
         for I in intents:
             key = (rid, I["effect_index"])
             exp_s, exp_c, exp_e = extoracle.outcome_state(I, snap, prev.get(key, (None, []))[0], prev.get(key, (None, []))[1],
-                                                          I["idempotency"], I["observability"], tick0 + R["window"])
+                                                          I["idempotency"], I["observability"], tick0 + R["window"], prev_wm.get(key), out["rules"])
+            if snap is not None:
+                prev_wm[key] = max(prev_wm.get(key, -1), snap["watermark"])
             prev[key] = (exp_s, exp_e)
             out["points"] += 1
             out["oracle_finals"][key] = exp_s
@@ -77,12 +82,13 @@ def eval_outcomes(R: dict, led: LedgerIndex, systems: dict) -> dict:
                 out["mismatch"].append({"rid": rid, "tick": rc["tick"], "why": f"no valid outcome for effect {I['effect_index']}: {rc['status']} {rc['reason']} {rc['error']}"})
                 continue
             out["finals"][key] = g["state"]
+            if g["evidence"] != exp_e:
+                out["evidence_bad"].append({"rid": rid, "effect": I["effect_index"], "tick": rc["tick"], "got": g["evidence"], "oracle": exp_e})
             if (g["state"], g["confidence"]) == (exp_s, exp_c):
                 out["equal"] += 1
                 continue
-            corroborated = bool(snap) and any(r["correlation"] == I["correlation"] for r in snap["effects"])
             rec = {"rid": rid, "effect": I["effect_index"], "tick": rc["tick"], "got": [g["state"], g["confidence"]], "oracle": [exp_s, exp_c]}
-            (out["mismatch"] if (g["state"] != "RECONCILED_SUCCESS" or corroborated) else out["false"]).append(rec)
+            (out["mismatch"] if g["state"] != "RECONCILED_SUCCESS" else out["false"]).append(rec)
     return out
 
 

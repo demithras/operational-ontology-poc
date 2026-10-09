@@ -71,7 +71,8 @@ def aggregate(J: dict) -> dict:
     gov_sub = Counter(g["sub"] for r in rows for g in r["gov"])
     det = [sum(r["detect"][0] for r in clean), sum(r["detect"][1] for r in clean)]
     harness = Counter(h for r in rows for h in set(r["harness"]))
-    harness["generator_redraw_exhausted"] += len(J["harness_rows"])
+    if J["harness_rows"]:
+        harness["generator_redraw_exhausted"] += len(J["harness_rows"])
     floors = {"per_primitive": {p: sum(p in r["prims"] for r in clean) for p in PRIMS_FLOOR},
               "per_domain_system": dict(Counter(f"{r['domain']}/{r['system']}" for r in clean)),
               "crash_cases": sum(bool(r["crash"]) for r in clean),

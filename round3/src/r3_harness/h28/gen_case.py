@@ -13,7 +13,7 @@ from r3_oracle import approvals, extoracle, ops_model
 
 from . import specs
 
-MAX_TRIES = 80
+MAX_TRIES = 400
 STR_POOL = {"visibility": ["internal", "public"], "reviewer": ["rev-a", "rev-b", "rev-c"]}
 
 

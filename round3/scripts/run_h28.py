@@ -117,7 +117,7 @@ def main() -> int:
         sock, ctl, ext = os.environ.get("R3_EXT_SOCK"), os.environ.get("R3_EXT_CTL"), os.environ.get("R3_EXT_DIR")
         if not (sock and ctl and ext):
             die("run needs R3_EXT_SOCK/R3_EXT_CTL/R3_EXT_DIR: start it through scripts/run_h28.sh")
-        pre = runner.run_variant(factory, a.variant, out, a.exp_id, a.seed, sock, ctl, ext, anchor_sock=os.environ.get("R3_ANCHOR_SOCK"),
+        pre = runner.run_variant(factory, a.variant, out, a.exp_id, a.seed, sock, ctl, ext, anchor_sock=None if a.variant.startswith("fake-") else os.environ.get("R3_ANCHOR_SOCK"),
                                  cases=a.cases, controls=a.controls)
         pre["dev_overrides"] = ov
         (out / "run-pre.json").write_text(json.dumps(pre, sort_keys=True))

@@ -62,7 +62,7 @@ class Composite:
         self.attempts.append({"request_id": req.request_id, "effect_index": req.effect_index, "system": req.system, "op": op,
                               "target": target, "payload_digest": payload_digest(payload), "kind": kind,
                               "cap_chain": extcap.chain_id(cap) if cap.startswith(extcap.PREFIX) else "",
-                              "tick": self.now() if tick is None else tick, "status": rec.status, "reason": rec.reason})
+                              "tick": self.now() if tick is None else tick, "cap": cap, "status": rec.status, "reason": rec.reason})
         self.receipts.append(rec)
         return rec
 

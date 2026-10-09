@@ -50,7 +50,7 @@ def corpus_file(J: dict, pre: dict) -> dict:
         B = J["recs"].get(cid, {}).get("byz") or {}
         rec = {k: v for k, v in B.get("recorder", {}).items()}
         cases.append({"case": d, "dep": B.get("dep"), "twin_dep": (J["recs"].get(cid, {}).get("twin") or {}).get("dep"),
-                      "start_tick": B.get("start_tick"), "world_digest": B.get("world_digest"), "attempts": B.get("attempts"),
+                      "start_tick": B.get("start_tick"), "world_digest": B.get("world_digest"), "attempts": [{k: v for k, v in a.items() if k != "cap"} for a in (B.get("attempts") or [])],
                       "recorder": {s: [{**{k: v for k, v in e.items() if k != "cap"}, "cap": _cap_view(e["cap"])} for e in log]
                                    for s, log in rec.items()}})
     return {"seed": pre["seed"], "generator": pre["stats"], "cases": cases}

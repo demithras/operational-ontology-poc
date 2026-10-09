@@ -47,7 +47,8 @@ class H28Dep(FakeDep):
     # ---- decision plane: reuse FakeDep, but external effects go to the outbox AFTER the world commit ---------------------
     def _apply(self, effects):
         ext = [e for e in effects if e["kind"] == "external"]
-        super()._apply([e for e in effects if e["kind"] != "external"] if self.external is not None else effects)
+        legacy = self.mode == "legacy_write"          # known negative for C28-1: still writes inside the world transaction
+        super()._apply([e for e in effects if e["kind"] != "external"] if (self.external is not None and not legacy) else effects)
         if self.external is not None:
             self._pending = ext
 
@@ -191,7 +192,7 @@ NEGATIVES = {   # name -> (mode, mutants): the known-negative fakes of ORACLE-AN
     "FakeRootCapToAdapter": ("honest", ("credential_scope_broadened",)), "FakeAdapterPolicy": ("honest", ("policy_gate_in_adapter",)),
     "FakeFreshCapRetry": ("honest", ("idempotency_disabled",)), "FakeReadsAdapterObservations": ("honest", ("observation_coupled",)),
     "FakeAnyRowSuccess": ("honest", ("divergence_rewritten",)), "FakeConsumesArtefact": ("FakeConsumesArtefact", ()),
-    "FakeAlwaysUnknown": ("always_unknown", ()), "FakeNeverDispatch": ("never_dispatch", ()),
+    "FakeAlwaysUnknown": ("always_unknown", ()), "FakeNeverDispatch": ("never_dispatch", ()), "FakeLegacyWrite": ("legacy_write", ()),
 }
 
 

@@ -30,7 +30,7 @@ def evaluator_sha256() -> str:
     return h.hexdigest()
 
 
-def oracle_isolation() -> tuple[bool, list[str]]:
+def oracle_isolation(src_dir: Path | None = None) -> tuple[bool, list[str]]:
     """C28-0: the closure of r3_oracle/extoracle.py imports no variant, no r3_harness, no HistoryStore, reads no world_log marks."""
     seen, todo, bad = set(), ["extoracle"], []
     while todo:
@@ -38,7 +38,7 @@ def oracle_isolation() -> tuple[bool, list[str]]:
         if name in seen:
             continue
         seen.add(name)
-        f = ROUND3 / "src" / "r3_oracle" / f"{name}.py"
+        f = (src_dir or ROUND3 / "src" / "r3_oracle") / f"{name}.py"
         if not f.is_file():
             continue
         for n in ast.walk(ast.parse(f.read_text())):

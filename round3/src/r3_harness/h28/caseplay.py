@@ -115,6 +115,20 @@ class Player:
             au, aerr = self.call("authority_used", lambda: self.dep.authority_used(r["rid"]))
             row["authority_used"] = {"status": au.status, "body": au.body} if au is not None else None
 
+    def s_script(self, st):
+        """Conformance C28-2: the HARNESS writes a scripted ledger row with its own broad cap (system+operation+correlation only)."""
+        from r3_shared import extcap
+        from r3_shared.extadapter import correlation as corr
+        r = self.case["requests"][st["i"]]
+        ints = self.intents.get(r["i"])
+        if not ints:
+            return
+        I = ints[0]
+        root = self.ctx.ctl.issue_root(self.rec["dep"], I["system"])
+        cap = extcap.attenuate(root, system=I["system"], operation=I["operation"], correlation=corr(r["rid"], I["effect_index"]))
+        tgt = I["target"] if st["what"] != "write_other" else I["target"] + "~other"
+        self.ctx.ctl.data_only().write(cap, I["operation"], tgt, I["payload"], "script")
+
     def s_dispatch(self, st):
         res, err = self.call("dispatch", g4_call, self.dep, "dispatch_pending")
         self.rec["dispatch"].append({"tick": self.clock.now(), "status": res.status if res else None,
@@ -133,13 +147,15 @@ class Player:
 
     def reconcile_one(self, r, fault):
         n0, now = len(self.observer.transcript), self.clock.now()
-        res, err = self.call("reconcile", g4_call, self.dep, "reconcile", r["rid"], now)
-        self.rec["recon"].append({"i": r["i"], "rid": r["rid"], "tick": now, "watermark": now, "fault": fault,
+        wm = max(0, now - 1)      # strictly earlier than any future write: the observer snapshot at wm is tick-complete (exact oracle replay)
+        res, err = self.call("reconcile", g4_call, self.dep, "reconcile", r["rid"], wm)
+        self.rec["recon"].append({"i": r["i"], "rid": r["rid"], "tick": now, "watermark": wm, "fault": fault,
                                   "status": res.status if res else None, "reason": (res.body or {}).get("reason") if res else None,
                                   "outcomes": (res.body or {}).get("outcomes") if res else None, "error": err,
                                   "transcript": [dict(e) for e in self.observer.transcript[n0:]]})
 
     def s_reconcile(self, st):
+        self.tick_to(self.clock.now() + 1)
         self.reconcile_all(st.get("fault"))
 
     def s_final(self, st):
@@ -151,9 +167,13 @@ class Player:
 
     def finish(self):
         self.rec["end_tick"] = self.clock.now()
+        sn = self.snapshot()
+        self.rec["world_external_rows"] = None if sn is None else len(sn["effects"])
         snap = self.snapshot()
         self.rec["world_digest"] = None if snap is None else __import__("hashlib").sha256(
-            canon_json({"objects": snap["objects"], "links": snap["links"]}).encode()).hexdigest()
+            canon_json({"objects": {k: ({**o, "props": {**o["props"], "snapshotObservedAt": o["props"]["snapshotObservedAt"] - self.rec["start_tick"]}}
+                                        if k.startswith("EvidenceSnapshot:") and "snapshotObservedAt" in o["props"] else o)
+                                    for k, o in snap["objects"].items()}, "links": snap["links"]}).encode()).hexdigest()
         self.rec["recorder"] = {s: r.log for s, r in self.recs.items() if r.log}
         self.rec["attempts"] = [a for c in self.comps.values() for a in c.attempts]
         outs = {}
