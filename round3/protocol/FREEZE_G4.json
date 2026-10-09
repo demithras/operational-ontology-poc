@@ -1,12 +1,16 @@
 {
   "recorded_at": "2026-10-09",
-  "note": "Gate 4 frozen design (tag r3-g4-freeze), recorded before any Gate 4 implementation. Evaluators compare against these hashes.",
+  "note": "Gate 4 frozen design (tag r3-g4-freeze), recorded before any Gate 4 implementation. Evaluators compare against these hashes. Errata G4-E1..E14 (P1f build report) and P1f frozen deliverables (H28 project overlay, external systems) added.",
   "files": {
     "spec/protections/PROT-H28.md": "260f53abaa15e6ec561eaf2232c7f1df4f6b6f7a170dbacbd621e07722964952",
     "spec/gate4/PROTOCOL-P1f.md": "13daa209c824cee22933016f810b97f22253919f00e9bcfcb526c1b56c3f6ec3",
     "spec/gate4/ORACLE-AND-HARNESS-G4.md": "5d69a06147eb4f5048406c9e5c4e3acddd134c520497e913497be322d1a19623",
     "spec/gate4/EQUIVALENCE-G4.md": "3add2a2779c0ef4176749b9d4719a8e70e85ad5880a5cd0b0848c02ab7337182",
-    "spec/gate4/OPEN-QUESTIONS.md": "5c2c68e639ab38d02c3766905753585834944f921a39706cdda0bef1b3136cb6",
-    "protocol/AUTHOR_DECISIONS_2026-10-09.md": "2ada9daa0dc4176464c4430c8daff8848169c52ace07fec487a93fc469b5079b"
+    "spec/gate4/OPEN-QUESTIONS.md": "7ce870e1425e0f89ca5d0b3136e69b3476201e35457a34b0e872ff1c70ac2aff",
+    "protocol/AUTHOR_DECISIONS_2026-10-09.md": "2ada9daa0dc4176464c4430c8daff8848169c52ace07fec487a93fc469b5079b",
+    "spec/ops/project.h28.json": "a375f6eaf996dec8da7f2b31ac09f9bb4d3dd964c9c7b46c93b393b114b4b5ae",
+    "spec/authority/project.h28.v3.json": "49d75aa1e2a325574e96434af63637ac0d9ce62d0775b70bccb83d6fe8b03033",
+    "spec/external/manufacturing.systems.json": "41de0476c42767d1f6976d4ae775a643faad781c892672649bf35904c01a94b3",
+    "spec/external/project.systems.json": "9bac1f4877ec35ac8169bf8311faec9352c6f918f3147ca0d821f023ae63cc00"
   }
 }

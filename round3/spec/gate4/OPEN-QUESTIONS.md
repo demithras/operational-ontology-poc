@@ -84,3 +84,34 @@ Q15 (orch) Static audit resolution file spec/gate4/ADAPTER-AUDIT-RESOLUTIONS.jso
 - Q5 (AUTHOR): accepted as scope limit L1 - the observer is not attacked (only unavailable/lagging); the independence check
   (shared_trust_root) stays.
 - Q6-Q15 (orch): recommendations accepted as written. Q7 floors accepted as written (author precedent G2 2b / G3 Q3, Q6).
+
+## Errata G4-E1..E14 (orch, 2026-10-09, from the P1f build report, before any Gate 4 variant/harness builder)
+G4-E1 Canonical JSON for P1f forms = the anchor canon (sort_keys, compact separators, ensure_ascii=False), implemented once
+      as r3_shared.extadapter.canon_json (P1f-3's `r3_shared.serial` does not exist).
+G4-E2 spec/external/{manufacturing,project}.systems.json are frozen deliverables of P1f (added to FREEZE_G4).
+G4-E3 GEN-NULL: one generated system per domain with a single operation `record` (at_most_once, target gen:<key>, semantics
+      gen_record), observability `none`; the H28 harness synthesises these effects; every one must stay UNKNOWN (Q3 ruling).
+G4-E4 Q2 overlay content as built in P1f is FROZEN: spec/ops/project.h28.json (publish_result: Verdict + visibility, rule
+      publish-public-needs-approval; notify_reviewer: Hypothesis + reviewer) and spec/authority/project.h28.v3.json (grants h28-*);
+      base ops byte-identical. publish-public-needs-approval is the project analogue for the policy_gate_in_adapter mutant (Q10).
+G4-E5 credential_scope_broadened mutant: the minted cap keeps its correlation caveat but drops the target and payload-digest
+      binding (system + op + correlation), so out-of-scope effects are ACCEPTED by ExternalWorld and measured, not refused.
+G4-E6 Outcome `evidence` = sorted list of namespaced strings "E:<effects.seq>" / "A:<audit.seq>"; informational only; outcome
+      equality (oracle vs variant) compares state and confidence, never evidence.
+G4-E7 Rule U keeps the previous state's evidence; D1 evidence = the conflicting ledger rows; D3 applies to at_most_once AND
+      exactly_once_required (PROT-H28 s4).
+G4-E8 complete_through_tick = min(watermark - k, server_tick); a watermark ahead of the server never overstates completeness.
+G4-E9 Refused rows: bad_signature rows are unattributed (deployment/chain/correlation empty) and invisible to observers;
+      unknown_root and later refusal reasons carry the authenticated caveats; several distinct correlation caveats ->
+      correlation_missing.
+G4-E10 Ledger rows carry a `deployment` column; observation keys are scoped per deployment (HMAC(root_key, deployment), stored
+      hashed); one ExternalWorld serves many per-case deployments.
+G4-E11 Control-plane isolation is by construction (separate data and .ctl sockets, per-plane op allow-lists,
+      ExternalClient.data_only()); the sandbox denies writes to the ext dir. Scope note: Byzantine adapters are harness-injected
+      code; attacking the control socket is not an H28 attack class.
+G4-E12 Identical caveat sets give an identical chain_id (re-minting cannot bypass max_uses); idempotency_disabled works only by
+      changing caveats.
+G4-E13 The ledger runs in WAL mode while live; close() switches to journal_mode=DELETE so a closed ledger is readable.
+G4-E14 ExternalRequest validates shape on construction; the strict check (never a root cap; correlation == request_id#effect_index)
+      is validate_request(strict_cap=True), used by the recorder and C28-3. Launcher env contract: R3_EXT_SOCK, R3_EXT_CTL
+      (= R3_EXT_SOCK + ".ctl"), R3_EXT_DIR; require_external(exp_id) refuses non-dev ids without them.
