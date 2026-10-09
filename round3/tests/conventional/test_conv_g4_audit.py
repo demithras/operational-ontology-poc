@@ -58,11 +58,10 @@ def test_adapter_modules_read_no_authority_vocabulary_outside_mutant_guards():
     for m in ADAPTER_MODULES:
         tree = ast.parse(Path(importlib.import_module(m).__file__).read_text())
         for fn in [n for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef,))]:
-            if "gate_hold" in fn.name:      # the policy_gate_in_adapter mutant site (scanned only in that build, G3-E24(2))
-                continue
             for n in ast.walk(fn):
                 if isinstance(n, (ast.Compare, ast.Subscript, ast.Attribute)):
                     txt = ast.unparse(n).lower()
+                    txt = txt.replace("policy_gate_in_adapter", "")  # the mutant switch NAME is not a rule (G4-E25(b))
                     assert not any(v in txt for v in VOCAB), (m, fn.name, txt)
 
 
@@ -77,3 +76,23 @@ def test_closure_of_adapter_modules_is_small_and_listed():
     for m in ADAPTER_MODULES:
         _closure(m, c)
     assert {"conventional.extout", "conventional.extrecon", "r3_shared.extcap", "r3_shared.extobs"} <= c
+
+
+def test_mutant_only_module_is_outside_the_clean_build_and_inside_the_mutant_build():
+    from conventional.variant import ConventionalVariant
+    assert "conventional.extgate_mut" not in ConventionalVariant().adapter_modules
+    assert "conventional.extgate_mut" in ConventionalVariant(["policy_gate_in_adapter"]).adapter_modules
+    closure = set()
+    for m in ConventionalVariant().adapter_modules:
+        _closure(m, closure)
+    assert "conventional.extgate_mut" not in closure
+
+
+def test_runner_static_scan_clean_build_zero_unresolved_mutant_build_hits_moved_rule():
+    from r3_harness.h28 import audit
+    from conventional.variant import ConventionalVariant
+    lits = audit.all_literals()
+    clean = audit.static_scan("conventional", list(ConventionalVariant().adapter_modules), lits)
+    mut = audit.static_scan("conventional", list(ConventionalVariant(["policy_gate_in_adapter"]).adapter_modules), lits)
+    assert clean["unresolved_count"] == 0, clean["hits"]
+    assert mut["unresolved_count"] >= 2 and any("extgate_mut" in h["file"] for h in mut["hits"])

@@ -149,3 +149,11 @@ G4-E23 The R28-1 envelope check (s4 launcher line "R28-1 envelope check", ruling
 G4-E24 R28-6 read literally is confirmed: any RECONCILED_SUCCESS the oracle does not give is false_reconciled_success; an always-
       UNKNOWN variant has target-mutation detection 0 and is REJECTED (Q6). The G4-E8 clamp lives in the shared observation
       code (r3_shared extobs: complete_through_tick = min(watermark - k, server_tick)); consumers must not work around it.
+
+## G4-E25 (orch, 2026-10-10, before any dev or official H28 run)
+G4-E25 (a) Official seeds, declared now (ORACLE-AND-HARNESS-G4 s11 "seed <new, declared in the freeze commit>"): exp-h28-001
+      seed 2821, exp-h28-002 seed 2822, exp-h28-003 seed 2823 (Q1: at most 3 attempts). Dev seed 2811, smoke 2812 (s11).
+      (b) Mutant-only adapter-side code lives in a module loaded ONLY in the mutant build and listed in that build's
+      `adapter_modules` (as paladin.extgate_mut), so the static governance-in-adapter scan sees it in the mutant build and never
+      in the clean build; code switched off by an in-module guard is still scanned (no resolution may excuse it). Applies to both
+      variants. (c) spec/gate4/ADAPTER-AUDIT-RESOLUTIONS.json is frozen with the candidate after the auditor's hit review (Q15).

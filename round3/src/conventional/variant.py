@@ -172,6 +172,11 @@ class ConventionalVariant:
     def __init__(self, mutants=()):
         self.mutant_switches = shared_mutants.validate(mutants)
 
+    @property
+    def adapter_modules(self) -> tuple:
+        """ADAPTER_MODULES of THIS build (the mutant policy_gate_in_adapter adds the module holding its adapter-side rule)."""
+        return ADAPTER_MODULES + (("conventional.extgate_mut",) if "policy_gate_in_adapter" in self.mutant_switches else ())
+
     def deploy(self, domain, world_handle_factory, verifier, ops_spec, auth_spec, clock, state_dir=None,
                history=None, anchor=None, governance=None, external=None) -> ConventionalDeployment:
         # state_dir is accepted but unused: all durable state (effects, idempotency ledger, approvals, the authority in
