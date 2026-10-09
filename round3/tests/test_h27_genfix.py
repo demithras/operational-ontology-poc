@@ -13,9 +13,11 @@ from tests.fakes import fake_h27
 def world(tmp_path_factory):
     d = tmp_path_factory.mktemp("h27gf")
     ap = start_anchor(d / "anchor", d / "sock")
-    var = fake_h27.load("fake-h27-honest")
-    yield {"var": var, "anchor": ap.client(), "dir": d}
-    ap.close()
+    try:
+        var = fake_h27.load("fake-h27-honest")
+        yield {"var": var, "anchor": ap.client(), "dir": d}
+    finally:
+        ap.close()
 
 
 def test_base_histories_for_seeds_0_to_9_build_without_error(world):
