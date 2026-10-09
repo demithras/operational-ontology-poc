@@ -35,6 +35,7 @@ class G4Rig:
     def __init__(self, tmp: Path, domain="manufacturing", adapter=Honest, per_system=None, mutants=(), fault=None,
                  history=False):
         self.tmp, self.domain, self.mutants = Path(tmp), domain, tuple(mutants)
+        self.tmp.mkdir(parents=True, exist_ok=True)
         ops_name, auth_name = SPECS[domain]
         self.ops, self.auth = load_ops_spec(ops_name), load_auth_spec(auth_name)
         self.systems = load_systems(domain)
