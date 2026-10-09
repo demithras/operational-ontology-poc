@@ -360,7 +360,7 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
                 seq = tx.mark("commit", {"request_id": d["rid"], "kind": d["kind"], "authority_version": self.version()})
                 d.update(world_seq=seq, tick=tx.tick, rows=tx_rows(th, tx.id))
             if self.ext is not None and res.status == "OK" and self._plans:   # the intent is durable before any adapter is called
-                res = CallResult("OK", {**res.body, "outcomes": self.ext.register(d["rid"], d["tick"], list(self._plans))})
+                res = CallResult("OK", {**res.body, "outcomes": self.ext.register(d["rid"] or f"anon-tx{d['world_seq']}", d["tick"], list(self._plans))})   # G4-E17
             self._plans.clear()
             d["committed"] = True
             if gov is not None:

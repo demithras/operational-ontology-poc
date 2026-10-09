@@ -5,13 +5,13 @@ from g4_adapters import (Duplicate, FalseFailure, FalseSuccess, Honest, PayloadM
 from g4_rig import EXP, G4Rig, RES
 from r3_shared.extadapter import AdapterReply
 from r3_shared.extobs import ObserverFault
-from r3_shared.outcome import allowed_transition, validate_outcomes
+from r3_shared.outcome import allowed_transition
 
 
 def one(r, rid, op="expedite_purchase_order", args=EXP, sub="planner-1"):
     assert r.call(sub, op, args, rid).status == "OK"
     outs = r.settle(rid)
-    validate_outcomes({"outcomes": outs})                                   # exact six keys, vocabulary, sorted evidence
+    assert all(set(o) == {"request_id", "effect_index", "system", "state", "confidence", "evidence"} and o["evidence"] == sorted(o["evidence"]) for o in outs)
     return outs[0]
 
 
@@ -130,5 +130,20 @@ def test_unknown_request_is_invalid(tmp_path):
             assert (res.status, res.body) == ("INVALID", {"reason": "unknown_request"})
         r.call("nobody-1", "reschedule_work_order", RES, "denied")                        # a refused request has no outcome
         assert r.dep.outcome("denied").status == "INVALID"
+    finally:
+        r.finish()
+
+
+def test_g4_e16_lower_watermark_is_ignored_and_reconciled_never_returns_to_pending(tmp_path):
+    r = G4Rig(tmp_path)
+    try:
+        assert r.call("planner-1", "expedite_purchase_order", EXP, "r1").status == "OK"
+        r.dep.dispatch_pending()
+        r.tick(10)
+        hi = r.dep.reconcile("r1", 11).body["outcomes"][0]
+        r.observer.fault = ObserverFault.lagging(30)                                  # a later read withholds every row
+        assert r.dep.reconcile("r1", 11).body["outcomes"][0] == hi                    # same watermark, lagging view: still not PENDING
+        assert r.dep.reconcile("r1", 2).body["outcomes"][0] == hi                     # lower watermark: ignored
+        assert hi["state"] == "RECONCILED_SUCCESS" and hi["evidence"] == [1, 1]       # E seq + A seq, duplicates kept (G4-E19)
     finally:
         r.finish()

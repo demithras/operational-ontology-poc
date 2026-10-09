@@ -114,11 +114,15 @@ class ExtPlane:
         except ObserverUnavailable:
             snap = None
         for e in effs:
+            if watermark < e.get("wm", -1):                       # G4-E16: a lower-watermark snapshot is ignored
+                continue
             new = extoutcome.outcome_state(e, snap, e["outcome"], self.mutants)
             if "adapter_success_trusted" in self.mutants and e["replies"] and e["replies"][-1] == _OK \
                     and new["state"] not in ("DIVERGED",):
                 new = {**new, "state": "RECONCILED_SUCCESS"}             # MUTANT: the adapter's OK is believed
-            self.box.update(rid, e["index"], outcome=new)
+            if new["state"] in ("PENDING", "UNKNOWN") and e["outcome"]["state"] in extoutcome.FINAL:
+                new = e["outcome"]                                # G4-E16: a reconciled state never returns to PENDING
+            self.box.update(rid, e["index"], outcome=new, wm=watermark)
         return [self.public(e) for e in self.box.get(rid) or []]
 
     def outcomes(self, rid: str) -> list[dict] | None:

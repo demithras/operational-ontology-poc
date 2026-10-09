@@ -44,11 +44,17 @@ src. Vendored patch `G4a` (domains/project/logic/constraints.py): the two Round 
 | observation_coupled | `extdispatch.py` :102 (snapshot synthesised from adapter replies) | false_reconciled_success on L1 |
 | divergence_rewritten | `extoutcome.py` :46/:51 (D2/D3 skipped) | target_mutation_detected < 1.0 |
 
+## Errata applied (OPEN-QUESTIONS G4-E16..E19, orchestrator 1a0fa60)
+- G4-E19 (voids E6/E15): evidence = sorted effects.seq of M + audit.seq of A (full systems only), duplicates kept; D1/D2 = conflicting rows;
+  U keeps the previous evidence (`extoutcome.py`).
+- G4-E16: `extdispatch.reconcile` stores the last watermark per effect and ignores a lower one; a reconciled state is never replaced by
+  PENDING/UNKNOWN (test_pal_g4_outcome `g4_e16`). The pure function stays literal (documented in test_pal_g4_outcome_fn).
+- G4-E17: `core._commit` registers under `anon-tx<world_seq>` when the decision has no request id (not reachable from today's paths).
+- G4-E18: nothing to implement; a redelivered request after a crash reads its envelope from the anchor again (not "" unless unprovable).
+
 ## Decisions recorded where the frozen text is silent or contradictory (see the build report)
-1. Evidence form: G4-E6 (namespaced strings) vs schemas/external-outcome.schema.json + `validate_outcome` (integers): integers are emitted
-   (the sorted union of used effect/audit seqs); equality never compares evidence.
-2. Frozen P1f-6 read literally lets SUCCESS fall back to PENDING when a LATER read withholds rows (larger lag, smaller watermark); the
-   function is implemented literally, not guarded (documented test `negative_literal_function_regresses_on_a_withdrawn_view`).
-3. GEN-NULL requests cannot arise from the ops specs; only rule N is implemented for such a system (pure-function tests).
-4. Engine execution state in the OK body (`state`) is `OUTCOME_UNKNOWN` in external mode (no Engine-visible observation); the P1f
-   outcome records are the only outcome truth.
+1. `r3_shared.outcome.validate_outcome` still rejects duplicate evidence, contradicting G4-E19 (it is frozen shared code; reported).
+2. GEN-NULL requests cannot arise from the ops specs; only rule N is implemented for such a system (pure-function tests).
+3. Engine execution state in the OK body (`state`) is `OUTCOME_UNKNOWN` in external mode; the P1f outcome records are the only outcome truth.
+4. tests/test_p1f_conformance.py `test_real_variant_adopts_the_seam...` deploys with empty `{}` specs; the real Paladin deploy now raises
+   KeyError there (the placeholder expected NotImplementedError G4 or a working deploy). Shared test, not edited.

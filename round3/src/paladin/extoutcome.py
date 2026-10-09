@@ -4,8 +4,8 @@ A pure function of (intent I, observer snapshot X or None = observer unavailable
 observability O, cap expiry E). The adapter reply is NOT an argument: this module never sees one. Rule order (frozen):
 N, U, D1, D2, D3, S, F, W.
 
-Evidence (G4-E6 vs schemas/external-outcome.schema.json disagree: namespaced strings vs integers): the shared validator
-`r3_shared.outcome.validate_outcome` is the executable form, so evidence is the sorted union of the ledger seqs used.
+Evidence (G4-E19): sorted ints = effects.seq of the matching rows M plus audit.seq of the matching audit rows A (A only when the
+system is `full`), duplicates kept; D1/D2 evidence = the conflicting rows by the same rule; rule U keeps the previous evidence.
 """
 from __future__ import annotations
 
@@ -42,12 +42,12 @@ def outcome_state(intent: dict, snap, prev: dict, mutants=frozenset()) -> dict:
     cor = intent["correlation"]
     m = [r for r in snap.effects if r.correlation == cor]
     a = [r for r in snap.audit if r.correlation == cor] if obs == "full" else []
-    ev = sorted({r.seq for r in m} | {r.seq for r in a})
+    ev = sorted([r.seq for r in m] + [r.seq for r in a])
     bad = [] if "divergence_rewritten" in mutants else [r for r in (*m, *a) if not _same(r, intent)]
     if p == "DIVERGED":                                                 # D1
-        return {"state": "DIVERGED", "confidence": conf, "evidence": sorted(set(prev["evidence"]) | {r.seq for r in bad})}
+        return {"state": "DIVERGED", "confidence": conf, "evidence": sorted(r.seq for r in bad) or list(prev["evidence"])}
     if bad:                                                             # D2
-        return {"state": "DIVERGED", "confidence": conf, "evidence": sorted({r.seq for r in bad})}
+        return {"state": "DIVERGED", "confidence": conf, "evidence": sorted(r.seq for r in bad)}
     if intent["idempotency"] in AT_MOST and len(m) > 1 and "divergence_rewritten" not in mutants:   # D3
         return {"state": "DIVERGED", "confidence": conf, "evidence": ev}
     if m:                                                               # S
