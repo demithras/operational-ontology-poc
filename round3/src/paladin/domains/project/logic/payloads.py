@@ -43,15 +43,15 @@ def preregister_hypothesis(ctx, deriver, reader):
 def new_experiment_ids(view, inputs) -> tuple:
     """(old experiment id, new experiment id, new version, new contract-version id)."""
     old_id = inputs["experiment"]
-    ver = next_version(facts.props(view, "Experiment", old_id)["version"])
+    ver = next_version("" if (_ver := (facts.props(view, "Experiment", old_id) or {}).get("version")) is None else str(_ver))
     return old_id, f"{str(old_id).split('@v')[0]}@v{ver}", ver, f"{inputs['contract_version']}+{ver}"
 
 
 def new_experiment_version(ctx, deriver, reader):
     old_id, new_id, ver, cv_id = new_experiment_ids(ctx.view, ctx.inputs)
-    old = facts.props(ctx.view, "Experiment", old_id)
-    return [{"id": new_id, "version": ver, "evidence_schema_ref": old["evidence_schema_ref"],
-             "evaluator_ref": old["evaluator_ref"]},
+    old = facts.props(ctx.view, "Experiment", old_id) or {}  # total over an absent/hidden experiment
+    return [{"id": new_id, "version": ver, "evidence_schema_ref": old.get("evidence_schema_ref"),
+             "evaluator_ref": old.get("evaluator_ref")},
             {"id": cv_id, "sha256": ctx.call("compute_freeze_hash", {"experiment": old_id}),
              "git_commit": head_commit(ctx.view)},
             {"$src": new_id, "$dst": old_id}]  # v3 effect #2: NEW_VERSION_OF (new version -> its predecessor)
@@ -74,7 +74,7 @@ def attach_evidence(ctx, deriver, reader):
     exp = experiment_of_evidence(ctx.view, ctx.inputs["hypothesis"], ev)
     if exp is None:
         raise ValueError("evidence is not pinned to a version of an experiment of this hypothesis")
-    return [{"id": ev_id, **{k: ev[k] for k in ("payload_hash", "git_commit", "experiment_version", "environment")}},
+    return [{"id": ev_id, **{k: (ev or {}).get(k) for k in ("payload_hash", "git_commit", "experiment_version", "environment")}},
             {"$src": exp, "$dst": ev_id},
             {"$src": ev_id, "$dst": ctx.inputs["hypothesis"]}]  # v2 effect #2: SUPPORTS_OR_REFUTES
 
@@ -96,8 +96,8 @@ def supersede_hypothesis(ctx, deriver, reader):
 
 
 def record_decision(ctx, deriver, reader):
-    d = facts.props(ctx.view, "Decision", ctx.inputs["decision"])
-    row = {"id": ctx.inputs["decision"], "rationale": d["rationale"]}
+    d = facts.props(ctx.view, "Decision", ctx.inputs["decision"]) or {}  # total over an absent/hidden decision
+    row = {"id": ctx.inputs["decision"], "rationale": d.get("rationale")}
     if d.get("decided_at") is not None:
         row["decided_at"] = d["decided_at"]
     return [row, {"$src": ctx.inputs["decision"], "$dst": ctx.inputs["contract_version"]}]

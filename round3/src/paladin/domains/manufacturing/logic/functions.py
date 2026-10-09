@@ -38,6 +38,8 @@ def recommend_transfer(view, args):  # decision-service recommender (largest can
 
 def decision_content_hash(view, args):  # services.decision_service.hashing.decision_content_hash
     d = view.get("Decision", args["decision"])
+    if d is None:
+        raise ValueError("decision does not exist")  # a deliberate helper error, not an unguarded subscript
     p = d["props"]
     actor = view.follow("Decision_actor", "Decision", d["key"])
     snap = view.follow("Decision_evidenceSnapshot", "Decision", d["key"])

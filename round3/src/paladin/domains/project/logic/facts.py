@@ -84,7 +84,7 @@ def evidence_count(view, hid: Any) -> int:
 
 def latest_experiment(view, hid: Any) -> str | None:
     """The tested-by experiment with the highest version (numeric when numeric, else lexicographic)."""
-    exps = [(e, props(view, "Experiment", e)) for e in experiments_of(view, hid)]
+    exps = [(e, props(view, "Experiment", e) or {}) for e in experiments_of(view, hid)]
     if not exps:
         return None
 
