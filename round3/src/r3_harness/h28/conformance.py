@@ -35,8 +35,11 @@ class World:
         self.recs.append(r)
         return r
 
+    closed = None
+
     def close(self):
-        self.closed = self.proc.close()
+        if self.closed is None:                 # idempotent: every check closes its ExternalWorld exactly once (no leaked processes)
+            self.closed = self.proc.close()
         return self.closed
 
     def judge_inputs(self):
@@ -108,8 +111,7 @@ def c2_outcomes(factory, n_points=2000, seed=2811) -> list[str]:
         missing = {"N", "U", "D1", "D2", "D3", "S", "F", "W"} - rules
         return bad[:20] + ([f"rules not covered: {sorted(missing)}"] if missing else []) + ([f"only {pts} points"] if pts < n_points else [])
     finally:
-        if not getattr(w, "closed", None):
-            w.close()
+        w.close()
 
 
 def c3_caveats(factory, n=40, seed=2811) -> list[str]:
@@ -196,7 +198,7 @@ def c5_refusal_order(factory, n=30, seed=2811) -> list[str]:
                     used[cid] = used.get(cid, 0) + 1
         return bad[:20]
     finally:
-        pass
+        w.close()
 
 
 def _predict_from_digest(root_key, systems, cap, a, used, issued) -> str:
@@ -251,8 +253,7 @@ def c6_crash_redelivery(factory, n=20, seed=2811) -> list[str]:
                         bad.append(f"{r['case']}: more than one applied row for {i['correlation']}")
         return bad[:20]
     finally:
-        if not getattr(w, "closed", None):
-            w.close()
+        w.close()
 
 
 def c0_oracle_isolation() -> list[str]:

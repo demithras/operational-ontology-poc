@@ -158,7 +158,8 @@ def _verdict(vdir, vname, t, is_dev, ov, agg, J, valid, reasons, man) -> dict:
     per_sys = all(fl["per_domain_system"].get(f"{d}/{s}", 0) >= need["min_per_system"] for d, s in
                   (("manufacturing", "WMS"), ("manufacturing", "ERP"), ("manufacturing", "MES"), ("manufacturing", "GEN-NULL"),
                    ("project", "REGISTRY"), ("project", "NOTIFY"), ("project", "GEN-NULL")))
-    checks = [(fl["byzantine_cases"] >= need["min_cases"], f"Byzantine cases {fl['byzantine_cases']} < {need['min_cases']}"),
+    checks = [(audit.get("static", {}).get("declared", False), "variant does not declare ADAPTER_MODULES (P1f-8): static audit cannot run"),
+              (fl["byzantine_cases"] >= need["min_cases"], f"Byzantine cases {fl['byzantine_cases']} < {need['min_cases']}"),
               (fl["honest_controls"] >= need["min_controls"], f"honest controls {fl['honest_controls']} < {need['min_controls']}"),
               (all(v > 0 for v in fl["controls_observed"].values()), f"controls with observed effects per domain {fl['controls_observed']}"),
               (per_prim, f"per-primitive minimum {need['min_per_primitive']}: {fl['per_primitive']}"),
