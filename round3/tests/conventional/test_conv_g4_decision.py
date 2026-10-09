@@ -47,6 +47,7 @@ def test_r28_2_policy_shaped_reply_is_an_outcome_not_a_decision(tmp_path):
     r = make_g4(tmp_path, default=PolicyReply)
     res = r.dep.call_tool(r.token("planner-1"), "expedite_purchase_order", EXPEDITE, request_id="g1")
     assert res.status == "OK"                                   # the adapter's "deny" changed nothing
+    r.ctl.advance(r.clock.now() + 20)                           # G4-E8: the server tick must reach the watermark
     assert [o["state"] for o in r.dep.reconcile("g1", r.clock.now() + 20).body["outcomes"]] == ["RECONCILED_FAILED"]
 
 

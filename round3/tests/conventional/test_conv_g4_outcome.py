@@ -107,6 +107,7 @@ def test_r28_10_effects_only_system_is_low_confidence(tmp_path):
 def test_r28_10_effects_only_hides_refused_substitution(tmp_path):
     r = make_g4(tmp_path, adapters={"MES": TargetSubst})
     r.dep.call_tool(r.token("planner-1"), "reschedule_work_order", RESCHEDULE, request_id="m2")
+    r.ctl.advance(r.clock.now() + 20)                                          # G4-E8: server tick must reach the watermark
     o = r.dep.reconcile("m2", r.clock.now() + 20).body["outcomes"][0]
     assert o["state"] == "RECONCILED_FAILED" and o["confidence"] == "low"      # refused attempt is invisible on this path
 
