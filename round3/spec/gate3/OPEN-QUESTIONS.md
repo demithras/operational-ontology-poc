@@ -196,3 +196,8 @@ G3-E31 (orch, 2026-10-09, after official exp-h25-001 / exp-h26-001, before exp-*
       precondition failure -> INVALID, as the oracle answers, not a deny rule). (b) H26 official runs go through
       scripts/run_h26.sh (HistoryStore + AnchorClient per ruling Q10); scripts/run_h26.py refuses a non-dev id without an
       anchor. The smoke run uses the identical launcher. exp-h26-001 ran without an anchor (orchestrator launch fault).
+G3-E32 (orch, 2026-10-09, after official exp-*-002, before exp-*-003) (a) A decision that completes by re-evaluation under a new
+      governance document (Q14, no grandfathering) takes the tick of the judgment that completes it, not the tick of
+      set_governance; the appeal window runs from that tick (oracle const_eval, conventional agree). (b) H26 pairs: both
+      worlds append the same number of world_log rows in every phase (equal schedules, declared low fact D2); a draw whose
+      composed batches differ in row count (e.g. a hidden write that is a no-op in one world) is re-drawn.
