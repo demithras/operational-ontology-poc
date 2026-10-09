@@ -28,7 +28,8 @@ from paladin.sovchan import SovMixin
 from paladin.sovprov import SovProvMixin
 from paladin.histledger import HistLedger
 from paladin.ledger import Ledger
-from paladin.worldbridge import state_from_world, tx_rows
+from paladin.extdispatch import ExtPlane
+from paladin.worldbridge import log_head, state_from_world, tx_rows
 from r3_shared.anchor import AnchorError
 from r3_shared.authgraph import authority_digest
 from r3_shared.evidence import canonical_bytes
@@ -75,13 +76,16 @@ def plain(x: Any) -> Any:
 class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
     def __init__(self, domain, factory, verifier, ops_spec, auth_spec, clock, mutants, state_dir=None,
                  hook: Callable[[str], None] = lambda point: None, restart: bool = False, history=None, anchor=None,
-                 stream=None, governance=None):
+                 stream=None, governance=None, external=None):
         self.domain, self._factory, self._verifier, self.clock, self.mutants = domain, factory, verifier, clock, mutants
         self.hook = hook  # crash-injection point callback (before_commit fires inside the adapters, after_commit in run)
         self.lock = threading.RLock()  # the Engine State, the service connection and the ledger are single-writer
         self._mutant_io = threading.RLock()  # used ONLY by the unsynchronized_commit mutant (serialises storage I/O, not the check)
         self.ops_spec = ops_spec
         self.g2_init(history, anchor, stream, mutants)
+        self.external, self._plans, self.ext = external, [], None   # Gate 4 (P1f-1): the binding, the Engine adapters' planned effects
+        if external is not None:
+            self.owner = {o: "paladin-service" for o in self.owner}   # no external system handle: nothing writes an external effect
         self._svc = self.handle("paladin-service")
         self.ops = {o["name"]: o for o in ops_spec["operations"]}
         self.reads = {r["name"] for r in ops_spec["reads"]}
@@ -96,6 +100,8 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
             os.makedirs(self.state_dir, exist_ok=True)
             self.ledger = Ledger(os.path.join(self.state_dir, "ledger.sqlite"), volatile="ledger_after_commit_volatile" in mutants)
         self._mut_n = 0
+        if external is not None:
+            self.ext = ExtPlane(external, self.ledger, ops_spec, mutants)
         self._attempts = self.ledger.get_meta("attempts") or 0
         persisted = self.ledger.get_meta("auth_spec") if (restart or history is not None) else None  # the authority in force wins over the deploy-time spec
         self.auth_fault = None  # E-7: set when the authority record in the history is unusable; mutating calls then fail closed
@@ -128,7 +134,7 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
         validate_strict(auth_spec, self.ops_spec)  # R-4: shared strict control, before anything changes (ValueError)
         doc = copy.deepcopy(auth_spec)
         self.booted = boot(self.domain, self.ops_spec, doc, self.handle, self._svc, self.clock.now,
-                           lambda: self.hook("before_commit"))
+                           lambda: self.hook("before_commit"), self._plans if self.external is not None else None, self.mutants)
         self.auth = doc
         if persist:
             self.persist(self.auth)
@@ -150,6 +156,8 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
         st = state_from_world(self.eng.model, self._svc)
         snap = {"o": sorted(f"{t}:{k}:{json.dumps(v['props'], sort_keys=True)}:{v['ver']}" for (t, k), v in st.objects.items()),
                 "l": sorted(repr(k) for k in st.links), "e": [(e["seq"], e["payload"]) for e in self._svc.external_effects()]}
+        if self.external is not None:   # external effects are not in the world: a committed request is witnessed by the log head
+            snap["h"] = log_head(self._svc)
         return hashlib.sha256(json.dumps(snap, sort_keys=True, default=str).encode()).hexdigest()
 
     def _guard(self):
@@ -317,6 +325,7 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
         d = d if d is not None else self.new_decision("direct", None, None, op, args, rid)
         th = self.handle(self.owner[op])  # the handle that owns the operation's effects (service, or its one external system)
         try:
+            self._plans.clear()
             with th.transaction(tag="effect") as tx:
                 self.eng.store.current = state_from_world(self.eng.model, self._svc)
                 d["doc"] = self.auth
@@ -350,6 +359,9 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
                     gov.after(tx, res)  # the one `governance` mark of this transaction
                 seq = tx.mark("commit", {"request_id": d["rid"], "kind": d["kind"], "authority_version": self.version()})
                 d.update(world_seq=seq, tick=tx.tick, rows=tx_rows(th, tx.id))
+            if self.ext is not None and res.status == "OK" and self._plans:   # the intent is durable before any adapter is called
+                res = CallResult("OK", {**res.body, "outcomes": self.ext.register(d["rid"], d["tick"], list(self._plans))})
+            self._plans.clear()
             d["committed"] = True
             if gov is not None:
                 gov.post(tx)
@@ -387,6 +399,18 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
             except (AnchorError, LookupError):
                 return False
         return verify
+
+    def envelope_text(self, rid: str):
+        """PROT-H28 Q13: the byte-exact H27 decision envelope the auditor would verify (anchor entry -> stored envelope proven
+        against its root). "" when the deployment has no history/anchor; None while the envelope is not provable (dispatch waits)."""
+        if self.prov is None:
+            return ""
+        try:
+            e = self.prov.a.lookup(self.prov.stream, rid)
+            raw = None if e is None else self.prov.h.get(f"env/{e['seq']:08d}")
+            return None if raw is None or evid.digest(raw) != e["root"] else raw.decode()
+        except Exception:  # noqa: BLE001 - unreachable anchor / corrupt history: not provable yet
+            return None
 
     def map_record(self, rec: dict) -> CallResult:
         st = rec["state"]

@@ -39,6 +39,10 @@ class RuleSet:
         """True when the spec rule's ``when`` holds; ``args`` defaults to the request inputs."""
         return self._eval(self.rule(op, rule_id)["when"], self._ops[op], ctx, ctx.inputs if args is None else args) is True
 
+    def eval_predicate(self, ctx, op: str, predicate: dict) -> bool:
+        """A precondition `predicate` AST of operation ``op`` over the request inputs."""
+        return self._eval(predicate, self._ops[op], ctx, ctx.inputs) is True
+
     def _input_type(self, op: dict, name: str) -> str | None:
         return next((i.get("resource_type") for i in op["inputs"] if i["name"] == name), None)
 
@@ -63,6 +67,10 @@ class RuleSet:
             ref = n["on"]
             return holds(ctx.principal, self._input_type(op, ref["input"]), self._eval(ref, op, ctx, args), n["relation"])
         a = [self._eval(x, op, ctx, args) for x in n.get("args", [])]
+        if k == "is_int":
+            return isinstance(a[0], int) and not isinstance(a[0], bool)
+        if k == "nonblank":
+            return a[0] is not None and str(a[0]).strip() != ""
         if k == "and":
             return all(x is True for x in a)
         if k == "or":

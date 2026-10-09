@@ -88,6 +88,30 @@ class WorldExternalAdapter:
         return list(self._obs)
 
 
+class OutboxAdapter:
+    """Gate 4 (external binding given): the Engine-side adapter of one external system. It performs NO external effect and reports
+    NO observation: it only PLANS the effect (system, ops-spec operation, payload on the authorised inputs) for the Core, which
+    makes the intent durable right after the world commit. The real submit happens later, from `dispatch_pending`."""
+
+    def __init__(self, system: str, effect_specs: dict, inputs_of: Callable[[str], dict], sink: list,
+                 pre_apply: Callable[[], None] = lambda: None):
+        self.system, self._specs, self._inputs_of, self._sink, self._pre = system, effect_specs, inputs_of, sink, pre_apply
+
+    def apply(self, effect: Any, payload: Any) -> dict:
+        self._pre()                                   # crash-injection point (before_commit), as the legacy adapter
+        spec = self._specs[effect["action"]]
+        inputs = self._inputs_of(effect["execution"])
+        body = to_plain({k: _eval_input(v, inputs) for k, v in spec["payload"].items()})
+        self._sink.append({"execution": effect["execution"], "action": effect["action"], "system": self.system,
+                           "operation": spec["target"], "payload": body, "inputs": to_plain(dict(inputs)),
+                           "effect_index": int(effect["effect_id"].rsplit("/e", 1)[1]),
+                           "request_id": request_id_of(effect.get("idempotency_key"))})
+        return {"queued": True}
+
+    def observations(self):
+        return []                                     # outcome truth comes only from the observer path (PROT-H28 R28-9)
+
+
 class WorldGitAdapter:
     """Project canonical writes (`git_change` effects in the Round 2 IR) applied to the world through the service handle."""
 
