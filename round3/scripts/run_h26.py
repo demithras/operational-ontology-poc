@@ -59,6 +59,9 @@ def main() -> int:
     import os
     import shutil
     import tempfile
+    if "-dev" not in a.exp_id and not os.environ.get("R3_ANCHOR_SOCK"):  # G3-E31(b): official runs must carry the sandboxed anchor
+        print(f"refusing: non-dev experiment id {a.exp_id!r} requires R3_ANCHOR_SOCK (launch through scripts/run_h26.sh)", file=sys.stderr)
+        return 2
     dev_anchor = None
     if "-dev" in a.exp_id and not os.environ.get("R3_ANCHOR_SOCK"):  # ruling Q10: dev paths also run with history + anchor
         from r3_shared.anchor import start_anchor

@@ -13,7 +13,7 @@ done
 [ -n "$ID" ] || { echo "usage: run_h26.sh --exp-id ID [--variants a,b] [--out-root D] [run_h26.py flags]" >&2; exit 64; }
 RC=0
 for V in ${VARIANTS//,/ }; do
-  OUT="$OUTROOT/$ID/$V"; mkdir -p "$OUT/.anchor"
-  "$R3/scripts/run_sandboxed.sh" "$OUT/.anchor" "$PY" "$R3/scripts/run_h26.py" --exp-id "$ID" --variants "$V" --out-root "$OUTROOT" ${PASS[@]+"${PASS[@]}"} || RC=$?
+  AN="$OUTROOT/$ID/.anchor-$V"; mkdir -p "$AN"  # SIBLING of the variant out dir: run_h26.py refuses an existing out dir
+  "$R3/scripts/run_sandboxed.sh" "$AN" "$PY" "$R3/scripts/run_h26.py" --exp-id "$ID" --variants "$V" --out-root "$OUTROOT" ${PASS[@]+"${PASS[@]}"} || RC=$?
 done
 exit $RC

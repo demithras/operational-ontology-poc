@@ -179,6 +179,12 @@ def vary_D(rng, ops, auth, lv, snap, observer, n):
             o = ops_model.evaluate(ops, auth, h, None, op["name"], args, snap, 0, frozenset(), None)
             outs.append((args, o))
         (a1, o1), (a2, o2) = outs
+        if val:  # G3-fix9: low-equivalence by construction - every resource input existence-visible to the observer is pinned equal
+            for i in op["inputs"]:
+                if i["type"] == "resource" and i["name"] in a1 and i["name"] in a2 and a1[i["name"]] != a2[i["name"]] and any(
+                        f"{i['resource_type']}:{a[i['name']]}" in lv.objects for a in (a1, a2)):
+                    a2[i["name"]] = a1[i["name"]]
+            o2 = ops_model.evaluate(ops, auth, h, None, op["name"], a2, snap, 0, frozenset(), None)
         if a1 == a2 or not (o1.commits and o2.commits) or len(o1.effects) != len(o2.effects):
             continue
         mk = lambda a: {**empty(), "high": [{"actor": h, "op": op["name"], "args": a, "rid": rid}]}  # noqa: E731

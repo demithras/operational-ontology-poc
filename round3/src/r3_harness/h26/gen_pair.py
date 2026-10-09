@@ -106,6 +106,14 @@ def _try(rng, seed, idx, kind, domain, stats, aa):
         vis = any(f"{t}:{k_}" in lvs[0].objects for t, k_ in ops_model.resources_of(opd, h["args"]))
         if vis and not swap:
             return None
+    if info.get("D", {}).get("mode") == "valdiff":  # G3-fix9: a valdiff decision may differ only in invisible resources or scalar values
+        h1, h2 = d1["high"][0], d2["high"][0]
+        opd = ops_model.op_of(ops, h1["op"])
+        r1, r2 = ops_model.resources_of(opd, h1["args"]), ops_model.resources_of(opd, h2["args"])
+        if any(a != b and (f"{a[0]}:{a[1]}" in lvs[0].objects or f"{b[0]}:{b[1]}" in lvs[0].objects)
+               for a, b in zip(sorted(r1), sorted(r2))):
+            stats["valdiff_redraws"] = stats.get("valdiff_redraws", 0) + 1
+            return None
     differ = (s[0]["objects"] != s[1]["objects"] or s[0]["links"] != s[1]["links"] or d1["edges"] != d2["edges"]
               or d1["cases"] != d2["cases"] or d1["high"] != d2["high"])
     if not aa and not differ:
