@@ -12,6 +12,11 @@ from .histledger import HISTORY_LAYOUT
 from .service import Service
 from .tools import ToolSurface
 
+# P1f-8 declarations (read by the harness). Adapter-side code = everything that builds an ExternalRequest, mints/stores a cap,
+# calls submit, interprets replies, retries or reads the observer. They import nothing from the decision plane.
+ADAPTER_MODULES = ("conventional.extout", "conventional.extrecon")
+EXTERNAL_HISTORY_PREFIXES: tuple[str, ...] = ()  # outbox + outcome records live in the world DB (same transaction as the commit)
+
 AUDIENCE = "conventional"  # token audience this variant accepts (== variant name)
 
 
@@ -131,6 +136,19 @@ class ConventionalDeployment:
     def authority_used_as(self, token, request_id) -> CallResult:
         return self.service.authority_used_as(token, request_id)
 
+    # -- Gate 4 (PROTOCOL-P1f P1f-1): outbox dispatch, observer-based reconciliation ------------------------------
+    @_safe
+    def dispatch_pending(self) -> CallResult:
+        return self.service.dispatch_pending()
+
+    @_safe
+    def reconcile(self, request_id, watermark) -> CallResult:
+        return self.service.reconcile(request_id, watermark)
+
+    @_safe
+    def outcome(self, request_id) -> CallResult:
+        return self.service.outcome(request_id)
+
     def set_dependency_down(self, adapter: str, down: bool = True) -> None:
         (self.service.unavailable.add if down else self.service.unavailable.discard)(adapter)
 
@@ -154,9 +172,9 @@ class ConventionalVariant:
         self.mutant_switches = shared_mutants.validate(mutants)
 
     def deploy(self, domain, world_handle_factory, verifier, ops_spec, auth_spec, clock, state_dir=None,
-               history=None, anchor=None, governance=None) -> ConventionalDeployment:
+               history=None, anchor=None, governance=None, external=None) -> ConventionalDeployment:
         # state_dir is accepted but unused: all durable state (effects, idempotency ledger, approvals, the authority in
         # force) lives in the world DB, in the same transaction as the effects - atomic by construction. With a
         # HistoryStore (H27 runs) every record other than the world store lives there instead (histledger.py).
         return ConventionalDeployment(Service(domain, world_handle_factory, verifier, ops_spec, auth_spec, clock,
-                                              AUDIENCE, self.mutant_switches, history, anchor, governance))
+                                              AUDIENCE, self.mutant_switches, history, anchor, governance, external))

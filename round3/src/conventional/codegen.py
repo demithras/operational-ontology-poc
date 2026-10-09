@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -28,9 +29,14 @@ def _cls(op_name: str) -> str:
 
 def render(root: Path = ROUND3) -> str:
     out = [HEADER]
-    reg = []
+    reg, seen = [], set()
+    # the H28-only project overlay (spec/ops/project.h28.json) adds publish_result / notify_reviewer (Q2 ruling, G4-E4)
+    overlay = json.loads((root / "spec" / "ops" / "project.h28.json").read_text())["operations"]
     for domain in DOMAINS:
-        for op in load_ops_spec(domain, root)["operations"]:
+        for op in load_ops_spec(domain, root)["operations"] + (overlay if domain == "project" else []):
+            if op["name"] in seen:
+                continue
+            seen.add(op["name"])
             c = _cls(op["name"])
             schema = tuple((i["name"], i["type"], bool(i["required"])) for i in op["inputs"])
             res = {i["name"]: i["resource_type"] for i in op["inputs"] if i["type"] == "resource"}
