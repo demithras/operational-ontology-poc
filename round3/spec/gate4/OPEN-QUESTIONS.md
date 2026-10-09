@@ -132,3 +132,20 @@ G4-E19 SUPERSEDES G4-E15 (which contradicted P1f-6 line "evidence = seqs of M (a
       audit.seq values of the matching audit rows A when the system's observability O == full; duplicates are kept (the two
       seq namespaces are not distinguished; oracle and variants compute the identical list); compared with the oracle in C28-2.
       G4-E7 reads: D1 evidence = the conflicting rows by the same rule; U keeps the previous evidence. G4-E6 and G4-E15 are void.
+G4-E20 (amends G4-E19 to match the frozen shared validator r3_shared.outcome.validate_outcome, which rejects repeated values):
+      `evidence` is the sorted list of DISTINCT positive ints from the same rows as G4-E19 (effects.seq of M, plus audit.seq of A
+      when O == full); a value present in both namespaces appears once. Everything else in G4-E19 stands.
+      Static audit note (PROT-H28 s6): the governance-in-adapter scan covers the adapter modules of the BUILD under test
+      (variant.adapter_modules for that build, incl. mutant-only modules such as paladin.extgate_mut), not only a module constant.
+
+## Errata G4-E21..E24 (orch, 2026-10-09, from the G4 harness build report, before integration)
+G4-E21 ext_transcript_mismatch makes the RUN INVALID (ORACLE-AND-HARNESS-G4 s1 "fails INVALID on any mismatch" and the s7
+      invalid_if row bind); its listing among the s5 row classes is for reporting only, never a per-row INCONCLUSIVE.
+G4-E22 The no-observation (GEN-NULL) operation is named `record` exactly as G4-E3 freezes it; the harness synthesises its effects
+      into the case ops/auth specs under that name (no other name such as `record_generated`).
+G4-E23 The R28-1 envelope check (s4 launcher line "R28-1 envelope check", ruling Q13) is a MEASURED check, not informational:
+      on non-crash cases a request whose envelope_text differs from the auditor envelope of its decision is classified
+      `envelope_mismatch` (a falsifier-level class of R28-1 -> REJECTED); crash cases are excluded per G4-E18.
+G4-E24 R28-6 read literally is confirmed: any RECONCILED_SUCCESS the oracle does not give is false_reconciled_success; an always-
+      UNKNOWN variant has target-mutation detection 0 and is REJECTED (Q6). The G4-E8 clamp lives in the shared observation
+      code (r3_shared extobs: complete_through_tick = min(watermark - k, server_tick)); consumers must not work around it.
