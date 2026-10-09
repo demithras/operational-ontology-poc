@@ -52,7 +52,7 @@ def with_gen_null(ops: dict, auth: dict) -> tuple[dict, dict]:
     humans = [p["id"] for p in auth["principals"] if p["kind"] == "human" and p["roles"] and p["roles"] != ["none"]]
     for i, pid in enumerate(humans):
         auth["grants"].append({"id": f"h28-gen-null-{i}", "effect": "allow", "operation": GEN_OP, "origin": "neutral-extension",
-                               "delegable": False, "principal": {"id": pid}, "resource": {"type": "*"}})
+                               "delegable": False, "principal": {"id": pid}, "resource": {"any": True}})   # `record` has no resource-typed input and GEN-NULL declares no resource type: the frozen `any` selector, never a "*" type
     return ops, auth
 
 

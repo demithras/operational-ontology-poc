@@ -54,7 +54,8 @@ def run_case(ctx: RunCtx, variant, case: dict, kind: str) -> dict:
     work = tempfile.mkdtemp(prefix="h28-", dir=ctx.workroot)
     hist = None
     try:
-        store = WorldStore(os.path.join(work, "world.db"))
+        clock = LogicalClock(ctx.tick)
+        store = WorldStore(os.path.join(work, "world.db"), clock=clock)   # same logical clock as the other harnesses: caps/expiry see the case tick
         h = store.handle("harness-seed")
         with h.transaction(tag="seed"):
             for o in ops["seed"]["objects"]:
@@ -62,7 +63,6 @@ def run_case(ctx: RunCtx, variant, case: dict, kind: str) -> dict:
             for lk in ops["seed"]["links"]:
                 h.link(lk["link_type"], lk["src"], lk["dst"])
         h.close()
-        clock = LogicalClock(ctx.tick)
         h = store.handle("harness-refresh")           # deployment timing, not a world edit: evidence age is relative to the case start
         with h.transaction(tag="refresh"):
             for o in ops["seed"]["objects"]:

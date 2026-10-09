@@ -65,3 +65,39 @@ def test_transcript_mismatch_makes_the_run_invalid(exp, monkeypatch):  # noqa: F
     monkeypatch.setattr(finalize, "aggregate", tampered)
     v = evaluator.evaluate_variant(vdir, th, "fake-FakeHonest", True)
     assert v["verdict"] == "INVALID" and any("ext_transcript_mismatch" in r for r in v["reasons"])
+
+
+def test_gen_null_grants_use_no_wildcard_and_validate_strict():
+    from r3_shared import authspec
+    for dom in specs.DOMAINS:
+        ops, auth, systems = specs.load(dom)
+        ops2, auth2 = specs.with_gen_null(ops, auth)
+        authspec.validate_strict(auth2, ops2)
+        gen = [g for g in auth2["grants"] if g["operation"] == "record"]
+        assert gen and all(g["resource"] == {"any": True} and "*" not in json.dumps(g) for g in gen)
+
+
+def test_gen_null_synthesised_specs_deploy_on_both_real_variants():
+    from r3_shared.clock import LogicalClock
+    from r3_shared.identity import IdentityProvider
+    from r3_shared.registry import load_variant
+    from r3_shared.world import WorldStore
+    import tempfile
+    for name in ("paladin", "conventional"):
+        for dom in specs.DOMAINS:
+            ops, auth, _ = specs.load(dom)
+            ops2, auth2 = specs.with_gen_null(ops, auth)
+            clock = LogicalClock(100)
+            store = WorldStore(tempfile.mkdtemp(prefix="g4f1") + "/w.db", clock=clock)
+            idp = IdentityProvider("g4fix1-secret")
+            dep = load_variant(name).deploy(dom, store.handle_factory(), idp.verifier(), ops2, auth2, clock,
+                                            state_dir=tempfile.mkdtemp(prefix="g4f1s"))
+            assert dep is not None
+
+
+def test_caserun_world_store_uses_the_case_clock():
+    import inspect
+    from r3_harness.h28 import caserun
+    src = inspect.getsource(caserun)
+    assert "WorldStore(os.path.join(work, \"world.db\"), clock=clock)" in src
+    assert src.index("clock = LogicalClock(ctx.tick)") < src.index("WorldStore(os.path.join(work")
