@@ -75,3 +75,13 @@ def _stop_g3_anchors():
     mod = sys.modules.get("conv_g3_util")
     if mod is not None:
         mod.stop_live_anchors()
+
+
+@pytest.fixture(autouse=True)
+def _stop_g4_externals():
+    """make_g4 starts a real ExternalWorld process per rig: stop them after each test (no leaked servers)."""
+    yield
+    import sys
+    mod = sys.modules.get("conv_g4_util")
+    if mod is not None:
+        mod.stop_all()
