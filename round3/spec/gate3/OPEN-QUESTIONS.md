@@ -201,3 +201,7 @@ G3-E32 (orch, 2026-10-09, after official exp-*-002, before exp-*-003) (a) A deci
       set_governance; the appeal window runs from that tick (oracle const_eval, conventional agree). (b) H26 pairs: both
       worlds append the same number of world_log rows in every phase (equal schedules, declared low fact D2); a draw whose
       composed batches differ in row count (e.g. a hidden write that is a no-op in one world) is re-drawn.
+G3-E33 (AUTHOR, 2026-10-09, pre-registered before exp-*-003 runs) exp-h25-003 and exp-h26-003 are the FINAL official Gate 3
+      attempt: their verdicts are the Gate 3 result for both variants. Only a run made invalid by a harness or launch fault
+      (not a variant defect) may be repeated, and only by a new author decision. The Gate 3 summary reports, per variant and
+      hypothesis, the number of official attempts and the attributed cause of every rejection (exp-*-001, -002 ATTRIBUTION.md).
