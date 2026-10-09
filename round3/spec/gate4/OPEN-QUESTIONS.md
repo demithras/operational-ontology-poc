@@ -115,3 +115,20 @@ G4-E13 The ledger runs in WAL mode while live; close() switches to journal_mode=
 G4-E14 ExternalRequest validates shape on construction; the strict check (never a root cap; correlation == request_id#effect_index)
       is validate_request(strict_cap=True), used by the recorder and C28-3. Launcher env contract: R3_EXT_SOCK, R3_EXT_CTL
       (= R3_EXT_SOCK + ".ctl"), R3_EXT_DIR; require_external(exp_id) refuses non-dev ids without them.
+
+## Errata G4-E15..E18 (orch, 2026-10-09, from the conventional G4 build report, before integration)
+G4-E15 SUPERSEDES G4-E6 (which contradicted the frozen schema / validate_outcome and C28-2): outcome `evidence` = the sorted
+      unique list of effect-ledger `effects.seq` values (positive ints) the state relies on; audit-ledger seqs are never in
+      evidence. Evidence IS compared with the oracle in C28-2 as frozen. G4-E7 reads accordingly: D1 evidence = the conflicting
+      effects rows; U keeps the previous evidence.
+G4-E16 Outcome state is monotone in observation: a snapshot whose watermark is lower than one already applied is ignored (the
+      previous state and evidence stay); a reconciled state never returns to PENDING.
+G4-E17 A commit without a request_id uses the deterministic correlation base `anon-tx<world_seq>` (world_seq of its commit).
+G4-E18 Envelope byte-exactness (Q13) is measured on non-crash cases only; crash cases are judged on duplicate_effect and outcome
+      equality (Q11). A redelivered request after a crash-after-commit may carry envelope_text "" and is not counted as a
+      provenance violation.
+G4-E19 SUPERSEDES G4-E15 (which contradicted P1f-6 line "evidence = seqs of M (and of A when O == full)"): `evidence` is exactly
+      as frozen in P1f-6 - a sorted list of positive ints: the effects.seq values of the matching effect rows M, plus the
+      audit.seq values of the matching audit rows A when the system's observability O == full; duplicates are kept (the two
+      seq namespaces are not distinguished; oracle and variants compute the identical list); compared with the oracle in C28-2.
+      G4-E7 reads: D1 evidence = the conflicting rows by the same rule; U keeps the previous evidence. G4-E6 and G4-E15 are void.
