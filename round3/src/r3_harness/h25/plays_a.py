@@ -63,15 +63,19 @@ def run_stage(g, cid, stage, mode):
     yes, no = VALUES[stage]
     limit = {"complete": len(el), "dissent": len(el), "partial": max(0, need - 1), "none": 0}[mode]
     done = 0
+    if mode == "partial" and need == 1 and el:
+        # k = 1: no strict-minority vote exists, so a partial stage is an ABSTAIN that leaves it open, then a SECOND
+        # judgment by the same member (refused already_judged; the stage stays open if the abstain did not decide it).
+        cast(g, cid, stage, el[0], "abstain")
+        if stage_of(g, cid, stage)["outcome"] == E.AWAIT:
+            cast(g, cid, stage, el[0], yes)
+        el = []
     for who in el:
         if g.rng.random() < 0.3:
             stray(g, cid, stage)
         if done >= limit or stage_of(g, cid, stage)["outcome"] != E.AWAIT:
             break
-        if mode == "partial" and need == 1:
-            cast(g, cid, stage, who, "abstain")
-        else:
-            cast(g, cid, stage, who, yes if mode in ("complete", "partial") else no)
+        cast(g, cid, stage, who, yes if mode in ("complete", "partial") else no)
         done += 1
     if g.rng.random() < 0.4:
         stray(g, cid, stage)  # judge after the stage closed / by outsiders
