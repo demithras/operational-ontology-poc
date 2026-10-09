@@ -1,0 +1,181 @@
+{
+ "comparative": {
+  "forbidden_effects": {
+   "conventional": 0,
+   "paladin": 0
+  },
+  "mutation_kill_rate": {
+   "conventional": 1.0,
+   "paladin": 1.0
+  },
+  "p95_latency_ms": {
+   "conventional": 1.6997079364955425,
+   "paladin": 20.532083930447698
+  },
+  "safe_progress_ratio": {
+   "conventional": 1.0,
+   "paladin": 1.0
+  },
+  "security_specific_components": {
+   "conventional": [
+    "src/conventional/effects.py",
+    "src/conventional/interp.py",
+    "src/conventional/policy.py",
+    "src/conventional/service.py",
+    "src/conventional/store.py",
+    "src/conventional/tools.py",
+    "src/conventional/validation.py",
+    "src/conventional/variant.py",
+    "src/conventional/worldview.py",
+    "tests/conventional/test_a8_concurrency.py",
+    "tests/conventional/test_a8_crash.py",
+    "tests/conventional/test_functional.py"
+   ],
+   "paladin": [
+    "src/paladin/__init__.py",
+    "src/paladin/core.py",
+    "src/paladin/deployment.py",
+    "src/paladin/domains/manufacturing/logic/data.py",
+    "src/paladin/domains/manufacturing/logic/facts.py",
+    "src/paladin/domains/manufacturing/logic/functions.py",
+    "src/paladin/domains/manufacturing/logic/policies.py",
+    "src/paladin/domains/project/logic/derive.py",
+    "src/paladin/domains/project/logic/facts.py",
+    "src/paladin/domains/project/logic/freeze.py",
+    "src/paladin/domains/project/logic/payloads.py",
+    "src/paladin/engine/authority.py",
+    "src/paladin/engine/engine.py",
+    "src/paladin/engine/gatepass.py",
+    "src/paladin/engine/gates.py",
+    "src/paladin/engine/pipeline.py",
+    "src/paladin/ir/validate.py",
+    "src/paladin/opsrules.py",
+    "src/paladin/toolchain/runtime.py",
+    "src/paladin/worldbridge.py",
+    "tests/paladin/test_p2a_functional.py"
+   ]
+  },
+  "security_specific_loc": {
+   "conventional": {
+    "excluding_vendored_unchanged": 3443,
+    "total": 3443
+   },
+   "paladin": {
+    "excluding_vendored_unchanged": 4993,
+    "total": 7582
+   }
+  }
+ },
+ "conventional_verdict": "SUPPORTED",
+ "evaluator_sha256": "e88b5bf126b9538fbceaededb7a2701091603ee1414d1d959635c22415ea4c56",
+ "experiment_id": "exp-h25-002",
+ "hypothesis": "H25",
+ "minimum_overrides": {},
+ "paladin_verdict": "REJECTED",
+ "thresholds_sha256": "b4aacac3e724d40438449d739775479b117306415d7047e468b191035490e320",
+ "variants": {
+  "conventional": {
+   "metrics": {
+    "class_counts": {
+     "ok": 155818,
+     "race_refusal_ok": 255
+    },
+    "distinct_models": 3,
+    "domain_branches": 0,
+    "emergency_violations": 0,
+    "evidence_sha256": {
+     "authority-topology-corpus.json": "10675530fc2446ce1794004717884cda5dab7ab9fe8696c5aedbd8d4385934aa",
+     "cases-h25.jsonl.gz": "d913648c60394bbb155ba25e91fed435d9846c1edb94028157820772b69a670f",
+     "domain-branch-audit.json": "7464b19662fdf7ac254e70906eacc4d23c3c26f8aa3a5e85023d4a6d9d72ed63",
+     "mutation-results.json": "c6d22857f6bbb11db6218c2bb135645a65e57635c637a84c9d107219feb037bc",
+     "oracle-boundary-audit.json": "6e102e8fbe934753015fd4b4769f35ae11e99e2cf928d887bd707e8179ec20b6",
+     "oracle-differential.json": "1d43551212d614db5c15c67feae89266dceb293cd4eb4d6d17192e36c40b6957",
+     "safe-progress.json": "deecadd2cf6284ecf2044c17f8f2ffd27f561a2c19d46d4f64788bc7afd46bc8"
+    },
+    "fabricated_judgments": 0,
+    "forbidden_effects": 0,
+    "loc": {
+     "excluding_vendored_unchanged": 3443,
+     "total": 3443
+    },
+    "mutation_kill_rate": 1.0,
+    "p50_latency_ms": 0.840459018945694,
+    "p95_latency_ms": 1.6997079364955425,
+    "payload_sha256": "24a77f0a5a808b6ab9d90cea659f2e01ba61c79e2d851bfc3e534e50cc8bf4de",
+    "procedural_equality": 1.0,
+    "safe_progress_ratio": 1.0,
+    "unique_cases": 10338,
+    "violations": {
+     "domain_branch": 0,
+     "emergency_violation": 0,
+     "fabricated_judgment": 0,
+     "illegitimate_effect": 0,
+     "invalid_doc_accepted": 0,
+     "linearizability_violation": 0,
+     "procedural_mismatch": 0,
+     "progress_loss": 0,
+     "unattributed_write": 0,
+     "unlogged_write": 0,
+     "writer_violation": 0
+    }
+   },
+   "minimum_overrides": {},
+   "reasons": [],
+   "variant": "conventional",
+   "verdict": "SUPPORTED"
+  },
+  "paladin": {
+   "metrics": {
+    "class_counts": {
+     "ok": 155812,
+     "procedural_mismatch": 2,
+     "race_refusal_ok": 259
+    },
+    "distinct_models": 3,
+    "domain_branches": 0,
+    "emergency_violations": 0,
+    "evidence_sha256": {
+     "authority-topology-corpus.json": "82cca7e0528deb13633374450b5f4bcd6405279e14e435933c5914adadd92e88",
+     "cases-h25.jsonl.gz": "04d3afa38200704e5444c61e57c862c4065498e6d13c95f86db41a25087e6366",
+     "domain-branch-audit.json": "7f7cf831b0636d8e525f68d05b6a0920daf5418a7fcde2e247cace4f33b9e6f1",
+     "mutation-results.json": "967915c5137c31d9dabf1329fe95954175f41de393119361036213738e9fa5cb",
+     "oracle-boundary-audit.json": "ae5472f9c2f3ee6e759386c05d3a70357db93fb569ec37e23697859d5fad5187",
+     "oracle-differential.json": "e792245b28c82f165d491bd3fa1524deb1c02b2f1fd1c01452d2c7e72214eabd",
+     "safe-progress.json": "71bceee51851776302c1de17b701da99564f66cadac66ffda024daa908ebd237"
+    },
+    "fabricated_judgments": 0,
+    "forbidden_effects": 0,
+    "loc": {
+     "excluding_vendored_unchanged": 4993,
+     "total": 7582
+    },
+    "mutation_kill_rate": 1.0,
+    "p50_latency_ms": 8.909541997127235,
+    "p95_latency_ms": 20.532083930447698,
+    "payload_sha256": "5f286815b5bf50d81b88e27b25dc78bf4f1a39e1b1c87aa74c0a1a5befa9d416",
+    "procedural_equality": 0.999980778225574,
+    "safe_progress_ratio": 1.0,
+    "unique_cases": 10338,
+    "violations": {
+     "domain_branch": 0,
+     "emergency_violation": 0,
+     "fabricated_judgment": 0,
+     "illegitimate_effect": 0,
+     "invalid_doc_accepted": 0,
+     "linearizability_violation": 0,
+     "procedural_mismatch": 3,
+     "progress_loss": 0,
+     "unattributed_write": 0,
+     "unlogged_write": 0,
+     "writer_violation": 0
+    }
+   },
+   "minimum_overrides": {},
+   "reasons": [
+    "reject: procedural_mismatch=3"
+   ],
+   "variant": "paladin",
+   "verdict": "REJECTED"
+  }
+ }
+}

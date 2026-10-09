@@ -1,0 +1,9 @@
+{
+ "expected_vs_listed": {
+  "exposure_loss": 0,
+  "exposure_ok": 10000,
+  "hidden_capability": 0,
+  "schema_disclosure": 0
+ },
+ "pairs": 5000
+}

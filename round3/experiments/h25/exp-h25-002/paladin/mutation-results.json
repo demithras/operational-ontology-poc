@@ -1,0 +1,295 @@
+{
+ "domain_privilege_branch": {
+  "control": {
+   "domain_branch": 0
+  },
+  "first_killing_case": {
+   "calls": 16,
+   "case": "7002523-16",
+   "diffs": [
+    {
+     "call": 15,
+     "kind": "request",
+     "original": [
+      "DENIED",
+      "policy"
+     ],
+     "renamed": [
+      "DENIED",
+      "case_required"
+     ]
+    }
+   ],
+   "domain": "project",
+   "domain_branch": true,
+   "model": "collegial"
+  },
+  "killed": true,
+  "killed_by": "audit",
+  "killing_class": "domain_branch",
+  "mutated": {
+   "domain_branch": 2,
+   "static_hits": 1
+  },
+  "sub_corpus": {
+   "audit_cases": 60,
+   "domain": "project",
+   "seed": 7002523
+  }
+ },
+ "emergency_no_expiry": {
+  "control": {
+   "emergency_violation": 0,
+   "illegitimate_effect": 0,
+   "procedural_mismatch": 0,
+   "world_lock_timeout": 0
+  },
+  "first_killing_case": {
+   "calls": [
+    {
+     "action": "act",
+     "actor": "u70815-10",
+     "classes": [
+      "procedural_mismatch"
+     ],
+     "kind": "constitutional",
+     "reason": "approval_required",
+     "seq": null,
+     "status": "DENIED",
+     "tick": null
+    },
+    {
+     "action": "act",
+     "actor": "u70815-10",
+     "classes": [
+      "procedural_mismatch"
+     ],
+     "kind": "constitutional",
+     "reason": "approval_required",
+     "seq": null,
+     "status": "DENIED",
+     "tick": null
+    },
+    {
+     "action": "act",
+     "actor": "u70815-10",
+     "classes": [
+      "procedural_mismatch"
+     ],
+     "kind": "constitutional",
+     "reason": "approval_required",
+     "seq": null,
+     "status": "DENIED",
+     "tick": null
+    }
+   ],
+   "case": "case-7002523-6",
+   "class": "procedural_mismatch"
+  },
+  "killed": true,
+  "killed_by": "corpus",
+  "killing_class": "emergency_violation",
+  "mutated": {
+   "emergency_violation": 22,
+   "illegitimate_effect": 22,
+   "procedural_mismatch": 32,
+   "world_lock_timeout": 0
+  },
+  "sub_corpus": {
+   "cases": 120,
+   "races": 40,
+   "seed": 7002523
+  }
+ },
+ "merit_autofill": {
+  "control": {
+   "fabricated_judgment": 0,
+   "world_lock_timeout": 0
+  },
+  "first_killing_case": {
+   "calls": [
+    {
+     "action": "execute",
+     "actor": "u12352-6",
+     "classes": [
+      "fabricated_judgment",
+      "illegitimate_effect",
+      "procedural_mismatch"
+     ],
+     "kind": "constitutional",
+     "reason": null,
+     "seq": 56,
+     "status": "OK",
+     "tick": 0
+    }
+   ],
+   "case": "case-7002523-0",
+   "class": "fabricated_judgment"
+  },
+  "killed": true,
+  "killed_by": "corpus",
+  "killing_class": "fabricated_judgment",
+  "mutated": {
+   "fabricated_judgment": 72,
+   "world_lock_timeout": 0
+  },
+  "sub_corpus": {
+   "cases": 120,
+   "races": 40,
+   "seed": 7002523
+  }
+ },
+ "precedence_inverted": {
+  "control": {
+   "illegitimate_effect": 0,
+   "procedural_mismatch": 0,
+   "progress_loss": 0,
+   "world_lock_timeout": 0
+  },
+  "first_killing_case": {
+   "calls": [
+    {
+     "action": "propose",
+     "actor": "u12352-6",
+     "classes": [
+      "procedural_mismatch"
+     ],
+     "kind": "constitutional",
+     "reason": null,
+     "seq": 54,
+     "status": "OK",
+     "tick": 0
+    },
+    {
+     "action": "judge",
+     "actor": "u35831-10",
+     "classes": [
+      "procedural_mismatch"
+     ],
+     "kind": "constitutional",
+     "reason": "not_eligible",
+     "seq": null,
+     "status": "DENIED",
+     "tick": null
+    },
+    {
+     "action": "judge",
+     "actor": "u35831-10",
+     "classes": [
+      "procedural_mismatch"
+     ],
+     "kind": "constitutional",
+     "reason": "not_eligible",
+     "seq": null,
+     "status": "DENIED",
+     "tick": null
+    },
+    {
+     "action": "judge",
+     "actor": "u35831-10",
+     "classes": [
+      "procedural_mismatch"
+     ],
+     "kind": "constitutional",
+     "reason": "not_eligible",
+     "seq": null,
+     "status": "DENIED",
+     "tick": null
+    }
+   ],
+   "case": "case-7002523-0",
+   "class": "procedural_mismatch"
+  },
+  "killed": true,
+  "killed_by": "corpus",
+  "killing_class": "procedural_mismatch",
+  "mutated": {
+   "illegitimate_effect": 1,
+   "procedural_mismatch": 286,
+   "progress_loss": 0,
+   "world_lock_timeout": 0
+  },
+  "sub_corpus": {
+   "cases": 120,
+   "races": 40,
+   "seed": 7002523
+  }
+ },
+ "quorum_weakened": {
+  "control": {
+   "fabricated_judgment": 0,
+   "illegitimate_effect": 0,
+   "procedural_mismatch": 0,
+   "world_lock_timeout": 0
+  },
+  "first_killing_case": {
+   "calls": [
+    {
+     "action": "judge",
+     "actor": "u25311-1",
+     "classes": [
+      "procedural_mismatch"
+     ],
+     "kind": "constitutional",
+     "reason": "stage_closed",
+     "seq": null,
+     "status": "INVALID",
+     "tick": null
+    },
+    {
+     "action": "execute",
+     "actor": "u36619-5",
+     "classes": [
+      "procedural_mismatch"
+     ],
+     "kind": "constitutional",
+     "reason": "not_final",
+     "seq": null,
+     "status": "DENIED",
+     "tick": null
+    },
+    {
+     "action": "appeal",
+     "actor": "u25311-1",
+     "classes": [
+      "procedural_mismatch"
+     ],
+     "kind": "constitutional",
+     "reason": "window_closed",
+     "seq": null,
+     "status": "DENIED",
+     "tick": null
+    },
+    {
+     "action": "execute",
+     "actor": "u36619-5",
+     "classes": [
+      "illegitimate_effect",
+      "procedural_mismatch"
+     ],
+     "kind": "constitutional",
+     "reason": null,
+     "seq": 59,
+     "status": "OK",
+     "tick": 4
+    }
+   ],
+   "case": "case-7002523-2",
+   "class": "procedural_mismatch"
+  },
+  "killed": true,
+  "killed_by": "corpus",
+  "killing_class": "procedural_mismatch",
+  "mutated": {
+   "fabricated_judgment": 4,
+   "illegitimate_effect": 8,
+   "procedural_mismatch": 244,
+   "world_lock_timeout": 0
+  },
+  "sub_corpus": {
+   "cases": 120,
+   "races": 40,
+   "seed": 7002523
+  }
+ }
+}

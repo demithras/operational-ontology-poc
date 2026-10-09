@@ -1,0 +1,6 @@
+STEP start 2026-10-09T09:15:28Z head=9334a6e8dbda4beb5ffebbcee885e5ddbadc5f1f tag=r3-g3-candidate2 dirty=0 load=9.65 17.28 20.51
+STEP h25-conventional exit=0 10:11:27
+STEP h25-paladin exit=0 10:35:12
+STEP h25-eval exit=0
+STEP h25-verify exit=0
+DONE 2026-10-09T10:35:22Z load=11.31 9.45 9.49
