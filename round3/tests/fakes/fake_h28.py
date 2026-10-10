@@ -56,6 +56,8 @@ class H28Dep(FakeDep):
         self._pending = []
         sub = self._sub(token)
         had = sub is not None and isinstance(args, dict) and self.approved.get(oracle_approvals.key(sub, obo, op, args), 0) > 0
+        if self.mode == "adapter_decision" and any((i.get("reply") or {}).get("status") != "OK" and i["attempts"] for i in self.g4["intents"]):
+            return CallResult("DENIED", {"reason": "adapter_said_no"})    # known negative (G4-E26): the DECISION depends on an adapter reply
         res = super()._run_locked(token, op, args, obo, rid, backstop)
         if res.status == "INVALID" and str((res.body or {}).get("why", "")).startswith("approval_required"):
             res = CallResult("DENIED", {"reason": "approval_required"})      # Variant protocol: needs approval -> DENIED approval_required
@@ -211,7 +213,8 @@ NEGATIVES = {   # name -> (mode, mutants): the known-negative fakes of ORACLE-AN
     "FakeRootCapToAdapter": ("honest", ("credential_scope_broadened",)), "FakeAdapterPolicy": ("honest", ("policy_gate_in_adapter",)),
     "FakeFreshCapRetry": ("honest", ("idempotency_disabled",)), "FakeReadsAdapterObservations": ("honest", ("observation_coupled",)),
     "FakeAnyRowSuccess": ("honest", ("divergence_rewritten",)), "FakeConsumesArtefact": ("FakeConsumesArtefact", ()),
-    "FakeAlwaysUnknown": ("always_unknown", ()), "FakeNeverDispatch": ("never_dispatch", ()), "FakeWrongEnvelope": ("wrong_envelope", ()), "FakeLegacyWrite": ("legacy_write", ()),
+    "FakeAlwaysUnknown": ("always_unknown", ()), "FakeNeverDispatch": ("never_dispatch", ()), "FakeWrongEnvelope": ("wrong_envelope", ()),
+    "FakeAdapterDecision": ("adapter_decision", ()), "FakeLegacyWrite": ("legacy_write", ()),
 }
 
 

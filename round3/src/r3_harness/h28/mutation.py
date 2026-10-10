@@ -4,14 +4,14 @@ ExternalWorld; the clean build runs the same subset. Killed = own class > 0 AND 
 from __future__ import annotations
 
 import json
+import multiprocessing
 import os
 import tempfile
 from pathlib import Path
 
 from r3_shared import mutants
-from r3_shared.extworld import start_external
 
-from . import finalize, specs
+from . import finalize, specs, worlds
 from .caserun import RunCtx, run_case
 from .gen_case import build_case
 from .gen_params import PAIRS, draw_params
@@ -56,13 +56,11 @@ def pick_subset(seed: int, per_prim: int = SUB_PER_PRIM, extra: int = 600, pool:
 
 def _run_build(factory, vname, subset, d: Path, seed: int, mutant) -> dict:
     d.mkdir(parents=True, exist_ok=True)
-    sp = d / "systems.json"
-    sp.write_text(json.dumps(specs.combined_systems()))
-    proc = start_external(d / "ext", sp, os.path.join(tempfile.mkdtemp(prefix="r3m"), "s"))
+    pair = worlds.Pair(d, "r3m")                       # own ExternalWorld pair (byz + twin), own RunCtx/tick, own work dir
     try:
-        ctl = proc.client()
-        sysseed = seed_external(ctl)
-        ctx = RunCtx(ctl, str(d / "ext"), "mutation", vname, tempfile.mkdtemp(prefix="h28-mut-", dir=str(d)))
+        sysseed = pair.sysseed
+        ctx = RunCtx(pair.ctl, str(d / "ext"), "mutation", vname, tempfile.mkdtemp(prefix="h28-mut-", dir=str(d)))
+        pair.attach(ctx)
         variant = factory((mutant,) if mutant else ())
         with (d / RAW).open("w") as fh:
             for c in subset:
@@ -73,22 +71,45 @@ def _run_build(factory, vname, subset, d: Path, seed: int, mutant) -> dict:
             for c in subset:
                 fh.write(json.dumps({"case_def": {k: c.get(k) for k in ("id", "kind", "domain", "system", "op", "prims", "crash", "fault")}}) + "\n")
     finally:
-        proc.close()
-    J = finalize.judge_all(d, str(d / "ext"), {"sysseed": sysseed})
+        pair.close()
+    J = finalize.judge_all(d, str(d / "ext"), {"sysseed": sysseed}, str(d / worlds.TWIN_DIR))
     agg = finalize.aggregate(J)
     return {"agg": agg, "rows": J["rows"]}
 
 
-def prove(factory, vname: str, seed: int, workroot: str, per_prim: int = SUB_PER_PRIM, extra: int = 600) -> dict:
+_JOB: dict = {}
+
+
+def _build_job(name):
+    """Worker body (forked child): one build (None = clean). An unbuilt mutant is 'not killed', never a crash of the run."""
+    j = _JOB
+    try:
+        return name, _run_build(j["factory"], j["vname"], j["subset"], j["base"] / (name or "clean"), j["seed"], name), None
+    except Exception as exc:  # noqa: BLE001
+        return name, None, f"{type(exc).__name__}: {exc}"
+
+
+def prove(factory, vname: str, seed: int, workroot: str, per_prim: int = SUB_PER_PRIM, extra: int = 600, workers: int | None = None) -> dict:
+    """The clean build and every mutant build are INDEPENDENT (own ExternalWorlds, clock, tick, work dir; the same frozen subset), so they run
+    in parallel forked processes; results are collected by name, so the output is byte-identical to the sequential form."""
     subset = pick_subset(seed, per_prim, extra)
-    base = Path(workroot)
-    clean = _run_build(factory, vname, subset, base / "clean", seed, None)
+    names = [None, *mutants.KNOWN["H28"]]
+    _JOB.update(factory=factory, vname=vname, subset=subset, base=Path(workroot), seed=seed)
+    n = max(1, min(workers or int(os.environ.get("R3_H28_WORKERS", "0")) or (os.cpu_count() or 2), len(names)))
+    if n == 1:
+        res = [_build_job(x) for x in names]
+    else:
+        with multiprocessing.get_context("fork").Pool(n) as pool:
+            res = pool.map(_build_job, names, chunksize=1)
+    got = {name: (m, err) for name, m, err in res}
+    if got[None][1]:
+        raise RuntimeError(f"clean build failed: {got[None][1]}")
+    clean = got[None][0]
     out = {"_subset": {"cases": len(subset), "per_primitive": per_prim, "ids": [c["id"] for c in subset]}}
     for name in mutants.KNOWN["H28"]:
-        try:
-            m = _run_build(factory, vname, subset, base / name, seed, name)
-        except Exception as exc:  # noqa: BLE001 - an unbuilt mutant is "not killed", never a crash of the run
-            out[name] = {"error": f"{type(exc).__name__}: {exc}", "own_class": OWN_CLASS[name], "own_class_count": 0,
+        m, err = got[name]
+        if err:
+            out[name] = {"error": err, "own_class": OWN_CLASS[name], "own_class_count": 0,
                          "clean_count": 0, "killed": False, "case_ids": []}
             continue
         out[name] = _kill(name, m, clean)

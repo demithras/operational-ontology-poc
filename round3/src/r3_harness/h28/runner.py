@@ -38,6 +38,7 @@ def _dump(path: Path, rows) -> None:
 
 
 def run_variant(factory, vname: str, out: Path, exp_id: str, seed: int, ext_sock: str, ext_ctl: str, ext_dir: str, *,
+                twin_ctl: str | None = None, twin_dir: str | None = None, twin_sock: str | None = None,
                 anchor_sock: str | None = None, cases: int = 5600, controls: int = 1000, start: int = 0, observer_factory=None,
                 mutants=(), progress=None) -> dict:
     out.mkdir(parents=True, exist_ok=True)
@@ -46,10 +47,15 @@ def run_variant(factory, vname: str, out: Path, exp_id: str, seed: int, ext_sock
         raise FileExistsError(f"refusing to overwrite {raw}")
     ctl = ExternalClient(ext_sock, ext_ctl)
     sysseed = seed_external(ctl)
+    twin_client = ExternalClient(twin_sock, twin_ctl) if (twin_ctl and twin_sock) else None   # G4-E26: the twins' own world
+    if twin_client is not None:
+        seed_external(twin_client)
     variant = factory(tuple(mutants))
     work = tempfile.mkdtemp(prefix="h28-run-")
     ctx = RunCtx(ctl, ext_dir, exp_id, vname, work, anchor_sock)
     ctx.observer_factory = observer_factory
+    if twin_client is not None:
+        ctx.attach_twin(twin_client, twin_dir)
     byz, st1 = draw_params(seed, cases, "byz", start)
     ctl_p, st2 = draw_params(seed + 1, controls, "control", start)
     stats = {"hypothesis": {"byz": st1, "control": st2}, "generator": {}, "cases_built": 0, "controls_built": 0}
@@ -72,5 +78,6 @@ def run_variant(factory, vname: str, out: Path, exp_id: str, seed: int, ext_sock
         _dump(raw, rows)
         if progress and n % 100 == 0:
             progress(n, time.time() - t0)
+    ctx.settle()
     return {"seed": seed, "variant": vname, "sysseed": sysseed, "stats": stats, "end_tick": ctx.tick, "cases": cases,
             "controls": controls, "start": start, "duration_s": round(time.time() - t0, 1), "mutants": list(mutants)}

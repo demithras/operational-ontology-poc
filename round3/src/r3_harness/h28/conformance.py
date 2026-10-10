@@ -12,7 +12,7 @@ from r3_shared import extcap
 from r3_shared.extadapter import FormError, validate_request
 from r3_shared.extworld import start_external
 
-from . import finalize, runner, specs
+from . import finalize, runner, specs, worlds
 from .caserun import RunCtx, run_case
 from .gen_case import build_case
 from .gen_params import draw_params
@@ -23,11 +23,10 @@ class World:
     """A private ExternalWorld + RunCtx for one conformance check."""
     def __init__(self, factory, vname="conf"):
         self.d = Path(tempfile.mkdtemp(prefix="h28c"))
-        (self.d / "systems.json").write_text(json.dumps(specs.combined_systems()))
-        self.proc = start_external(self.d / "ext", self.d / "systems.json", os.path.join(tempfile.mkdtemp(prefix="r3c"), "s"))
-        self.ctl = self.proc.client()
-        self.sysseed = runner.seed_external(self.ctl)
+        self.pair = worlds.Pair(self.d, "r3c")
+        self.proc, self.ctl, self.sysseed = self.pair.main, self.pair.ctl, self.pair.sysseed
         self.ctx = RunCtx(self.ctl, str(self.d / "ext"), "conf", vname, tempfile.mkdtemp(prefix="h28c-w-", dir=str(self.d)))
+        self.pair.attach(self.ctx)                  # G4-E26: twins run in their own world on the identical clock
         self.variant, self.recs, self.cases = factory(()), [], {}
 
     def run(self, case, kind="byz"):
@@ -39,11 +38,14 @@ class World:
 
     def close(self):
         if self.closed is None:                 # idempotent: every check closes its ExternalWorld exactly once (no leaked processes)
-            self.closed = self.proc.close()
+            self.closed = self.pair.close()["external"]
         return self.closed
 
+    def ledger(self) -> dict:
+        return finalize.merged_ledger(self.d / "ext", self.d / worlds.TWIN_DIR)[0]
+
     def judge_inputs(self):
-        led = LedgerIndex(extoracle.load_ledger(self.d / "ext"))
+        led = LedgerIndex(self.ledger())
         return led
 
 
@@ -185,7 +187,7 @@ def c5_refusal_order(factory, n=30, seed=2811) -> list[str]:
             return bad
         closed = w.close()
         key, systems = bytes.fromhex(closed["root_key_hex"]), specs.combined_systems()
-        led = extoracle.load_ledger(w.d / "ext")
+        led = w.ledger()
         issued = {(r["nonce"], r["system"], r["deployment"]) for r in led["issued"]}
         used: dict = {}
         for r in w.recs:
@@ -240,7 +242,7 @@ def c6_crash_redelivery(factory, n=20, seed=2811) -> list[str]:
         if bad:
             return bad
         w.close()
-        led = LedgerIndex(extoracle.load_ledger(w.d / "ext"))
+        led = LedgerIndex(w.ledger())
         for r in w.recs:
             chains: dict = {}
             for log in r["recorder"].values():

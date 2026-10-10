@@ -2,11 +2,15 @@
 # Re-hash the evidence of experiments/h28/<ID> (override root: R3_H28_OUT_ROOT), re-evaluate from the raw records + the closed ledger,
 # and diff against the recorded verdict.json.
 set -euo pipefail
-ID="${1:?usage: verify_h28.sh <exp-id>}"; shift || true
+# usage: verify_h28.sh <exp-id | path-to-experiment-dir>
+#   an id is resolved under $R3_H28_OUT_ROOT (default experiments/h28); anything containing a '/' is taken as the experiment directory itself.
+case "${1:-}" in -h|--help) sed -n 2,6p "$0"; exit 0;; esac
+ARG="${1:?usage: verify_h28.sh <exp-id | path-to-experiment-dir>}"; shift || true
 R3="$(cd "$(dirname "$0")/.." && pwd)"
 PY="${PY:-$R3/.venv/bin/python}"
 OUTROOT="${R3_H28_OUT_ROOT:-$R3/experiments/h28}"
-EXP="$OUTROOT/$ID"
+if [[ "$ARG" == */* ]]; then EXP="$(cd "$ARG" 2>/dev/null && pwd -P)" || { echo "no such experiment directory: $ARG" >&2; exit 2; }; OUTROOT="$(dirname "$EXP")"; ID="$(basename "$EXP")"
+else ID="$ARG"; EXP="$OUTROOT/$ID"; fi
 [ -f "$EXP/verdict.json" ] || { echo "no verdict.json in $EXP" >&2; exit 2; }
 "$PY" - "$EXP" <<'PYEOF'
 import hashlib, json, pathlib, sys

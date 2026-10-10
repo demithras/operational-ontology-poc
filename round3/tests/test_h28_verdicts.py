@@ -44,7 +44,12 @@ def test_unadopted_seam_is_unsupported_never_supported(run):
         assert "not implemented yet - G4" in r.stderr or r.returncode != 0
         return
     v = ev["variants"]["paladin"]
-    assert v["verdict"] != "SUPPORTED"
+    # G4-E26: paladin has adopted the seam and its twins now match byte-for-byte (the old 445 envelope diffs were a harness artefact), so a
+    # tiny dev run may legitimately be SUPPORTED. The invariant that stays: an `unsupported` harness row is NEVER SUPPORTED.
+    if v["metrics"].get("harness", {}).get("unsupported"):
+        assert v["verdict"] != "SUPPORTED"
+    else:
+        assert v["verdict"] in ("SUPPORTED", "INCONCLUSIVE"), v["reasons"]
 
 
 class Obs:

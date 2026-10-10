@@ -111,7 +111,7 @@ def test_evidence_files_and_servers_closed(exp):
         assert (d / f).is_file(), f
     man = json.loads((d / "manifest.json").read_text())["raw_observations"]
     assert man["closes"]["external"]["head"]["effects"] > 0 and man["closes"]["anchor"] is not None
-    assert (d / "ext" / "KEY.revealed").is_file()
+    assert (d / "ext" / "KEY.revealed").is_file() and (d / "ext-twin" / "KEY.revealed").is_file()   # G4-E26: both worlds closed
     audit = json.loads((d / "adapter-governance-audit.json").read_text())
     assert audit["self_test"]["ok"] is True
 

@@ -129,16 +129,10 @@ def _env_core(text: str):
     return d
 
 
-def _rel(v, R: dict):
-    """Twins run one after the other on one logical clock, so their ABSOLUTE ticks differ by construction (the case start_tick).
-    Compare tick-valued fields relative to the case start_tick (as the world digest already does); the relative offset is still compared."""
-    if isinstance(v, dict) and isinstance(v.get("body"), dict) and isinstance(v["body"].get("tick"), int):
-        return {**v, "body": {**v["body"], "tick": v["body"]["tick"] - R.get("start_tick", 0)}}
-    return v
-
-
 def twin_diff(B: dict, T: dict) -> list[str]:
-    """R28-11a: decision plane (status, reason, authority_used, canonical world digest, envelope decision part) byte-identical."""
+    """R28-11a (G4-E26): decision plane (status, reason, authority_used, canonical world digest, envelope decision part incl. tick and
+    effect_digest) BYTE-identical. The twin ran on the identical absolute clock schedule in its own world, so NO field is excluded and
+    no tick is shifted: an absolute difference is a difference."""
     diffs = []
     bq = {(q["i"], q["replay"]): q for q in B["requests"]}
     tq = {(q["i"], q["replay"]): q for q in T["requests"]}
@@ -146,7 +140,7 @@ def twin_diff(B: dict, T: dict) -> list[str]:
         diffs.append("request set")
     for k in sorted(set(bq) & set(tq)):
         for f in ("status", "reason", "authority_used"):
-            if json.dumps(_rel(bq[k].get(f), B), sort_keys=True) != json.dumps(_rel(tq[k].get(f), T), sort_keys=True):
+            if json.dumps(bq[k].get(f), sort_keys=True) != json.dumps(tq[k].get(f), sort_keys=True):
                 diffs.append(f"req{k}.{f}")
     if B.get("world_digest") != T.get("world_digest"):
         diffs.append("world")

@@ -74,9 +74,9 @@ def _need(ov: dict, th: dict) -> dict:
 def evaluate_variant(vdir: Path, thresholds: dict, vname: str, is_dev: bool) -> dict:
     t, reasons, valid = thresholds["H28"], [], True
     missing = [f for f in (*FILES, MANIFEST, RAW, "run-pre.json") if not (vdir / f).is_file()]
-    if missing or not (vdir / "ext" / "external.db").is_file():
-        return _finish(vname, True, False, False, False, False, ["required evidence missing: " + ", ".join(missing + (
-            [] if (vdir / "ext" / "external.db").is_file() else ["ext/external.db"]))], {})
+    dbs = [f"{d}/external.db" for d in ("ext", "ext-twin") if not (vdir / d / "external.db").is_file()]
+    if missing or dbs:
+        return _finish(vname, True, False, False, False, False, ["required evidence missing: " + ", ".join(missing + dbs)], {})
     man = _read(vdir / MANIFEST)
     ro = man["raw_observations"]
     ov = ro.get("dev_overrides") or {}
@@ -110,7 +110,7 @@ def evaluate_variant(vdir: Path, thresholds: dict, vname: str, is_dev: bool) -> 
         valid = False
         reasons.append(f"manifest invalid: {exc}")
     pre = _read(vdir / "run-pre.json")
-    J = finalize.judge_all(vdir, str(vdir / "ext"), pre)
+    J = finalize.judge_all(vdir, str(vdir / "ext"), pre, str(vdir / "ext-twin"))
     agg = finalize.aggregate(J)
     if not agg["sysstate"]["replay_equals_sysstate"]:
         valid = False
