@@ -4,6 +4,7 @@ import tempfile
 
 import pytest
 
+from r3_harness.h28.factories import NamedFactory
 from r3_harness.h28 import mutation
 from r3_shared import mutants
 from tests.fakes import fake_h28
@@ -13,7 +14,7 @@ _R = {}
 
 def proof():
     if "r" not in _R:
-        _R["r"] = mutation.prove(lambda m: fake_h28.load("FakeHonest", m), "fake", 2811, tempfile.mkdtemp(prefix="h28m"), per_prim=6, extra=24)
+        _R["r"] = mutation.prove(NamedFactory("fake-FakeHonest"), "fake", 2811, tempfile.mkdtemp(prefix="h28m"), per_prim=6, extra=24)
     return _R["r"]
 
 

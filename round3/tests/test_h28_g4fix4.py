@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from r3_harness.h28.factories import NamedFactory
 from r3_harness.h28 import judge, mutation
 from tests.fakes import fake_h28
 from tests.h28_util import run_corpus
@@ -69,7 +70,7 @@ def test_envelope_only_difference_is_caught(field, value):
 
 
 def test_parallel_mutation_proof_equals_sequential():
-    mk = lambda m: fake_h28.load("FakeHonest", m)  # noqa: E731
+    mk = NamedFactory("fake-FakeHonest")
     a = mutation.prove(mk, "fake", 2811, tempfile.mkdtemp(prefix="h28pa"), per_prim=2, extra=6, workers=1)
     b = mutation.prove(mk, "fake", 2811, tempfile.mkdtemp(prefix="h28pb"), per_prim=2, extra=6, workers=4)
     assert json.dumps(a, sort_keys=True, default=str) == json.dumps(b, sort_keys=True, default=str)

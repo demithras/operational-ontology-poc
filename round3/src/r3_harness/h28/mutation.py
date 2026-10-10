@@ -77,30 +77,29 @@ def _run_build(factory, vname, subset, d: Path, seed: int, mutant) -> dict:
     return {"agg": agg, "rows": J["rows"]}
 
 
-_JOB: dict = {}
-
-
-def _build_job(name):
-    """Worker body (forked child): one build (None = clean). An unbuilt mutant is 'not killed', never a crash of the run."""
-    j = _JOB
+def _build_job(job):
+    """Worker body (a SPAWNED child: fresh interpreter, every module imported anew; nothing inherited): one build (None = clean).
+    An unbuilt mutant is 'not killed', never a crash of the run."""
+    name, factory, vname, subset, base, seed = job
     try:
-        return name, _run_build(j["factory"], j["vname"], j["subset"], j["base"] / (name or "clean"), j["seed"], name), None
+        return name, _run_build(factory, vname, subset, Path(base) / (name or "clean"), seed, name), None
     except Exception as exc:  # noqa: BLE001
         return name, None, f"{type(exc).__name__}: {exc}"
 
 
 def prove(factory, vname: str, seed: int, workroot: str, per_prim: int = SUB_PER_PRIM, extra: int = 600, workers: int | None = None) -> dict:
     """The clean build and every mutant build are INDEPENDENT (own ExternalWorlds, clock, tick, work dir; the same frozen subset), so they run
-    in parallel forked processes; results are collected by name, so the output is byte-identical to the sequential form."""
+    in parallel SPAWNED processes (never fork: a variant may keep import-time state, e.g. a temp dir, and fork-after-threads can deadlock);
+    results are collected by name, so the output is byte-identical to the sequential form. The factory must be picklable (factories.NamedFactory)."""
     subset = pick_subset(seed, per_prim, extra)
     names = [None, *mutants.KNOWN["H28"]]
-    _JOB.update(factory=factory, vname=vname, subset=subset, base=Path(workroot), seed=seed)
+    jobs = [(x, factory, vname, subset, str(workroot), seed) for x in names]
     n = max(1, min(workers or int(os.environ.get("R3_H28_WORKERS", "0")) or (os.cpu_count() or 2), len(names)))
     if n == 1:
-        res = [_build_job(x) for x in names]
+        res = [_build_job(j) for j in jobs]
     else:
-        with multiprocessing.get_context("fork").Pool(n) as pool:
-            res = pool.map(_build_job, names, chunksize=1)
+        with multiprocessing.get_context("spawn").Pool(n, maxtasksperchild=1) as pool:
+            res = pool.map(_build_job, jobs, chunksize=1)
     got = {name: (m, err) for name, m, err in res}
     if got[None][1]:
         raise RuntimeError(f"clean build failed: {got[None][1]}")

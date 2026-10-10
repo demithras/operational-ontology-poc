@@ -20,6 +20,7 @@ sys.path.insert(0, str(ROUND3 / "src"))
 
 from r3_harness.h28 import audit, evaluator, evidence_out, finalize, mutation, runner, selftest  # noqa: E402
 from r3_shared.extworld import ExternalError, is_dev_id, require_external  # noqa: E402
+from r3_harness.h28.factories import NamedFactory  # noqa: E402
 from r3_shared.registry import load_variant  # noqa: E402
 
 FROZEN = {"cases": 5600, "controls": 1000}
@@ -37,12 +38,12 @@ def factory_for(name: str, test_variants: bool):
             die(f"{name}: fake variants need --test-variants")
         sys.path.insert(0, str(ROUND3))
         from tests.fakes import fake_h28
-        return (lambda m, n=name: fake_h28.load(n, m)), None
+        return NamedFactory(name), None
     try:
         load_variant(name)
     except NotImplementedError as exc:
         die(f"not implemented yet - G4 ({exc})")
-    return (lambda m, n=name: load_variant(n, m)), name
+    return NamedFactory(name), name
 
 
 def overrides_for(cases: int, controls: int) -> dict:
