@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -15,28 +16,84 @@ ENV = {**os.environ, "PYTHONPATH": str(R3 / "src")}
 SIZES = ["--cases", "130", "--controls", "30", "--dev-overrides", "--mutation-per-prim", "3", "--mutation-extra", "12", "--selftest-cases", "8"]
 
 
-def procs():
-    out = subprocess.run(["ps", "-axo", "pid,command"], capture_output=True, text=True).stdout
-    return {l.split()[0] for l in out.splitlines() if ("extworld_server" in l or "anchor_server" in l) and "r3h28" in l}
+MARKS = ("r3_shared.anchor_server", "r3_shared.extworld_server")
+
+
+def servers_in(root):
+    """pid -> cmdline of live anchor/extworld servers whose command line names a path inside `root` (exact attribution, as in
+    tests/conftest.py; never a machine-wide diff or ppid)."""
+    roots = {os.path.realpath(str(root)), str(root)}
+    roots |= {r.replace("/private", "", 1) for r in roots}
+    out = subprocess.run(["ps", "-axo", "pid=,command="], capture_output=True, text=True).stdout
+    res = {}
+    for line in out.splitlines():
+        parts = line.split(None, 1)
+        if len(parts) == 2 and parts[0].isdigit() and any(m in parts[1] for m in MARKS) and any(f"{r.rstrip('/')}/" in parts[1] for r in roots):
+            res[int(parts[0])] = parts[1]
+    return res
+
+
+def fake_server(mark, d):
+    """A stand-in process whose command line looks like a launcher server started with --dir d."""
+    return subprocess.Popen([sys.executable, "-c", "import time; time.sleep(120)", mark, "--dir", str(d)])
 
 
 @pytest.fixture(scope="module")
-def exp():
+def shim(tmp_path_factory):
+    """PATH shim: run_h28.sh makes its work dir with an absolute `mktemp -d /tmp/r3h28.XXXXXX`; redirect that template into this test's
+    private root so every server the launcher starts carries the root in its command line."""
+    real = shutil.which("mktemp")
+    root = Path(os.path.realpath(tempfile.mkdtemp(prefix="h28w")))  # short path (AF_UNIX limit), under the session TMPDIR
+    bindir = Path(tempfile.mkdtemp(prefix="h28b"))
+    (bindir / "mktemp").write_text(f'#!/bin/bash\nargs=()\nfor a in "$@"; do args+=("${{a/#\\/tmp\\/r3h28./{root}/r3h28.}}"); done\nexec {real} "${{args[@]}}"\n')
+    (bindir / "mktemp").chmod(0o755)
+    yield root, bindir
+    shutil.rmtree(bindir, ignore_errors=True)
+    shutil.rmtree(root, ignore_errors=True)
+
+
+@pytest.fixture(scope="module")
+def exp(shim):
+    wroot, bindir = shim
     root = Path(tempfile.mkdtemp(prefix="h28e2e"))
-    before = procs()
-    r = subprocess.run([str(R3 / "scripts" / "run_h28.sh"), "--exp-id", "exp-h28-e2e-dev-1", "--out-root", str(root), "--variants",
-                        "fake-FakeHonest,fake-FakeTrustsReply", "--test-variants", *SIZES], capture_output=True, text=True, env=ENV,
-                       cwd=R3, timeout=900)
-    assert r.returncode == 0, r.stderr[-3000:]
-    ev = subprocess.run([PY, str(R3 / "scripts" / "evaluate_h28.py"), "exp-h28-e2e-dev-1", "--out-root", str(root)], capture_output=True,
-                        text=True, env=ENV, cwd=R3)
-    assert ev.returncode == 0, ev.stderr[-2000:]
-    return root, r, procs() - before
+    unrelated = fake_server(MARKS[1], Path(tempfile.mkdtemp(prefix="h28other")))  # alive during the run, NOT ours
+    try:
+        env = {**ENV, "PATH": f"{bindir}{os.pathsep}{ENV['PATH']}"}
+        r = subprocess.run([str(R3 / "scripts" / "run_h28.sh"), "--exp-id", "exp-h28-e2e-dev-1", "--out-root", str(root), "--variants",
+                            "fake-FakeHonest,fake-FakeTrustsReply", "--test-variants", *SIZES], capture_output=True, text=True, env=env,
+                           cwd=R3, timeout=900)
+        assert r.returncode == 0, r.stderr[-3000:]
+        ev = subprocess.run([PY, str(R3 / "scripts" / "evaluate_h28.py"), "exp-h28-e2e-dev-1", "--out-root", str(root)], capture_output=True,
+                            text=True, env=ENV, cwd=R3)
+        assert ev.returncode == 0, ev.stderr[-2000:]
+        yield root, r, servers_in(wroot), unrelated.pid, wroot
+    finally:
+        unrelated.kill()
+        unrelated.wait()
 
 
 def test_launcher_leaks_no_server_process(exp):
-    assert exp[2] == set()
-    assert not list(Path("/tmp").glob("r3h28.*")) or True
+    root, _, leaked, unrelated_pid, wroot = exp
+    assert leaked == {}, leaked
+    # proof the attribution is live (not vacuous): the launcher's work dirs were under wroot (now removed), and the unrelated server is
+    # alive yet was ignored
+    assert subprocess.run(["ps", "-p", str(unrelated_pid)], capture_output=True).returncode == 0
+    assert unrelated_pid not in leaked
+
+
+def test_attribution_ignores_unrelated_and_catches_own_leftovers(shim):
+    wroot, _ = shim
+    other = fake_server(MARKS[1], Path(tempfile.mkdtemp(prefix="h28other")))
+    mine = fake_server(MARKS[0], wroot / "r3h28.leftover" / "anchor")
+    try:
+        import time
+        time.sleep(0.5)
+        found = servers_in(wroot)
+        assert mine.pid in found and other.pid not in found and len(found) == 1
+    finally:
+        for p in (other, mine):
+            p.kill()
+            p.wait()
 
 
 def test_verdicts(exp):
