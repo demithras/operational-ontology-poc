@@ -22,6 +22,7 @@ CONTROL_OPS = ("issue_root", "advance", "observer_key", "seed", "tick", "close",
 class Handler(socketserver.StreamRequestHandler):
     def handle(self):
         core, plane = self.server.core, self.server.plane
+        stop_after_reply = False
         try:
             r = json.loads(self.rfile.readline())
             op = r.get("op")
@@ -44,15 +45,21 @@ class Handler(socketserver.StreamRequestHandler):
                 out = {"tick": core.tick}
             else:  # close
                 out = core.close()
-                threading.Thread(target=self.server.stop, daemon=True).start()
+                stop_after_reply = True
             resp = {"ok": True, **out}
         except Exception as exc:  # protocol-level refusal; never crash the service
             resp = {"ok": False, "error": str(exc)}
         self.wfile.write(canon_json(resp).encode() + b"\n")
+        self.wfile.flush()
+        if stop_after_reply:
+            # Only now release main(): stopping before the reply was flushed let the process exit (daemon handler thread
+            # killed) so the client read an EMPTY close reply, losing the revealed root key, under load.
+            threading.Thread(target=self.server.stop, daemon=True).start()
 
 
 class PlaneServer(socketserver.ThreadingUnixStreamServer):
-    daemon_threads = True
+    daemon_threads = False  # server_close() joins handler threads: the close reply is fully sent before the process exits
+    block_on_close = True
 
     def __init__(self, path, core, plane, stop):
         if os.path.exists(path):
