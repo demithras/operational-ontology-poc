@@ -4,7 +4,7 @@ from pathlib import Path
 
 from r3_harness.h28 import evaluator, finalize, judge, specs
 from r3_oracle import extoracle
-from tests.test_h28_e2e import R3, exp  # noqa: F401  (module fixture)
+from tests.test_h28_e2e import R3, exp, shim  # noqa: F401  (module fixtures)
 
 
 def test_gen_null_operation_is_named_record():
