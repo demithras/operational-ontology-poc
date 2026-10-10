@@ -27,7 +27,14 @@ def load_raw(out: Path):
     return cases, recs, harness
 
 
-def sysstate_check(ledger: dict, sysseed: dict) -> dict:
+def sysstate_check(ledgers, sysseed: dict) -> dict:
+    ledgers = ledgers if isinstance(ledgers, list) else [ledgers]
+    res = [_sysstate_one(l, sysseed) for l in ledgers]
+    return {"replay_equals_sysstate": all(r["replay_equals_sysstate"] for r in res),
+            "mismatching_keys": [k for r in res for k in r["mismatching_keys"]][:20], "keys": sum(r["keys"] for r in res)}
+
+
+def _sysstate_one(ledger: dict, sysseed: dict) -> dict:
     seed = {tuple(k.split("|", 1)): v for k, v in sysseed.items()}
     combined = specs.combined_systems()
     exp = extoracle.sysstate_expected(combined, ledger, seed)
@@ -37,9 +44,22 @@ def sysstate_check(ledger: dict, sysseed: dict) -> dict:
     return {"replay_equals_sysstate": not bad, "mismatching_keys": bad[:20], "keys": len(keys)}
 
 
-def judge_all(out: Path, ext_dir: str, pre: dict) -> dict:
+def merged_ledger(ext_dir, twin_dir=None):
+    """(merged ledger, per-world ledgers). Deployments are world-private (twin deployments live ONLY in the twin world), so the merged
+    effects/audit lists answer every per-deployment question; sysstate is checked per world (it is per-world state)."""
+    main = extoracle.load_ledger(ext_dir)
+    if twin_dir is None:
+        return main, [main]
+    tw = extoracle.load_ledger(twin_dir)
+    # rows keep their world-local seq (observer transcripts quote it); a row is identified by (deployment, seq) and every deployment lives in ONE world
+    merged = {"effects": main["effects"] + tw["effects"], "audit": main["audit"] + tw["audit"],
+              "sysstate": main["sysstate"], "issued": main["issued"] + tw["issued"]}
+    return merged, [main, tw]
+
+
+def judge_all(out: Path, ext_dir: str, pre: dict, twin_dir: str | None = None) -> dict:
     cases, recs, harness = load_raw(out)
-    ledger = extoracle.load_ledger(ext_dir)
+    ledger, worlds = merged_ledger(ext_dir, twin_dir)
     led = judge.LedgerIndex(ledger)
     intents_by_dep: dict = defaultdict(list)
     for cid, kinds in recs.items():
@@ -59,7 +79,7 @@ def judge_all(out: Path, ext_dir: str, pre: dict) -> dict:
     known = {R["dep"] for kinds in recs.values() for R in kinds.values()}
     return {"cases": cases, "recs": recs, "rows": rows, "ledger": ledger, "harness_rows": harness, "scope_all": scope_all,
             "unattributed_scope": [r["seq"] for r in scope_all if r["deployment"] not in known],
-            "sysstate": sysstate_check(ledger, pre["sysseed"])}
+            "sysstate": sysstate_check(worlds, pre["sysseed"])}
 
 
 def aggregate(J: dict) -> dict:

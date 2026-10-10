@@ -8,9 +8,7 @@ import os
 import tempfile
 from pathlib import Path
 
-from r3_shared.extworld import start_external
-
-from . import audit, finalize, specs
+from . import audit, finalize, specs, worlds
 from .caserun import RunCtx, run_case
 from .mutation import APPROVAL_SYSTEMS
 from .gen_case import build_case
@@ -34,12 +32,11 @@ def _probe_cases(seed: int, n: int) -> list[dict]:
 def behavioural(factory, seed: int, n: int, workdir: Path) -> dict:
     d = Path(workdir)
     d.mkdir(parents=True, exist_ok=True)
-    (d / "systems.json").write_text(json.dumps(specs.combined_systems()))
-    proc = start_external(d / "ext", d / "systems.json", os.path.join(tempfile.mkdtemp(prefix="r3st"), "s"))
+    pair = worlds.Pair(d, "r3st")
     try:
-        ctl = proc.client()
-        sysseed = seed_external(ctl)
-        ctx = RunCtx(ctl, str(d / "ext"), "selftest", "selftest", tempfile.mkdtemp(prefix="h28-st-", dir=str(d)))
+        sysseed = pair.sysseed
+        ctx = RunCtx(pair.ctl, str(d / "ext"), "selftest", "selftest", tempfile.mkdtemp(prefix="h28-st-", dir=str(d)))
+        pair.attach(ctx)
         v = factory(())
         cases = _probe_cases(seed, n)
         with (d / RAW).open("w") as fh:
@@ -49,8 +46,8 @@ def behavioural(factory, seed: int, n: int, workdir: Path) -> dict:
             for c in cases:
                 fh.write(json.dumps({"case_def": {k: c.get(k) for k in ("id", "kind", "domain", "system", "op", "prims", "crash", "fault")}}) + "\n")
     finally:
-        proc.close()
-    J = finalize.judge_all(d, str(d / "ext"), {"sysseed": sysseed})
+        pair.close()
+    J = finalize.judge_all(d, str(d / "ext"), {"sysseed": sysseed}, str(d / worlds.TWIN_DIR))
     return {"cases": len(cases), "governance_in_adapter": sum(r["classes"].get("governance_in_adapter", 0) for r in J["rows"]),
             "oracle_denied_variant_ok": sum(1 for r in J["rows"] for g in r["gov"] if g["sub"] == "oracle_denied_variant_ok")}
 

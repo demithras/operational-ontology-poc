@@ -3,6 +3,7 @@ only readable by the oracle after ExternalWorld close(), so classification happe
 exactly the generated schedule; the twin gets the identical step list with honest (H0) adapters (G3-E32b)."""
 from __future__ import annotations
 
+import copy
 import hashlib
 import os
 import shutil
@@ -31,6 +32,30 @@ class RunCtx:
         self.anchor_sock, self.tick, self.cap_pool = anchor_sock, start_tick, []
         self.sock_path = getattr(ctl, "_sock", "")
         self.observer_factory = None            # tests only: a factory building a (deliberately) non-independent observer
+        self.twin = None                        # G4-E26: the TWIN ExternalWorld (ctl, ext_dir); honest twins run there on the identical clock
+
+    pending_end = None
+
+    def settle(self) -> None:
+        """Move the shared tick past the case (pair) that just ran."""
+        if self.pending_end is not None:
+            self.tick = max(self.tick, self.pending_end)
+            self.pending_end = None
+
+    def attach_twin(self, ctl, ext_dir: str) -> None:
+        self.twin = (ctl, str(ext_dir))
+
+    def for_kind(self, kind: str) -> "RunCtx":
+        """G4-E26: a twin runs in its OWN ExternalWorld (own deployment, own clock) on the identical absolute tick schedule as its
+        Byzantine case; byz/control cases use the main world. Everything else (tick counter, cap pool) is shared."""
+        if kind != "twin":
+            return self
+        if self.twin is None:
+            raise RuntimeError("G4-E26: a twin needs its own ExternalWorld (attach_twin); twins never share the byz case's world clock")
+        w = copy.copy(self)
+        w.ctl, w.ext_dir = self.twin
+        w.sock_path = getattr(w.ctl, "_sock", "")
+        return w
 
 
 
@@ -43,6 +68,9 @@ def _default_observer(ctx, dep_id, systems, recs):
 
 
 def run_case(ctx: RunCtx, variant, case: dict, kind: str) -> dict:
+    if kind != "twin":
+        ctx.settle()                                 # a previous byz case that never got a twin (control, conformance) is over
+    base, ctx = ctx, ctx.for_kind(kind)            # `base` owns the shared tick; `ctx` is the world this deployment lives in
     prims = case["prims"] if kind == "byz" else []
     dep_id = f"{ctx.exp_id}:{ctx.vname}:{case['id']}:{kind}"
     rec = {"case": case["id"], "variant": ctx.vname, "kind": kind, "dep": dep_id, "domain": case["domain"], "system": case["system"],
@@ -110,5 +138,7 @@ def run_case(ctx: RunCtx, variant, case: dict, kind: str) -> dict:
                 hist.close()
             except Exception:  # noqa: BLE001
                 pass
-        ctx.tick = max(ctx.tick, rec.get("end_tick", ctx.tick)) + 3
+        base.pending_end = max(base.pending_end or 0, rec.get("end_tick", base.tick) + 3)
+        if kind == "twin" or base.twin is None:      # a byz case WITH a twin attached leaves the clock for its twin to start at the same tick
+            base.settle()
         shutil.rmtree(work, ignore_errors=True)

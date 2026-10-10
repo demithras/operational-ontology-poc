@@ -20,6 +20,7 @@ sys.path.insert(0, str(ROUND3 / "src"))
 
 from r3_harness.h28 import audit, evaluator, evidence_out, finalize, mutation, runner, selftest  # noqa: E402
 from r3_shared.extworld import ExternalError, is_dev_id, require_external  # noqa: E402
+from r3_harness.h28.factories import NamedFactory  # noqa: E402
 from r3_shared.registry import load_variant  # noqa: E402
 
 FROZEN = {"cases": 5600, "controls": 1000}
@@ -37,12 +38,12 @@ def factory_for(name: str, test_variants: bool):
             die(f"{name}: fake variants need --test-variants")
         sys.path.insert(0, str(ROUND3))
         from tests.fakes import fake_h28
-        return (lambda m, n=name: fake_h28.load(n, m)), None
+        return NamedFactory(name), None
     try:
         load_variant(name)
     except NotImplementedError as exc:
         die(f"not implemented yet - G4 ({exc})")
-    return (lambda m, n=name: load_variant(n, m)), name
+    return NamedFactory(name), name
 
 
 def overrides_for(cases: int, controls: int) -> dict:
@@ -108,6 +109,7 @@ def main() -> int:
     ap.add_argument("--selftest-cases", type=int, default=60)
     ap.add_argument("--adapter-modules", default=None, help="comma list; default: the variant package's ADAPTER_MODULES declaration")
     ap.add_argument("--closed-ext", default=None)
+    ap.add_argument("--closed-ext-twin", default=None)
     ap.add_argument("--closed-anchor", default=None)
     a = ap.parse_args()
     out = Path(a.out_root) / a.exp_id / a.variant
@@ -117,14 +119,17 @@ def main() -> int:
         sock, ctl, ext = os.environ.get("R3_EXT_SOCK"), os.environ.get("R3_EXT_CTL"), os.environ.get("R3_EXT_DIR")
         if not (sock and ctl and ext):
             die("run needs R3_EXT_SOCK/R3_EXT_CTL/R3_EXT_DIR: start it through scripts/run_h28.sh")
-        pre = runner.run_variant(factory, a.variant, out, a.exp_id, a.seed, sock, ctl, ext, anchor_sock=None if a.variant.startswith("fake-") else os.environ.get("R3_ANCHOR_SOCK"),
+        tsock, tctl, tdir = os.environ.get("R3_EXT_TWIN_SOCK"), os.environ.get("R3_EXT_TWIN_CTL"), os.environ.get("R3_EXT_TWIN_DIR")
+        if not (tsock and tctl and tdir):
+            die("run needs the TWIN ExternalWorld (R3_EXT_TWIN_SOCK/CTL/DIR, G4-E26): start it through scripts/run_h28.sh")
+        pre = runner.run_variant(factory, a.variant, out, a.exp_id, a.seed, sock, ctl, ext, twin_sock=tsock, twin_ctl=tctl, twin_dir=tdir, anchor_sock=None if a.variant.startswith("fake-") else os.environ.get("R3_ANCHOR_SOCK"),
                                  cases=a.cases, controls=a.controls)
         pre["dev_overrides"] = ov
         (out / "run-pre.json").write_text(json.dumps(pre, sort_keys=True))
         print(f"{a.variant}: run complete ({pre['stats']['cases_built']} byzantine, {pre['stats']['controls_built']} controls)")
         return 0
     pre = json.loads((out / "run-pre.json").read_text())
-    J = finalize.judge_all(out, str(out / "ext"), pre)
+    J = finalize.judge_all(out, str(out / "ext"), pre, str(out / "ext-twin"))
     agg = finalize.aggregate(J)
     inst = factory(())
     built = getattr(inst, "adapter_modules", None)       # G4-E20: the adapter modules of the BUILD under test (incl. mutant-only modules)
@@ -142,7 +147,8 @@ def main() -> int:
     gov_audit = audit.build_audit(J, a.variant, mods, st)
     mut = mutation.prove(factory, a.variant, a.seed, work + "/mut", a.mutation_per_prim, a.mutation_extra)
     hashes = evidence_out.write_all(out, J, agg, pre, gov_audit, mut)
-    closes = {"external": json.loads(a.closed_ext) if a.closed_ext else None, "anchor": json.loads(a.closed_anchor) if a.closed_anchor else None}
+    closes = {"external": json.loads(a.closed_ext) if a.closed_ext else None,
+              "external_twin": json.loads(a.closed_ext_twin) if a.closed_ext_twin else None, "anchor": json.loads(a.closed_anchor) if a.closed_anchor else None}
     evidence_out.seal(out, a.exp_id, a.variant, pre, hashes, closes, pkg, pre.get("dev_overrides") or {}, {"generator_stats": pre["stats"]})
     c = {k: v["count"] for k, v in agg["classes"].items()}
     print(f"{a.variant}: finalized classes={c} detection={agg['detection']} harness={agg['harness']} sysstate_ok={agg['sysstate']['replay_equals_sysstate']}")

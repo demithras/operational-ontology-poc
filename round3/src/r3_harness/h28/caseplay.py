@@ -182,9 +182,7 @@ class Player:
         self.rec["world_external_rows"] = None if sn is None else len(sn["effects"])
         snap = self.snapshot()
         self.rec["world_digest"] = None if snap is None else __import__("hashlib").sha256(
-            canon_json({"objects": {k: ({**o, "props": {**o["props"], "snapshotObservedAt": o["props"]["snapshotObservedAt"] - self.rec["start_tick"]}}
-                                        if k.startswith("EvidenceSnapshot:") and "snapshotObservedAt" in o["props"] else o)
-                                    for k, o in snap["objects"].items()}, "links": snap["links"]}).encode()).hexdigest()
+            canon_json({"objects": snap["objects"], "links": snap["links"]}).encode()).hexdigest()
         self.rec["recorder"] = {s: r.log for s, r in self.recs.items() if r.log}
         self.rec["attempts"] = [a for c in self.comps.values() for a in c.attempts]
         outs = {}
