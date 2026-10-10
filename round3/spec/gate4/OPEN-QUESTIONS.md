@@ -157,3 +157,11 @@ G4-E25 (a) Official seeds, declared now (ORACLE-AND-HARNESS-G4 s11 "seed <new, d
       `adapter_modules` (as paladin.extgate_mut), so the static governance-in-adapter scan sees it in the mutant build and never
       in the clean build; code switched off by an in-module guard is still scanned (no resolution may excuse it). Applies to both
       variants. (c) spec/gate4/ADAPTER-AUDIT-RESOLUTIONS.json is frozen with the candidate after the auditor's hit review (Q15).
+
+## G4-E26 (orch, 2026-10-10, from dev1 attribution reports/g4-attr1-report.md, before any official H28 run)
+G4-E26 Twins (R28-11a; ORACLE-AND-HARNESS-G4 s2 "honest twin (H0) with identical world, requests, clock schedule"): a Byzantine
+      case and its honest twin run on the IDENTICAL ABSOLUTE clock schedule (same start tick, same tick at every step), e.g. each in
+      its own deployment and clock starting at the same tick. The R28-11a comparison then stays byte-exact on the decision plane
+      AND the envelope (incl. tick and effect_digest); no field is excluded. The G4 fix2 relative-tick shift in judge.twin_diff
+      becomes unnecessary and must not mask an absolute difference. Found in exp-h28-dev1: 445/445 governance_in_adapter in BOTH
+      variants were envelope tick/effect_digest differences caused by twins running sequentially on one clock (100 vs 114).
