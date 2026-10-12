@@ -189,3 +189,25 @@ G5-E24 Boundary probes: B1-B4 each >= 50 (author Q6). B2 (anchor permanently unr
       resume over absent durable stores with CanonicalStateLost before the variant runs; this is part of the deployed system
       of BOTH variants, so B4 is explicit by shared construction and NOT variant-discriminating; SUMMARY must say so.
       FakeEmptyOnLoss stays a record-level judge test proving boundary_not_explicit is detected.
+
+## Errata G5-E25..E27 (orch, 2026-10-12, from the G5 harness fix1 report, before any dev run)
+G5-E25 Restricted-phase I/O is a recovery_divergence (R29-10). P1g-2 forbids a resumed deployment to append to the anchor,
+      fetch a lease, write ExternalWorld or read the observer before the first API call after recovery_view(). Every
+      restricted_io item the judge records (anchor head advanced across RC1 per G5-E17; an AuthorityService, ExternalWorld
+      or observer request by the resumed deployment) is added to recovery_divergence with what="restricted_io". The
+      restricted window is bounded by TRANSCRIPT ORDER (as G5-E20), not by tick: from resume until the harness's first call
+      other than recovery_view(); a request issued after that call at the same tick is NOT restricted_io (G5-E18 allows a
+      fresh fetch before the first governed decision). Same rule for both variants; conformance C29-5b stays the
+      pre-dev-run encoding and must pass for both before dev1.
+G5-E26 Known-negative fake sets (s10) under R29-7 literal, extending G5-E19: FakeFailOpenAuth = {stale_authority_commit,
+      forbidden_effect, misclassified_dependency_failure, disclosure_leak, recovery_divergence}; FakeStaleRestart = the same
+      plus stale_authority_after_restart (serving/committing past the lease also leaks reads and diverges the committed set).
+      FakeDropOutbox = {recovery_divergence}: R29-7's outcome-plane clause requires RECONCILED_FAILED while EXT/OBS was
+      faulted, and the fake drops intents on an ENGINE crash only. The outcome-plane branch must instead be proven non-vacuous
+      by a record-level known-negative test (RECONCILED_FAILED while the oracle state is PENDING/UNKNOWN under an EXT or OBS
+      fault -> misclassified_dependency_failure; same report without the fault -> not misclassified). Mutant
+      outbox_dropped_on_restart is killed by recovery_divergence (kill rule: own class > 0 on the mutant, == 0 clean).
+G5-E27 Oracle form comparison: recoverymodel.world_digest compares Verdict reason / derivation_hash by form (ops_model
+      LOOSE_PROPS: non-blank / 64 hex), as every earlier gate's world comparison does; refused/unavailable ExternalWorld
+      audit rows (G5-E4) are placed by the cap's claimed deployment for injection-effectiveness counting only, never as
+      attribution evidence. Both are harness corrections, not design changes.
