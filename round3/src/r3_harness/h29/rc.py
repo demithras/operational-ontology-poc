@@ -61,8 +61,8 @@ def resume(r) -> None:
     r.event("rc1", resume=T, view_a=va, view_b=vb, err_a=ea, err_b=eb, anchor_head_before=head0, anchor_head_after=head1,
             marks=marks, files=names, a_started=px_a is not None)
     r.open_recoveries.append({"resume": T})
-    r.obs_apply()
     r.stream = stream
+    r.tick_to(r.t + 1)                     # one tick after RC1 (ORACLE-AND-HARNESS-G5 s2): nothing is sent at the restricted tick
 
 
 def _head(r, stream):

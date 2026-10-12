@@ -55,8 +55,8 @@ def _closing(plan, ch) -> None:
         E.dispatch(plan)
         for rid in sorted(plan.intents):
             E.reconcile(plan, rid)
-    if plan.kills:
-        plan.add({"op": "recovery_schedule"})
+    if plan.open_rec:
+        E.recovery(plan)
 
 
 def _finish(plan, hdr: dict) -> dict | None:
@@ -70,7 +70,7 @@ def _finish(plan, hdr: dict) -> dict | None:
             return None
     hdr["steps"] = plan.steps
     hdr["class_windows"] = plan.class_windows
-    hdr["planned"] = {"requests": sum(1 for s in plan.steps if s["op"] == "request"), "steps": n,
+    hdr["planned"] = {"requests": sum(1 for s in plan.steps if s["op"] == "request"), "steps": n, "end_t": plan.t,
                       "stale_sensitive": plan.stats.get("stale_sensitive", 0), "attacker": plan.stats.get("attacker")}
     hdr["attacker"] = plan.stats.get("attacker")
     return hdr

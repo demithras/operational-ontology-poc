@@ -57,6 +57,7 @@ class Plan:
         self.intents = {}                                                  # rid -> (tick, [I])
         self.class_windows = {}                                            # cls -> [[from, to)]
         self.approvals_pending = 0
+        self.open_rec = False
         self.phi = C.Phi([], [])
         self.stats = {"redraw": 0}
 

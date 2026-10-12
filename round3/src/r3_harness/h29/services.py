@@ -92,6 +92,10 @@ def copy_store(src_dir: Path, dst_dir: Path) -> list:
     for p in sorted(Path(src_dir).glob("*.db*")):
         shutil.copyfile(p, dst_dir / p.name)
         out.append(p.name)
+    fs = Path(src_dir) / "fakestate"                      # tests only: the reference fakes keep extra durable files in this directory
+    if fs.is_dir():
+        shutil.copytree(fs, dst_dir / "fakestate")
+        out.append("fakestate/")
     return out
 
 

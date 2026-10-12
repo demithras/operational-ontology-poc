@@ -93,7 +93,7 @@ def resume(plan, killed_at: int):
     plan.kills.append((killed_at, plan.t))
     plan.phi = C.Phi(plan.windows, plan.kills)
     plan.t += 1
-    plan.mark_class("F1", killed_at, plan.t + 1)
+    plan.open_rec = True
 
 
 def corr(rid: str, idx: int = 0) -> str:
@@ -110,3 +110,12 @@ def close_windows(plan) -> None:
 def publish(plan, k: int):
     plan.add({"op": "publish_authority", "version": k})
     return plan.model.publish(plan.fam[k], plan.t)
+
+
+def recovery(plan) -> None:
+    """recovery_schedule (RC2): mirrors rc.rc2's tick arithmetic - heal to the end of every window, then past the last request + WINDOW + 2."""
+    plan.add({"op": "recovery_schedule"})
+    end = max([w["to_tick"] for w in plan.windows] + [plan.t])
+    last = max([q["t"] for q in plan.sends if q["kind"] == "request"] + [plan.t])
+    plan.t = max(end, last + faults.WINDOW + 2)
+    plan.open_rec = False

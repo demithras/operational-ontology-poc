@@ -17,7 +17,9 @@ def _rel(rows, base, keys=("tick", "from_tick", "to_tick", "granted_tick", "leas
 
 
 def finish(r) -> None:
+    from . import services
     rec, base = r.rec, r.base
+    r.stream = r.stream or services.stream_of(r.hist_path)
     try:
         rd = WorldReader(r.world_path)
         try:

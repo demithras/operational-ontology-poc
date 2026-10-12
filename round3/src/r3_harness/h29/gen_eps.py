@@ -28,7 +28,8 @@ def f1_crash(plan, ch, cp: str, var: int = 0) -> None:
         E.fill(plan, ch, 2)
         plan.add({"op": "redeliver", "rid": rid, "copies": 1, "concurrent": False})
         plan.note_send("request", pick["operation"], rid)
-        E.fill(plan, ch, 1)
+        E.recovery(plan)
+        E.fill(plan, ch, 3, tag="post")
     elif cp in ("CP4_adapter_before_apply", "CP5_adapter_after_apply"):
         s = ch.choice(_ext_systems(plan))
         pick = gen_draw.draw(plan, ch, "ok_ext", system=s)
@@ -46,7 +47,8 @@ def f1_crash(plan, ch, cp: str, var: int = 0) -> None:
         plan.advance(1)
         plan.add({"op": "redeliver", "rid": rid, "copies": 1, "concurrent": False})
         plan.note_send("request", pick["operation"], rid)
-        E.fill(plan, ch, 2)
+        E.recovery(plan)
+        E.fill(plan, ch, 3, tag="post")
     elif cp == "CP7_reconcile_after_read":
         s = ch.choice(_ext_systems(plan))
         pick = gen_draw.draw(plan, ch, "ok_ext", system=s)
@@ -61,7 +63,8 @@ def f1_crash(plan, ch, cp: str, var: int = 0) -> None:
         plan.advance(1)
         E.resume(plan, kill_t)
         E.dispatch(plan)
-        E.fill(plan, ch, 2)
+        E.recovery(plan)
+        E.fill(plan, ch, 3, tag="post")
     else:   # CP8: crash during recovery - first crash (CP2), resume, then the first dispatch after resume dies
         pick = gen_draw.draw(plan, ch, "ok_ext") or gen_draw.draw(plan, ch, "ok")
         if pick is None:
@@ -80,7 +83,8 @@ def f1_crash(plan, ch, cp: str, var: int = 0) -> None:
         plan.advance(1)
         E.resume(plan, kill2)
         E.dispatch(plan)
-        E.fill(plan, ch, 2)
+        E.recovery(plan)
+        E.fill(plan, ch, 3, tag="post")
 
 
 def f2_auth(plan, ch, mode: str, var: int, cls: str = "F2", tail: bool = True) -> None:
@@ -289,7 +293,8 @@ def f8_tamper(plan, ch, var: int) -> None:
     for r in ([rid] if rid else []) + rids[:1] + [key]:
         plan.add({"op": "redeliver", "rid": r, "copies": 1, "concurrent": False})
         plan.note_send("request", None, r)
-    E.fill(plan, ch, 2)
+    E.recovery(plan)
+    E.fill(plan, ch, 3, tag="post")
     plan.mark_class("F8", kill_t, plan.t + 1)
 
 
