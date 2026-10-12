@@ -23,7 +23,7 @@ def _marks_view(marks):
 
 
 def judge_recovery(R: dict, events: list, versions: list, intents: dict, tick0: dict, dl: dict, systems: dict, window: int,
-                   rep_open: list, reads: dict, fault_at) -> dict:
+                   rep_open: list, reads: dict, fault_at, anchor=None) -> dict:
     out = {"rc1": [], "rc2": [], "checks": 0, "passes": 0, "classes": {}, "unsupported": 0, "restricted_io": []}
 
     def hit(cls, detail):
@@ -103,5 +103,9 @@ def judge_recovery(R: dict, events: list, versions: list, intents: dict, tick0: 
         new_rows = [r for r in dl["effects"] if r["tick"] == e["t_redeliver"]]
         if new_rows and e["redelivered"]:
             hit("recovery_divergence", {"rc": "RC2", "what": "redelivery created ledger rows", "rows": [r["seq"] for r in new_rows][:5]})
+        miss = [m["data"].get("request_id") for m in e["marks"] if isinstance(m["data"].get("request_id"), str)
+                and R.get("stream") and (R["stream"], m["data"]["request_id"]) not in (anchor or ())]
+        if miss and anchor is not None:
+            hit("unanchored_ack", {"rc": "RC2", "what": "world commit still unanchored at RC2 (G5-E12)", "rids": miss[:5]})
         out["rc2"].append(rec)
     return out

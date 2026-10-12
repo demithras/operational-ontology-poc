@@ -78,7 +78,7 @@ def main(argv=None) -> int:
     J = finalize.judge_all(out, out / "svc", W, pre, closes)
     mut = {}
     if a.mutants:
-        work = tempfile.mkdtemp(prefix="h29-mut-")
+        work = tempfile.mkdtemp(prefix="h29m", dir="/tmp")
         mut = mutation.prove(host_name, vname, a.seed, min(a.mutation_env, a.sequences), W, Path(work), extra, J["rows"])
     hashes = evidence_out.write_all(out, J, pre, mut)
     evidence_out.seal(out, a.exp_id, vname, pre, hashes, closes, pkg, pre.get("dev_overrides") or {}, {"candidate": pre.get("candidate"), "generator_stats": pre["gen_stats"]})

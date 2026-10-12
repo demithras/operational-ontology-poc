@@ -18,7 +18,7 @@ MAIN_PRIMS = tuple(p for p in PRIMS if p != "H0")
 MIN_STEPS, MAX_STEPS, MAX_TRIES = 24, 48, 40
 
 
-def _episode(plan, ch, cls: str, i: int, hdr: dict) -> None:
+def _episode(plan, ch, cls: str, i: int, hdr: dict):
     v = i // 8
     if cls == "F1":
         cp = faults.CRASH_POINTS[v % len(faults.CRASH_POINTS)]
@@ -38,7 +38,7 @@ def _episode(plan, ch, cls: str, i: int, hdr: dict) -> None:
     elif cls == "F5":
         G.f5_partition(plan, ch, v)
     elif cls == "F6":
-        G.f6_stale(plan, ch, v)
+        return G.f6_stale(plan, ch, v)
     elif cls == "F7":
         G.f7_attacker(plan, ch, v)
     elif cls == "F8":
@@ -80,12 +80,14 @@ def build_env(idx: int, seed: int, stats: dict) -> dict | None:
     cls0 = rules.CLASSES[idx % 8]
     for attempt in range(MAX_TRIES):
         ch = RandChooser(random.Random(f"{seed}:env:{idx}:{attempt}"))
-        domain = DOMAINS[(idx // 2) % 2]
+        domain = DOMAINS[(idx // 8 + idx // 64) % 2]
         plan = Plan(domain)
         hdr = {"id": f"env-{idx:06d}", "stratum": "env", "domain": domain, "seed": seed, "idx": idx, "classes": [cls0], "cp": [],
                "boundary": None, "obs_lag": 0, "byz": None}
         E.fill(plan, ch, 2, tag="warm")
-        _episode(plan, ch, cls0, idx, hdr)
+        if _episode(plan, ch, cls0, idx, hdr) is False:
+            stats["episode_redraw"] = stats.get("episode_redraw", 0) + 1
+            continue
         if ch.chance(0.4):
             c2 = ch.choice(SECOND[cls0])
             E.close_windows(plan)

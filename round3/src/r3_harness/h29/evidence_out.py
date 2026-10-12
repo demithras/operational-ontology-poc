@@ -27,7 +27,7 @@ def _dump(path: Path, obj) -> None:
 
 def _seq_line(R: dict, row: dict) -> dict:
     sd = R.get("seq_def") or {}
-    return {"id": R["seq"], "stratum": R["stratum"], "seed": sd.get("seed"), "domain": R["domain"], "world_digest": row.get("world_digest"),
+    return {"id": R["seq"], "stratum": R["stratum"], "seed": sd.get("seed"), "domain": R.get("domain"), "world_digest": row.get("world_digest"),
             "planned_classes": row["planned_classes"], "steps": sd.get("steps"), "class_windows": sd.get("class_windows"),
             "kills": R.get("kills"), "faults": R.get("faults"), "requests": [{k: q.get(k) for k in
                 ("n", "t", "rid", "k", "op", "cls", "down", "strict", "status", "reason", "dep", "oracle", "committed", "eligible", "progressed", "spurious", "phi")}

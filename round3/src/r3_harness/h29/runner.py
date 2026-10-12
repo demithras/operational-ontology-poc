@@ -68,6 +68,10 @@ def run_jobs(svc: Services, variant: str, mutants, exp_id: str, seed: int, my_jo
 
 
 def _worker(root, i, variant, mutants, exp_id, seed, my_jobs, out, workroot, extra, q):
+    import sys
+    for p in extra:
+        if p not in sys.path:
+            sys.path.insert(0, p)
     svc = services_for(root, i)
     try:
         q.put((i, run_jobs(svc, variant, mutants, exp_id, seed, my_jobs, Path(out), workroot, extra), None))

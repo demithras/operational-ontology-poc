@@ -55,12 +55,15 @@ class Replayer:
     def __init__(self, ops: dict, seed_snap: dict):
         self.ops, self.snap, self.committed = ops, copy.deepcopy(seed_snap), set()
         self.appr: dict = {}
+        self.fp: dict = {}
 
     def approve(self, auth: dict, approver, requester, obo, op: str, args) -> bool:
         ok, _ = approvals.validate(self.ops, auth, approver, requester, op, args)
         if ok:
             k = approvals.key(requester, obo, op, args)
             self.appr[k] = self.appr.get(k, 0) + 1
+            # G5-E11: canonical approval fingerprint
+            self.fp[k] = hashlib.sha256(canon_json({"subject": requester, "on_behalf_of": obo or None, "operation": op, "inputs": args}).encode()).hexdigest()
         return ok
 
     def decide(self, auth: dict, subject, obo, op, args, tick: int, rid):
@@ -80,7 +83,7 @@ class Replayer:
         self.committed.add(rid)
 
     def open_approvals(self) -> list:
-        return sorted(k for k, n in self.appr.items() if n > 0)
+        return sorted({self.fp[k] for k, n in self.appr.items() if n > 0 and k in self.fp})
 
 
 # ---- outcome chain (P1f-6 via extoracle; reused unchanged) ------------------------------------------------------------
@@ -127,7 +130,7 @@ def predict_view(marks: list, intent_states: dict, versions: list, t_probe: int,
             "intents": [{"request_id": r, "effect_index": i, "system": v["system"], "chain_ids": v["chain_ids"], "state": v["state"],
                          "confidence": v["confidence"]} for (r, i), v in sorted(intent_states.items())],
             "authority": {"version": authority_in_force(versions, t_probe), "lease_until": grant_until(versions, t_probe, lease)},
-            "approvals_open": sorted(hashlib.sha256(k.encode()).hexdigest() for k in approvals_open)}
+            "approvals_open": sorted(set(approvals_open))}
 
 
 def view_diff(a: dict, b: dict, path: str = "") -> list:

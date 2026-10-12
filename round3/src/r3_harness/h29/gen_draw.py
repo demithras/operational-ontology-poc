@@ -97,3 +97,10 @@ def any_read(plan, ch):
     ref = ch.choice(refs)
     t, key = ref.split(":", 1)
     return {"principal": ch.choice(principals(plan)), "operation": "get", "args": {"type": t, "key": key}}
+
+
+def stale_ok(plan, pair, k: int):
+    """pair if it is STILL stale-sensitive on the current predicted state (OK under version 0, not OK under version k)."""
+    a, _ = plan.rep.decide(plan.fam[0], pair["principal"], None, pair["operation"], pair["args"], plan.t, None)
+    b, _ = plan.rep.decide(plan.fam[k], pair["principal"], None, pair["operation"], pair["args"], plan.t, None)
+    return pair if a.kind == "OK" and a.outcome.effects and not a.outcome.used_approval and b.kind != "OK" else None

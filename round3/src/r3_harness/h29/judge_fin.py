@@ -50,7 +50,7 @@ def _finish(R, row, ctx, ev, phi, versions, rep, state, systems, cw, base, dep, 
                 row["outcome_progress"]["checked"] += 1
                 if oc["oracle"][k][0] == "RECONCILED_SUCCESS" and oc["got"].get(k) != "RECONCILED_SUCCESS":
                     row["outcome_progress"]["lost"].append({"rid": rid, "effect": I["effect_index"], "got": oc["got"].get(k)})
-    rec = JR.judge_recovery(R, ev, versions, intents, tick0, dl, systems, window, rep.open_approvals(), reads, fa)
+    rec = JR.judge_recovery(R, ev, versions, intents, tick0, dl, systems, window, rep.open_approvals(), reads, fa, ctx.anchor)
     row["recovery"] = {"rc1": rec["rc1"], "rc2": rec["rc2"]}
     row["recovery_checks"] = [rec["checks"], rec["passes"]]
     for c, dd in rec["classes"].items():
@@ -91,7 +91,8 @@ def _injection(R, ev, dl, phi) -> list:
         elif node.startswith("EXT:"):
             s = node[4:]
             enforced = any(r["system"] == s and r["from_tick"] == f and r["to_tick"] == to for r in ext_rows if r["deployment"] == R["dep"])
-            refused = sum(1 for r in dl["audit"] if r["system"] == s and r["outcome"] == "refused" and r["reason"] == "unavailable" and f <= r["tick"] < to)
+            refused = sum(1 for r in dl["audit"] if r["system"] == s and f <= r["tick"] < to and
+                          ((r["outcome"] == "refused" and r["reason"] == "unavailable") or (e["mode"] == "reply_lost" and r["outcome"] == "applied")))
         elif node == "OBS":
             enforced = any(w["from"] == f and w["to"] == to for w in R.get("obs_windows", []))
             refused = sum(1 for x in ev if x["k"] == "reconcile" and f <= x["t"] < to)

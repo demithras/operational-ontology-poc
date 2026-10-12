@@ -46,6 +46,7 @@ class H29Dep(H28Dep):
         self._lease = validate_lease(json.loads(p.read_text())) if p.exists() else None
         self.stream = self._stream()
         self.approved = json.loads((sd / "approvals.json").read_text()) if (sd / "approvals.json").exists() else {}
+        self._fps = json.loads((sd / "fps.json").read_text()) if (sd / "fps.json").exists() else {}
         if resume:
             self._promote()
             if "outbox_dropped_on_restart" in self.mutants:
@@ -271,7 +272,13 @@ class H29Dep(H28Dep):
         if rep is not None:
             return rep
         self.auth = lease.doc
-        return super().approve(token, operation, args, requester, on_behalf_of)
+        res = super().approve(token, operation, args, requester, on_behalf_of)
+        if res.status == "OK":      # G5-E11 fingerprint, persisted with the approval counts
+            from r3_shared.extadapter import canon_json
+            k = oracle_approvals.key(requester, on_behalf_of, operation, args)
+            self._fps[k] = hashlib.sha256(canon_json({"subject": requester, "on_behalf_of": on_behalf_of or None, "operation": operation, "inputs": args}).encode()).hexdigest()
+            self._w("fps.json", self._fps)
+        return res
 
     def delegate(self, token, edge, request_id):
         return CallResult("INVALID", {"reason": "schema_invalid"})
@@ -317,7 +324,7 @@ class H29Dep(H28Dep):
         l = self._report_lease()
         return validate_recovery_view({"form": "r3-recovery-1", "committed": marks, "intents": intents,
                                        "authority": {"version": None if l is None else l.digest, "lease_until": None if l is None else l.lease_until},
-                                       "approvals_open": sorted(hashlib.sha256(k.encode()).hexdigest() for k, n in self.approved.items() if n > 0)})
+                                       "approvals_open": sorted({self._fps[k] for k, n in self.approved.items() if n > 0 and k in self._fps})})
 
     def dependency_status(self) -> dict:
         return {"AUTH": "UNKNOWN" if self._auth_up is None else ("UP" if self._auth_up else "DOWN")}

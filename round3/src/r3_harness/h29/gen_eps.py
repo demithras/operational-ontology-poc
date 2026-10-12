@@ -29,7 +29,7 @@ def f1_crash(plan, ch, cp: str, var: int = 0) -> None:
         plan.add({"op": "redeliver", "rid": rid, "copies": 1, "concurrent": False})
         plan.note_send("request", pick["operation"], rid)
         E.recovery(plan)
-        E.fill(plan, ch, 3, tag="post")
+        E.fill(plan, ch, 2, tag="post")
     elif cp in ("CP4_adapter_before_apply", "CP5_adapter_after_apply"):
         s = ch.choice(_ext_systems(plan))
         pick = gen_draw.draw(plan, ch, "ok_ext", system=s)
@@ -48,7 +48,7 @@ def f1_crash(plan, ch, cp: str, var: int = 0) -> None:
         plan.add({"op": "redeliver", "rid": rid, "copies": 1, "concurrent": False})
         plan.note_send("request", pick["operation"], rid)
         E.recovery(plan)
-        E.fill(plan, ch, 3, tag="post")
+        E.fill(plan, ch, 2, tag="post")
     elif cp == "CP7_reconcile_after_read":
         s = ch.choice(_ext_systems(plan))
         pick = gen_draw.draw(plan, ch, "ok_ext", system=s)
@@ -64,7 +64,7 @@ def f1_crash(plan, ch, cp: str, var: int = 0) -> None:
         E.resume(plan, kill_t)
         E.dispatch(plan)
         E.recovery(plan)
-        E.fill(plan, ch, 3, tag="post")
+        E.fill(plan, ch, 2, tag="post")
     else:   # CP8: crash during recovery - first crash (CP2), resume, then the first dispatch after resume dies
         pick = gen_draw.draw(plan, ch, "ok_ext") or gen_draw.draw(plan, ch, "ok")
         if pick is None:
@@ -84,7 +84,7 @@ def f1_crash(plan, ch, cp: str, var: int = 0) -> None:
         E.resume(plan, kill2)
         E.dispatch(plan)
         E.recovery(plan)
-        E.fill(plan, ch, 3, tag="post")
+        E.fill(plan, ch, 2, tag="post")
 
 
 def f2_auth(plan, ch, mode: str, var: int, cls: str = "F2", tail: bool = True) -> None:
@@ -110,12 +110,12 @@ def f2_auth(plan, ch, mode: str, var: int, cls: str = "F2", tail: bool = True) -
     if plan.t < plan.windows[-1]["to_tick"]:
         plan.advance(plan.windows[-1]["to_tick"] - plan.t)
     if tail:
-        E.fill(plan, ch, 2)
+        E.fill(plan, ch, 1)
 
 
 def f3_ext(plan, ch, byz: bool, var: int) -> None:
     syss = _ext_systems(plan)
-    s = ch.choice(syss)
+    s = syss[var % len(syss)]
     others = [x for x in syss if x != s]
     pick = gen_draw.draw(plan, ch, "ok_ext", system=s)
     if pick is None:
@@ -132,7 +132,8 @@ def f3_ext(plan, ch, byz: bool, var: int) -> None:
                 E.request(plan, p2)
                 E.dispatch(plan)
                 plan.advance(1)
-        E.fill(plan, ch, 2)
+        E.fill(plan, ch, 3)
+        E.dispatch(plan)
         E.close_windows(plan)
         plan.advance(1)
         E.dispatch(plan)
@@ -178,45 +179,46 @@ def f4_events(plan, ch, var: int) -> None:
 def f5_partition(plan, ch, var: int, nodes=None) -> None:
     E.fill(plan, ch, 1, tag="renew")
     syss = _ext_systems(plan)
-    pool = ["ANCHOR", "OBS", "EXT:" + ch.choice(syss), "AUTH"]
-    nodes = nodes or ([pool[var % 3]] if var % 4 else [pool[var % 3], pool[(var + 1) % 3]])
-    dur = ch.randint(3, PARTITION_MAX)
+    sx = syss[var % len(syss)]
+    pool = ["ANCHOR", "OBS", "EXT:" + sx]
+    combos = [["ANCHOR"], ["OBS"], ["EXT:" + sx], ["ANCHOR", "OBS"], ["OBS", "EXT:" + sx]]
+    nodes = nodes or combos[var % len(combos)]
+    dur = ch.randint(5, PARTITION_MAX)
     modes = ["drop", "reply_lost"]
     plan.advance(1)
     for n in nodes:
         plan.fault("F5", n, ch.choice(modes) if n != "OBS" else "drop", dur)
-    for _ in range(3):
-        e = gen_draw.draw(plan, ch, "ok")
-        if e is not None:
-            E.request(plan, e, tag="partition")
+    for it in range(2):
+        for _k in range(2):
+            e = gen_draw.draw(plan, ch, "ok")
+            if e is not None:
+                E.request(plan, e, tag="partition")
         if "ANCHOR" in nodes:
             E.read(plan, gen_draw.any_read(plan, ch), tag="unrelated")
-        plan.advance(1)
-    ext_nodes = [n for n in nodes if n.startswith("EXT:")]
-    if ext_nodes or "OBS" in nodes:
-        p = gen_draw.draw(plan, ch, "ok_ext", system=ch.choice(syss))
-        if p is not None:
+        p = gen_draw.draw(plan, ch, "ok_ext", system=sx)
+        if p is not None and it == 0 and not any(n == "ANCHOR" for n in nodes):
             r, _ = E.request(plan, p)
             E.dispatch(plan)
             E.reconcile(plan, r)
+        plan.advance(1)
     E.close_windows(plan)
-    E.fill(plan, ch, 2)
+    E.fill(plan, ch, 1)
 
 
 def f6_stale(plan, ch, var: int) -> None:
     """Publish a narrowed version while the variant holds a lease (var%3==0), while AUTH is faulted (1), or while ENGINE is down (2);
     then stale-sensitive requests/reads sent after the effective tick (computed by the same lease rule)."""
     ks = list(range(1, len(plan.fam)))
-    ch_order = [ks[(ch.randint(0, 999) + j) % len(ks)] for j in range(len(ks))]
-    k, pair = None, None
-    for kk in ch_order:
-        pair = gen_draw.stale_pair(plan, ch, kk)
-        if pair is not None:
+    E.fill(plan, ch, 1, tag="renew")
+    off, k, pair0 = ch.randint(0, 999), None, None
+    for j in range(len(ks)):
+        kk = ks[(var * 7 + off + j) % len(ks)]
+        pair0 = gen_draw.stale_pair(plan, ch, kk)
+        if pair0 is not None:
             k = kk
             break
-    if pair is None:
-        return
-    E.fill(plan, ch, 1, tag="renew")
+    if k is None:
+        return False
     mode = var % 3
     if mode == 1:
         plan.advance(1)
@@ -224,7 +226,7 @@ def f6_stale(plan, ch, var: int) -> None:
     if mode == 2:
         pk = gen_draw.draw(plan, ch, "ok_local") or gen_draw.draw(plan, ch, "ok")
         if pk is None:
-            return
+            return False
         rid = plan.new_rid("c")
         E.crash(plan, "CP6_idle", rid)
         plan.advance(1)
@@ -238,20 +240,23 @@ def f6_stale(plan, ch, var: int) -> None:
     else:
         row = E.publish(plan, k)
     f = row["effective_tick"]
+    pair = gen_draw.stale_pair(plan, ch, k) or pair0
     rd = gen_draw.read_pair(plan, ch, k)
     plan.mark_class("F6", plan.t, f + 3)
-    for target in (f - 1, f, f + 1, f + 2):
+    for target in (f, f + 1, f + 2):
         if target > plan.t:
             plan.advance(target - plan.t)
         elif mode == 0 and target == plan.t:
             pass
-        st_pick = {**pair, "dec": None}                  # sent with the pre-publication OK/DENIED unknown to the plan: no commit predicted
-        E.request(plan, st_pick, tag="stale" if target >= f else "pre_effective", predict=False)
-        if rd is not None and target >= f:
+        pair = gen_draw.stale_ok(plan, pair, k) or gen_draw.stale_pair(plan, ch, k) or pair
+        E.request(plan, {**pair, "dec": None}, tag="stale", predict=False)      # DENIED under the version in force: nothing commits
+        if rd is not None:
             E.read(plan, rd, tag="stale")
+        E.fill(plan, ch, 1, gap=0)                                                # an unrelated OK request inside the stale window
     plan.stats["stale_sensitive"] = plan.stats.get("stale_sensitive", 0) + 1
     E.close_windows(plan)
     E.fill(plan, ch, 1)
+    return True
 
 
 def f7_attacker(plan, ch, var: int) -> None:
@@ -295,7 +300,7 @@ def f8_tamper(plan, ch, var: int) -> None:
         plan.note_send("request", None, r)
     E.fill(plan, ch, 3)
     E.recovery(plan)
-    E.fill(plan, ch, 3, tag="post")
+    E.fill(plan, ch, 2, tag="post")
     plan.mark_class("F8", kill_t, plan.t + 1)
 
 
