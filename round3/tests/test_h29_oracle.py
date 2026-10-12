@@ -85,3 +85,19 @@ def test_oracle_isolation_scan_and_known_negative(tmp_path):
     assert not ok2 and any("paladin" in b for b in bad2)
     (d / "continuity.py").write_text((EC.ROUND3 / "src/r3_oracle/continuity.py").read_text() + "\nX = 'world_log'\n")
     assert not EC.oracle_isolation(d)[0]              # world_log is allowed in recoverymodel only
+
+
+def test_world_digest_compares_loose_verdict_props_by_form_only():
+    """Verdict reason / derivation_hash are specified loosely (ops_model.LOOSE_PROPS): two well-formed texts digest equal, a blank reason or a
+    non-hex hash is a divergence (known-negative)."""
+    from r3_oracle import recoverymodel as RM
+
+    def snap(reason, h):
+        return {"objects": {"Verdict:v1": {"props": {"id": "v1", "reason": reason, "derivation_hash": h, "value": "SUPPORTED"}, "version": 1}}, "links": []}
+    a, b = "a" * 64, "b" * 64
+    assert RM.world_digest(snap("machine-derived x", a)) == RM.world_digest(snap("experiment=E; evidence=1", b))
+    assert RM.world_digest(snap("  ", a)) != RM.world_digest(snap("experiment=E", a))
+    assert RM.world_digest(snap("ok", "zz")) != RM.world_digest(snap("ok", a))
+    other = snap("ok", a)
+    other["objects"]["Verdict:v1"]["props"]["value"] = "REJECTED"
+    assert RM.world_digest(other) != RM.world_digest(snap("ok", a))

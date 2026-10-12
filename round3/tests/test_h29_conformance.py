@@ -98,6 +98,15 @@ def test_c29_5_recovery_view_determinism_and_equality(variant):
 
 
 @pytest.mark.parametrize("variant", VARIANTS)
+def test_c29_5b_restricted_phase_does_no_dependency_io(variant):
+    """P1g-7 / G5-E17: between resume and the first API call a variant appends nothing to the anchor, fetches no lease, writes no ExternalWorld
+    and reads no observer. Measured by the harness (anchor head before/after RC1, AuthorityService refusals, EXT/OBS gates)."""
+    J = conf(variant)
+    supported(J, variant)
+    assert J["agg"]["recovery"]["restricted_io"] == 0, [(r["seq"], r["restricted_io"]) for r in J["rows"] if r["restricted_io"]]
+
+
+@pytest.mark.parametrize("variant", VARIANTS)
 def test_c29_6_resume_refuses_lost_canonical_state(variant):
     J = conf(variant)
     supported(J, variant)

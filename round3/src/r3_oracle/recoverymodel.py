@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import re
 
 from r3_shared.extadapter import canon_json
 
@@ -37,9 +38,22 @@ def apply_effects(snap: dict, effects: list) -> dict:
     return s
 
 
+def _loose(ref: str, props: dict) -> dict:
+    """Props the prose fixes only loosely (ops_model.LOOSE_PROPS: Verdict reason / derivation_hash) compare by FORM, exactly as the H23 effect
+    comparison does (non-blank string; 64 lowercase hex for the hash): a well-formed value is replaced by a placeholder on both sides, a
+    malformed one stays raw and so diverges."""
+    out = dict(props)
+    for lp in ops_model.LOOSE_PROPS.get(ref.split(":", 1)[0], ()):
+        v = out.get(lp)
+        if isinstance(v, str) and v.strip() != "" and (lp != "derivation_hash" or re.fullmatch(r"[0-9a-f]{64}", v)):
+            out[lp] = "<loose>"
+    return out
+
+
 def world_digest(snap: dict) -> str:
-    """Digest of canonical objects (props) + links: version counters and log heads are not part of the canonical state."""
-    objs = {k: v["props"] for k, v in sorted(snap["objects"].items())}
+    """Digest of canonical objects (props) + links: version counters and log heads are not part of the canonical state; loosely specified
+    props (Verdict reason / derivation_hash) are compared by form (see _loose)."""
+    objs = {k: _loose(k, v["props"]) for k, v in sorted(snap["objects"].items())}
     return hashlib.sha256(canon_json({"objects": objs, "links": sorted(map(list, snap["links"]))}).encode()).hexdigest()
 
 
