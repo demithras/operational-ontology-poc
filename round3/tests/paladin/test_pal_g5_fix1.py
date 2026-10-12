@@ -226,3 +226,20 @@ def test_e25_resume_over_unanchored_commit_keeps_anchor_head_through_recovery_vi
     assert again.status == "OK" and again.body.get("replayed") is True
     assert pend_keys(rig) == [] and rig.anchor.client().head(stream) != head0    # the missing entry is completed now
     assert rig.commits() == ["e25"]
+
+
+# ---- G5-E28(d): unknown operation / tool name while a dependency is down is INVALID, never UNKNOWN -----------------------
+def test_e28d_unknown_operation_and_tool_are_invalid_while_a_dependency_is_down_and_legacy_when_all_up(irig):
+    tok = irig.token("planner-1")
+    up_op = irig.dep.direct(tok, "no_such_op", {}, request_id="u0")
+    up_tool = irig.dep.call_tool(tok, "no_such_tool", {}, request_id="u1")
+    assert up_op.status == "UNKNOWN" and up_tool.status == "UNKNOWN"             # all up: the legacy H23 replies are unchanged
+    irig.actl.outage(DEP, 1, 20, "drop")
+    irig.tick(6)
+    for res, reason in ((irig.dep.direct(tok, "no_such_op", {}, request_id="u2"), "unknown_operation"),
+                        (irig.dep.call_tool(tok, "no_such_tool", {}, request_id="u3"), "unknown_tool")):
+        assert (res.status, res.body) == ("INVALID", {"reason": reason})
+        assert res.body["reason"] in INPUT_INVALID_REASONS
+    bad = irig.dep.direct("not-a-token", "no_such_op", {}, request_id="u4")        # unauthenticated: AUTH is needed to say so
+    assert bad.status == "UNAVAILABLE" and bad.body.get("dependency") == "AUTH"
+    assert irig.commits() == []

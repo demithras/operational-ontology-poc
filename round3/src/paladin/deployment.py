@@ -175,7 +175,7 @@ class PaladinDeployment(ContinuityMixin):
         return public(res, rid, leak)
 
     def call_tool(self, token, name, args, on_behalf_of=None, request_id=None) -> CallResult:
-        return self._mutating(lambda: self.guarded(token, name, args, lambda: self._pub(self._call_tool(token, name, args, on_behalf_of, request_id), request_id, name, args)))
+        return self._mutating(lambda: self.guarded(token, name, args, lambda: self._pub(self._call_tool(token, name, args, on_behalf_of, request_id), request_id, name, args), tool=True))
 
     def _call_tool(self, token, name, args, on_behalf_of, request_id) -> CallResult:
         sub = self._c.subject(token, args)

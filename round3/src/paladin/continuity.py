@@ -105,7 +105,16 @@ class ContinuityMixin:
                 return CallResult("INVALID", {"reason": "schema_invalid"})
         return CallResult("UNAVAILABLE", {"reason": DEP_UNAVAILABLE, "dependency": node})
 
-    def guarded(self, token, op, args, fn, kind: str = "mutation"):
+    def _unknown_nodes(self) -> tuple:
+        """Decision-plane nodes any governed mutation of this domain depends on (the request names no operation we know)."""
+        out: list = []
+        for op in self._deps._ops:
+            for n in self._deps.mutation(op):
+                if n not in out:
+                    out.append(n)
+        return tuple(out)
+
+    def guarded(self, token, op, args, fn, kind: str = "mutation", tool: bool = False):
         """Run `fn` (the unchanged legacy call) behind the dependency gate. Legacy deployment (no authority_source): just `fn()`."""
         if not self._h29 or self._crashed:
             return fn()
@@ -114,6 +123,14 @@ class ContinuityMixin:
             node = self._probe(self._deps.mutation(op) if kind == "mutation" else self._deps.surface(kind))
             if node is not None:
                 return self._blocked(node, token, op if kind == "mutation" and op in self._c.ops else None, args)
+        elif kind == "mutation":
+            # G5-E28(d): an unknown operation/tool name is an input error decidable without dependencies: while a dependency of the
+            # request is down the reply is INVALID (never UNKNOWN); with every dependency up fn() gives the legacy H23 reply.
+            node = self._probe(self._unknown_nodes())
+            if node is not None and self._c.subject(token) is not None:
+                return CallResult("INVALID", {"reason": "unknown_tool" if tool else "unknown_operation"})
+            if node is not None:
+                return CallResult("UNAVAILABLE", {"reason": DEP_UNAVAILABLE, "dependency": node})
         if known and self._c.prov is not None:
             self.complete_anchors()   # first call after heal: a lost anchor entry is completed before anything else is decided
         res = fn()
