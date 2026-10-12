@@ -61,6 +61,16 @@ def freeze_state() -> tuple[dict, dict]:
     return frozen, {f: hashlib.sha256((ROUND3 / f).read_bytes()).hexdigest() for f in frozen if (ROUND3 / f).is_file()}
 
 
+CATALOGUE_REL = "src/r3_harness/h28/adapters.py"
+
+
+def catalogue_state() -> tuple[str | None, str]:
+    """(sha256 frozen in FREEZE_G4 or None when the adapter catalogue is not listed, sha256 of the file on disk). Shared by the
+    evaluator and the launcher guard (scripts/run_h28.py) so they can never disagree."""
+    frozen, _ = freeze_state()
+    return frozen.get(CATALOGUE_REL), hashlib.sha256((ROUND3 / CATALOGUE_REL).read_bytes()).hexdigest()
+
+
 def _read(p: Path):
     return json.loads(p.read_text())
 
@@ -92,9 +102,9 @@ def evaluate_variant(vdir: Path, thresholds: dict, vname: str, is_dev: bool) -> 
     if drift:
         valid = False
         reasons.append("frozen G4 files changed: " + ", ".join(drift))
-    adapters_rel = "src/r3_harness/h28/adapters.py"
-    if adapters_rel in frozen:
-        if hashlib.sha256((ROUND3 / adapters_rel).read_bytes()).hexdigest() != frozen[adapters_rel]:
+    fz_hash, cur_hash = catalogue_state()
+    if fz_hash is not None:
+        if cur_hash != fz_hash:
             valid = False
             reasons.append("adapter catalogue sha256 != FREEZE_G4")
     elif not is_dev:
