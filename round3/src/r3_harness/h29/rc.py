@@ -49,7 +49,7 @@ def resume(r) -> None:
             r.svc.ext.outage(s, dep, r.base + T, r.base + T + 1)
     services.obs_set(r.work / "obs-a", r.svc.ext_dir, False)
     stream = r.stream or services.stream_of(r.hist_path)
-    head0 = _head(r, stream)
+    head0, aseq0 = _head(r, stream), _auth_seq(r)
     px_a = r.start_host(True)
     px_b = r.start_host(True, dep=dep_b, paths={"world": str(copy_dir / "world.db"), "hist": str(copy_dir / "hist.db")}, obs_tag="b") if names else None
     va, ea = _view(px_a, r) if px_a is not None else (None, "no_host")
@@ -60,13 +60,31 @@ def resume(r) -> None:
         except Exception:  # noqa: BLE001
             px_b.kill()
     shutil.rmtree(copy_dir, ignore_errors=True)
-    head1 = _head(r, stream)
+    head1, aseq1 = _head(r, stream), _auth_seq(r)
+    restricted_auth = _auth_refused_between(r, aseq0, aseq1)       # G5-E25: the window ends at the harness's first call other than recovery_view()
     marks = _marks(r)
-    r.event("rc1", resume=T, view_a=va, view_b=vb, err_a=ea, err_b=eb, anchor_head_before=head0, anchor_head_after=head1,
+    r.event("rc1", resume=T, view_a=va, view_b=vb, err_a=ea, err_b=eb, anchor_head_before=head0, anchor_head_after=head1, auth_refused_restricted=restricted_auth,
             marks=marks, files=names, a_started=px_a is not None)
     r.open_recoveries.append({"resume": T})
     r.stream = stream
     r.tick_to(r.t + 1)                     # one tick after RC1 (ORACLE-AND-HARNESS-G5 s2): nothing is sent at the restricted tick
+
+
+def _auth_seq(r):
+    try:
+        return max([x["seq"] for x in r.svc.auth.log()["refused"]], default=0)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _auth_refused_between(r, lo, hi) -> int:
+    """Refusals of the resumed deployment recorded by the service after `lo` and up to `hi` (service sequence = transcript order)."""
+    if lo is None or hi is None:
+        return 0
+    try:
+        return sum(1 for x in r.svc.auth.log()["refused"] if x["deployment"] == r.dep and lo < x["seq"] <= hi)
+    except Exception:  # noqa: BLE001
+        return 0
 
 
 def _head(r, stream):

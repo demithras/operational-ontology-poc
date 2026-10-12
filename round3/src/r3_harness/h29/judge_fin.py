@@ -57,10 +57,11 @@ def _finish(R, row, ctx, ev, phi, versions, rep, state, systems, cw, base, dep, 
         row["classes"].setdefault(c, []).extend(dd)
     row["restricted_io"] = list(rec["restricted_io"])
     for e in ev:
-        if e["k"] == "rc1":
-            n = [r for r in R["auth"]["refused"] if r["deployment"] == dep and r["tick"] == e["resume"]]
-            if n:
-                row["restricted_io"].append({"resume": e["resume"], "what": "AuthorityService fetch refused during the restricted phase", "n": len(n)})
+        if e["k"] == "rc1" and e.get("auth_refused_restricted"):      # G5-E25: bounded by transcript order (service sequence), not by tick
+            row["restricted_io"].append({"resume": e["resume"], "what": "AuthorityService fetch refused during the restricted phase",
+                                         "n": e["auth_refused_restricted"]})
+    for item in row["restricted_io"]:                                  # G5-E25 / R29-10: every restricted_io item is a recovery_divergence
+        row["classes"].setdefault("recovery_divergence", []).append({**item, "what": "restricted_io", "detail": item["what"]})
     w = R.get("world")
     if w is not None:
         act = {"objects": {k: {"props": v} for k, v in w["objects"].items()}, "links": w["links"]}
