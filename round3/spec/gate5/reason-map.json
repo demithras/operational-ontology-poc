@@ -1,0 +1,32 @@
+{
+  "form": "r3-reason-map-1",
+  "variants": {
+    "conventional": {
+      "bad_args": "bad_args",
+      "bad_on_behalf_of": "bad_args",
+      "bad_request_id": "bad_args",
+      "bad_schema": "schema_invalid",
+      "bad_type": "schema_invalid",
+      "bad_watermark": "bad_args",
+      "missing_field": "schema_invalid",
+      "operation_takes_no_approval": "bad_args",
+      "schema": "schema_invalid",
+      "schema_invalid": "schema_invalid",
+      "unknown_field": "schema_invalid",
+      "unknown_operation": "unknown_operation",
+      "unknown_read": "unknown_operation",
+      "unknown_tool": "unknown_tool",
+      "unknown_type": "bad_args"
+    },
+    "paladin": {
+      "approval": "bad_args",
+      "request_id required": "bad_args",
+      "schema": "schema_invalid",
+      "schema_invalid": "schema_invalid",
+      "unknown_operation": "unknown_operation",
+      "unknown_query": "unknown_operation",
+      "unknown_tool": "unknown_tool",
+      "unknown_type": "bad_args"
+    }
+  }
+}

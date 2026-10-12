@@ -238,3 +238,15 @@ G5-E28 Input-invalid probes (Q9, G5-E14, R29-7 INVALID branch) must be exercised
       (e) spec/gate5/reason-map.json is produced by the equivalence auditor AFTER the variant fixes for (d) and frozen with the
           G5 manifest; new conformance C29-8: for every probe shape, under AUTH down and ANCHOR down, both variants' replies are
           admissible by (b) - must pass for both before dev1.
+
+## Erratum G5-E29 (orch, 2026-10-13, from the G5 re-audit at 4646a3c, before any dev run)
+G5-E29 (a) G5-E28(b)/(d) apply to requests the oracle classifies BLOCKED or UNRESOLVED (a dependency down and not covered by an
+      admissibility lease), which is the scope R29-7 is judged on. Under a valid lease (SAFE_TO_RUN or lease_gap) the request is
+      decided as with all dependencies up, and the legacy reply for an unknown name stands for both variants (audit N14).
+      (b) The G5-E28(a) floor of >= 50 probes inside AUTH or ANCHOR fault windows counts the main corpus only; boundary-stratum
+      (S-bnd, B1-B4) probes are reported separately and never count toward it (PROT-H29 s9 keeps stratum B out of main counts;
+      audit N16).
+      (c) Scope limit L5: schema-shape probes (missing input, unknown key, wrong type) use the direct surface; call_tool schema
+      probes are not generated. Both variants gate call_tool before the tool binding (audit N15).
+      (d) spec/gate5/reason-map.json is the equivalence auditor's map at 4646a3c (paladin 8 mapped, conventional 15 mapped;
+      evidence spec/gate5/audit/mapping-table.md, findings.md); HARDENING_LEDGER.jsonl gains the 28 G5 rows (all present).
