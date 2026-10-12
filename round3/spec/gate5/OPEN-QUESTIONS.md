@@ -109,3 +109,28 @@ Q17 (orch) Upstream: H24, H27, H28 are SUPPORTED for both variants (G2, G4 exp-h
   status of UNRESOLVED requests and every OK row must have a matching anchor entry (else a finding). Q16: every file of the
   ORACLE-AND-HARNESS-G5 freeze manifest that does not exist yet is added to FREEZE_G5 in the commit that creates it, before
   any dev run; the launcher refuses a non-dev id while any manifest file is missing from FREEZE_G5.
+
+## Errata G5-E1..E9 (orch, 2026-10-12, from the P1g build report reports/p1g-report.md, before any Gate 5 variant/harness builder)
+G5-E1 spec/gate5/authority-versions/<domain>/*.json (ORACLE-AND-HARNESS-G5 s9, F6-stale "narrowed doc"): built by the harness
+      builder, not P1g. Content: for each domain, versions v1..vN each = the domain's version-0 authority spec with exactly ONE
+      grant removed (narrowing only, never widening), generated deterministically by a harness script from the frozen auth
+      specs; every file is added to FREEZE_G5 in the commit that creates it, before dev1.
+G5-E2 The AuthorityService starts empty; the harness publishes version 0 at tick 0 for every deployment before the first
+      request; fetch before any publish is an error (harness defect, never a variant finding).
+G5-E3 Publish while an earlier publish is still pending: effective tick f_n = max(p_n, latest lease_until granted for any older
+      digest, f_(n-1)); publish order = effect order. The oracle's in-force rule (PROT-H29 1.5) uses the same formula. The lease
+      MAC covers (deployment, digest, granted_tick, lease_until).
+G5-E4 ExternalWorld `unavailable` (checked before authentication, Q12) is decided from the request's system route and the
+      fault plane; claims read from an unverified cap are NEVER used for attribution: the audit row of an `unavailable`
+      refusal carries deployment null and the claimed caveats only under a separate key "unverified_claim". A forged cap
+      during an outage gets `unavailable` instead of `bad_signature`; neither creates an effect. (P1g fix1.)
+G5-E5 Crash keys: CP6 = request_id of the call that just returned; CP7 = request_id of the reconcile call; CP8 = "dispatch_pending"
+      (first dispatch after resume). CP4/CP5 hooks belong to the harness adapter wrapper.
+G5-E6 One fault-control form (schemas/fault-control.schema.json): {op outage|partition, deployment, [target], from_tick,
+      to_tick, mode}; for the anchor, deployment = stream id.
+G5-E7 Service connect failure (process gone) stays AnchorError/AuthorityError: every envelope outage/partition (F2, F3, F5) is
+      server-signalled, and killing a service process is outside the envelope (envelope-ops.json classes). Only the
+      server-signalled drop / closed-without-reply raise AnchorUnavailable / AuthorityUnavailable (DependencyUnavailable).
+      ObserverUnavailable stays an outcome-level fault (H28 P1f-6 UNKNOWN), not a request reply.
+G5-E8 The host builds adapters from deploy_spec "adapter_factory" = "module:function" (r3_shared cannot import r3_harness).
+G5-E9 dependency-graph.json carries a top-level "systems" map (per-domain EXT node + OBS) so GEN-NULL = EXT:GEN-NULL with no OBS.
