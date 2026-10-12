@@ -108,7 +108,7 @@ def f2_auth(plan, ch, mode: str, var: int, cls: str = "F2", tail: bool = True) -
         if e is not None:
             E.request(plan, e, tag="lease" if off + s0 + 1 <= s0 + LEASE - 1 else "past_lease")
     if plan.t < plan.windows[-1]["to_tick"]:
-        plan.advance(plan.windows[-1]["to_tick"] - plan.t)
+        plan.heal(plan.windows[-1]["fid"])                 # fault_heal: the driver advances to the end of the window
     if tail:
         E.fill(plan, ch, 1)
 
@@ -279,6 +279,10 @@ def f7_attacker(plan, ch, var: int) -> None:
         d = gen_draw.draw(plan, ch, "deny", who=who)
         if d is not None:
             E.request(plan, d, attacker=True, rid=rid0, predict=False, tag="rid_replay")
+    plan.add({"op": "delegate", "principal": who, "edge": {"id": "e-probe"}, "rid": plan.new_rid("d")})     # malformed edge: must not commit
+    plan.note_send("request", None, None)
+    plan.add({"op": "revoke", "principal": who, "edge_id": "e-unknown", "rid": plan.new_rid("v")})
+    plan.note_send("request", None, None)
     plan.mark_class("F7", 0, plan.t + 1)
     E.close_windows(plan)
     E.fill(plan, ch, 1)

@@ -172,6 +172,8 @@ def _judge(R: dict, ctx: Ctx, row: dict) -> dict:
                 rep.approve(doc_at(e["t"]), e["approver"], e["requester"], None, e["operation"], e["args"])
         elif k in REQ_KINDS and e.get("rid") is not None:
             _request(R, row, e, ctx, phi, versions, renew, crashed, rep, state, process_marks, cw, base, ops, graph, dom, doc_at)
+        elif k in ("delegate", "revoke") and e.get("res") and e["res"]["status"] == "OK":
+            row["classes"].setdefault("false_success", []).append({"rid": e["rid"], "t": e["t"], "why": f"{k} probe answered OK (malformed / unknown edge)"})
         elif k == "read":
             _read(R, row, e, phi, graph, dom, renew, versions, rep, doc_at, ops, cw)
     for rid, ms in by_rid.items():                              # commits of requests nobody sent: foreign effects

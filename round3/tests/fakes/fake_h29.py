@@ -58,7 +58,15 @@ class H29Dep(H28Dep):
 
     # ---- durable helpers ------------------------------------------------------------------------------------------
     def _w(self, name, obj):
-        (self.sdir / name).write_text(json.dumps(obj, sort_keys=True))
+        tmp = self.sdir / (name + ".tmp")
+        tmp.write_text(json.dumps(obj, sort_keys=True))
+        os.replace(tmp, self.sdir / name)         # atomic: a SIGKILL never leaves a truncated record
+
+    def _g4_save(self):
+        self._w("g4.json", self.g4)
+
+    def _persist_approvals(self):
+        self._w("approvals.json", self.approved)
 
     def _stream(self) -> str:
         raw = self.history.get("meta/stream") if self.history is not None else None
