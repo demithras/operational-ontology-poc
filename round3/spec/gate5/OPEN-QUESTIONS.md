@@ -211,3 +211,30 @@ G5-E27 Oracle form comparison: recoverymodel.world_digest compares Verdict reaso
       LOOSE_PROPS: non-blank / 64 hex), as every earlier gate's world comparison does; refused/unavailable ExternalWorld
       audit rows (G5-E4) are placed by the cap's claimed deployment for injection-effectiveness counting only, never as
       attribution evidence. Both are harness corrections, not design changes.
+
+## Erratum G5-E28 (orch, 2026-10-12, from the G5 equivalence audit at e00fcec, before any dev run)
+G5-E28 Input-invalid probes (Q9, G5-E14, R29-7 INVALID branch) must be exercised, and judged by the variants' own strict rule.
+      (a) Corpus: rules.py gets an input-invalid probe step drawn from the SAME frozen rule table for every sequence, in healthy
+          phases and inside every fault window; probe shapes: missing required input, unknown extra key, wrong-typed argument,
+          unknown operation name, unknown tool name (one shape per probe, seeded). Probes carry invalid_probe=true through
+          generation, transcript, judge AND finalize (judge_fin must not hard-code invalid_probe=False). Coverage floor: >= 50
+          probes inside fault windows of AUTH or ANCHOR in an official run, else INCONCLUSIVE (floor pattern of Q4); per-shape
+          counts reported.
+      (b) Judge predicate: "input-invalid" = the strict frozen input schema (ops_model.schema_valid_args: unknown keys rejected,
+          types checked) plus the P1g-5 envelope checks (request_id / on_behalf_of form), not ops_model.validate_args. For an
+          input-invalid request the admissible replies are INVALID with a reason whose reason-map image is in
+          INPUT_INVALID_REASONS (any member; the member is not compared), or UNAVAILABLE naming a node in deps(op) that is down.
+      (c) Lease windows (R29-0): a send renews the lease in the oracle when it is AUTH-dependent with AUTH up, EXCEPT an
+          input-invalid probe, which is decidable without AUTH. A variant may still fetch a lease while handling a probe (both
+          currently do); such a lease is server-granted and honouring it is safe (P1g-2). Therefore: the obligation window
+          (SAFE_TO_RUN, counted in progress) is computed WITHOUT probe sends; the admissibility window (a decision under a valid
+          lease is not stale) is computed WITH them. A request inside the admissibility window but outside the obligation
+          window may be decided under the lease or answered UNAVAILABLE AUTH; it is excluded from the progress denominators and
+          reported as count lease_gap per variant.
+      (d) An unknown operation or tool name is an input error decidable without dependencies: while any dependency of the
+          request is down, the reply is INVALID unknown_operation / unknown_tool (or the variant's raw reason mapped to them),
+          never UNKNOWN. With all dependencies up the legacy H23 reply is unchanged. Applies to both variants (conventional
+          already complies; Paladin answered UNKNOWN - audit note N1).
+      (e) spec/gate5/reason-map.json is produced by the equivalence auditor AFTER the variant fixes for (d) and frozen with the
+          G5 manifest; new conformance C29-8: for every probe shape, under AUTH down and ANCHOR down, both variants' replies are
+          admissible by (b) - must pass for both before dev1.
