@@ -130,6 +130,28 @@ class FakeDeployment(G2Mixin, G3Mixin, G4Mixin):
     def set_authority(self, auth_spec):
         self.auth_spec = auth_spec
 
+    # ---- Gate 5 surface (reference behaviour; honest and pure) -------------------------------------------------------
+    def _report_lease(self):
+        return None
+
+    def recovery_view(self) -> dict:
+        from r3_shared.recovery import validate_recovery_view
+        rows = self.world._con.execute("SELECT seq, data_json FROM world_log WHERE kind='mark' AND ref='commit' ORDER BY seq").fetchall()
+        committed = [{"request_id": json.loads(dj).get("request_id"), "world_seq": seq, "authority_version": json.loads(dj)["authority_version"]}
+                     for seq, dj in rows]
+        outs = self.g4["outcomes"]
+        intents = sorted(({"request_id": i["request_id"], "effect_index": i["effect_index"], "system": i["system"], "chain_ids": 1,
+                           "state": outs[f"{i['request_id']}#{i['effect_index']}"]["state"],
+                           "confidence": outs[f"{i['request_id']}#{i['effect_index']}"]["confidence"]} for i in self.g4["intents"]),
+                         key=lambda x: (x["request_id"], x["effect_index"]))
+        l = self._report_lease()
+        return validate_recovery_view({"form": "r3-recovery-1", "committed": committed, "intents": intents,
+                                       "authority": {"version": None if l is None else l.digest, "lease_until": None if l is None else l.lease_until},
+                                       "approvals_open": []})
+
+    def dependency_status(self) -> dict:
+        return {}
+
     def authority_version(self):
         return hashlib.sha256(json.dumps(self.auth_spec, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 

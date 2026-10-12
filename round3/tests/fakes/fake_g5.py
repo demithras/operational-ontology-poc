@@ -9,7 +9,7 @@ from pathlib import Path
 
 from r3_shared.authsvc import Lease, validate_lease
 from r3_shared.faultplane import CanonicalStateLost, DependencyUnavailable
-from r3_shared.recovery import DEP_UNAVAILABLE, IN_DOUBT, validate_recovery_view
+from r3_shared.recovery import DEP_UNAVAILABLE, IN_DOUBT
 from r3_shared.variant import CallResult
 from tests.fakes.fake_variant import FakeDeployment, FakeVariant
 
@@ -108,22 +108,7 @@ class FakeG5Deployment(FakeDeployment):
         super().restart()
         self._lease = self._load_lease()
 
-    # ---- G5 self-reports ---------------------------------------------------------------------------------------------------
-    def recovery_view(self) -> dict:
-        rows = self.world._con.execute("SELECT seq, data_json FROM world_log WHERE kind='mark' AND ref='commit' ORDER BY seq").fetchall()
-        committed = []
-        for seq, dj in rows:
-            d = json.loads(dj)
-            committed.append({"request_id": d.get("request_id"), "world_seq": seq, "authority_version": d["authority_version"]})
-        intents = sorted(({"request_id": i["request_id"], "effect_index": i["effect_index"], "system": i["system"], "chain_ids": 1,
-                           "state": self.g4["outcomes"][f"{i['request_id']}#{i['effect_index']}"]["state"],
-                           "confidence": self.g4["outcomes"][f"{i['request_id']}#{i['effect_index']}"]["confidence"]}
-                          for i in self.g4["intents"]), key=lambda x: (x["request_id"], x["effect_index"]))
-        l = self._report_lease()
-        return validate_recovery_view({"form": "r3-recovery-1", "committed": committed, "intents": intents,
-                                       "authority": {"version": None if l is None else l.digest, "lease_until": None if l is None else l.lease_until},
-                                       "approvals_open": []})
-
+    # ---- G5 self-reports (recovery_view lives in FakeDeployment; the lease it reports is decided here) ---------------------
     def _report_lease(self):
         """Honest: only a lease that is still valid at the current tick is reported as the authority in use."""
         return self._lease if self._lease is not None and self._lease.valid_at(self.clock.now()) else None
