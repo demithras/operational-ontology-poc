@@ -103,7 +103,7 @@ def test_e12_a_request_without_request_id_is_refused_before_any_commit_so_there_
     assert irig.dep._c.history.keys("led/pend/") == []
 
 
-def test_e12_unanchored_authority_change_is_completed_on_resume_like_a_request(monkeypatch):
+def test_e12_unanchored_authority_change_is_completed_at_first_call_after_resume_like_a_request(monkeypatch):
     import copy
 
     import g5_rig
@@ -126,9 +126,10 @@ def test_e12_unanchored_authority_change_is_completed_on_resume_like_a_request(m
         px.wait_dead()
         assert rig.commits() == ["m1"] and pend_keys(rig) == ["led/pend/m1"]
         px2 = rig.host(resume=True)
-        assert pend_keys(rig) == []                                              # the delegate decision is anchored by the resumed process
+        assert pend_keys(rig) == ["led/pend/m1"]                                 # G5-E25: nothing is anchored before the first API call
         again = px2.delegate(rig.token("planner-1"), edge("e1", "planner-1", "junior-1"), "m1")
         assert again.status == "OK" and rig.commits() == ["m1"]                  # the original decision, no second commit
+        assert pend_keys(rig) == []                                              # the delegate decision is anchored by the first call
         assert len(HistoryStore(str(rig.root / "hist.db")).keys("env/")) == 1    # exactly one decision envelope exists for it
     finally:
         rig.finish()
@@ -206,3 +207,39 @@ def test_e11_a_consumed_approval_leaves_approvals_open(irig):
     assert irig.dep.recovery_view()["approvals_open"] == [fp("planner-1", None, "expedite_purchase_order", args)]
     assert irig.dep.direct(irig.token("planner-1"), "expedite_purchase_order", args, request_id="c1").status == "OK"
     assert irig.dep.recovery_view()["approvals_open"] == []
+
+
+# ---- G5-E25 / P1g-2: resume appends nothing to the anchor before the first API call after recovery_view() ---------------
+def test_e25_resume_over_unanchored_commit_keeps_anchor_head_through_recovery_view_then_completes_at_first_call(rig):
+    kill_at(rig, "CP2_after_commit", "e25")
+    stream = HistoryStore(str(rig.root / "hist.db")).get("meta/stream").decode()
+    assert pend_keys(rig) == ["led/pend/e25"]
+    head0 = rig.anchor.client().head(stream)
+    rig.tick(1)
+    px = rig.host(resume=True, tick=1)
+    v1 = px.recovery_view()
+    v2 = px.recovery_view()
+    assert v1 == v2                                                              # read-only and deterministic
+    assert rig.anchor.client().head(stream) == head0                             # restricted phase: no anchor append
+    assert pend_keys(rig) == ["led/pend/e25"]                                    # the journal is untouched too
+    again = px.direct(rig.token("planner-1"), "transfer_inventory", TR, None, "e25")   # first API call after recovery_view()
+    assert again.status == "OK" and again.body.get("replayed") is True
+    assert pend_keys(rig) == [] and rig.anchor.client().head(stream) != head0    # the missing entry is completed now
+    assert rig.commits() == ["e25"]
+
+
+# ---- G5-E28(d): unknown operation / tool name while a dependency is down is INVALID, never UNKNOWN -----------------------
+def test_e28d_unknown_operation_and_tool_are_invalid_while_a_dependency_is_down_and_legacy_when_all_up(irig):
+    tok = irig.token("planner-1")
+    up_op = irig.dep.direct(tok, "no_such_op", {}, request_id="u0")
+    up_tool = irig.dep.call_tool(tok, "no_such_tool", {}, request_id="u1")
+    assert up_op.status == "UNKNOWN" and up_tool.status == "UNKNOWN"             # all up: the legacy H23 replies are unchanged
+    irig.actl.outage(DEP, 1, 20, "drop")
+    irig.tick(6)
+    for res, reason in ((irig.dep.direct(tok, "no_such_op", {}, request_id="u2"), "unknown_operation"),
+                        (irig.dep.call_tool(tok, "no_such_tool", {}, request_id="u3"), "unknown_tool")):
+        assert (res.status, res.body) == ("INVALID", {"reason": reason})
+        assert res.body["reason"] in INPUT_INVALID_REASONS
+    bad = irig.dep.direct("not-a-token", "no_such_op", {}, request_id="u4")        # unauthenticated: AUTH is needed to say so
+    assert bad.status == "UNAVAILABLE" and bad.body.get("dependency") == "AUTH"
+    assert irig.commits() == []
