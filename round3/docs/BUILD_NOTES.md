@@ -603,3 +603,14 @@ Tests: tests/paladin/test_pal_g4_*.py (rig g4_rig.py, adapters g4_adapters.py). 
   harness adapter wrapper (not built here).
 - Fakes: tests/fakes/fake_g5.py (FakeG5Variant honest; FakeStaleCacheVariant keeps a module-level lease cache and reports it unconditionally).
 - Tests: tests/test_p1g_{authsvc,faultplane,faultctl,host,recovery,misc,e2e}.py, helper tests/p1g_util.py.
+
+
+## G5 paladin - H29 (tag r3-g5-paladin)
+- Spec: spec/protections/H29-paladin.md (requirement table, mutants, decisions where the frozen text is silent). Code: src/paladin/{continuity,leasing,
+  depgraph}.py (new), core.py / core_g2.py (h29 flag, stamp(), unacked(), recover salt), ledger.py / histledger.py (recover salt, open_approvals),
+  extdispatch.py / extoutbox.py (breaker state, drop, cap_n), deployment.py / variant.py (authority_source, resume).
+- Design: lease cache is memory-only (a persisted lease cannot be MAC-checked by the variant and the oracle's lease window ends at a restart); every decision
+  re-fetches; the leased document is adopted with one `authority` mark; the commit mark carries the SERVICE digest. Pre-flight anchor probe before any world
+  write; unconfirmed commit -> UNKNOWN in_doubt; a stored OK replays only when the anchor holds the decision.
+- Tests: tests/paladin/test_pal_g5_{lease,recovery,mutants,more}.py with rig g5_rig.py / g5_adapters.py (REAL AuthorityService, anchor, ExternalWorld; spawned
+  hosts for SIGKILL). The paladin venv resolves `paladin` from the MAIN checkout: always run with PYTHONPATH=<worktree>/round3/src:<worktree>/round3.

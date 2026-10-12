@@ -46,6 +46,7 @@ class G5Rig:
     def __init__(self, tmp=None, domain="manufacturing", external=True, mutants=(), history=True, inproc=True, auth_name=AUTH_NAME):
         self.root = Path(tempfile.mkdtemp(prefix="r3g5"))
         self.domain, self.mutants, self.history_on = domain, tuple(mutants), history
+        self.adapter_factory = "g5_adapters:build"
         self.ops, self.auth0 = load_ops_spec(domain), load_auth_spec(auth_name)
         self.clock, self.idp = LogicalClock(), IdentityProvider(SECRET)
         self.world_path = self.root / "world.db"
@@ -76,11 +77,11 @@ class G5Rig:
     def binding(self):
         return AuthorityBinding(self.auth.client(DEP), 4, json.loads(GRAPH_PATH.read_text()))
 
-    def external_binding(self):
+    def external_binding(self, fault=None):
         if self.ctl is None:
             return None
         ad = {s: Honest(self.ctl.data_only()) for s in self.systems["systems"]}
-        obs = ObservationClient(str(self.root / "ext"), self.ctl.observer_key(DEP), self.systems, None)
+        obs = ObservationClient(str(self.root / "ext"), self.ctl.observer_key(DEP), self.systems, fault)
         return ExternalBinding(self.systems, ad, {s: self.ctl.issue_root(DEP, s) for s in self.systems["systems"]}, obs, self.systems["window"])
 
     def deploy(self, resume=False, mutants=None, with_auth=True):
@@ -101,7 +102,7 @@ class G5Rig:
         if self.ctl is not None and with_ext:
             s["external"] = {"systems": self.systems, "data_sock": self.proc.sock_path, "root_caps": {x: self.ctl.issue_root(DEP, x) for x in self.systems["systems"]},
                              "observer": {"ext_dir": str(self.root / "ext"), "key": self.ctl.observer_key(DEP), "fault": None},
-                             "window": self.systems["window"], "adapter_factory": "g5_adapters:build", "adapter_args": {}}
+                             "window": self.systems["window"], "adapter_factory": self.adapter_factory, "adapter_args": {}}
         return s
 
     def host(self, resume=False, tick=0, mutants=None):
