@@ -3,7 +3,9 @@ byte-compared recovery_view()), RC2 at the end of each recovery event (heal, dis
 of every committed request_id). Only raw observations are recorded here."""
 from __future__ import annotations
 
+import json
 import shutil
+import sqlite3
 from pathlib import Path
 
 from r3_oracle import continuity as C
@@ -49,7 +51,7 @@ def resume(r) -> None:
             r.svc.ext.outage(s, dep, r.base + T, r.base + T + 1)
     services.obs_set(r.work / "obs-a", r.svc.ext_dir, False)
     stream = r.stream or services.stream_of(r.hist_path)
-    head0, aseq0 = _head(r, stream), _auth_seq(r)
+    head0, aseq0, eseq0, oseq0 = _head(r, stream), _auth_seq(r), _ext_seq(r), _obs_seq(r)
     px_a = r.start_host(True)
     px_b = r.start_host(True, dep=dep_b, paths={"world": str(copy_dir / "world.db"), "hist": str(copy_dir / "hist.db")}, obs_tag="b") if names else None
     va, ea = _view(px_a, r) if px_a is not None else (None, "no_host")
@@ -60,10 +62,12 @@ def resume(r) -> None:
         except Exception:  # noqa: BLE001
             px_b.kill()
     shutil.rmtree(copy_dir, ignore_errors=True)
-    head1, aseq1 = _head(r, stream), _auth_seq(r)
+    head1, aseq1, eseq1, oseq1 = _head(r, stream), _auth_seq(r), _ext_seq(r), _obs_seq(r)
     restricted_auth = _auth_refused_between(r, aseq0, aseq1)       # G5-E25: the window ends at the harness's first call other than recovery_view()
+    restricted_ext = _ext_between(r, eseq0, eseq1)                 # G5-E25: ExternalWorld requests (all outcomes) by the resumed deployment
+    restricted_obs = None if oseq0 is None or oseq1 is None else oseq1 - oseq0     # None = no server-side record of observer reads exists
     marks = _marks(r)
-    r.event("rc1", resume=T, view_a=va, view_b=vb, err_a=ea, err_b=eb, anchor_head_before=head0, anchor_head_after=head1, auth_refused_restricted=restricted_auth,
+    r.event("rc1", resume=T, view_a=va, view_b=vb, err_a=ea, err_b=eb, anchor_head_before=head0, anchor_head_after=head1, auth_refused_restricted=restricted_auth, ext_restricted=restricted_ext, obs_reads_restricted=restricted_obs,
             marks=marks, files=names, a_started=px_a is not None)
     r.open_recoveries.append({"resume": T})
     r.stream = stream
@@ -145,3 +149,57 @@ def rc2(r) -> None:
     r.event("rc2", t_probe=t_probe, probe={"status": pr.status, "body_ok": pr.status == "OK"} if pr is not None else None, probe_err=pe,
             view=view, err=verr, marks_before=before, marks_after=after, redelivered=redo, t_redeliver=t_re, marks=marks)
     r.open_recoveries.clear()
+
+
+def _ext_db(r):
+    p = Path(r.svc.ext_dir) / "external.db"
+    return p if p.exists() else None
+
+
+def _ext_seq(r):
+    """Highest ExternalWorld audit seq (every write attempt appends exactly one audit row: applied, refused or unavailable)."""
+    p = _ext_db(r)
+    if p is None:
+        return None
+    try:
+        con = sqlite3.connect(f"file:{p}?mode=ro", uri=True, timeout=15, isolation_level=None)
+        try:
+            return con.execute("SELECT COALESCE(MAX(seq),0) FROM audit").fetchone()[0]
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return None
+
+
+def _ext_between(r, lo, hi) -> int:
+    """ExternalWorld requests of the resumed deployment (either RC1 deployment id) with service seq in (lo, hi]. Refused/unavailable rows carry no
+    attribution (G5-E4); they are placed by the cap's claimed deployment (unverified_claim)."""
+    p = _ext_db(r)
+    if p is None or lo is None or hi is None or hi <= lo:
+        return 0
+    deps = (r.dep, r.dep + "~rc1b")
+    try:
+        con = sqlite3.connect(f"file:{p}?mode=ro", uri=True, timeout=15, isolation_level=None)
+        try:
+            n = sum(1 for (d,) in con.execute("SELECT deployment FROM audit WHERE seq>? AND seq<=?", (lo, hi)) if d in deps)
+            if con.execute("SELECT 1 FROM sqlite_master WHERE name='unverified_claim'").fetchone():
+                for (c,) in con.execute("SELECT u.claim_json FROM unverified_claim u JOIN audit a ON a.seq=u.audit_seq WHERE a.seq>? AND a.seq<=?", (lo, hi)):
+                    n += json.loads(c).get("deployment") in deps
+            return n
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return 0
+
+
+def _obs_seq(r):
+    """Observer reads leave NO server-side record today: ObservationClient.read (src/r3_shared/extobs.py:129) opens the ledger read-only and
+    appends only to the client's in-process transcript (extobs.py:154). A sidecar `<ext_dir>/obs_reads.log` (one JSON line per read attempt) would
+    make them countable; until it exists the count is None (not instrumented, reported as such)."""
+    p = Path(r.svc.ext_dir) / "obs_reads.log"
+    if not p.exists():
+        return None
+    try:
+        return sum(1 for _ in p.open())
+    except OSError:
+        return None

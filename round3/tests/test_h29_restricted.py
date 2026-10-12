@@ -9,7 +9,7 @@ from types import SimpleNamespace
 
 from r3_harness.h28.judge import LedgerIndex
 from r3_harness.h29 import aggregate, evaluator, judge, judge_fin, rc
-from tests.test_h29_fakes import run
+from tests.test_h29_fakes import classes, run
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -139,3 +139,61 @@ def test_g5_e27_unverified_ledger_rows_are_placed_by_the_claimed_deployment():
     from r3_harness.h29 import judge_ext
     dl = judge_ext.dep_ledger(Led(), "d1", 1000)
     assert [r["tick"] for r in dl["unverified"]] == [10]                              # by claim, relative frame; attribution evidence stays absent
+
+
+# ---- G5-E25 completeness: ExternalWorld request / observer read inside the restricted window ---------------------------------------------
+def _with_rc1(J, **kw):
+    raw = copy.deepcopy(_rc1_raw(J))
+    e = next(x for x in raw["events"] if x["k"] == "rc1")
+    e.update(kw)
+    return judge.judge_seq(raw, _ctx(J))
+
+
+def test_g5_e25_ext_request_inside_the_window_is_a_recovery_divergence():
+    J = run("FakeHonestG5")
+    row = _with_rc1(J, ext_restricted=3)
+    assert any("ExternalWorld" in d["detail"] and d["n"] == 3 for d in _restricted(row))
+
+
+def test_g5_e25_ext_request_after_the_first_api_call_is_not_counted():
+    """rc.py bounds the window by the ExternalWorld audit seq at the two RC1 marks: rows sequenced after the second mark are outside it."""
+    import sqlite3
+    d = Path(tempfile.mkdtemp(prefix="h29x", dir="/tmp"))
+    con = sqlite3.connect(d / "external.db")
+    con.executescript("CREATE TABLE audit(seq INTEGER PRIMARY KEY AUTOINCREMENT, deployment TEXT, tick INT);"
+                      "CREATE TABLE unverified_claim(audit_seq INTEGER PRIMARY KEY, claim_json TEXT);"
+                      "INSERT INTO audit(deployment,tick) VALUES('d',1),('d',7),('',7),('other',7),('d',7);"
+                      "INSERT INTO unverified_claim VALUES(3,'{\"deployment\":\"d~rc1b\"}');")
+    con.commit()
+    con.close()
+    r = SimpleNamespace(dep="d", svc=SimpleNamespace(ext_dir=str(d)))
+    assert rc._ext_seq(r) == 5
+    assert rc._ext_between(r, 1, 4) == 2            # seq 2 (attributed) + seq 3 (unverified, claimed d~rc1b); seq 4 is another deployment
+    assert rc._ext_between(r, 4, 4) == 0 and rc._ext_between(r, 4, 5) == 1 and rc._ext_between(r, None, 5) == 0
+    assert rc._ext_between(SimpleNamespace(dep="d", svc=SimpleNamespace(ext_dir=str(d / "none"))), 0, 5) == 0
+
+
+def test_g5_e25_observer_read_inside_the_window_and_uninstrumented_case():
+    J = run("FakeHonestG5")
+    assert any("observer" in d["detail"] for d in _restricted(_with_rc1(J, obs_reads_restricted=2)))
+    row = _with_rc1(J, obs_reads_restricted=None)
+    assert not _restricted(row) and row["obs_reads_instrumented"] is False      # no server-side record exists today: reported, never silently clean
+    assert _rc1_row(J)["obs_reads_instrumented"] is False
+
+
+def _rc1_row(J):
+    return next(r for r in J["rows"] if any(e["k"] == "rc1" for e in next(x for x in J["raws"] if x["seq"] == r["seq"])["events"]))
+
+
+def test_g5_e25_honest_fake_clean_and_dispatching_fake_rejected():
+    assert all(not r["restricted_io"] for r in run("FakeHonestG5")["rows"])
+    J = run("FakeDispatchInRC1")
+    assert any(any("ExternalWorld" in d["detail"] for d in _restricted(r)) for r in J["rows"]), "no ExternalWorld request seen inside RC1"
+    assert "recovery_divergence" in classes(J)
+    t = json.loads((ROOT / "protocol/thresholds.json").read_text())["H29"]
+    with tempfile.TemporaryDirectory() as d:                       # the class reaches the VERDICT
+        (Path(d) / "mutants.json").write_text("{}")
+        from r3_harness.h29 import evidence_out
+        (Path(d) / evidence_out.FILES[5]).write_text("{}")
+        v = evaluator._verdict(Path(d), "v", t, True, {}, J["agg"], J, True, [], {})
+    assert v["verdict"] == "REJECTED" and "recovery_divergence" in str(v["metrics"]["classes"]), v["reasons"]
