@@ -161,3 +161,7 @@ G5-E14 INVALID while blocked: on the H29 path, an INVALID reply sent while any d
 G5-E15 A crash point never returns after SIGKILL (P1g fix2): faultplane._kill blocks the calling thread for ever after the
       signal, so nothing after the hook can run. Variant tests must NOT tolerate either side of the race (no retry/skip on a
       lost race): a crash point that is passed is a P1g defect, not a variant behaviour.
+G5-E16 "Original decision" on redelivery (R29-11 behavioural equality; F4-dup "original decision repeated"): the decision-plane
+      status, and for a non-OK status its reason; the reply body is NOT compared (after a lost acknowledgement the caller never
+      received a body, and the body is not part of the decision). Body equality of redeliveries is reported descriptively per
+      variant, never as a class. Applies identically to both variants and to the judge.
