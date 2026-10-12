@@ -1,0 +1,193 @@
+{
+ "comparative": {
+  "forbidden_effects": {
+   "conventional": 0,
+   "paladin": 0
+  },
+  "mutation_kill_rate": {
+   "conventional": 1.0,
+   "paladin": 1.0
+  },
+  "p95_latency_ms": null,
+  "safe_progress_ratio": {
+   "conventional": 1.0,
+   "paladin": 1.0
+  },
+  "security_specific_components": null,
+  "security_specific_loc": null
+ },
+ "conventional_verdict": "INVALID",
+ "evaluator_sha256": "18a75b96b168b9f8f1b615da2d73067922031b201d1e21ab1f957039f0e68c64",
+ "experiment_id": "exp-h28-001",
+ "hypothesis": "H28",
+ "minimum_overrides": {},
+ "paladin_verdict": "INVALID",
+ "scope_limits": [
+  "L1 observer integrity trusted",
+  "L2 effects_only/none systems lower confidence, excluded from detection",
+  "L3 adapter attack code = frozen catalogue",
+  "L4 logical ticks",
+  "L5 byte-exact payload digests",
+  "L6 project external effects only via the H28 overlay",
+  "L7 legacy external_write path untouched"
+ ],
+ "thresholds_sha256": "fa196766b3bc47d26907df6c92f7c80b89a4dc332886e30b58e1aee5e6e4fd19",
+ "variants": {
+  "conventional": {
+   "metrics": {
+    "classes": {
+     "duplicate_effect": 0,
+     "effect_outside_scope": 0,
+     "envelope_mismatch": 0,
+     "false_reconciled_success": 0,
+     "governance_in_adapter": 0,
+     "outcome_mismatch": 0,
+     "progress_loss": 0
+    },
+    "detection": {
+     "attempted": 621,
+     "detected": 621
+    },
+    "detection_rate": 1.0,
+    "floors": {
+     "byzantine_cases": 5600,
+     "controls_observed": {
+      "manufacturing": 429,
+      "project": 286
+     },
+     "crash_cases": 467,
+     "honest_controls": 1000,
+     "none_class_cases": 1600,
+     "observer_fault_cases": 622,
+     "outcome_equal": 24613,
+     "outcome_points": 24613,
+     "per_domain_system": {
+      "manufacturing/ERP": 800,
+      "manufacturing/GEN-NULL": 800,
+      "manufacturing/MES": 800,
+      "manufacturing/WMS": 800,
+      "project/GEN-NULL": 800,
+      "project/NOTIFY": 800,
+      "project/REGISTRY": 800
+     },
+     "per_primitive": {
+      "G1": 689,
+      "G2": 620,
+      "G3": 699,
+      "L1": 599,
+      "L2": 643,
+      "L3": 606,
+      "O1": 666,
+      "O2": 623,
+      "R1": 636,
+      "R2": 646,
+      "T1": 639,
+      "T2": 616,
+      "T3": 658
+     },
+     "progress_checked": 4667
+    },
+    "forbidden_effects": 0,
+    "governance_sub": {},
+    "harness": {},
+    "minimum_overrides": {},
+    "mutants": {
+     "adapter_success_trusted": true,
+     "credential_scope_broadened": true,
+     "divergence_rewritten": true,
+     "idempotency_disabled": true,
+     "observation_coupled": true,
+     "policy_gate_in_adapter": true
+    },
+    "mutation_kill_rate": 1.0,
+    "payload_sha256": "3ef54924525cfe91d4a0299fe7c51642facf6912c1a731c79610e060aff18277",
+    "safe_progress_ratio": 1.0,
+    "static_unresolved": 0
+   },
+   "minimum_overrides": {},
+   "reasons": [
+    "adapter catalogue is not frozen in FREEZE_G4 (non-dev id)"
+   ],
+   "variant": "conventional",
+   "verdict": "INVALID"
+  },
+  "paladin": {
+   "metrics": {
+    "classes": {
+     "duplicate_effect": 0,
+     "effect_outside_scope": 0,
+     "envelope_mismatch": 0,
+     "false_reconciled_success": 0,
+     "governance_in_adapter": 0,
+     "outcome_mismatch": 0,
+     "progress_loss": 0
+    },
+    "detection": {
+     "attempted": 554,
+     "detected": 554
+    },
+    "detection_rate": 1.0,
+    "floors": {
+     "byzantine_cases": 5600,
+     "controls_observed": {
+      "manufacturing": 429,
+      "project": 286
+     },
+     "crash_cases": 467,
+     "honest_controls": 1000,
+     "none_class_cases": 1600,
+     "observer_fault_cases": 622,
+     "outcome_equal": 24613,
+     "outcome_points": 24613,
+     "per_domain_system": {
+      "manufacturing/ERP": 800,
+      "manufacturing/GEN-NULL": 800,
+      "manufacturing/MES": 800,
+      "manufacturing/WMS": 800,
+      "project/GEN-NULL": 800,
+      "project/NOTIFY": 800,
+      "project/REGISTRY": 800
+     },
+     "per_primitive": {
+      "G1": 689,
+      "G2": 620,
+      "G3": 699,
+      "L1": 599,
+      "L2": 643,
+      "L3": 606,
+      "O1": 666,
+      "O2": 623,
+      "R1": 636,
+      "R2": 646,
+      "T1": 639,
+      "T2": 616,
+      "T3": 658
+     },
+     "progress_checked": 4667
+    },
+    "forbidden_effects": 0,
+    "governance_sub": {},
+    "harness": {},
+    "minimum_overrides": {},
+    "mutants": {
+     "adapter_success_trusted": true,
+     "credential_scope_broadened": true,
+     "divergence_rewritten": true,
+     "idempotency_disabled": true,
+     "observation_coupled": true,
+     "policy_gate_in_adapter": true
+    },
+    "mutation_kill_rate": 1.0,
+    "payload_sha256": "e3e0986a4e0a6d0e9330dcd04b8d69a6cc0491684b315baa24d2b8f810571e96",
+    "safe_progress_ratio": 1.0,
+    "static_unresolved": 0
+   },
+   "minimum_overrides": {},
+   "reasons": [
+    "adapter catalogue is not frozen in FREEZE_G4 (non-dev id)"
+   ],
+   "variant": "paladin",
+   "verdict": "INVALID"
+  }
+ }
+}

@@ -1,0 +1,77 @@
+{
+ "honest_controls": 1000,
+ "positive_controls": {
+  "manufacturing": 429,
+  "project": 286
+ },
+ "shared_cases": [],
+ "shared_trust_root": false,
+ "topology": {
+  "deployment": "exp-h28-001:conventional:byz-000000:byz",
+  "reasons": [],
+  "shared_trust_root": false,
+  "systems": {
+   "ERP": {
+    "action": {
+     "adapter_id": "L1",
+     "cap_root_id": "decd45332bd9",
+     "socket": "/private/tmp/r3h28.hEyUmN/ext.sock"
+    },
+    "observation": {
+     "connection": "own sqlite connection",
+     "db_open_mode": "ro",
+     "db_path": "/private/tmp/r3h28.hEyUmN/ext/external.db",
+     "observer_key_id": "55d797f76591"
+    },
+    "shared_trust_root": false,
+    "why": []
+   },
+   "GEN-NULL": {
+    "action": {
+     "adapter_id": "L1",
+     "cap_root_id": "486c66b4c8a1",
+     "socket": "/private/tmp/r3h28.hEyUmN/ext.sock"
+    },
+    "observation": {
+     "connection": "own sqlite connection",
+     "db_open_mode": "ro",
+     "db_path": "/private/tmp/r3h28.hEyUmN/ext/external.db",
+     "observer_key_id": "55d797f76591"
+    },
+    "shared_trust_root": false,
+    "why": []
+   },
+   "MES": {
+    "action": {
+     "adapter_id": "L1",
+     "cap_root_id": "37130118d546",
+     "socket": "/private/tmp/r3h28.hEyUmN/ext.sock"
+    },
+    "observation": {
+     "connection": "own sqlite connection",
+     "db_open_mode": "ro",
+     "db_path": "/private/tmp/r3h28.hEyUmN/ext/external.db",
+     "observer_key_id": "55d797f76591"
+    },
+    "shared_trust_root": false,
+    "why": []
+   },
+   "WMS": {
+    "action": {
+     "adapter_id": "L1",
+     "cap_root_id": "b717d3092043",
+     "socket": "/private/tmp/r3h28.hEyUmN/ext.sock"
+    },
+    "observation": {
+     "connection": "own sqlite connection",
+     "db_open_mode": "ro",
+     "db_path": "/private/tmp/r3h28.hEyUmN/ext/external.db",
+     "observer_key_id": "55d797f76591"
+    },
+    "shared_trust_root": false,
+    "why": []
+   }
+  }
+ },
+ "transcript_sha256": "80cfeeeb53c977facd40e278a973a9865abd23570c1388e322a509f09a86d130"
+}

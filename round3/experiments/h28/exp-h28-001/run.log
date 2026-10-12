@@ -1,0 +1,4 @@
+paladin: run complete (5600 byzantine, 1000 controls)
+paladin: finalized classes={'effect_outside_scope': 0, 'false_reconciled_success': 0, 'governance_in_adapter': 0, 'duplicate_effect': 0, 'outcome_mismatch': 0, 'progress_loss': 0, 'envelope_mismatch': 0} detection={'attempted': 554, 'detected': 554} harness={} sysstate_ok=True
+conventional: run complete (5600 byzantine, 1000 controls)
+conventional: finalized classes={'effect_outside_scope': 0, 'false_reconciled_success': 0, 'governance_in_adapter': 0, 'duplicate_effect': 0, 'outcome_mismatch': 0, 'progress_loss': 0, 'envelope_mismatch': 0} detection={'attempted': 621, 'detected': 621} harness={} sysstate_ok=True
