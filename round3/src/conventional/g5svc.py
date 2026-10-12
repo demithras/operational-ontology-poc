@@ -153,8 +153,9 @@ class G5Ops:
 
     # -- anchor journal -------------------------------------------------------------------------------------------------
     def _g5_journal(self, h, dc: DecisionCtx, status: str, body: dict, doc: dict) -> None:
-        if self._g5 is not None and self.prov is not None and isinstance(dc.rid, str):
-            g5journal.put(h, dc.rid, g5journal.prep_record(dc, status, body, doc))
+        key = g5journal.key_of(dc)
+        if self._g5 is not None and self.prov is not None and key is not None:
+            g5journal.put(h, key, g5journal.prep_record(dc, status, body, doc))
 
     def _g5_complete(self, h, rid: str):
         """Finish the anchoring of a committed decision (idempotent: append, or rebuild the envelope of an entry that is
@@ -162,7 +163,7 @@ class G5Ops:
         p = g5journal.get_open(h, rid)
         if p is None:
             return None
-        dc = DecisionCtx(p["kind"], rid, p["subject"], p["obo"], p["operation"], p["args"],
+        dc = DecisionCtx(p["kind"], p["rid"], p["subject"], p["obo"], p["operation"], p["args"],
                          op=self._ops.get(p["operation"]) if isinstance(p["operation"], str) else None, governed=True,
                          evidence=[e.encode() for e in p["evidence"]], authority_doc=p["authority_doc"],
                          path=tuple(p["path"]), tick=p["tick"], world_seq=p["world_seq"], tx_id=p["tx_id"])

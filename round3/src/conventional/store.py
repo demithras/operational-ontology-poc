@@ -19,6 +19,13 @@ def fingerprint(subject: str, on_behalf_of: str | None, operation: str, inputs: 
     return hashlib.sha256(json.dumps(doc, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
+def approval_fingerprint(subject: str, on_behalf_of: str | None, operation: str, inputs) -> str:
+    """G5-E11: the canonical approval fingerprint (RECOVERY_VIEW approvals_open): sha256 hex of extadapter.canon_json."""
+    from r3_shared.extadapter import canon_json
+    doc = {"subject": subject, "on_behalf_of": on_behalf_of, "operation": operation, "inputs": dict(inputs)}
+    return hashlib.sha256(canon_json(doc).encode()).hexdigest()
+
+
 def init(handle) -> None:
     handle._con.executescript(DDL)
 

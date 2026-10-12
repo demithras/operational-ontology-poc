@@ -16,8 +16,15 @@ def init(h) -> None:
     h._con.executescript(DDL)
 
 
+def key_of(dc) -> str | None:
+    """Journal key: the request_id; a decision without one (G5-E12) is keyed by its world transaction ('~tx<id>')."""
+    if isinstance(dc.rid, str) and dc.rid:
+        return dc.rid
+    return None if dc.tx_id is None else f"~tx{dc.tx_id}"
+
+
 def prep_record(dc, status: str, body: dict, authority_doc: dict) -> dict:
-    return {"kind": dc.kind, "subject": dc.subject, "obo": dc.obo, "operation": dc.operation, "args": dc.args,
+    return {"rid": dc.rid, "kind": dc.kind, "subject": dc.subject, "obo": dc.obo, "operation": dc.operation, "args": dc.args,
             "path": list(dc.path), "tick": dc.tick, "world_seq": dc.world_seq, "tx_id": dc.tx_id,
             "evidence": [e.decode() for e in (dc.evidence or [])], "authority_doc": authority_doc,
             "status": status, "body": body}

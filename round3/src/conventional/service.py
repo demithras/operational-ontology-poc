@@ -321,7 +321,10 @@ class Service(AuthorityOps, GovernanceOps, ExternalOps, G5Ops, LowReads, LowProv
                     ins = {}
                 dc.evidence = self.prov.collect(h, dc.op, model.RESOURCES, ins) if dc.op and model else []
             dc.authority_doc = dc.authority_doc or self._policy.doc
-            return self.prov.finalize(h, dc, res)
+            out = self.prov.finalize(h, dc, res)
+            if self._g5 is not None and out is res and res.status == "OK" and g5journal.key_of(dc) is not None:
+                g5journal.mark_done(h, g5journal.key_of(dc))   # anchored: the journal row needs no repair pass (G5-E12)
+            return out
         finally:
             h.close()
 
@@ -494,13 +497,14 @@ class Service(AuthorityOps, GovernanceOps, ExternalOps, G5Ops, LowReads, LowProv
                 "status": "OK", "body": body,
                 "used": {"authority_version": claim, "path": list(path), "on_behalf_of": b.on_behalf_of,
                      "subject": b.subject}})
-            self._g5_journal(h, dc, "OK", body, self._policy.doc)
+        if b.request_id is None or not self.mutant("ledger_after_commit_volatile"):
+            self._g5_journal(h, dc, "OK", body, self._policy.doc)   # G5-E12: also for a commit without request_id
         return CallResult("OK", body)
 
     def _consume_approval(self, h, tx, op: dict, b: BoundRequest, rule: str) -> None:
         aop = (op["approval"] or {}).get("approver_operation")
         extra = self._policy.approval_forbidden(b.subject, b.on_behalf_of)
-        for aid, approver in self._store.approvals_open(h, b.fingerprint):
+        for aid, approver in self._store.approvals_open(h, store.approval_fingerprint(b.subject, b.on_behalf_of, b.operation, b.inputs)):
             if aop and self._policy.can_approve(approver, b.subject, b.on_behalf_of, aop, list(b.resources), extra):
                 self._store.approval_consume(h, aid, tx)
                 return
@@ -547,7 +551,9 @@ class Service(AuthorityOps, GovernanceOps, ExternalOps, G5Ops, LowReads, LowProv
                             raise self._crash_now()
                         if self.prov is not None:
                             dc.evidence = self.prov.collect(h, op, model.RESOURCES, inputs)
-                        self._store.approval_add(h, store.fingerprint(requester, on_behalf_of, operation, inputs), approver, tx)
+                        self._store.approval_add(h, store.approval_fingerprint(requester, on_behalf_of, operation, inputs), approver, tx)
+                        dc.tx_id, dc.tick = tx.id, tx.tick
+                        self._g5_journal(h, dc, "OK", {"approved_by": approver}, self._policy.doc)   # G5-E12
                     dc.tx_id, dc.tick = tx.id, tx.tick
                 finally:
                     h.close()
