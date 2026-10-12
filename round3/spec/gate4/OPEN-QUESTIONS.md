@@ -165,3 +165,12 @@ G4-E26 Twins (R28-11a; ORACLE-AND-HARNESS-G4 s2 "honest twin (H0) with identical
       AND the envelope (incl. tick and effect_digest); no field is excluded. The G4 fix2 relative-tick shift in judge.twin_diff
       becomes unnecessary and must not mask an absolute difference. Found in exp-h28-dev1: 445/445 governance_in_adapter in BOTH
       variants were envelope tick/effect_digest differences caused by twins running sequentially on one clock (100 vs 114).
+
+## G4-E27 (orch + author decision 2026-10-12, after exp-h28-001 INVALID, before exp-h28-001r)
+G4-E27 (a) The Byzantine adapter catalogue src/r3_harness/h28/adapters.py is frozen in protocol/FREEZE_G4.json (ORACLE-AND-HARNESS-G4
+      s9 invalid_if "catalogue module sha256 != FREEZE_G4"); the entry was omitted after the harness build (orchestrator fault), so
+      official exp-h28-001 (seed 2821, r3-g4-cand1) was INVALID for both variants. The catalogue file is unchanged since r3-g4-cand1.
+      (b) scripts/run_h28.py refuses (exit 2, no evidence) a non-dev id whose catalogue entry is missing or stale (G4 fix6), using the
+      evaluator's own catalogue_state() helper.
+      (c) Author: exp-h28-001 does NOT count toward the Q1 budget. The repeat is exp-h28-001r on the NEW seed 2824 (corpus 2821
+      already seen) on candidate r3-g4-cand2; seeds 2822/2823 stay reserved for attempts 2 and 3.
