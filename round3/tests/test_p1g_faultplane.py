@@ -124,3 +124,56 @@ def test_fault_command_validation_known_negatives():
         with pytest.raises(ValueError):
             faultplane.validate_fault_command(bad)
     assert faultplane.in_window([ok], "d", 2) is ok and faultplane.in_window([ok], "d", 3) is None and faultplane.in_window([ok], "e", 2) is None
+
+
+# ---- fix2: the crash point never returns (no race with COMMIT) ---------------------------------------------------------
+_HOT_SCRIPT = r'''
+import sys, threading
+from r3_shared import faultplane
+from r3_shared.world import WorldStore
+db, rid = sys.argv[1], sys.argv[2]
+stop = False
+def busy():
+    n = 0
+    while not stop:
+        n += 1
+for _ in range(2):
+    threading.Thread(target=busy, daemon=True).start()
+h = WorldStore(db).handle("w")
+faultplane.arm("CP1_before_commit", rid)
+with h.transaction(tag="t") as tx:
+    tx.mark("commit", {"request_id": rid, "kind": "k", "authority_version": 1})
+print("SURVIVED", flush=True)
+'''
+
+
+def _run_hot(tmp_path, i, kill_impl=None):
+    import subprocess
+    import sys
+    from r3_shared.world import WorldReader
+    script = tmp_path / "hot.py"
+    script.write_text(_HOT_SCRIPT if kill_impl is None else _HOT_SCRIPT.replace(
+        "faultplane.arm(", f"faultplane._kill = {kill_impl}\nfaultplane.arm(", 1))
+    db = str(tmp_path / f"w{i}.db")
+    env = {**__import__("os").environ, "PYTHONPATH": str(faultplane.ROUND3 / "src")}
+    cp = subprocess.run([sys.executable, str(script), db, f"r{i}"], capture_output=True, text=True, env=env, timeout=60)
+    r = WorldReader(db)
+    try:
+        landed = [x for x in r.log() if x["kind"] == "mark" and x["ref"] == "commit"]
+    finally:
+        r.close()
+    return cp.returncode, cp.stdout, len(landed)
+
+
+def test_crash_point_never_returns_commit_never_lands_under_a_busy_thread(tmp_path):
+    bad = [i for i in range(50) if _run_hot(tmp_path, i) != (-9, "", 0)]
+    assert bad == []                                          # killed by SIGKILL, nothing after the hook ran, no commit row
+
+
+def test_a_returning_kill_goes_red(tmp_path):
+    """Control (proves the stress test can fail). The pre-fix _kill was `os.kill(getpid(), SIGKILL)` and returned. On this macOS
+    box the self-signal lands before kill() returns, so the race the Paladin builder saw (Linux, 8-shard load) is modelled by
+    delivering the signal asynchronously: the old-style _kill that returns, with SIGKILL arriving 0.2 s later."""
+    old = ("lambda: (__import__('threading').Timer(0.2, lambda: __import__('os').kill(__import__('os').getpid(), 9)).start())")
+    runs = [_run_hot(tmp_path, i, old) for i in range(5)]
+    assert all(r != (-9, "", 0) for r in runs), runs          # every run passed the crash point and landed its commit
