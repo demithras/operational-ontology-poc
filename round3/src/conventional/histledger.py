@@ -84,6 +84,13 @@ class HistLedger:
             out.append((seq, m["approver"]))
         return out
 
+    def approvals_open_all(self, h) -> list[str]:
+        """Fingerprints of every unconsumed approval (recovery_view): pure read of the world-log marks, no history I/O."""
+        used = {json.loads(r[0])["approval"] for r in h._con.execute(
+            "SELECT data_json FROM world_log WHERE kind='mark' AND ref='approval_used'")}
+        return [json.loads(d)["fp"] for seq, d in h._con.execute(
+            "SELECT seq, data_json FROM world_log WHERE kind='mark' AND ref='approval' ORDER BY seq") if seq not in used]
+
     def approval_consume(self, h, aid: int, tx) -> None:
         tx.mark("approval_used", {"approval": aid})  # same transaction as the effect: a rollback un-consumes it
 

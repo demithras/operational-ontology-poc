@@ -52,6 +52,8 @@ class ExternalOps:
                 return CallResult("UNAVAILABLE", {"reason": "crashed"})
             if self._ext is None:
                 return CallResult("OK", {"submitted": 0})
+            if getattr(self, "_g5", None) is not None:
+                self._g5_anchor()   # recovery: finish the anchoring of committed-but-unanchored decisions first (no-op if ANCHOR is down)
             h = self._factory(WRITER)
             try:
                 return CallResult("OK", {"submitted": self._ext.dispatch(h, self._envelope_text, self._clock.now())})
@@ -71,7 +73,7 @@ class ExternalOps:
                 intents = self._ext.intents(h, request_id)
                 if not intents:
                     return CallResult("INVALID", {"reason": "unknown_request"})
-                extrecon.reconcile(h, intents, self._ext.b.observer, watermark, self._ext.mut)
+                extrecon.reconcile(h, intents, self._ext.b.observer, watermark, self._ext.mut, self._ext.guard)
                 return CallResult("OK", {"outcomes": self._ext.outcomes(h, request_id)})
             finally:
                 h.close()

@@ -4,6 +4,8 @@ from __future__ import annotations
 import functools
 
 from r3_shared.authgraph import authority_document
+from r3_shared.faultplane import DependencyUnavailable
+from r3_shared.recovery import DEP_UNAVAILABLE
 from r3_shared.variant import CallResult, ReplayResult, ToolDescriptor
 
 from r3_shared import mutants as shared_mutants
@@ -27,6 +29,8 @@ def _safe(fn):
     def wrapper(*a, **kw):
         try:
             return fn(*a, **kw)
+        except DependencyUnavailable as exc:  # G5: a lost dependency is always the explicit, node-naming reply
+            return CallResult("UNAVAILABLE", {"reason": DEP_UNAVAILABLE, "dependency": exc.node})
         except Exception as exc:  # noqa: BLE001
             return CallResult("UNAVAILABLE", {"reason": "internal_error"})
     return wrapper
@@ -153,6 +157,13 @@ class ConventionalDeployment:
     def set_dependency_down(self, adapter: str, down: bool = True) -> None:
         (self.service.unavailable.add if down else self.service.unavailable.discard)(adapter)
 
+    # -- Gate 5 (PROTOCOL-P1g P1g-1): self-reports, never ground truth ------------------------------------------------------
+    def recovery_view(self) -> dict:
+        return self.service.recovery_view()
+
+    def dependency_status(self) -> dict:
+        return self.service.dependency_status()
+
     def arm_crash(self, point) -> None:
         self.service.arm_crash(point)
 
@@ -178,10 +189,12 @@ class ConventionalVariant:
         return ADAPTER_MODULES + (("conventional.extgate_mut",) if "policy_gate_in_adapter" in self.mutant_switches else ())
 
     def deploy(self, domain, world_handle_factory, verifier, ops_spec, auth_spec, clock, state_dir=None,
-               history=None, anchor=None, governance=None, external=None) -> ConventionalDeployment:
+               history=None, anchor=None, governance=None, external=None, authority_source=None,
+               resume: bool = False) -> ConventionalDeployment:
         # state_dir is accepted but unused: all durable state (effects, idempotency ledger, approvals, the authority in
         # force) lives in the world DB, in the same transaction as the effects - atomic by construction. With a
         # HistoryStore (H27 runs) every record other than the world store lives there instead (histledger.py).
         ensure_models(ops_spec)
         return ConventionalDeployment(Service(domain, world_handle_factory, verifier, ops_spec, auth_spec, clock,
-                                              AUDIENCE, self.mutant_switches, history, anchor, governance, external))
+                                              AUDIENCE, self.mutant_switches, history, anchor, governance, external,
+                                              authority_source, resume))

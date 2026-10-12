@@ -87,10 +87,12 @@ def _adapter_snapshot(it: dict, watermark: int) -> ObsSnapshot:
     return ObsSnapshot(watermark, rows, [], watermark)
 
 
-def reconcile(h, intents: list[dict], observer, watermark: int, mutants=frozenset()) -> None:
+def reconcile(h, intents: list[dict], observer, watermark: int, mutants=frozenset(), guard=None) -> None:
     """Update the outcome records of `intents` (one request) from ONE observer snapshot (R28-5). Durable, idempotent."""
     coupled = "observation_coupled" in mutants
     snap = None if coupled else read_snapshot(observer, watermark)
+    if guard is not None and not coupled:   # G5: the OBS breaker follows what the observer answered (descriptive status only)
+        guard.up("OBS") if snap is not None else guard.down("OBS")
     for it in intents:
         cur = h._con.execute("SELECT state, confidence, evidence_json, wm FROM conv_outcome WHERE request_id=? AND effect_index=?",
                              (it["request_id"], it["effect_index"])).fetchone()

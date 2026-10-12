@@ -46,6 +46,10 @@ def approval_consume(handle, approval_id: int) -> None:
     handle._con.execute("UPDATE conv_approvals SET consumed=1 WHERE id=?", (approval_id,))
 
 
+def approvals_open_all(handle) -> list[str]:
+    return [r[0] for r in handle._con.execute("SELECT fingerprint FROM conv_approvals WHERE consumed=0 ORDER BY id")]
+
+
 def authority_put(handle, version: int, spec: dict) -> None:
     """The authority spec in force is durable (PROT-H23-A8): restart() rebuilds the policy from here, not from memory."""
     handle._con.execute("INSERT OR REPLACE INTO conv_authority VALUES(1,?,?)", (version, json.dumps(spec, sort_keys=True)))
@@ -78,6 +82,9 @@ class AuxStore:
 
     def approval_consume(self, h, aid, tx=None) -> None:
         approval_consume(h, aid)
+
+    def approvals_open_all(self, h) -> list[str]:
+        return approvals_open_all(h)
 
     def approval_restore(self, h, aid) -> None:
         h._con.execute("UPDATE conv_approvals SET consumed=0 WHERE id=?", (aid,))

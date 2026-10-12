@@ -11,6 +11,8 @@ from __future__ import annotations
 import importlib
 import json
 
+from r3_shared.faultplane import DependencyUnavailable
+
 from r3_shared import extcap
 from r3_shared.extadapter import ExternalRequest, correlation, payload_digest
 from r3_shared.extsystems import idempotency, observability, render_target
@@ -48,6 +50,7 @@ def synthetic_request_id(world_seq: int) -> str:
 class Outbox:
     def __init__(self, binding, mutants=frozenset()):
         self.b, self.mut = binding, frozenset(mutants)
+        self.guard = None   # G5: per-node breakers (g5deps.Guard); None on the legacy path
 
     # -- enqueue: runs INSIDE the request's world transaction (R28-1: the decision is final before any adapter call) ----------
     def _caveats(self, system, op, target, payload, rid, idx, cls, tick) -> dict:
@@ -118,16 +121,25 @@ class Outbox:
     def dispatch(self, h, envelope_for, now: int, rid: str | None = None) -> int:
         """Submit every eligible intent (R28-8: same cap on resubmission). Returns the number of submit() calls."""
         n = 0
+        tripped: set[str] = set()   # systems whose breaker opened in THIS pass: one half-open trial per system per pass
         for it in self.intents(h, rid):
-            if not self._eligible(it, now) or self._settled(h, it):
+            if not self._eligible(it, now) or self._settled(h, it) or it["system"] in tripped:
                 continue
             payload = json.loads(it["payload_json"])
             cap = self._fresh_cap(it) if "idempotency_disabled" in self.mut else it["cap"]
             req = ExternalRequest(it["request_id"], it["effect_index"], it["system"], it["operation"], it["target"], payload,
                                   envelope_for(it["request_id"]), cap)
             status = "TIMEOUT"
+            node = f"EXT:{it['system']}"
             try:
                 status = self.b.adapters[it["system"]].submit(req).status       # UNTRUSTED: only decides resubmission
+                if self.guard is not None:
+                    self.guard.up(node)
+            except DependencyUnavailable:   # G5: the system is down - not an attempt (the intent stays deliverable)
+                if self.guard is not None:
+                    self.guard.down(node)
+                    tripped.add(it["system"])
+                    continue
             except Exception:  # noqa: BLE001 - any exception is a TIMEOUT (P1f-7)
                 pass
             n += 1
