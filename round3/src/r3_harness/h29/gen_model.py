@@ -49,6 +49,9 @@ class Plan:
         self.ops, self.auth0, self.systems = specs.load(domain)
         self.fam, self.graph = specs.family(domain), specs.graph()
         self.snap0 = specs.seed_snapshot(self.ops)
+        for k, o in self.snap0["objects"].items():          # the driver refreshes evidence age to the sequence base (= relative tick 0)
+            if k.startswith("EvidenceSnapshot:"):
+                o["props"]["snapshotObservedAt"] = 0
         self.rep = Replayer(self.ops, self.snap0)
         self.model = ServiceModel()
         self.model.publish(copy.deepcopy(self.fam[0]), 0)              # G5-E2: version 0 at tick 0, before the first request

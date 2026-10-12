@@ -40,11 +40,14 @@ def envelope_ok(seq: dict) -> tuple[bool, str]:
     if len(crashes) > CRASHES_MAX:
         return False, "too many crashes"
     # replay the clock over advance steps to find concurrent fault classes and node sets
-    t, act = 0, []
+    t, act, ends = 0, [], {}
     for s in steps:
         if s["op"] == "advance":
             t += s["n"]
+        elif s["op"] == "fault_heal":
+            t = max(t, ends.get(s["fid"], t))
         elif s["op"] == "fault_start":
+            ends[s["fid"]] = t + s["duration"]
             if s["duration"] > PARTITION_MAX or s["duration"] < 1:
                 return False, "fault duration outside PARTITION_MAX"
             act.append((t, t + s["duration"], s["cls"], s["node"].split(":")[0]))

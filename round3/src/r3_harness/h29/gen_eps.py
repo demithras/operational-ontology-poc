@@ -248,7 +248,10 @@ def f6_stale(plan, ch, var: int) -> None:
             plan.advance(target - plan.t)
         elif mode == 0 and target == plan.t:
             pass
-        pair = gen_draw.stale_ok(plan, pair, k) or gen_draw.stale_pair(plan, ch, k) or pair
+        cand = gen_draw.stale_ok(plan, pair, k) or gen_draw.stale_pair(plan, ch, k)
+        if cand is None:
+            continue
+        pair = cand
         E.request(plan, {**pair, "dec": None}, tag="stale", predict=False)      # DENIED under the version in force: nothing commits
         if rd is not None:
             E.read(plan, rd, tag="stale")

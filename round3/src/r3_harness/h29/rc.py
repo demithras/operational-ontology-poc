@@ -14,9 +14,10 @@ from . import faults, services
 
 def do_tamper(r, st) -> None:
     if r.host is not None and r.host.alive:
-        r.harness_row("tamper_host_alive")          # TamperView is applied while the host is DEAD (F8): kill it first, hard
-        r.host.kill()
-        r._died()
+        if not (r.kills and r.kills[-1].get("resume") is None):
+            r.harness_row("tamper_host_alive")      # TamperView is applied while the host is DEAD (F8): kill it first, hard
+            r._died()
+        r.host.kill()                                # a host already recorded as killed may still be exiting: reap it
     rec = services.tamper(st["what"], r.hist_path, r.world_path, r.layout)
     r.event("tamper", **rec)
 
@@ -30,9 +31,11 @@ def _view(px, r):
 
 def resume(r) -> None:
     if r.host is not None and r.host.alive:
-        r.harness_row("injection_miss", why="armed crash point never fired", detail="resume with a live host: SIGKILL")
+        recorded = bool(r.kills) and r.kills[-1].get("resume") is None
+        if not recorded:
+            r.harness_row("injection_miss", why="armed crash point never fired", detail="resume with a live host: SIGKILL")
+            r._died()
         r.host.kill()
-        r._died()
     if not r.kills or r.kills[-1].get("resume") is not None:
         r.kills.append({"kill": r.t, "resume": None})
     r.kills[-1]["resume"] = r.t

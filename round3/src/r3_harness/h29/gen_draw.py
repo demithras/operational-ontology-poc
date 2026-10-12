@@ -72,7 +72,8 @@ def stale_pair(plan, ch, k: int):
         if not (a.kind == "OK" and a.outcome.effects and not a.outcome.used_approval):
             continue
         b, _ = plan.rep.decide(dk, sub, None, name, args, plan.t, None)
-        if b.kind != "OK":
+        late, _ = plan.rep.decide(d0, sub, None, name, args, plan.t + 14, None)     # not time-sensitive (evidence age rules)
+        if b.kind != "OK" and late.kind == "OK":
             return {"principal": sub, "operation": name, "args": args, "dec": a, "akey": ak, "approver": None}
     return None
 
