@@ -65,7 +65,7 @@ def test_redelivery_after_resume_returns_the_original_with_no_new_rows(rig):
     first = rig.d("planner-1", "transfer_inventory", TRANSFER, "r1")
     n = len(rig.reader.log())
     rig.restart()
-    again = rig.d("planner-1", "transfer_inventory", TRANSFER, "r1")
+    again = rig.d("planner-1", "transfer_inventory", TRANSFER, "r1", fresh=False)
     assert (again.status, again.body.get("effects")) == (first.status, first.body["effects"])
     assert again.body["replayed"] is True
     assert rig.commits().count("r1") == 1 and len([x for x in rig.reader.log() if x["kind"] != "mark"]) == len(
@@ -145,7 +145,8 @@ def test_authority_published_while_engine_down_is_not_served_stale_after_resume(
     rig.tick(4)                                                   # in force from tick 6
     dep = rig.restart()
     assert view(dep)["authority"]["version"] is None
-    assert rig.d("planner-1", "transfer_inventory", TRANSFER, "r2").status == "DENIED"
+    denied = rig.d("planner-1", "transfer_inventory", TRANSFER, "r2")
+    assert (denied.status, denied.body["reason"]) == ("DENIED", "no_matching_allow")
     assert view(dep)["authority"]["version"] == doc_digest(narrowed())
 
 

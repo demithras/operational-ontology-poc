@@ -20,8 +20,9 @@ def unav(node):
 def test_anchor_down_blocks_governed_decisions_with_zero_effects(rig):
     rig.actl_anchor.partition(rig.dep.service.stream, 3, 9, "drop")
     rig.tick()
-    before = rig.snap() if hasattr(rig, "snap") else rig.reader.snapshot()
-    res = rig.d("planner-1", "transfer_inventory", TRANSFER, "r1")
+    rig.fresh()
+    before = rig.reader.snapshot()
+    res = rig.d("planner-1", "transfer_inventory", TRANSFER, "r1", fresh=False)
     assert (res.status, res.body) == unav("ANCHOR")
     validate_reply(res.status, res.body)
     assert rig.reader.snapshot() == before and rig.commits() == []

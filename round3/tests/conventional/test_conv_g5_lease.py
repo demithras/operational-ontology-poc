@@ -51,7 +51,7 @@ def test_stale_sensitive_request_is_denied_after_publish_takes_effect(rig):
     assert info["effective_tick"] == 6                                              # waits for the outstanding lease
     rig.tick(4)                                                                     # tick 6: new version in force
     res = rig.d("planner-1", "transfer_inventory", {**TRANSFER, "quantity": 1}, "r1")
-    assert res.status == "DENIED"
+    assert (res.status, res.body["reason"]) == ("DENIED", "no_matching_allow")   # authority, not a business rule
     assert "r1" not in rig.commits()
 
 

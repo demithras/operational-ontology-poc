@@ -106,7 +106,15 @@ class G5Rig:
         self.dep = self.deploy(resume=True, mutants=mutants)
         return self.dep
 
-    def d(self, sub, op, args, rid, obo=None):
+    def fresh(self):
+        """Keep the transfer evidence fresh so a DENIED can only come from authority, never from `transfer-stale-evidence`."""
+        h = self.store.handle("seed")
+        h.update("EvidenceSnapshot", "ES-1", {"snapshotObservedAt": self.clock.now()})
+        h.close()
+
+    def d(self, sub, op, args, rid, obo=None, fresh=True):
+        if op == "transfer_inventory" and fresh:
+            self.fresh()
         return self.dep.direct(self.token(sub), op, args, obo, rid)
 
     def host(self, resume=False, mutants=(), tick=None):
