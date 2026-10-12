@@ -603,3 +603,27 @@ Tests: tests/paladin/test_pal_g4_*.py (rig g4_rig.py, adapters g4_adapters.py). 
   harness adapter wrapper (not built here).
 - Fakes: tests/fakes/fake_g5.py (FakeG5Variant honest; FakeStaleCacheVariant keeps a module-level lease cache and reports it unconditionally).
 - Tests: tests/test_p1g_{authsvc,faultplane,faultctl,host,recovery,misc,e2e}.py, helper tests/p1g_util.py.
+
+
+## G5 paladin - H29 (tag r3-g5-paladin)
+- Spec: spec/protections/H29-paladin.md (requirement table, mutants, decisions where the frozen text is silent). Code: src/paladin/{continuity,leasing,
+  depgraph}.py (new), core.py / core_g2.py (h29 flag, stamp(), unacked(), recover salt), ledger.py / histledger.py (recover salt, open_approvals),
+  extdispatch.py / extoutbox.py (breaker state, drop, cap_n), deployment.py / variant.py (authority_source, resume).
+- Design: lease cache is memory-only (a persisted lease cannot be MAC-checked by the variant and the oracle's lease window ends at a restart); every decision
+  re-fetches; the leased document is adopted with one `authority` mark; the commit mark carries the SERVICE digest. Pre-flight anchor probe before any world
+  write; unconfirmed commit -> UNKNOWN in_doubt; a stored OK replays only when the anchor holds the decision.
+- Tests: tests/paladin/test_pal_g5_{lease,recovery,mutants,more}.py with rig g5_rig.py / g5_adapters.py (REAL AuthorityService, anchor, ExternalWorld; spawned
+  hosts for SIGKILL). The paladin venv resolves `paladin` from the MAIN checkout: always run with PYTHONPATH=<worktree>/round3/src:<worktree>/round3.
+
+## G5 conventional H29 (branch r3-conv, tag r3-g5-conventional)
+- New modules in `src/conventional/`: `g5deps.py` (dependency graph as data, Breaker, Bulkhead, Guard), `g5svc.py` (Service mixin: lease gate,
+  adoption, anchor pre-flight, journal completion, resume mutants, `recovery_view`, `dependency_status`), `g5journal.py` (anchor journal table
+  `conv_journal`, written in the effect transaction). Touched: `service.py` (deploy params, resume branch, pre-gates, leased-digest claims),
+  `authority_ops.py`, `lowreads.py`, `tools.py`, `provenance.py` (`AnchorUnavailable` -> in_doubt, repair of an anchored entry), `extout.py` /
+  `extrecon.py` / `extsvc.py` (breaker hooks, an EXT outage is not an attempt), `store.py` / `histledger.py` (`approvals_open_all`), `variant.py`.
+- Design: the lease lives in memory only; a fresh process trusts no durable copy and fetches before its first governed decision. Breaker cooldown
+  is 0 ticks on purpose (an open breaker would answer UNAVAILABLE for a node the oracle already sees healthy). The pre-flight anchor `head()` keeps
+  the dropped-anchor case an UNAVAILABLE with zero effects; the in-doubt UNKNOWN is only for a root lost after the world commit.
+- Tests: `tests/conventional/test_conv_g5_{lease,deps,recovery,hostkill,progress,mutants}.py` + `conv_g5_util.py` (real AuthorityService, anchor with
+  control plane, ExternalWorld, SIGKILL hosts). Mutants: `spec/protections/H29-conventional.md`.
+- Gaps in the frozen text: listed at the end of `spec/protections/H29-conventional.md` (G1-G4) and in the report.

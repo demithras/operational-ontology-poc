@@ -36,6 +36,12 @@ class Outbox:
         if new:
             self.led.put_meta(IDX, [*self.rids(), rid])
 
+    def drop(self, rid: str) -> None:
+        """Void the record of `rid` (an intent whose world COMMIT never happened). Absent is fine."""
+        if self.led.get_meta(_key(rid)) is not None:
+            self.led.put_meta(_key(rid), None)
+            self.led.put_meta(IDX, [r for r in self.rids() if r != rid])
+
     def update(self, rid: str, index: int, **fields: Any) -> dict:
         effs = self.get(rid) or []
         e = next(x for x in effs if x["index"] == index)

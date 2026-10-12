@@ -34,6 +34,7 @@ class PaladinVariant:
         return ADAPTER_MODULES + (("paladin.extgate_mut",) if "policy_gate_in_adapter" in self.mutants else ())
 
     def deploy(self, domain, world_handle_factory, verifier, ops_spec, auth_spec, clock,
-               state_dir=None, history=None, anchor=None, governance=None, external=None) -> PaladinDeployment:
+               state_dir=None, history=None, anchor=None, governance=None, external=None, authority_source=None,
+               resume=False) -> PaladinDeployment:
         return self.deployment_class(domain, world_handle_factory, verifier, ops_spec, auth_spec, clock, self.mutants,
-                                     state_dir, history, anchor, governance, external)
+                                     state_dir, history, anchor, governance, external, authority_source, resume)

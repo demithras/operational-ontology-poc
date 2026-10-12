@@ -134,3 +134,58 @@ G5-E7 Service connect failure (process gone) stays AnchorError/AuthorityError: e
       ObserverUnavailable stays an outcome-level fault (H28 P1f-6 UNKNOWN), not a request reply.
 G5-E8 The host builds adapters from deploy_spec "adapter_factory" = "module:function" (r3_shared cannot import r3_harness).
 G5-E9 dependency-graph.json carries a top-level "systems" map (per-domain EXT node + OBS) so GEN-NULL = EXT:GEN-NULL with no OBS.
+
+## Errata G5-E10..E15 (orch, 2026-10-12, from the G5 conventional + paladin build reports, before any dev run)
+G5-E10 Bound authority version (R29-1 "authority_used", RECOVERY_VIEW committed[].authority_version, H27 envelope): the
+      digest of the AuthorityService document in force (A(t), PROT-H29 1.5) under which the decision was taken, i.e. the
+      leased digest. World-local delegate/revoke edges do NOT change it (they are world state checked by ops_model at the
+      commit point, not authority versions). Oracle and both variants use this digest.
+G5-E11 Canonical approval fingerprint (RECOVERY_VIEW approvals_open): sha256 hex of canon_json({"subject": requester,
+      "on_behalf_of": on_behalf_of or null, "operation": operation, "inputs": args}) with r3_shared.extadapter.canon_json
+      (G4-E1); one entry per unconsumed approval, de-duplicated, sorted. Oracle and both variants compute exactly this.
+G5-E12 Commit in the world but not anchored (crash at CP2 / ANCHOR reply lost). Before RC2: a redelivery of that request_id
+      may answer UNKNOWN {"reason": "in_doubt"} or UNAVAILABLE {"reason": "dependency_unavailable", "dependency": "ANCHOR"}
+      while ANCHOR is down (both admissible under R29-7). At RC2 (all faults healed, P1g-7): the variant has completed the
+      missing anchor entry (on resume, on the first call after heal, or on redelivery - the variant's choice), the commit's
+      intents are dispatched like any committed intent at dispatch_pending, and redelivery returns the ORIGINAL decision
+      with zero new world rows and zero new external-ledger rows (R29-11). A world row still unanchored at RC2 =
+      unanchored_ack finding (Q11). A commit without request_id is anchored on resume or the first governed call after heal.
+      Answering in_doubt for ever, or never dispatching a committed intent, = recovery_divergence.
+G5-E13 Invalid/unknown token while a dependency of (op, decision) is down: the oracle class follows deps(op, decision) and Phi(t)
+      like any request (BLOCKED_BY_DEPENDENCY), so the admissible reply is UNAVAILABLE {"dependency": <down node in deps>};
+      DENIED would be a misclassification (R29-7). With all deps up, the H23-H28 DENIED/INVALID behaviour is unchanged.
+G5-E14 INVALID while blocked: on the H29 path, an INVALID reply sent while any dependency of (op, decision) is down carries a
+      reason from INPUT_INVALID_REASONS verbatim (P1g-5). spec/gate5/reason-map.json maps each variant's legacy INVALID reason
+      strings (healthy path) to that set; it is built by the equivalence auditor from both variants' code and the H23 oracle
+      reason classes, reviewed, and frozen in FREEZE_G5 before dev1.
+G5-E15 A crash point never returns after SIGKILL (P1g fix2): faultplane._kill blocks the calling thread for ever after the
+      signal, so nothing after the hook can run. Variant tests must NOT tolerate either side of the race (no retry/skip on a
+      lost race): a crash point that is passed is a P1g defect, not a variant behaviour.
+G5-E16 "Original decision" on redelivery (R29-11 behavioural equality; F4-dup "original decision repeated"): the decision-plane
+      status, and for a non-OK status its reason; the reply body is NOT compared (after a lost acknowledgement the caller never
+      received a body, and the body is not part of the decision). Body equality of redeliveries is reported descriptively per
+      variant, never as a class. Applies identically to both variants and to the judge.
+
+## Errata G5-E17..E24 (orch, 2026-10-12, from the G5 harness build report, before any dev run)
+G5-E17 RC1 restricted dependency state (P1g-7) covers AUTH, EXT and OBS outages; there is no ANCHOR read-only control, so
+      the RC1 "no append" rule for ANCHOR is checked by comparing the anchor head before/after RC1, not enforced by a fault.
+G5-E18 After an ENGINE restart a variant MAY use a still-valid lease it can verify, but is not required to; a fresh fetch
+      before the first governed decision is always admissible. The oracle's lease windows end at an ENGINE restart (PROT-H29
+      1.4 "no ENGINE restart in [s, t]").
+G5-E19 The judge applies R29-7 literally. Where a known-negative fake (ORACLE-AND-HARNESS-G5 s10) also produces
+      misclassified_dependency_failure by R29-7's own definition (FakeFailOpenAuth, FakeStaleRestart, FakeAckBeforeAnchor),
+      that class is added to the fake's expected set; s10 "EXACTLY its expected class set" then holds with the extended set.
+G5-E20 The anchor log carries no tick; the "anchor entry tick <= reply tick" check is replaced by ordering: the anchor
+      entry's sequence must precede the variant's reply in the harness transcript (same absolute clock step).
+G5-E21 AUTH governs every governed operation, so its per-node unrelated-operation floor (Q4 (iii)) is "not applicable by
+      graph" and reported as such; ANCHOR, EXT:* and OBS keep the floor.
+G5-E22 spec/gate5/reason-map.json form: {"form": "r3-reason-map-1", "variants": {<variant>: {<raw INVALID reason>:
+      <one of INPUT_INVALID_REASONS>}}}; built by the equivalence auditor from both variants and the H23 oracle reason
+      classes; an unmapped raw reason while blocked = misclassification (G5-E14).
+G5-E23 OBS outage (F5 on OBS) is injected by making the observer's ledger source unavailable to the shared ObservationClient
+      for the window (the real observation path); the observer itself is not attacked (L1 from G4 stays).
+G5-E24 Boundary probes: B1-B4 each >= 50 (author Q6). B2 (anchor permanently unreachable: permanent anchor outage) must be
+      implemented and judged (no OK governed result, replay never VERIFIED). B4: the shared host (r3_shared/host.py) refuses
+      resume over absent durable stores with CanonicalStateLost before the variant runs; this is part of the deployed system
+      of BOTH variants, so B4 is explicit by shared construction and NOT variant-discriminating; SUMMARY must say so.
+      FakeEmptyOnLoss stays a record-level judge test proving boundary_not_explicit is detected.

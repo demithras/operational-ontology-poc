@@ -17,6 +17,7 @@ from types import MappingProxyType
 from typing import Any, Callable
 
 from r3_shared.authspec import validate_strict
+from r3_shared.faultplane import CanonicalStateLost
 from r3_shared.identity import TokenError
 from r3_shared.variant import CallResult
 
@@ -30,6 +31,8 @@ from .models_gen import OPERATION_MODELS
 from .abort import _Abort
 from .authority_ops import AuthorityOps
 from .extsvc import ExternalOps
+from . import g5journal
+from .g5svc import DURABLE_CACHE_MAC, G5Ops, G5State
 from .govsvc import GovernanceOps
 from .lowevents import LowEvents
 from .lowprov import LowProv
@@ -66,10 +69,11 @@ class BoundRequest:
     fingerprint: str
 
 
-class Service(AuthorityOps, GovernanceOps, ExternalOps, LowReads, LowProv, LowEvents):
+class Service(AuthorityOps, GovernanceOps, ExternalOps, G5Ops, LowReads, LowProv, LowEvents):
     def __init__(self, domain: str, factory: Callable, verifier, ops_spec: dict, auth_spec: dict, clock,
                  audience: str = "conventional", mutant_switches: frozenset[str] = frozenset(),
-                 history=None, anchor=None, governance: dict | None = None, external=None):
+                 history=None, anchor=None, governance: dict | None = None, external=None,
+                 authority_source=None, resume: bool = False):
         self.domain, self._factory, self._verifier, self._clock, self.audience = domain, factory, verifier, clock, audience
         self._spec = copy.deepcopy(ops_spec)
         self._ops = {o["name"]: o for o in self._spec["operations"]}
@@ -90,21 +94,36 @@ class Service(AuthorityOps, GovernanceOps, ExternalOps, LowReads, LowProv, LowEv
         doc, version = auth_spec, 1
         self._initial_spec = copy.deepcopy(auth_spec)
         self._authority_unresolved: str | None = None  # E-7: set when the durable authority lineage cannot be trusted
+        self._g5 = G5State(authority_source, domain, clock, self._mutants) if authority_source is not None else None
+        self._resume = resume
+        if self._g5 is not None and self._ext is not None:
+            self._ext.guard = self._g5.guard
         h = factory(WRITER)
         try:
             self._store.init(h)
             if self._ext is not None:
                 extout.init(h)
+            if self._g5 is not None or resume:
+                g5journal.init(h)
             try:
                 got = None
-                if history is not None:  # a fresh deployment over an existing history continues its authority lineage
+                if resume:  # P1g-1: rebuild from the durable stores ONLY; absent -> never start empty (PROT-H29 s9 B4)
+                    got = self._store.authority_get(h)
+                    if got is None:
+                        raise CanonicalStateLost("no durable authority lineage")
+                    version, doc = got
+                    Pdp(doc, version, self._mutants)
+                elif history is not None:  # a fresh deployment over an existing history continues its authority lineage
                     got = self._store.authority_get(h)
                     if got is not None and _base(got[1]) == _base(auth_spec):
                         version, doc = got
                         Pdp(doc, version, self._mutants)  # a document that cannot even be evaluated is unresolved too
-                with h.transaction():
-                    if version == 1 and (history is None or got is None):
-                        self._store.authority_put(h, 1, doc)
+                if not resume:
+                    with h.transaction():
+                        if version == 1 and (history is None or got is None):
+                            self._store.authority_put(h, 1, doc)
+            except CanonicalStateLost:
+                raise
             except _LINEAGE_ERRORS as exc:  # E-7: never raise from deploy because of HistoryStore content
                 self._authority_unresolved = f"{type(exc).__name__}"
                 doc, version = auth_spec, 1
@@ -122,7 +141,11 @@ class Service(AuthorityOps, GovernanceOps, ExternalOps, LowReads, LowProv, LowEv
         self.stream = self._init_stream(domain)
         self.prov = Provenance(history, anchor, self.stream, self._spec, clock, self._mutants) \
             if history is not None and anchor is not None else None
+        if self.prov is not None and self._g5 is not None:
+            self.prov.g5 = True
         self.replayer = Replayer(self)
+        if resume:
+            self._g5_after_resume()
 
     def _init_stream(self, domain: str) -> str | None:
         if self.history is None:
@@ -229,12 +252,16 @@ class Service(AuthorityOps, GovernanceOps, ExternalOps, LowReads, LowProv, LowEv
     # -- the write path ------------------------------------------------------------------------
     def execute(self, token: str, operation: str, args: dict, on_behalf_of: str | None = None,
                 request_id: str | None = None, *, _enforce: bool = True, _kind: str = "direct",
-                _hidden: bool = False) -> CallResult:
+                _hidden: bool = False, _pregated: bool = False) -> CallResult:
         with self._guarded():
             if self.crashed:
                 return CallResult("UNAVAILABLE", {"reason": "crashed"})
             if self._authority_unresolved:  # E-7: the authority a decision depends on cannot be trusted: no effects
                 return CallResult("UNAVAILABLE", {"reason": "history_unresolved"})
+            gate = None if _pregated else self._g5_pregate("execute", operation, operation, args, on_behalf_of, request_id,
+                                                            _kind == "call_tool")
+            if gate is not None:
+                return gate
             dc = DecisionCtx(_kind, request_id if isinstance(request_id, str) and request_id.strip() else None, None,
                              on_behalf_of if isinstance(on_behalf_of, str) else None, operation, args)
             try:
@@ -242,7 +269,7 @@ class Service(AuthorityOps, GovernanceOps, ExternalOps, LowReads, LowProv, LowEv
             except _Abort as a:
                 res = a.result
             except (sqlite3.Error, ConnectionError) as exc:
-                return CallResult("UNAVAILABLE", {"reason": "dependency_unavailable"})
+                return CallResult("UNAVAILABLE", {"reason": "world_busy" if self._g5 is not None else "dependency_unavailable"})
             except LedgerUnresolved:
                 return CallResult("UNAVAILABLE", {"reason": "history_unresolved"})
             if self.mutant("error_detail_leak") and res.status in ("DENIED", "INVALID"):
@@ -294,7 +321,10 @@ class Service(AuthorityOps, GovernanceOps, ExternalOps, LowReads, LowProv, LowEv
                     ins = {}
                 dc.evidence = self.prov.collect(h, dc.op, model.RESOURCES, ins) if dc.op and model else []
             dc.authority_doc = dc.authority_doc or self._policy.doc
-            return self.prov.finalize(h, dc, res)
+            out = self.prov.finalize(h, dc, res)
+            if self._g5 is not None and out is res and res.status == "OK" and g5journal.key_of(dc) is not None:
+                g5journal.mark_done(h, g5journal.key_of(dc))   # anchored: the journal row needs no repair pass (G5-E12)
+            return out
         finally:
             h.close()
 
@@ -374,6 +404,7 @@ class Service(AuthorityOps, GovernanceOps, ExternalOps, LowReads, LowProv, LowEv
         """pre: an already-made authority decision (constitutional execute/act); gate: the PROT-H25 case_required gate."""
         tick = tx.tick if tx is not None else self._clock.now()
         dc.authority_doc, dc.governed = self._policy.doc, True
+        claim = self.auth_claim()
         if self.prov is not None:
             dc.evidence = self.prov.collect(h, op, model.RESOURCES, dict(b.inputs))
         path: tuple = ()
@@ -393,8 +424,7 @@ class Service(AuthorityOps, GovernanceOps, ExternalOps, LowReads, LowProv, LowEv
                 dc.governed, dc.extra["replayed"] = False, True
                 if prior[0] != b.fingerprint:
                     raise _Abort("INVALID", {"reason": "idempotency_key_reuse"})
-                if self.prov is not None and not self.prov.anchored(b.request_id):
-                    raise _Abort("UNAVAILABLE", {"reason": "anchor_unavailable"})
+                self._replay_anchored(h, b.request_id)
                 return CallResult(prior[1]["status"], {**prior[1]["body"], "replayed": True})
         inputs = dict(b.inputs)
         if self.mutant("mutable_gated_input"):  # BUG: commit re-reads the caller's (mutable) args after authorization
@@ -447,7 +477,7 @@ class Service(AuthorityOps, GovernanceOps, ExternalOps, LowReads, LowProv, LowEv
             if ext_planned:  # P1f outbox: intent + per-effect cap are durable in THIS transaction; dispatch is post-commit
                 if b.request_id is None and tx is not None:  # G4-E17: anon-tx<world_seq of THIS commit's mark>
                     dc.world_seq = tx.mark("commit", {"request_id": None, "kind": dc.kind,
-                                                      "authority_version": self._policy.digest})
+                                                      "authority_version": claim})
                 rid = b.request_id or extout.synthetic_request_id(dc.world_seq if dc.world_seq is not None else 0)
                 n += self._ext.enqueue(h, rid, ext_planned, self._clock.now(), approved)  # service clock: a world store may carry none
                 dc.extra["ext_rid"] = rid
@@ -460,19 +490,21 @@ class Service(AuthorityOps, GovernanceOps, ExternalOps, LowReads, LowProv, LowEv
             dc.tx_id, dc.tick = tx.id, tx.tick
             if not (b.request_id is None and dc.extra.get("ext_rid")):  # anon external commit marked early (above)
                 dc.world_seq = tx.mark("commit", {"request_id": b.request_id, "kind": dc.kind,
-                                                  "authority_version": self._policy.digest})
+                                                  "authority_version": claim})
         if b.request_id is not None and not self.mutant("ledger_after_commit_volatile"):
             # request_id=None is accepted but has NO replay protection (documented, PROT-H23-A8 audit item b)
             self._store.idem_put(h, b.request_id, b.fingerprint, {
                 "status": "OK", "body": body,
-                "used": {"authority_version": self._policy.digest, "path": list(path), "on_behalf_of": b.on_behalf_of,
+                "used": {"authority_version": claim, "path": list(path), "on_behalf_of": b.on_behalf_of,
                      "subject": b.subject}})
+        if b.request_id is None or not self.mutant("ledger_after_commit_volatile"):
+            self._g5_journal(h, dc, "OK", body, self._policy.doc)   # G5-E12: also for a commit without request_id
         return CallResult("OK", body)
 
     def _consume_approval(self, h, tx, op: dict, b: BoundRequest, rule: str) -> None:
         aop = (op["approval"] or {}).get("approver_operation")
         extra = self._policy.approval_forbidden(b.subject, b.on_behalf_of)
-        for aid, approver in self._store.approvals_open(h, b.fingerprint):
+        for aid, approver in self._store.approvals_open(h, store.approval_fingerprint(b.subject, b.on_behalf_of, b.operation, b.inputs)):
             if aop and self._policy.can_approve(approver, b.subject, b.on_behalf_of, aop, list(b.resources), extra):
                 self._store.approval_consume(h, aid, tx)
                 return
@@ -486,6 +518,9 @@ class Service(AuthorityOps, GovernanceOps, ExternalOps, LowReads, LowProv, LowEv
                 return CallResult("UNAVAILABLE", {"reason": "crashed"})
             if self._authority_unresolved:
                 return CallResult("UNAVAILABLE", {"reason": "history_unresolved"})
+            gate = self._g5_pregate("approve", "approve", operation, args, on_behalf_of)
+            if gate is not None:
+                return gate
             dc = DecisionCtx("approve", None, None, on_behalf_of if isinstance(on_behalf_of, str) else None, operation, args)
             try:
                 approver = self.authenticate(token)
@@ -516,7 +551,9 @@ class Service(AuthorityOps, GovernanceOps, ExternalOps, LowReads, LowProv, LowEv
                             raise self._crash_now()
                         if self.prov is not None:
                             dc.evidence = self.prov.collect(h, op, model.RESOURCES, inputs)
-                        self._store.approval_add(h, store.fingerprint(requester, on_behalf_of, operation, inputs), approver, tx)
+                        self._store.approval_add(h, store.approval_fingerprint(requester, on_behalf_of, operation, inputs), approver, tx)
+                        dc.tx_id, dc.tick = tx.id, tx.tick
+                        self._g5_journal(h, dc, "OK", {"approved_by": approver}, self._policy.doc)   # G5-E12
                     dc.tx_id, dc.tick = tx.id, tx.tick
                 finally:
                     h.close()

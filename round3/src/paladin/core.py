@@ -76,7 +76,8 @@ def plain(x: Any) -> Any:
 class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
     def __init__(self, domain, factory, verifier, ops_spec, auth_spec, clock, mutants, state_dir=None,
                  hook: Callable[[str], None] = lambda point: None, restart: bool = False, history=None, anchor=None,
-                 stream=None, governance=None, external=None):
+                 stream=None, governance=None, external=None, h29: bool = False):
+        self.h29 = h29   # Gate 5 (authority_source given): lease-backed decisions, in-doubt replies, intent durable before the world COMMIT
         self.domain, self._factory, self._verifier, self.clock, self.mutants = domain, factory, verifier, clock, mutants
         self.hook = hook  # crash-injection point callback (before_commit fires inside the adapters, after_commit in run)
         self.lock = threading.RLock()  # the Engine State, the service connection and the ledger are single-writer
@@ -103,6 +104,8 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
         if external is not None:
             self.ext = ExtPlane(external, self.ledger, ops_spec, mutants)
         self._attempts = self.ledger.get_meta("attempts") or 0
+        if restart and self.ext is not None and "outbox_dropped_on_restart" in mutants:
+            self.ext.drop_undispatched()
         persisted = self.ledger.get_meta("auth_spec") if (restart or history is not None) else None  # the authority in force wins over the deploy-time spec
         self.auth_fault = None  # E-7: set when the authority record in the history is unusable; mutating calls then fail closed
         self.recovered = []
@@ -122,7 +125,12 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
             self.install(auth_spec, persist=False)  # boot the deploy-time base; never overwrite the tampered record
         if not self.ledger.volatile:
             try:
-                self.recovered = self.ledger.recover(self.world_digest())  # resolve a request left in doubt by a crash
+                salt = os.urandom(8) if "nondeterministic_recovery" in mutants else None   # MUTANT: unordered per-process choice of the winning record
+                self.recovered = self.ledger.recover(self.world_digest(), salt)  # resolve a request left in doubt by a crash
+                if self.ext is not None:
+                    for rid_, how in self.recovered:
+                        if how == "aborted":
+                            self.ext.box.drop(rid_)   # an intent made durable before a COMMIT that never happened (H29 ordering) is void
             except Exception as exc:  # noqa: BLE001 - E-7
                 if history is None:
                     raise
@@ -256,9 +264,18 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
             d = self.new_decision(kind, sub, obo, op, clean, rid)
             try:
                 res = self._commit(BYPASS if bypass else who, op, clean, f"{rid}~{attempt}", afp, rid, True, (sub, obo) if edge else None, d, gov)
+                if not d.get("committed"):
+                    self.pend_drop(rid)
                 if res.status == "OK":
                     self.hook("after_commit")  # crash here: world committed, ledger still PREPARED (recovered at restart)
+                acked = res
                 res = self._anchor(d, res, rid)
+                lost = res.status == "UNAVAILABLE" and res.body.get("reason") == "anchor_unavailable" and d.get("committed")
+                if lost and "anchor_skipped_when_unavailable" in self.mutants:
+                    res = acked   # MUTANT: the ack leaves although the root was never anchored
+                elif lost and self.h29:   # the world holds the effect, the anchor did not confirm: commit status in doubt (R29-6)
+                    self.ledger.finalize(rid, fp, sub, obo_id, op, "OK", {"recovered": True})   # redelivery re-checks the anchor entry
+                    return CallResult("UNKNOWN", {"reason": "in_doubt"})
                 if d.get("committed"):  # the world holds the effect: the request id is spent even if the anchor failed
                     self.ledger.finalize(rid, fp, sub, obo_id, op, res.status, plain(res.body))
                 else:
@@ -288,7 +305,11 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
 
     def _replay(self, led, who, bypass, fp, sub, obo, op, clean, rid, edge=False, gov=None) -> CallResult:
         if led["fp"] == fp:  # R5: same request -> never a second effect, decided against the authority in force NOW
-            if led["status"] == "OK" and led["body"] == {"recovered": True} and self.prov is not None:
+            if self.h29:
+                bad = self.unacked(rid, led)   # never an OK without its anchor entry (R27-6): in doubt until the anchor shows it
+                if bad is not None:
+                    return bad
+            elif led["status"] == "OK" and led["body"] == {"recovered": True} and self.prov is not None:
                 return CallResult("UNAVAILABLE", {"reason": "unanchored_after_crash"})  # never an OK without its anchor entry
             if gov is not None and hasattr(gov, "in_force_now"):  # G3-E24 R5 for `act`: the authority in force now INCLUDES the
                 bad = gov.in_force_now()  # emergency grant (active, unexpired, in scope) - never the actor's base grants alone
@@ -346,6 +367,7 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
                             d["reason"] = "case_required"
                             raise _Rollback(CallResult("DENIED", {"gate": "governance", "reason": "case_required"}))
                 d["evidence"] = self.evidence_for(op, args)
+                self.pend_put(d)   # H29: durable before the COMMIT; a rolled-back request leaves a record the recovery sweep discards
                 rec = self.eng.propose(op, args, who, idempotency_key=key)
                 if rec["state"] == "PENDING_APPROVAL":
                     approver = self.ledger.claim_approval(fp, rid, self._approval_check(op, args))  # durable claim: one approval, one commit
@@ -357,15 +379,17 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
                     raise _Rollback(res)  # nothing but an OK commit may touch the world (R7)
                 if gov is not None:
                     gov.after(tx, res)  # the one `governance` mark of this transaction
-                seq = tx.mark("commit", {"request_id": d["rid"], "kind": d["kind"], "authority_version": self.version()})
+                seq = tx.mark("commit", {"request_id": d["rid"], "kind": d["kind"], "authority_version": self.stamp()})
                 d.update(world_seq=seq, tick=tx.tick, rows=tx_rows(th, tx.id))
-            if self.ext is not None and res.status == "OK" and self._plans:   # the intent is durable before any adapter is called
+                if self.h29 and self.ext is not None and res.status == "OK" and self._plans:   # H29: the intent is durable BEFORE the world COMMIT
+                    res = CallResult("OK", {**res.body, "outcomes": self.ext.register(d["rid"] or f"anon-tx{seq}", self.clock.now(), list(self._plans))})
+            if not self.h29 and self.ext is not None and res.status == "OK" and self._plans:   # the intent is durable before any adapter is called
                 res = CallResult("OK", {**res.body, "outcomes": self.ext.register(d["rid"] or f"anon-tx{d['world_seq']}", self.clock.now(), list(self._plans))})   # G4-E17; intent tick = the injected deployment clock (the world store may carry none: tx.tick 0)
             self._plans.clear()
             d["committed"] = True
             if gov is not None:
                 gov.post(tx)
-            self.ledger.put_meta(f"used:{d['rid']}", {"authority_version": self.version(), "world_seq": d["world_seq"],
+            self.ledger.put_meta(f"used:{d['rid']}", {"authority_version": self.stamp(), "world_seq": d["world_seq"],
                                                       "tick": d["tick"], "path": d["path"], "on_behalf_of": d["obo"]})
             if not journaled:
                 self.ledger.consume(rid)  # mutant path is not journaled: consume its claim here
@@ -381,6 +405,8 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
             return CallResult("INVALID", {"gate": "engine", "reason": str(exc) or "invalid request"})
         except Exception as exc:  # noqa: BLE001 - fail closed: the transaction was rolled back
             self.ledger.release_approval(rid)
+            if self.h29 and self.ext is not None and rid:
+                self.ext.box.drop(rid)   # rolled back: no intent without its commit
             return CallResult("UNAVAILABLE", {"reason": f"{type(exc).__name__}: {exc}"})
 
     def _approval_check(self, op: str, args: dict):

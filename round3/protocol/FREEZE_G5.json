@@ -6,7 +6,7 @@
     "spec/gate5/PROTOCOL-P1g.md": "c26d360b2baf2e5014336d947b01a9384680034dc9ffbea674709e6b20010b9e",
     "spec/gate5/ORACLE-AND-HARNESS-G5.md": "310c59734665910e8ba63b65cd138641add0fba15dd261800b650dda95c2d4f9",
     "spec/gate5/EQUIVALENCE-G5.md": "d7593eb5e29ca4cbbf5e925ae4e03c9481fd0e67fb21bb96b8cac77d10dd567d",
-    "spec/gate5/OPEN-QUESTIONS.md": "1f8a1676e8d9bbf62aad7db9e030806c5c462b1618d14a316e73b481bba5c7e1",
+    "spec/gate5/OPEN-QUESTIONS.md": "db2715eb3ae07cd16126cad79168018933ceb5ce2ac74cd75935aec48b387d9a",
     "protocol/AUTHOR_DECISIONS_2026-10-12.md": "57c5ed40e369dcbe3ffffe407cbb4a4ebbacee9576b30c432b9ab777fa446a8d",
     "threat_model/survivability_envelope.json": "b97048a68e26c69f56d4ee10a9e966f698c62cf760846a5bc403ff30f283658d",
     "threat_model/security_invariants.json": "227caa08dfcbbcc9ad9546141a0be6765d8bb8a7680e520aa789afb4d89bd9c2"

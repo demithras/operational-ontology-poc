@@ -8,6 +8,7 @@ import threading
 
 from paladin import evid, replay as _replay
 from paladin.authreplay import Reauth
+from paladin.continuity import ContinuityMixin, approval_fingerprint
 from paladin.core import AUDIENCE, Core, Crash, fingerprint, plain
 from paladin.engine import CapabilityError, InvalidRequest, Principal
 from paladin.prov import HISTORY_LAYOUT, stream_for
@@ -32,15 +33,16 @@ def _schema(op: dict) -> dict:
             "additionalProperties": False}
 
 
-class PaladinDeployment:
+class PaladinDeployment(ContinuityMixin):
     audience = AUDIENCE
     HISTORY_LAYOUT = {**HISTORY_LAYOUT, "authority_version": "auth/"}  # every durable record kind kept in the HistoryStore
 
     def __init__(self, domain, factory, verifier, ops_spec, auth_spec, clock, mutants=frozenset(), state_dir=None,
-                 history=None, anchor=None, governance=None, external=None):
+                 history=None, anchor=None, governance=None, external=None, authority_source=None, resume=False):
         if governance is not None:
             validate_governance(governance, auth_spec, ops_spec)   # a caller error: ValueError, nothing deployed
         self._governance, self._external = governance, external
+        self.h29_setup(authority_source, resume, history, state_dir)   # B4: resume over absent stores raises CanonicalStateLost
         self._args = (domain, factory, verifier, ops_spec, auth_spec, clock, mutants)
         self.history, self.anchor, self.mutants = history, anchor, frozenset(mutants)
         self.stream = stream_for(history, anchor, domain) if history is not None else None
@@ -51,14 +53,15 @@ class PaladinDeployment:
         self._armed = None
         self._crashed = False
         self._auth_version = None
-        self._build(restart=False)
+        self._build(restart=resume)
 
     # ---- crash / restart (PROT-H23-A8) ------------------------------------------------------
     def _build(self, restart: bool) -> None:
         d, f, v, ops, auth, clk, mut = self._args
-        self._c = Core(d, f, v, ops, auth, clk, mut, self._state_dir, self._fire, restart, self.history, self.anchor, self.stream, self._governance, self._external)
+        self._c = Core(d, f, v, ops, auth, clk, mut, self._state_dir, self._fire, restart, self.history, self.anchor, self.stream, self._governance, self._external, self._h29)
         self._surfaces = SurfaceFactory(self._c.booted.ir)
-        self._auth_version = self._c.version()
+        self.h29_build()
+        self._auth_version = self._c.stamp()
 
     def _fire(self, point: str) -> None:
         if getattr(self._tl, "point", None) == point:
@@ -125,7 +128,7 @@ class PaladinDeployment:
         with c.lock:
             c.replace_authority(auth_spec)  # one world transaction with the `authority` mark (PROT-H24 s4)
             self._surfaces = SurfaceFactory(c.booted.ir)
-            self._auth_version = c.version()
+            self._auth_version = c.stamp()
 
     def authority_version(self) -> str:
         """sha256 hex of the canonical JSON of the spec in force (r3_shared protocol)."""
@@ -172,7 +175,7 @@ class PaladinDeployment:
         return public(res, rid, leak)
 
     def call_tool(self, token, name, args, on_behalf_of=None, request_id=None) -> CallResult:
-        return self._mutating(lambda: self._pub(self._call_tool(token, name, args, on_behalf_of, request_id), request_id, name, args))
+        return self._mutating(lambda: self.guarded(token, name, args, lambda: self._pub(self._call_tool(token, name, args, on_behalf_of, request_id), request_id, name, args)))
 
     def _call_tool(self, token, name, args, on_behalf_of, request_id) -> CallResult:
         sub = self._c.subject(token, args)
@@ -210,7 +213,7 @@ class PaladinDeployment:
         return box.get("r") or CallResult("INVALID", {"reason": "request was not issued"})
 
     def direct(self, token, operation, args, on_behalf_of=None, request_id=None) -> CallResult:
-        return self._mutating(lambda: self._pub(self._direct(token, operation, args, on_behalf_of, request_id), request_id, operation, args))
+        return self._mutating(lambda: self.guarded(token, operation, args, lambda: self._pub(self._direct(token, operation, args, on_behalf_of, request_id), request_id, operation, args)))
 
     def _direct(self, token, operation, args, on_behalf_of, request_id) -> CallResult:
         sub = self._c.subject(token, args)
@@ -230,6 +233,10 @@ class PaladinDeployment:
         """One low-channel call: token -> subject -> answer from the subject's low view under the Core lock."""
         if self._crashed:
             return self._DOWN
+        if self._h29:   # P3: a read is decided under a version whose lease is valid, else UNAVAILABLE dependency_unavailable AUTH
+            node = self._probe(self._deps.surface("read"))
+            if node is not None:
+                return self._blocked(node, token, None, None)
         c = self._c
         sub = c.subject(token)
         if sub is None or sub not in c.booted.principals:
@@ -283,7 +290,7 @@ class PaladinDeployment:
 
     def approve(self, token, operation, args, requester, on_behalf_of=None) -> CallResult:
         # recording an approval commits nothing to the world: it never reaches a crash point and leaves an armed crash pending
-        return self._mutating(lambda: self._pub(self._approve(token, operation, args, requester, on_behalf_of), None, operation, args), arms=False)
+        return self._mutating(lambda: self.guarded(token, "approve", args, lambda: self._pub(self._approve(token, operation, args, requester, on_behalf_of), None, operation, args)), arms=False)
 
     def _approve(self, token, operation, args, requester, on_behalf_of=None) -> CallResult:
         """Pre-approve the EXACT request (requester, delegator, operation, args). The Engine approval gate still decides
@@ -313,15 +320,16 @@ class PaladinDeployment:
                 return c.finish(d, CallResult("DENIED", {"gate": "approval", "reason": "approver holds no approval capability for this request"}))
             res = c.finish(d, CallResult("OK", {"approval": "recorded"}))  # the approval is itself an anchored decision
             if res.status == "OK":
-                c.ledger.add_approval(fingerprint(requester, on_behalf_of, operation, clean), sub, d["rid"])
+                c.ledger.add_approval(fingerprint(requester, on_behalf_of, operation, clean), sub, d["rid"],
+                                      approval_fingerprint(requester, on_behalf_of, operation, clean))
             return res
 
     # ---- Gate 2: delegation, revocation, historical authority (PROT-H24) ---------------------------------------------
     def delegate(self, token: str, edge: dict, request_id: str) -> CallResult:
-        return self._mutating(lambda: self._pub(self._authority_call("delegate", token, edge, request_id), request_id))
+        return self._mutating(lambda: self.guarded(token, "delegate", None, lambda: self._pub(self._authority_call("delegate", token, edge, request_id), request_id)))
 
     def revoke(self, token: str, edge_id: str, request_id: str) -> CallResult:
-        return self._mutating(lambda: self._pub(self._authority_call("revoke", token, {"edge_id": edge_id}, request_id), request_id))
+        return self._mutating(lambda: self.guarded(token, "revoke", None, lambda: self._pub(self._authority_call("revoke", token, {"edge_id": edge_id}, request_id), request_id)))
 
     def _authority_call(self, kind: str, token: str, payload, rid) -> CallResult:
         c = self._c
@@ -333,7 +341,7 @@ class PaladinDeployment:
         except (TypeError, ValueError):
             return CallResult("INVALID", {"reason": "schema"})
         res = c.mutate_authority(kind, sub, payload, rid)
-        self._auth_version = c.version()
+        self._auth_version = c.stamp()
         return res
 
     def authority_used(self, request_id: str) -> CallResult:
@@ -381,6 +389,7 @@ class PaladinDeployment:
         if c.ext is None:
             return CallResult("OK", {"submitted": 0})
         with c.lock:
+            self.complete_anchors()   # G5-E12: a commit whose anchor entry was lost is anchored first, so its intents become dispatchable
             return CallResult("OK", {"submitted": c.ext.dispatch(self._envelope_of)})
 
     def reconcile(self, request_id: str, watermark: int) -> CallResult:
@@ -389,6 +398,7 @@ class PaladinDeployment:
     def _reconcile(self, request_id, watermark) -> CallResult:
         c = self._c
         with c.lock:
+            self.complete_anchors()
             outs = c.ext.reconcile(request_id, watermark) if c.ext is not None and isinstance(request_id, str) else None
         return CallResult("OK", {"outcomes": outs}) if outs else CallResult("INVALID", {"reason": "unknown_request"})
 

@@ -30,11 +30,14 @@ class LowReads:
         with self._lock:
             if self.crashed:
                 return CallResult("UNAVAILABLE", {"reason": "crashed"})
+            gate = None if self._g5_gated() else self._g5_pregate("read", None)   # read(): gated once by read() itself
+            if gate is not None:
+                return gate
             h = self._factory("conventional-service")
             try:
                 return fn(*self._view(h, token), h)
             except sqlite3.Error:
-                return CallResult("UNAVAILABLE", {"reason": "dependency_unavailable"})
+                return CallResult("UNAVAILABLE", {"reason": "world_busy" if self._g5 is not None else "dependency_unavailable"})
             finally:
                 h.close()
 
@@ -89,6 +92,18 @@ class LowReads:
 
     def read(self, token: str, operation: str, args: dict) -> CallResult:
         """H23 read(), redefined onto the P1e-5 forms (ruling Q12)."""
+        with self._lock:
+            if not self.crashed:
+                gate = self._g5_pregate("read", None)   # the read decision needs AUTH before anything is disclosed (R29-3)
+                if gate is not None:
+                    return gate
+            self._g5_mark_gated(True)
+            try:
+                return self._read(token, operation, args)
+            finally:
+                self._g5_mark_gated(False)
+
+    def _read(self, token: str, operation: str, args: dict) -> CallResult:
         if self.authenticate(token) is None and not self.crashed:
             return CallResult("DENIED", {"reason": "invalid_token"})
         if operation in ("get", "list"):

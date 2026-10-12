@@ -102,6 +102,9 @@ class AuthorityOps:
                 return CallResult("UNAVAILABLE", {"reason": "crashed"})
             if self._authority_unresolved:  # E-7
                 return CallResult("UNAVAILABLE", {"reason": "history_unresolved"})
+            gate = self._g5_pregate(kind, kind, None, args["edge"] if kind == "delegate" else args["edge_id"], None, request_id)
+            if gate is not None:
+                return gate
             sub = self.authenticate(token)
             if sub is None:
                 return CallResult("DENIED", {"reason": "token"})
@@ -124,7 +127,7 @@ class AuthorityOps:
                 except _NoOp as n:  # the open transaction rolled back: world_log and tx counter are untouched
                     res = CallResult("OK", n.body)
                 except (sqlite3.Error, ConnectionError, LedgerUnresolved):
-                    return CallResult("UNAVAILABLE", {"reason": "dependency_unavailable"})
+                    return CallResult("UNAVAILABLE", {"reason": "world_busy" if self._g5 is not None else "dependency_unavailable"})
                 if res.status == "OK" and not res.body.get("replayed") and not res.body.get("already") \
                         and self._armed == "after_commit":
                     raise_ = self._crash_now()
@@ -147,8 +150,7 @@ class AuthorityOps:
             if prior is not None:
                 if prior[0] != fp:
                     raise _Abort("INVALID", {"reason": "idempotency_key_reuse"})
-                if self.prov is not None and not self.prov.anchored(rid):
-                    raise _Abort("UNAVAILABLE", {"reason": "anchor_unavailable"})
+                self._replay_anchored(h, rid)
                 return CallResult(prior[1]["status"], {**prior[1]["body"], "replayed": True})
             refusal, new_doc, body, mark = plan(sub, args, authdoc.upgraded(self._policy.doc), tx.tick)  # E-3: v1 == empty v2
             if refusal is not None:
@@ -162,6 +164,7 @@ class AuthorityOps:
                 return CallResult("OK", body)
             version = self._apply_mutation(h, tx, rid, kind, new_doc, body, mark, sub, fp)
             dc.tx_id, dc.tick, dc.world_seq, dc.path = tx.id, tx.tick, version, ()
+            self._g5_journal(h, dc, "OK", body, new_doc)
         self._swap_policy(new_doc)
         return CallResult("OK", body)
 
@@ -170,9 +173,9 @@ class AuthorityOps:
         digest = authority_digest(new_doc)
         self._store.authority_put(h, self._policy.version + 1, new_doc)
         tx.mark("authority", {**mark, "version": digest})
-        seq = tx.mark("commit", {"request_id": rid, "kind": kind, "authority_version": digest})
+        seq = tx.mark("commit", {"request_id": rid, "kind": kind, "authority_version": self.auth_claim() if self._g5 else digest})
         self._store.idem_put(h, rid, fp, {"status": "OK", "body": body,
-                                          "used": {"authority_version": digest, "path": [], "on_behalf_of": None,
+                                          "used": {"authority_version": self.auth_claim() if self._g5 else digest, "path": [], "on_behalf_of": None,
                                                    "subject": sub}})
         return seq
 

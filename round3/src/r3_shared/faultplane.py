@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import signal
+import time
 from pathlib import Path
 
 import jsonschema
@@ -36,7 +37,13 @@ _ARMED: tuple[str, str] | None = None
 
 
 def _kill() -> None:  # replaced by in-process tests only
+    """SIGKILL this process and NEVER return. kill() to our own pid is delivered asynchronously to whichever thread the kernel
+    picks, so returning would let the calling thread run on (e.g. into COMMIT) before the signal lands. The crash points sit
+    on the thread that performs the guarded operation (the CP1/CP2 hooks run inside WorldHandle.transaction on the dispatching
+    thread, which alone issues COMMIT), so parking this thread for ever means no thread can complete the in-flight operation."""
     os.kill(os.getpid(), signal.SIGKILL)
+    while True:  # SIGKILL cannot be caught or ignored: this loop only runs until the kernel finishes delivering it
+        time.sleep(3600)
 
 
 _CONTEXT_KEY = ""
