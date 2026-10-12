@@ -13,10 +13,10 @@ import sys
 import threading
 
 from r3_shared.extadapter import canon_json
-from r3_shared.extworld_core import ExternalWorldCore
+from r3_shared.extworld_core import ExternalWorldCore, Unavailable
 
 DATA_OPS = ("write", "ping")
-CONTROL_OPS = ("issue_root", "advance", "observer_key", "seed", "tick", "close", "ping")
+CONTROL_OPS = ("issue_root", "advance", "observer_key", "seed", "tick", "close", "ping", "fault", "clear_faults", "fault_log")
 
 
 class Handler(socketserver.StreamRequestHandler):
@@ -43,10 +43,19 @@ class Handler(socketserver.StreamRequestHandler):
                 out = {}
             elif op == "tick":
                 out = {"tick": core.tick}
+            elif op == "fault":
+                out = {"n": core.fault(r["cmd"])}
+            elif op == "clear_faults":
+                core.clear_faults()
+                out = {}
+            elif op == "fault_log":
+                out = {"log": core.fault_log()}
             else:  # close
                 out = core.close()
                 stop_after_reply = True
             resp = {"ok": True, **out}
+        except Unavailable as exc:  # G5 outage/partition: the client raises ExternalUnavailable
+            resp = {"ok": False, "error": "unavailable", "unavailable": str(exc)}
         except Exception as exc:  # protocol-level refusal; never crash the service
             resp = {"ok": False, "error": str(exc)}
         self.wfile.write(canon_json(resp).encode() + b"\n")

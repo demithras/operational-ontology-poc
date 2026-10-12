@@ -39,6 +39,19 @@ def _kill() -> None:  # replaced by in-process tests only
     os.kill(os.getpid(), signal.SIGKILL)
 
 
+_CONTEXT_KEY = ""
+
+
+def set_context_key(key: str) -> None:
+    """Host-only: the request_id of the call being dispatched (CP7 key). Cleared by passing ""."""
+    global _CONTEXT_KEY
+    _CONTEXT_KEY = key
+
+
+def context_key() -> str:
+    return _CONTEXT_KEY
+
+
 def arm(point: str, key: str) -> None:
     """Host-only: arm exactly one (point, key); replaces any earlier arming."""
     global _ARMED

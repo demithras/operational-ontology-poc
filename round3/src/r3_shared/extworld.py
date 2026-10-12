@@ -12,10 +12,20 @@ from pathlib import Path
 
 from .extadapter import canon_json, validate_receipt
 from .extcap import CapError  # noqa: F401  (re-export for callers)
+from .faultplane import DependencyUnavailable
 
 
 class ExternalError(Exception):
     """ExternalWorld refused a control/protocol request, is unreachable, or the launcher guard refused."""
+
+
+class ExternalUnavailable(ExternalError, DependencyUnavailable):
+    """G5: the system is inside a server-side outage/partition window (str(e) == "EXT:<system>"). drop: nothing applied;
+    reply_lost: the write was applied, the reply was dropped."""
+
+    def __init__(self, system: str):
+        DependencyUnavailable.__init__(self, f"EXT:{system}")
+        self.system = system
 
 
 @dataclass(frozen=True)
@@ -41,6 +51,8 @@ def _call(path: str, req: dict, timeout: float = 15.0) -> dict:
     except (OSError, ValueError) as exc:
         raise ExternalError(f"external world unreachable: {exc}") from exc
     if not resp.get("ok"):
+        if resp.get("unavailable") is not None:
+            raise ExternalUnavailable(resp["unavailable"])
         raise ExternalError(resp.get("error", "external world error"))
     return resp
 
@@ -78,6 +90,22 @@ class ExternalClient:
 
     def tick(self) -> int:
         return self._control({"op": "tick"})["tick"]
+
+    def fault(self, cmd: dict) -> None:
+        """Harness only (G5): arm an outage/partition window (faultplane.validate_fault_command form)."""
+        self._control({"op": "fault", "cmd": cmd})
+
+    def outage(self, system: str, deployment: str, from_tick: int, to_tick: int) -> None:
+        self.fault({"op": "outage", "deployment": deployment, "target": system, "from_tick": from_tick, "to_tick": to_tick, "mode": "drop"})
+
+    def partition(self, system: str, deployment: str, from_tick: int, to_tick: int, mode: str = "reply_lost") -> None:
+        self.fault({"op": "partition", "deployment": deployment, "target": system, "from_tick": from_tick, "to_tick": to_tick, "mode": mode})
+
+    def clear_faults(self) -> None:
+        self._control({"op": "clear_faults"})
+
+    def fault_log(self) -> list:
+        return self._control({"op": "fault_log"})["log"]
 
     def close(self) -> dict:
         r = self._control({"op": "close"})
