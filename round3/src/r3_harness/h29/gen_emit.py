@@ -24,6 +24,7 @@ def request(plan, pick, tag=None, surface="direct", rid=None, attacker=False, pr
         st["attacker"] = True
     if pick.get("invalid"):
         st["invalid_probe"] = True
+        st["probe_shape"] = pick.get("shape")
     if step_extra:
         st.update(step_extra)
     plan.add(st)
@@ -35,6 +36,23 @@ def request(plan, pick, tag=None, surface="direct", rid=None, attacker=False, pr
         if ints:
             plan.intents[rid] = (plan.t, ints)
     return rid, cls
+
+
+def probe_chooser(plan, what: str):
+    """Seeded chooser for the probe layer only (derived from the sequence's own state), so that adding probes never moves the draws of
+    the rest of the sequence: the non-probe corpus stays byte-identical to the pre-E28 corpus."""
+    import random
+    from r3_harness.h23.chooser import RandChooser
+    return RandChooser(random.Random(f"probe:{what}:{plan.domain}:{plan.t}:{len(plan.steps)}:{plan.n_req}"))
+
+
+def probe(plan, ch, shape=None, tag="probe"):
+    """G5-E28 (a): one input-invalid probe (healthy phase or inside a fault window). `ch` is accepted for call-site symmetry and NOT used. -> rid or None."""
+    p = gen_draw.probe(plan, probe_chooser(plan, "draw"), shape)
+    if p is None:
+        return None
+    plan.stats["probes"] = plan.stats.get("probes", 0) + 1
+    return request(plan, p, tag=tag, surface=p["surface"], predict=False)[0]
 
 
 def approve_flow(plan, ch, surface="direct", system=None):
@@ -69,6 +87,8 @@ def fill(plan, ch, n: int, want="ok", gap=1, system=None, tag=None):
         p = gen_draw.draw(plan, ch, want, system=system)
         if p is not None:
             rids.append(request(plan, p, tag=tag, surface=ch.choice(["direct", "call_tool"]))[0])
+            if probe_chooser(plan, "fill").chance(0.3):
+                probe(plan, ch)
     return rids
 
 

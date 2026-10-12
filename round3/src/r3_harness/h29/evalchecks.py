@@ -88,7 +88,8 @@ def oracle_isolation(src_dir: Path | None = None, roots=ORACLE_ROOTS) -> tuple[b
 
 # ---- floors (official) and the stamped dev scaling ---------------------------------------------------------------------
 FLOORS = {"min_env": 5000, "min_ctrl": 600, "min_bnd_each": 50, "min_class_seqs": 450, "min_cp_seqs": 60, "min_during_fault": 300, "min_node": 300,
-          "min_post": 300, "min_blocked": 100, "min_safe_during": 300, "min_fault_share_pct": 50}
+          "min_post": 300, "min_blocked": 100, "min_safe_during": 300, "min_fault_share_pct": 50,
+          "min_probe_window": 50}                                                # G5-E28 (a): probes inside AUTH/ANCHOR fault windows
 SIZES = {"env": 5600, "ctrl": 600, "bnd": 200}
 FACTOR = 0.5
 
@@ -99,6 +100,6 @@ def overrides_for(n_env: int, n_ctrl: int, n_bnd: int) -> dict:
         return {}
     s = n_env / SIZES["env"]
     sc = lambda v: max(1, int(v * s * FACTOR))  # noqa: E731
-    ov = {k: sc(FLOORS[k]) for k in ("min_class_seqs", "min_cp_seqs", "min_during_fault", "min_node", "min_post", "min_blocked", "min_safe_during")}
+    ov = {k: sc(FLOORS[k]) for k in ("min_class_seqs", "min_cp_seqs", "min_during_fault", "min_node", "min_post", "min_blocked", "min_safe_during", "min_probe_window")}
     ov.update(min_env=n_env, min_ctrl=n_ctrl, min_bnd_each=max(1, n_bnd // 8))
     return ov

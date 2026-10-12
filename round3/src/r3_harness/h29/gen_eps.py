@@ -107,6 +107,7 @@ def f2_auth(plan, ch, mode: str, var: int, cls: str = "F2", tail: bool = True) -
         e = gen_draw.draw(plan, ch, "ok")
         if e is not None:
             E.request(plan, e, tag="lease" if off + s0 + 1 <= s0 + LEASE - 1 else "past_lease")
+        E.probe(plan, ch)                                  # G5-E28 (a): an input-invalid probe inside the AUTH window
     if plan.t < plan.windows[-1]["to_tick"]:
         plan.heal(plan.windows[-1]["fid"])                 # fault_heal: the driver advances to the end of the window
     if tail:
@@ -130,6 +131,7 @@ def f3_ext(plan, ch, byz: bool, var: int) -> None:
             p2 = gen_draw.draw(plan, ch, "ok_ext", system=sysx)
             if p2 is not None:
                 E.request(plan, p2)
+                E.probe(plan, ch)                          # G5-E28 (a): inside the EXT window
                 E.dispatch(plan)
                 plan.advance(1)
         E.fill(plan, ch, 3)
@@ -193,6 +195,7 @@ def f5_partition(plan, ch, var: int, nodes=None) -> None:
             e = gen_draw.draw(plan, ch, "ok")
             if e is not None:
                 E.request(plan, e, tag="partition")
+            E.probe(plan, ch)                              # G5-E28 (a): inside the F5 windows (ANCHOR / OBS / EXT)
         if "ANCHOR" in nodes:
             E.read(plan, gen_draw.any_read(plan, ch), tag="unrelated")
         p = gen_draw.draw(plan, ch, "ok_ext", system=sx)

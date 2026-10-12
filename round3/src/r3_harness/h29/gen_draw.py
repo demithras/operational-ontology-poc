@@ -41,8 +41,7 @@ def draw(plan, ch, want: str, op: str | None = None, system: str | None = None, 
         sub = who if who else ch.choice(principals(plan))
         args = _args(spec, plan.rep.snap, ch)
         if want == "invalid":
-            args = {k: v for k, v in args.items() if k != spec["inputs"][0]["name"]} if spec["inputs"] else {"zz": 1}
-            return {"principal": sub, "operation": name, "args": args, "dec": None, "akey": "", "approver": None}
+            return probe(plan, ch, who=who, op=name)
         dec, akey = plan.rep.decide(auth, sub, None, name, args, plan.t, None)
         if want in ("ok", "ok_ext", "ok_local") and dec.kind == "OK" and dec.outcome.effects and not dec.outcome.used_approval:
             if want == "ok_ext" and not has_external(dec) or want == "ok_local" and has_external(dec):
@@ -105,3 +104,41 @@ def stale_ok(plan, pair, k: int):
     a, _ = plan.rep.decide(plan.fam[0], pair["principal"], None, pair["operation"], pair["args"], plan.t, None)
     b, _ = plan.rep.decide(plan.fam[k], pair["principal"], None, pair["operation"], pair["args"], plan.t, None)
     return pair if a.kind == "OK" and a.outcome.effects and not a.outcome.used_approval and b.kind != "OK" else None
+
+
+def probe(plan, ch, shape: str | None = None, who=None, op: str | None = None):
+    """G5-E28 (a): an input-invalid request of one of the five frozen shapes (rules.PROBE_SHAPES), seeded. Shapes 1-3 are checked against the
+    strict schema (ops_model.schema_valid_args); the pick carries invalid=True so that the emitter marks the step (invalid_probe) and the model
+    does not count it as a lease renewal. -> pick dict (surface included) or None."""
+    from .rules import PROBE_SHAPES, PROBE_UNKNOWN_OP, PROBE_UNKNOWN_TOOL
+    shape = shape or ch.choice(list(PROBE_SHAPES))
+    sub = who if who else ch.choice(principals(plan))
+    base = {"principal": sub, "dec": None, "akey": "", "approver": None, "invalid": True, "shape": shape, "surface": "direct"}
+    names = [o["name"] for o in plan.ops["operations"]]
+    if shape in ("unknown_operation", "unknown_tool"):
+        return {**base, "operation": PROBE_UNKNOWN_OP if shape == "unknown_operation" else PROBE_UNKNOWN_TOOL, "args": {},
+                "surface": "direct" if shape == "unknown_operation" else "call_tool"}
+    for _ in range(MAX_TRIES):
+        name = op or ch.choice(names)
+        spec = ops_model.op_of(plan.ops, name)
+        if spec is None:
+            continue
+        args = _args(spec, plan.rep.snap, ch)
+        if shape == "missing_input":
+            req = [i["name"] for i in spec["inputs"] if i["required"]]
+            if not req:
+                op = None
+                continue
+            args = {k: v for k, v in args.items() if k != ch.choice(req)}
+        elif shape == "unknown_key":
+            args = {**args, "zz_unknown_key": 1}
+        else:   # wrong_type: a supplied input replaced by a value of no declared type
+            if not spec["inputs"]:
+                op = None
+                continue
+            args = {**args, ch.choice([i["name"] for i in spec["inputs"]]): {"zz": [1]}}
+        if not ops_model.schema_valid_args(spec, args):
+            return {**base, "operation": name, "args": args}
+        op = None
+    plan.stats["redraw"] = plan.stats.get("redraw", 0) + 1
+    return None

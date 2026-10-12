@@ -6,6 +6,8 @@ from collections import defaultdict
 from r3_oracle import continuity as C
 from r3_oracle import recoverymodel as RM
 
+from r3_shared.recovery import INPUT_INVALID_REASONS
+
 from . import judge_ext as JE, judge_rec as JR, specs
 
 
@@ -57,10 +59,11 @@ def _finish(R, row, ctx, ev, phi, versions, rep, state, systems, cw, base, dep, 
         row["classes"].setdefault(c, []).extend(dd)
     row["restricted_io"] = list(rec["restricted_io"])
     for e in ev:
-        if e["k"] == "rc1":
-            n = [r for r in R["auth"]["refused"] if r["deployment"] == dep and r["tick"] == e["resume"]]
-            if n:
-                row["restricted_io"].append({"resume": e["resume"], "what": "AuthorityService fetch refused during the restricted phase", "n": len(n)})
+        if e["k"] == "rc1" and e.get("auth_refused_restricted"):      # G5-E25: bounded by transcript order (service sequence), not by tick
+            row["restricted_io"].append({"resume": e["resume"], "what": "AuthorityService fetch refused during the restricted phase",
+                                         "n": e["auth_refused_restricted"]})
+    for item in row["restricted_io"]:                                  # G5-E25 / R29-10: every restricted_io item is a recovery_divergence
+        row["classes"].setdefault("recovery_divergence", []).append({**item, "what": "restricted_io", "detail": item["what"]})
     w = R.get("world")
     if w is not None:
         act = {"objects": {k: {"props": v} for k, v in w["objects"].items()}, "links": w["links"]}
@@ -115,9 +118,9 @@ def _boundary(R, ctx, row):
     from .judge import build_phi, versions_of
     versions, phi = versions_of(R, ctx), build_phi(R)
     graph = ctx.graph
-    sends = [{"kind": "request" if e["k"] in ("request", "redeliver") else e["k"], "op": e.get("operation"), "t": e["t"], "invalid_probe": False}
+    sends = [{"kind": "request" if e["k"] in ("request", "redeliver") else e["k"], "op": e.get("operation"), "t": e["t"], "invalid_probe": bool(e.get("invalid_probe"))}      # G5-E28 (a): same source as judge.py
              for e in ev if e["k"] in ("request", "redeliver", "read", "approve") and e.get("err") != "no_host"]
-    renew = C.lease_sends(sends, phi, graph, dom)
+    renew = C.renew_pair(sends, phi, graph, dom)
     if b in ("B1", "B2"):
         for e in (x for x in ev if x["k"] in ("request", "read") and x.get("err") != "no_host"):
             cls = C.classify({"kind": "request" if e["k"] == "request" else "read", "op": e.get("operation"), "t": e["t"], "rid": e.get("rid")}, phi, graph, dom, renew, versions)
@@ -127,6 +130,13 @@ def _boundary(R, ctx, row):
             body = res.get("body") or {}
             node = "AUTH" if b == "B1" else "ANCHOR"
             ok_reply = res.get("status") == "UNAVAILABLE" and body.get("reason") == "dependency_unavailable" and body.get("dependency") in cls.down
+            probe_ok = bool(e.get("invalid_probe") and res.get("status") == "INVALID"
+                            and ctx.reason_map.get(body.get("reason"), body.get("reason")) in INPUT_INVALID_REASONS)   # G5-E28 (b): any member
+            ok_reply = ok_reply or probe_ok
+            if e.get("invalid_probe"):
+                row["boundary"].setdefault("probes", []).append({"shape": e.get("probe_shape"), "status": res.get("status") or e.get("err"),
+                                                                 "reason": body.get("reason"), "ok": bool(ok_reply), "node": node,
+                                                                 "t": e["t"]})
             ok_reply = ok_reply or (b == "B2" and res.get("status") == "UNKNOWN" and body.get("reason") == "in_doubt") or e.get("err") == "no_reply"
             if not ok_reply:
                 v.append({"t": e["t"], "status": res.get("status") or e.get("err"), "body": body, "node": node})

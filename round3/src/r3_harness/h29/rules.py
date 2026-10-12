@@ -25,9 +25,12 @@ FIELDS = {
     "dispatch": (),
     "reconcile": ("rid", "watermark"),
 }
-OPTIONAL = {"request": ("tag", "invalid_probe", "attacker"), "read": ("tag",), "fault_start": ("k",), "reconcile": ("lag",),
+OPTIONAL = {"request": ("tag", "invalid_probe", "attacker", "probe_shape"), "read": ("tag",), "fault_start": ("k",), "reconcile": ("lag",),
             "approve": (), "redeliver": ()}
 SURFACES = ("call_tool", "direct")
+# G5-E28 (a): input-invalid probe shapes (one per probe, seeded). They are `request` steps with invalid_probe=true + probe_shape=<shape>.
+PROBE_SHAPES = ("missing_input", "unknown_key", "wrong_type", "unknown_operation", "unknown_tool")
+PROBE_UNKNOWN_OP, PROBE_UNKNOWN_TOOL = "zz_no_such_operation", "zz_no_such_tool"
 FAULT_MODES = ("drop", "reply_lost")
 TAMPER_KINDS = ("forge_approval", "delete_idempotency", "rewrite_meta")
 BOUNDARY_TAMPER = ("delete_store",)       # B4 only (PROT-H29 s9): world store + HistoryStore deleted

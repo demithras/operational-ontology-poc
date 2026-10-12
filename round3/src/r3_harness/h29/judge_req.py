@@ -10,6 +10,11 @@ from r3_shared.recovery import DEPENDENCY_REASONS, RecoveryFormError, validate_r
 REQ_KINDS = ("request", "redeliver")
 
 
+def envelope_invalid(rid, obo) -> bool:
+    """P1g-5 envelope checks (G5-E28 b): request_id must be a non-blank string, on_behalf_of None or a string."""
+    return not (isinstance(rid, str) and rid.strip()) or not (obo is None or isinstance(obo, str))
+
+
 def _form_bad(status, body):
     if status in ("UNAVAILABLE", "UNKNOWN", "DENIED") and isinstance(body, dict):
         reason = body.get("reason")
@@ -51,11 +56,12 @@ def _request(R, row, e, ctx, phi, versions, renew, crashed, rep, state, process_
     m = process_marks(e)
     committed = was or m is not None
     spec = ops_model.op_of(ops, op)
-    input_invalid = spec is None or not ops_model.validate_args(spec, args)[0]
+    input_invalid = envelope_invalid(rid, e.get("obo")) or spec is None or not ops_model.schema_valid_args(spec, args)    # G5-E28 (b)
     rec = {"n": e["n"], "t": t, "rid": rid, "k": e["k"], "op": op, "cls": cls.kind, "down": cls.down, "strict": cls.strict, "status": status or err,
            "reason": body.get("reason") if isinstance(body, dict) else None, "dep": body.get("dependency") if isinstance(body, dict) else None,
            "oracle": dec.kind, "committed": committed, "eligible": False, "progressed": False, "spurious": None, "fclasses": active(cw, t),
-           "phi": sorted(phi.down(t))}
+           "phi": sorted(phi.down(t)),
+           "probe": bool(e.get("invalid_probe")), "probe_shape": e.get("probe_shape"), "input_invalid": input_invalid, "lease_gap": cls.gap}
     if e.get("tag") == "stale":                     # F6: truly stale-sensitive = OK under version 0, not OK under the version in force
         old, _ = rep.decide(versions[0]["doc"], e["principal"], None, op, args, base + t, None)
         rec["stale_sensitive"] = old.kind == "OK" and dec.kind != "OK"
@@ -81,7 +87,7 @@ def _request(R, row, e, ctx, phi, versions, renew, crashed, rep, state, process_
         if not ok:
             _mis(row, status, {"rid": rid, "t": t, "down": cls.down, "why": why})
     elif status is not None and cls.kind == C.SAFE:
-        if status == "UNAVAILABLE" and isinstance(body, dict) and body.get("reason") == "dependency_unavailable":
+        if status == "UNAVAILABLE" and isinstance(body, dict) and body.get("reason") == "dependency_unavailable" and not cls.gap:
             rec["spurious"] = body.get("dependency")
     if (cls.kind == C.SAFE and cls.strict and dec.kind == "OK" and dec.outcome is not None and dec.outcome.effects and not was
             and e["k"] == "request" and rid not in crashed and not e.get("attacker") and e.get("tag") not in ("redeliver", "rc2_redeliver")):

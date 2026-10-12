@@ -25,6 +25,22 @@ def aggregate(rows: list) -> dict:
             "per_node": defaultdict(lambda: [0, 0]), "during_fault": [0, 0], "spurious": Counter(), "outcome": [0, 0], "ctrl": [0, 0]}
     mis = {"total": 0, "by_kind": Counter(), "ids": []}
     rec = {"checks": 0, "passes": 0, "events": 0, "restricted_io": 0}
+    probes = {"total": 0, "per_shape": Counter(), "in_auth_anchor_window": 0, "per_shape_in_window": Counter(), "lease_gap": 0}
+    for r in env:                                                                       # G5-E28 (a)/(c): counted on every judged env/ctrl row
+        for q in r["req"]:
+            if q.get("probe"):
+                probes["total"] += 1
+                probes["per_shape"][q.get("probe_shape")] += 1
+                if set(q.get("phi") or ()) & {"AUTH", "ANCHOR"}:
+                    probes["in_auth_anchor_window"] += 1
+                    probes["per_shape_in_window"][q.get("probe_shape")] += 1
+            probes["lease_gap"] += bool(q.get("lease_gap"))
+    for r in bnd:                                                                       # B1/B2 probe matrix (every shape, dependency down)
+        for q in (r["boundary"] or {}).get("probes", []):
+            probes["total"] += 1
+            probes["per_shape"][q["shape"]] += 1
+            probes["in_auth_anchor_window"] += 1
+            probes["per_shape_in_window"][q["shape"]] += 1
     for r in clean:
         rc2 = [x["t_probe"] for x in ((r["recovery"] or {}).get("rc2") or [])]
         for q in r["req"]:
@@ -87,4 +103,5 @@ def aggregate(rows: list) -> dict:
             "misclassification": {**mis, "by_kind": dict(mis["by_kind"])}, "recovery": rec, "sequences_with_class": dict(seq_class),
             "crash_points": dict(cps), "harness": dict(harness), "boundary": dict(bnd_res), "injection": dict(inj),
             "stale_sensitive_sequences": sum(1 for r in env if r["stale_sensitive"] > 0 and "F6" in r["planned_classes"]),
-            "f6_sequences": sum(1 for r in env if "F6" in r["planned_classes"])}
+            "f6_sequences": sum(1 for r in env if "F6" in r["planned_classes"]),
+            "probes": {**probes, "per_shape": dict(probes["per_shape"]), "per_shape_in_window": dict(probes["per_shape_in_window"])}}

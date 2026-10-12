@@ -142,6 +142,13 @@ def build_ctrl(idx: int, seed: int, stats: dict) -> dict | None:
     return None
 
 
+def _probe_matrix(plan, ch) -> None:
+    """G5-E28 (a)/(e): every input-invalid probe shape once, while the dependency is down (C29-8)."""
+    for shape in rules.PROBE_SHAPES:
+        plan.advance(1)
+        E.probe(plan, ch, shape=shape)
+
+
 def build_bnd(idx: int, seed: int, stats: dict) -> dict | None:
     b = ("B1", "B2", "B3", "B4")[idx % 4]
     ch = RandChooser(random.Random(f"{seed}:bnd:{idx}"))
@@ -155,10 +162,12 @@ def build_bnd(idx: int, seed: int, stats: dict) -> dict | None:
         plan.fault("B1", "AUTH", "drop", 60)
         E.fill(plan, ch, 4, gap=2)
         E.fill(plan, ch, 1, want="deny")
+        _probe_matrix(plan, ch)
     elif b == "B2":
         plan.advance(1)
         plan.fault("B2", "ANCHOR", "drop", 100000)   # permanent: never heals within the sequence (PROT-H29 s9)
         E.fill(plan, ch, 4, gap=2)
+        _probe_matrix(plan, ch)
     elif b == "B3":
         s = ch.choice(G._ext_systems(plan))
         p = gen_draw.draw(plan, ch, "ok_ext", system=s)

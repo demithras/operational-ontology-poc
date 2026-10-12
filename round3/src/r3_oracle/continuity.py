@@ -103,15 +103,27 @@ def lease_valid(g: int, until: int, t: int) -> bool:
     return g <= t < until          # strict upper bound
 
 
-def lease_sends(sends: list, phi: Phi, graph: dict, domain: str) -> list:
-    """Ticks s of sends that renew the lease (R29-0): AUTH-dependent, schema-valid probe-free requests with AUTH up at s."""
+def lease_sends(sends: list, phi: Phi, graph: dict, domain: str, include_probes: bool = False) -> list:
+    """Ticks s of sends that renew the lease (R29-0): AUTH-dependent, schema-valid probe-free requests with AUTH up at s.
+    include_probes=True (G5-E28 c) also counts input-invalid probes: a variant MAY fetch a lease while handling one (server-granted, safe)."""
     out = []
     for q in sends:
-        if q.get("invalid_probe") or "AUTH" not in decision_deps(graph, domain, q["kind"], q.get("op")):
+        if (q.get("invalid_probe") and not include_probes) or "AUTH" not in decision_deps(graph, domain, q["kind"], q.get("op")):
             continue
         if phi.mode("AUTH", q["t"]) is None and not phi.engine_down(q["t"]):
             out.append(q["t"])
     return sorted(set(out))
+
+
+class Renew(list):
+    """Obligation-window renewal ticks (probe-free; the list itself) + `.adm` = admissibility-window ticks (with probes), G5-E28 (c)."""
+    adm: list = []
+
+
+def renew_pair(sends: list, phi: Phi, graph: dict, domain: str) -> Renew:
+    r = Renew(lease_sends(sends, phi, graph, domain))
+    r.adm = lease_sends(sends, phi, graph, domain, include_probes=True)
+    return r
 
 
 def lease_cover(t: int, sends_ticks: list, versions: list, phi: Phi, lease: int = LEASE_DEFAULT):
@@ -132,9 +144,10 @@ class Cls:
     down: list              # down nodes among deps(op, decision) at t (empty for SAFE)
     strict: bool = True     # SAFE only: must progress (False = lease use after an ENGINE restart: permitted, not required)
     reason: str = ""
+    gap: bool = False       # G5-E28 (c): inside the admissibility window only (a probe-granted lease): may be decided or UNAVAILABLE AUTH; no obligation
 
     def as_dict(self) -> dict:
-        return {"kind": self.kind, "down": list(self.down), "strict": self.strict, "reason": self.reason}
+        return {"kind": self.kind, "down": list(self.down), "strict": self.strict, "reason": self.reason, "gap": self.gap}
 
 
 def classify(q: dict, phi: Phi, graph: dict, domain: str, renew_ticks: list, versions: list, crashed_rids=frozenset(),
@@ -153,6 +166,8 @@ def classify(q: dict, phi: Phi, graph: dict, domain: str, renew_ticks: list, ver
         covered, strict = lease_cover(t, renew_ticks, versions, phi, lease)
         if covered:
             return Cls(SAFE, [], strict, "AUTH down inside a lease window")
+        if lease_cover(t, getattr(renew_ticks, "adm", renew_ticks), versions, phi, lease)[0]:
+            return Cls(SAFE, [], False, "AUTH down inside the admissibility lease window only (lease_gap)", gap=True)
     left = sorted(n for n in down if n != "AUTH" or not lease_cover(t, renew_ticks, versions, phi, lease)[0])
     return Cls(BLOCKED, left or sorted(down), True, "decision dependency down")
 
