@@ -87,6 +87,11 @@ def guard(a, out: Path) -> dict:
         drift = [f for f, h in frozen.items() if cur.get(f) != h]
         if drift:
             die(f"refusing: FREEZE_G4 hashes mismatch: {drift}")
+        fz_hash, cur_hash = evaluator.catalogue_state()
+        if fz_hash is None:
+            die(f"refusing: adapter catalogue {evaluator.CATALOGUE_REL} is not frozen in FREEZE_G4 (the evaluator would mark the run INVALID)")
+        if fz_hash != cur_hash:
+            die(f"refusing: adapter catalogue {evaluator.CATALOGUE_REL} sha256 != FREEZE_G4")
         if (out / "cases.jsonl").exists() or (out / "run-pre.json").exists():
             die(f"refusing: {out} already holds evidence")
     return ov
