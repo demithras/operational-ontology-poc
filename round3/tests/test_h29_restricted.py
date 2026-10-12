@@ -173,12 +173,14 @@ def test_g5_e25_ext_request_after_the_first_api_call_is_not_counted():
     assert rc._ext_between(SimpleNamespace(dep="d", svc=SimpleNamespace(ext_dir=str(d / "none"))), 0, 5) == 0
 
 
-def test_g5_e25_observer_read_inside_the_window_and_uninstrumented_case():
+def test_g5_e25_observer_read_inside_the_window_and_missing_log_is_invalid():
     J = run("FakeHonestG5")
     assert any("observer" in d["detail"] for d in _restricted(_with_rc1(J, obs_reads_restricted=2)))
+    assert _with_rc1(J, obs_reads_restricted=0)["restricted_io"] == []             # after the first API call at the same tick: nothing
     row = _with_rc1(J, obs_reads_restricted=None)
-    assert not _restricted(row) and row["obs_reads_instrumented"] is False      # no server-side record exists today: reported, never silently clean
-    assert _rc1_row(J)["obs_reads_instrumented"] is False
+    assert not _restricted(row) and row["obs_reads_instrumented"] is False
+    assert "observer_log_missing" in row["harness"]                                # a G5 run without the read log is a harness INVALID, not clean
+    assert all(r["obs_reads_instrumented"] and "observer_log_missing" not in r["harness"] for r in J["rows"] if r["stratum"] == "env")
 
 
 def _rc1_row(J):
@@ -199,13 +201,34 @@ def test_g5_e25_honest_fake_clean_and_dispatching_fake_rejected():
     assert v["verdict"] == "REJECTED" and "recovery_divergence" in str(v["metrics"]["classes"]), v["reasons"]
 
 
-def test_anchor_seq_of_a_reused_request_id_is_the_first_entry():
-    """Fix1-3 investigation (conventional env-000006, r004): the same request_id anchored again at seq 7 after an OK reply at head 3 is a harness
-    artefact, not unanchored_ack: the committed decision's entry is the FIRST one."""
+def test_anchor_seq_lists_every_entry_of_a_reused_request_id():
     from r3_harness.h29 import finalize
     a: dict = {}
-    for seq in (3, 7):
+    for seq in (7, 3):
         finalize.note_anchor_seq(a, {"stream": "s", "decision_id": "r004", "seq": seq})
-    assert a == {("s", "r004"): 3}
-    finalize.note_anchor_seq(a, {"stream": "s", "decision_id": "r004", "seq": 2})
-    assert a[("s", "r004")] == 2
+    assert a == {("s", "r004"): [3, 7]}
+
+
+def test_anchor_entry_exact_match_cases():
+    """G5-E20 exact match (record level). seqs = entries with decision_id == request_id; before/after = heads read around the call."""
+    from r3_harness.h29.judge_req import _anchor_entry_violation as V
+    assert V([3], 2, 3, True) is None                                      # honest: entry in (before, after]
+    assert V([3], 2, 2, True)["why"] == "anchor entry appended after the reply"      # OK whose entry lands after the reply
+    assert V([3, 7], 2, 3, True) is None                                   # deny-then-succeed order irrelevant: first NEW entry is the success
+    assert V([3, 7], 6, 7, True) is None and V([3, 7], 6, 6, True)["entry_seq"] == 7  # success (7) after an earlier deny (3): judges seq 7, not 3
+    assert "earlier entry" in V([3], 5, 9, True)["why"]                    # fresh OK, only an old entry of a reused id: missing entry for THIS decision
+    assert V([3], 5, 9, False) is None                                     # idempotent replay may rest on the earlier entry
+    assert V([], 5, 9, True)["why"] == "no anchor entry"
+    assert V([3], None, 3, True) is None and V([3], 2, -1, True) is None   # unreadable head -> not judged
+
+
+def test_g5_e25_observer_reading_fake_is_rejected():
+    J = run("FakeObserveInRC1")
+    assert any(any("observer" in d["detail"] for d in _restricted(r)) for r in J["rows"]), "no observer read seen inside RC1"
+    t = json.loads((ROOT / "protocol/thresholds.json").read_text())["H29"]
+    with tempfile.TemporaryDirectory() as d:
+        (Path(d) / "mutants.json").write_text("{}")
+        from r3_harness.h29 import evidence_out
+        (Path(d) / evidence_out.FILES[5]).write_text("{}")
+        v = evaluator._verdict(Path(d), "v", t, True, {}, J["agg"], J, True, [], {})
+    assert v["verdict"] == "REJECTED" and "recovery_divergence" in str(v["metrics"]["classes"]), v["reasons"]

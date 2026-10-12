@@ -70,6 +70,8 @@ def _finish(R, row, ctx, ev, phi, versions, rep, state, systems, cw, base, dep, 
             row["restricted_io"].append({"resume": e["resume"], "what": "observer read by the resumed deployment during the restricted phase",
                                          "n": e["obs_reads_restricted"]})
     row["obs_reads_instrumented"] = all(e.get("obs_reads_restricted") is not None for e in ev if e["k"] == "rc1")
+    if not row["obs_reads_instrumented"]:
+        row["harness"].append("observer_log_missing")                  # a G5 run without the observer read log is INVALID, never clean
     for item in row["restricted_io"]:                                  # G5-E25 / R29-10: every restricted_io item is a recovery_divergence
         row["classes"].setdefault("recovery_divergence", []).append({**item, "what": "restricted_io", "detail": item["what"]})
     w = R.get("world")

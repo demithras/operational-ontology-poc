@@ -113,8 +113,9 @@ def key_hash(observer_key: str) -> str:
 
 
 class ObservationClient:
-    def __init__(self, ext_dir: str, observer_key: str, systems: dict, fault: ObserverFault | None = None):
+    def __init__(self, ext_dir: str, observer_key: str, systems: dict, fault: ObserverFault | None = None, read_log: str | None = None):
         self._path, self._key, self._systems, self.fault = str(Path(ext_dir) / DB_NAME), observer_key, systems, fault
+        self._read_log = None if read_log is None else str(read_log)     # G5-E25: optional server-side-style record of every read ATTEMPT
         self.transcript: list[dict] = []   # harness record: one entry per read (watermark, complete_through_tick, row seqs)
         self._reads = 0
 
@@ -130,6 +131,10 @@ class ObservationClient:
         if not isinstance(watermark, int) or isinstance(watermark, bool) or watermark < 0:
             raise ValueError("watermark must be a non-negative int")
         idx, self._reads = self._reads, self._reads + 1
+        if self._read_log is not None:                    # an attempt is I/O (G5-E25): recorded before the fault / unavailable check
+            with open(self._read_log, "a") as lf:
+                lf.write(json.dumps({"n": idx, "watermark": watermark}, sort_keys=True) + "\n")
+                lf.flush()
         f = self.fault
         if f is not None and f.kind == "unavailable" and (not f.reads or idx in f.reads):
             raise ObserverUnavailable("injected: observer unavailable")

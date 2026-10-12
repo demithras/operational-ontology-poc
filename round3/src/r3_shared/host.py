@@ -110,7 +110,8 @@ def _build(spec: dict, variant, clock):
         o = ext["observer"]
         fault = o.get("fault")
         obs = ObservationClient(o["ext_dir"], o["key"], ext["systems"],
-                                ObserverFault(fault["kind"], fault.get("k", 0), frozenset(fault.get("reads", ()))) if fault else None)
+                                ObserverFault(fault["kind"], fault.get("k", 0), frozenset(fault.get("reads", ()))) if fault else None,
+                                o.get("read_log"))        # None unless the harness asks (H28 stays byte-identical)
         kw["external"] = ExternalBinding(ext["systems"], adapters, ext["root_caps"], obs, ext["window"])
     args = (spec["domain"], store.handle_factory(), IdentityProvider(spec["secret"]).verifier(), ops, auth, clock)
     a = spec.get("authority")

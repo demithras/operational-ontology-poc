@@ -19,11 +19,11 @@ def load_raw(vdir: Path) -> list:
 
 
 def note_anchor_seq(aseq: dict, e: dict) -> None:
-    """A request_id the corpus REUSES (conflicting redelivery) is anchored again later: the FIRST entry is the committed decision's, so the
-    unanchored_ack ordering check (G5-E20) must compare against the minimum, never the last entry (G5-E30 candidate: harness artefact, conventional
-    env-000006 r004 entry_seq 7 head_at_reply 3)."""
-    k = (e["stream"], e["decision_id"])
-    aseq[k] = min(aseq.get(k, e["seq"]), e["seq"])
+    """(stream, decision_id) -> sorted list of the anchor seqs of EVERY entry carrying that decision_id. A request_id the corpus reuses (deny, then
+    succeed) is anchored once per decision; the judge picks the entry that records the OK decision by position relative to the head read before
+    the call (G5-E20, exact match; the entry carries stream, seq, decision_id, root - only decision_id + seq are usable by the harness)."""
+    aseq.setdefault((e["stream"], e["decision_id"]), []).append(e["seq"])
+    aseq[(e["stream"], e["decision_id"])].sort()
 
 
 def load_services(svc_root: Path, W: int, closes: dict | None = None) -> dict:

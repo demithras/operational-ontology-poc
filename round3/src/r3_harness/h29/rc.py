@@ -193,13 +193,12 @@ def _ext_between(r, lo, hi) -> int:
 
 
 def _obs_seq(r):
-    """Observer reads leave NO server-side record today: ObservationClient.read (src/r3_shared/extobs.py:129) opens the ledger read-only and
-    appends only to the client's in-process transcript (extobs.py:154). A sidecar `<ext_dir>/obs_reads.log` (one JSON line per read attempt) would
-    make them countable; until it exists the count is None (not instrumented, reported as such)."""
-    p = Path(r.svc.ext_dir) / "obs_reads.log"
-    if not p.exists():
+    """Observer read attempts so far: lines of every <work>/obs-*/obs_reads.log (ObservationClient read_log, written BEFORE the fault check, so an
+    unavailable read counts). None = the log of the main observer is missing (harness INVALID)."""
+    main = Path(r.work) / "obs-a" / services.OBS_LOG
+    if not main.is_file():
         return None
     try:
-        return sum(1 for _ in p.open())
+        return sum(sum(1 for _ in p.open()) for p in Path(r.work).glob("obs-*/" + services.OBS_LOG))
     except OSError:
         return None
