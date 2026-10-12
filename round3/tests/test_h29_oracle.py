@@ -101,3 +101,25 @@ def test_world_digest_compares_loose_verdict_props_by_form_only():
     other = snap("ok", a)
     other["objects"]["Verdict:v1"]["props"]["value"] = "REJECTED"
     assert RM.world_digest(other) != RM.world_digest(snap("ok", a))
+
+
+def test_g5_e4_unavailable_rows_are_placed_by_the_claimed_deployment(tmp_path):
+    """Refused/unavailable ledger rows attribute nothing (deployment ''); load_ledger joins the unverified claim and dep_ledger places the row
+    in the claimed deployment's frame (relative ticks), including the RC1 twin id."""
+    import sqlite3
+    from r3_harness.h28.judge import LedgerIndex
+    from r3_harness.h29 import judge_ext
+    from r3_oracle import extoracle
+    con = sqlite3.connect(tmp_path / "external.db")
+    con.executescript("CREATE TABLE effects(seq INTEGER PRIMARY KEY, deployment TEXT); CREATE TABLE sysstate(system TEXT, key TEXT, props_json TEXT);"
+                      "CREATE TABLE issued(seq INTEGER); CREATE TABLE unverified_claim(audit_seq INTEGER PRIMARY KEY, claim_json TEXT);"
+                      "CREATE TABLE audit(seq INTEGER PRIMARY KEY, deployment TEXT, system TEXT, tick INTEGER, outcome TEXT, reason TEXT);"
+                      "INSERT INTO audit VALUES(1,'','',1105,'refused','unavailable'),(2,'d1','WMS',1106,'applied','');"
+                      "INSERT INTO unverified_claim VALUES(1,'{\"system\": \"WMS\", \"deployment\": \"d1~rc1b\", \"caveats\": []}');")
+    con.commit()
+    con.close()
+    led = extoracle.load_ledger(tmp_path)
+    assert [r["seq"] for r in led["unverified"]] == [1] and led["unverified"][0]["claim"]["system"] == "WMS"
+    dl = judge_ext.dep_ledger(LedgerIndex(led), "d1", 1000)
+    assert [(r["tick"], r["claim"]["system"]) for r in dl["unverified"]] == [(105, "WMS")] and [r["seq"] for r in dl["audit"]] == [2]
+    assert judge_ext.dep_ledger(LedgerIndex(led), "other", 1000)["unverified"] == []

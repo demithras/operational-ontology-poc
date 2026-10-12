@@ -91,8 +91,9 @@ def _injection(R, ev, dl, phi) -> list:
         elif node.startswith("EXT:"):
             s = node[4:]
             enforced = any(r["system"] == s and r["from_tick"] == f and r["to_tick"] == to for r in ext_rows if r["deployment"] == R["dep"])
-            refused = sum(1 for r in dl["audit"] if r["system"] == s and f <= r["tick"] < to and
-                          ((r["outcome"] == "refused" and r["reason"] == "unavailable") or (e["mode"] == "reply_lost" and r["outcome"] == "applied")))
+            refused = sum(1 for r in dl["audit"] if r["system"] == s and f <= r["tick"] < to and e["mode"] == "reply_lost" and r["outcome"] == "applied")
+            refused += sum(1 for r in dl.get("unverified", []) if r["claim"].get("system") == s and f <= r["tick"] < to
+                           and r["outcome"] == "refused" and r["reason"] == "unavailable")      # G5-E4: attributed by the cap's claim
         elif node == "OBS":
             enforced = any(w["from"] == f and w["to"] == to for w in R.get("obs_windows", []))
             refused = sum(1 for x in ev if x["k"] == "reconcile" and f <= x["t"] < to)

@@ -35,7 +35,8 @@ def load_services(svc_root: Path, W: int, closes: dict | None = None) -> dict:
         authv = verify_log(Path(svc_root) / f"auth-{i}")
         integ["auth"].append({"ok": authv["ok"], "errors": authv["errors"]})
     merged = {"effects": [r for l in ledgers for r in l["effects"]], "audit": [r for l in ledgers for r in l["audit"]],
-              "sysstate": {}, "issued": [r for l in ledgers for r in l["issued"]]}
+              "sysstate": {}, "issued": [r for l in ledgers for r in l["issued"]],
+              "unverified": [r for l in ledgers for r in l.get("unverified", [])]}
     return {"ledgers": ledgers, "merged": merged, "anchor": anchor, "anchor_seq": aseq, "integrity": integ}
 
 

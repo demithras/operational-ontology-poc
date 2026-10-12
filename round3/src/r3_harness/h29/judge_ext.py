@@ -14,7 +14,9 @@ def dep_ledger(led, dep: str, base: int) -> dict:
     def rel(rows):
         return [{**r, "tick": r["tick"] - base} for r in rows]
     dl = led.dep_ledger(dep)
-    return {"effects": rel(dl["effects"]), "audit": rel(dl["audit"]), "_dep": dep}
+    # G5-E4: refused/unavailable rows carry no attribution; the deployment CLAIMED by the (unverified) cap places them in this deployment's frame
+    unv = [r for r in led.ledger.get("unverified", []) if r["claim"].get("deployment") in (dep, dep + "~rc1b")]
+    return {"effects": rel(dl["effects"]), "audit": rel(dl["audit"]), "unverified": rel(unv), "_dep": dep}
 
 
 def form_ok(o) -> bool:
