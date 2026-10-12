@@ -165,3 +165,27 @@ G5-E16 "Original decision" on redelivery (R29-11 behavioural equality; F4-dup "o
       status, and for a non-OK status its reason; the reply body is NOT compared (after a lost acknowledgement the caller never
       received a body, and the body is not part of the decision). Body equality of redeliveries is reported descriptively per
       variant, never as a class. Applies identically to both variants and to the judge.
+
+## Errata G5-E17..E24 (orch, 2026-10-12, from the G5 harness build report, before any dev run)
+G5-E17 RC1 restricted dependency state (P1g-7) covers AUTH, EXT and OBS outages; there is no ANCHOR read-only control, so
+      the RC1 "no append" rule for ANCHOR is checked by comparing the anchor head before/after RC1, not enforced by a fault.
+G5-E18 After an ENGINE restart a variant MAY use a still-valid lease it can verify, but is not required to; a fresh fetch
+      before the first governed decision is always admissible. The oracle's lease windows end at an ENGINE restart (PROT-H29
+      1.4 "no ENGINE restart in [s, t]").
+G5-E19 The judge applies R29-7 literally. Where a known-negative fake (ORACLE-AND-HARNESS-G5 s10) also produces
+      misclassified_dependency_failure by R29-7's own definition (FakeFailOpenAuth, FakeStaleRestart, FakeAckBeforeAnchor),
+      that class is added to the fake's expected set; s10 "EXACTLY its expected class set" then holds with the extended set.
+G5-E20 The anchor log carries no tick; the "anchor entry tick <= reply tick" check is replaced by ordering: the anchor
+      entry's sequence must precede the variant's reply in the harness transcript (same absolute clock step).
+G5-E21 AUTH governs every governed operation, so its per-node unrelated-operation floor (Q4 (iii)) is "not applicable by
+      graph" and reported as such; ANCHOR, EXT:* and OBS keep the floor.
+G5-E22 spec/gate5/reason-map.json form: {"form": "r3-reason-map-1", "variants": {<variant>: {<raw INVALID reason>:
+      <one of INPUT_INVALID_REASONS>}}}; built by the equivalence auditor from both variants and the H23 oracle reason
+      classes; an unmapped raw reason while blocked = misclassification (G5-E14).
+G5-E23 OBS outage (F5 on OBS) is injected by making the observer's ledger source unavailable to the shared ObservationClient
+      for the window (the real observation path); the observer itself is not attacked (L1 from G4 stays).
+G5-E24 Boundary probes: B1-B4 each >= 50 (author Q6). B2 (anchor permanently unreachable: permanent anchor outage) must be
+      implemented and judged (no OK governed result, replay never VERIFIED). B4: the shared host (r3_shared/host.py) refuses
+      resume over absent durable stores with CanonicalStateLost before the variant runs; this is part of the deployed system
+      of BOTH variants, so B4 is explicit by shared construction and NOT variant-discriminating; SUMMARY must say so.
+      FakeEmptyOnLoss stays a record-level judge test proving boundary_not_explicit is detected.
