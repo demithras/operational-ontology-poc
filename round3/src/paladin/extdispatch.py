@@ -13,6 +13,7 @@ from paladin import extoutcome
 from paladin.extoutbox import Outbox
 from r3_shared import extadapter, extcap, extsystems
 from r3_shared.extobs import EffRow, ObserverUnavailable, ObsSnapshot
+from r3_shared.faultplane import DependencyUnavailable
 
 MAX_ATTEMPTS = 3          # total submissions of one intent (R28-8; the cap itself bounds applied rows)
 USES = {"at_most_once": 1, "exactly_once_required": 1, "idempotent_set": 3}
@@ -23,6 +24,7 @@ class ExtPlane:
     def __init__(self, binding, ledger, ops_spec, mutants=frozenset()):
         self.b, self.box, self.mutants = binding, Outbox(ledger), frozenset(mutants)
         self.ops_spec = ops_spec
+        self.down: set = set()   # G5: dependency nodes ("EXT:<S>", "OBS") the last call to them found unavailable (breaker state, descriptive)
         self._gate = None
         if "policy_gate_in_adapter" in self.mutants:   # mutant-only module, loaded by name (see variant.adapter_modules)
             self._gate = importlib.import_module("paladin.extgate_mut")
@@ -88,13 +90,20 @@ class ExtPlane:
             return 0
         cap = self.attenuate(e, e["attempts"]) if "idempotency_disabled" in self.mutants else e["cap"]
         req = extadapter.ExternalRequest(rid, e["index"], e["system"], e["operation"], e["target"], e["payload"], env, cap)
+        node = f"EXT:{e['system']}"
         try:
             reply = self.b.adapters[e["system"]].submit(req)
             st = reply.status if isinstance(reply, extadapter.AdapterReply) else _FAILED
             st = st if st in (_OK, _FAILED, _TIMEOUT) else _FAILED
+            self.down.discard(node)
+        except DependencyUnavailable as exc:                         # G5: the system is down/partitioned: nothing is learned, the intent stays due
+            self.down.add(exc.node)
+            self.box.update(rid, e["index"], cap=cap, cap_n=e.get("cap_n", 1) + (cap != e["cap"]))   # the cap bounds uses, so retrying after the outage is safe
+            return 0
         except Exception:                                            # noqa: BLE001 - any exception is a TIMEOUT (P1f-7)
             st = _TIMEOUT
-        self.box.update(rid, e["index"], attempts=e["attempts"] + 1, replies=[*e["replies"], st], cap=cap)
+        self.box.update(rid, e["index"], attempts=e["attempts"] + 1, replies=[*e["replies"], st], cap=cap,
+                        cap_n=e.get("cap_n", 1) + (cap != e["cap"]))
         return 1
 
     # ---- reconciliation (observer is the only evidence) -----------------------------------------------------------
@@ -111,8 +120,10 @@ class ExtPlane:
             return None
         try:
             snap = self._snapshot(effs, watermark)
-        except ObserverUnavailable:
+            self.down.discard("OBS")
+        except (ObserverUnavailable, DependencyUnavailable):
             snap = None
+            self.down.add("OBS")
         for e in effs:
             if watermark < e.get("wm", -1):                       # G4-E16: a lower-watermark snapshot is ignored
                 continue
@@ -124,6 +135,14 @@ class ExtPlane:
                 new = e["outcome"]                                # G4-E16: a reconciled state never returns to PENDING
             self.box.update(rid, e["index"], outcome=new, wm=watermark)
         return [self.public(e) for e in self.box.get(rid) or []]
+
+    def drop_undispatched(self) -> None:
+        """MUTANT outbox_dropped_on_restart: resume discards every intent that has not been submitted and reports it RECONCILED_FAILED."""
+        for rid in self.box.rids():
+            for e in self.box.get(rid) or []:
+                if not e["replies"] and e["outcome"]["state"] not in extoutcome.FINAL:
+                    self.box.update(rid, e["index"], attempts=MAX_ATTEMPTS,
+                                    outcome={"state": "RECONCILED_FAILED", "confidence": e["outcome"]["confidence"], "evidence": []})
 
     def outcomes(self, rid: str) -> list[dict] | None:
         effs = self.box.get(rid)

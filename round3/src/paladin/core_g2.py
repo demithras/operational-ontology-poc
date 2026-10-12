@@ -14,7 +14,7 @@ from paladin import capgraph, evid
 from paladin.engine import gates
 from paladin.prov import Prov
 from paladin.worldbridge import log_head, tx_rows
-from r3_shared.authgraph import V2, authority_digest
+from r3_shared.authgraph import V2, V3, authority_digest
 from r3_shared.authspec import validate_strict
 from r3_shared.evidence import canonical_bytes
 from r3_shared.variant import CallResult
@@ -55,8 +55,14 @@ class G2Mixin:
         return h
 
     # ---- authority document ----------------------------------------------------------------
+    lease_version = None   # Gate 5 (authority_source given): digest of the AuthorityService document adopted; None on the legacy path
+
     def version(self) -> str:
         return authority_digest(self.auth)
+
+    def stamp(self, doc=None) -> str:
+        """The authority version a commit is bound to: the AuthorityService version in force (H29 path) else the digest of `doc`."""
+        return self.lease_version or (self.version() if doc is None else authority_digest(doc))
 
     def pdefs(self) -> dict:
         return {p["id"]: p for p in self.auth["principals"]}
@@ -66,18 +72,19 @@ class G2Mixin:
         if self.history is not None:
             self.history.put(f"auth/{authority_digest(doc)}", canonical_bytes(doc))
 
-    def replace_authority(self, spec: dict) -> None:
+    def replace_authority(self, spec: dict, keep_edges: bool = False) -> None:
         """set_authority: validate, then one transaction {mark authority set_authority; boot; persist}. ValueError changes nothing."""
         if self.auth_fault is not None:
             raise ValueError("authority history unresolved")
         validate_strict(spec, self.ops_spec)
         inforce = bool(self.auth.get("capabilities") or self.auth.get("revoked"))
-        if self.auth.get("spec") == V2 and (inforce or spec.get("spec") == V2):  # E-5: base layer only; edges and revocations in force persist, the doc's are ignored
-            spec = {"max_delegation_depth": self.auth["max_delegation_depth"], **copy.deepcopy(spec), "spec": V2, "capabilities": copy.deepcopy(list(self.auth.get("capabilities", ()))),
+        kinds = (V2, V3) if keep_edges else (V2,)   # keep_edges: the Gate 5 lease adoption path keeps v3 edges too
+        if self.auth.get("spec") in kinds and (inforce or spec.get("spec") in kinds):  # E-5: base layer only; edges and revocations in force persist, the doc's are ignored
+            spec = {"max_delegation_depth": self.auth["max_delegation_depth"], **copy.deepcopy(spec), "spec": self.auth["spec"] if keep_edges else V2, "capabilities": copy.deepcopy(list(self.auth.get("capabilities", ()))),
                     "revoked": sorted(self.auth.get("revoked", ()))}
             validate_strict(spec, self.ops_spec)
         with self._svc.transaction(tag="authority") as tx:
-            tx.mark("authority", {"op": "set_authority", "version": authority_digest(spec)})
+            tx.mark("authority", {"op": "set_authority", "version": self.lease_version or authority_digest(spec)})
             self.install(spec)
 
     # ---- decisions -------------------------------------------------------------------------
@@ -175,7 +182,7 @@ class G2Mixin:
 
     # ---- edge-mode requests (PROT-H24 s3) -----------------------------------------------------
     def candidates(self, sub: str, obo: str) -> list:
-        k = (self.version(), sub, obo)
+        k = (authority_digest(self.auth), sub, obo)
         if k not in self._cand:
             if len(self._cand) > 4096:
                 self._cand.clear()
@@ -226,6 +233,10 @@ class G2Mixin:
                     return CallResult("UNAVAILABLE", {"reason": "request in flight"})
                 if led["fp"] != fp:
                     return CallResult("INVALID", {"reason": "request_id already used for a different request"})
+                if getattr(self, "h29", False):
+                    bad = self.unacked(rid, led)
+                    if bad is not None:
+                        return bad
                 return CallResult(led["status"], plain(led["body"] or {}))
             g = self.guard_history(rid)
             if g is not None:
@@ -255,7 +266,7 @@ class G2Mixin:
                     d["reason"], d["rule_invalid"] = (None if status == "OK" or reason == "schema" else reason), True
                     raise Rollback(CallResult(status, body))
                 new = capgraph.with_edge(self.auth, payload) if kind == "delegate" else capgraph.with_revoked(self.auth, edge_id)
-                ver = authority_digest(new)
+                ver = self.stamp(new)
                 tx.mark("authority", {"op": kind, **({"edge": payload} if kind == "delegate" else {"edge_id": edge_id}),
                                       "version": ver})
                 seq = tx.mark("commit", {"request_id": rid, "kind": kind, "authority_version": ver})
@@ -294,9 +305,26 @@ class G2Mixin:
         try:
             a = self.prov.anchored_decision(rid)
         except AnchorError:
+            if "anchor_skipped_when_unavailable" in self.mutants:
+                return None   # MUTANT: an unreachable anchor does not stop the commit
             return CallResult("UNAVAILABLE", {"reason": "anchor_unavailable"})
         except LookupError:
             return CallResult("UNAVAILABLE", {"reason": "history_unresolved"})
         if a is not None and a["status"] == "OK":
             return CallResult("UNAVAILABLE", {"reason": "idempotency_record_missing"})
         return None
+
+    def unacked(self, rid: str, led: dict) -> CallResult | None:
+        """H29: a stored OK is replayed only when the anchor holds the decision with a provable envelope; else UNKNOWN in_doubt
+        (commit status certain, ack never anchored); an unreachable anchor is the dependency failure (str(e) names the node)."""
+        if self.prov is None or led.get("status") != "OK":
+            return None
+        from r3_shared.anchor import AnchorError  # noqa: PLC0415
+        from r3_shared.faultplane import DependencyUnavailable  # noqa: PLC0415
+        try:
+            a = self.prov.anchored_decision(rid)
+        except DependencyUnavailable as exc:
+            return CallResult("UNAVAILABLE", {"reason": "dependency_unavailable", "dependency": exc.node})
+        except (AnchorError, LookupError):
+            return CallResult("UNKNOWN", {"reason": "in_doubt"})
+        return None if a is not None and a["status"] == "OK" else CallResult("UNKNOWN", {"reason": "in_doubt"})

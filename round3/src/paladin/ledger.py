@@ -16,6 +16,7 @@ request is in doubt): changed -> the request committed (finalize); unchanged -> 
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 import threading
@@ -80,13 +81,14 @@ class Ledger:
             self._con.execute("UPDATE approvals SET claimed_by=NULL WHERE claimed_by=?", (rid,))
             self._con.execute("COMMIT")
 
-    def recover(self, digest_now: str) -> list[tuple[str, str]]:
-        """Resolve PREPARED rows left by a crash. Returns [(rid, 'committed'|'aborted')]."""
+    def recover(self, digest_now: str, salt: bytes | None = None) -> list[tuple[str, str]]:
+        """Resolve PREPARED rows left by a crash. Returns [(rid, 'committed'|'aborted')].
+        `salt` is the nondeterministic_recovery MUTANT: which candidate record wins is decided by a per-process random salt."""
         out = []
         with self._lock:
             rows = self._con.execute("SELECT rid,pre FROM requests WHERE state='PREPARED'").fetchall()
             for rid, pre in rows:
-                if pre != digest_now:  # the world moved after prepare: the commit happened, only the ack was lost
+                if (pre != digest_now) if salt is None else bool(hashlib.sha256(salt + rid.encode()).digest()[0] & 1):  # the world moved after prepare: the commit happened, only the ack was lost
                     self._con.execute("UPDATE requests SET state='COMMITTED', status='OK', body_json=?, pre=NULL WHERE rid=?",
                                       (json.dumps({"recovered": True}), rid))
                     self._con.execute("DELETE FROM approvals WHERE claimed_by=?", (rid,))
@@ -119,6 +121,13 @@ class Ledger:
                 return None
             self._con.execute("UPDATE approvals SET claimed_by=? WHERE id=?", (rid, r[0]))
             return r[1]
+
+    def open_approvals(self) -> list[str]:
+        """Fingerprints of the single-use approvals neither claimed nor consumed (H29 RECOVERY_VIEW approvals_open)."""
+        with self._lock:
+            if self.volatile:
+                return [a["fp"] for a in self._mem_appr]
+            return [r[0] for r in self._con.execute("SELECT fp FROM approvals WHERE claimed_by IS NULL ORDER BY id")]
 
     def consume(self, rid: str) -> None:
         with self._lock:

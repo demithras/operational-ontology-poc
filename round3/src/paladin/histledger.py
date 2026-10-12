@@ -6,6 +6,7 @@ Keys: led/req/<request_id>, led/appr/<n>, led/meta/<name>. Records are canonical
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import threading
 from typing import Any, Callable
@@ -70,7 +71,7 @@ class HistLedger:
                 self.h.delete(REQ + rid)
             self._drop_claims(rid, consume=False)
 
-    def recover(self, digest_now: str) -> list[tuple[str, str]]:
+    def recover(self, digest_now: str, salt: bytes | None = None) -> list[tuple[str, str]]:
         out = []
         with self._lock:
             for k in self.h.keys(REQ):
@@ -78,7 +79,7 @@ class HistLedger:
                 if not r or r.get("state") != "PREPARED":
                     continue
                 rid = k[len(REQ):]
-                if r.get("pre") != digest_now:
+                if (r.get("pre") != digest_now) if salt is None else bool(hashlib.sha256(salt + rid.encode()).digest()[0] & 1):
                     self._store(k, {**r, "state": "COMMITTED", "status": "OK", "body": {"recovered": True}, "pre": None})
                     self._drop_claims(rid, consume=True)
                     out.append((rid, "committed"))
@@ -108,6 +109,15 @@ class HistLedger:
                 self._store(k, {**r, "claimed_by": rid})
                 return r["approver"]
         return None
+
+    def open_approvals(self) -> list[str]:
+        with self._lock:
+            out = []
+            for k in self._appr_keys():
+                r = self._load(k)
+                if r and not r.get("_corrupt") and r.get("claimed_by") is None and isinstance(r.get("fp"), str):
+                    out.append(r["fp"])
+            return out
 
     def _drop_claims(self, rid: str, consume: bool) -> None:
         for k in self._appr_keys():
