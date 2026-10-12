@@ -10,7 +10,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
-from r3_shared.anchor import AnchorError
+from r3_shared.anchor import AnchorError, AnchorUnavailable
 from r3_shared.authgraph import authority_document
 from r3_shared.evidence import canonical_bytes
 from r3_shared.variant import CallResult
@@ -71,6 +71,7 @@ class DecisionCtx:
 class Provenance:
     def __init__(self, history, anchor, stream: str, ops_spec: dict, clock, mutants: frozenset[str]):
         self.history, self.anchor, self.stream, self._clock, self.mutants = history, anchor, stream, clock, mutants
+        self.g5 = False   # set by the service when it was deployed with an authority_source
         self._spec = ops_spec
         self._ops = {o["name"]: o for o in ops_spec["operations"]}
 
@@ -133,30 +134,61 @@ class Provenance:
                 self.history.put("evref/" + json.loads(e)["ref"], sha(e).encode())
             ok = result.status == "OK"
             head = h._con.execute("SELECT COALESCE(MAX(seq),0) FROM world_log").fetchone()[0]
-            head_e = self.anchor.head(self.stream)
-            seq, prev = (head_e["seq"] + 1, head_e["root"]) if head_e else (1, ZERO)
-            decision = {"decision_id": dc.rid or f"{dc.kind}-{seq}", "kind": dc.kind, "subject": dc.subject,
-                        "on_behalf_of": dc.obo,
-                        "operation": dc.operation if dc.kind in ("call_tool", "direct", "approve") else None,
-                        "args_digest": args_digest,
-                        "status": result.status, "reason": "ok" if ok else str(result.body.get("reason", "")),
-                        "effect_digest": self.effect_digest(h, dc.tx_id if ok else None),
-                        "world_seq": dc.world_seq if ok and dc.world_seq is not None else head,
-                        "tick": dc.tick if ok and dc.tick is not None else self._clock.now(),
-                        "authority_path": list(dc.path)}
-            arts = {"evidence": sorted(sha(e) for e in evidence), "authority": sha(auth), "policy": sha(pol),
-                    "contract": sha(con)}
-            if "digest_omission" in self.mutants:  # BUG: the policy digest sits beside the envelope, not under its root
-                side, arts = arts.pop("policy"), arts
-            env = {"v": 1, "stream": self.stream, "seq": seq, "prev": prev, "decision": decision, "artifacts": arts}
-            raw = canonical_bytes(env)
-            receipt = self.anchor.append(self.stream, seq, decision["decision_id"], sha(raw))
+            repair = bool(dc.extra.get("repair"))
+
+            def build(seq: int, prev: str):
+                decision = {"decision_id": dc.rid or f"{dc.kind}-{seq}", "kind": dc.kind, "subject": dc.subject,
+                            "on_behalf_of": dc.obo,
+                            "operation": dc.operation if dc.kind in ("call_tool", "direct", "approve") else None,
+                            "args_digest": args_digest,
+                            "status": result.status, "reason": "ok" if ok else str(result.body.get("reason", "")),
+                            "effect_digest": self.effect_digest(h, dc.tx_id if ok else None),
+                            "world_seq": dc.world_seq if ok and dc.world_seq is not None else head,
+                            "tick": dc.tick if ok and dc.tick is not None else self._clock.now(),
+                            "authority_path": list(dc.path)}
+                arts = {"evidence": sorted(sha(e) for e in evidence), "authority": sha(auth), "policy": sha(pol),
+                        "contract": sha(con)}
+                side = None
+                if "digest_omission" in self.mutants:  # BUG: the policy digest sits beside the envelope, not under its root
+                    side, arts = arts.pop("policy"), arts
+                env = {"v": 1, "stream": self.stream, "seq": seq, "prev": prev, "decision": decision, "artifacts": arts}
+                return decision, canonical_bytes(env), side
+
+            existing = None
+            if repair and dc.rid:
+                existing = self.anchor.lookup(self.stream, dc.rid)   # G5: re-finish an anchored entry
+            elif repair:   # G5-E12: a decision without request_id has no key; find the entry whose envelope is exactly this one
+                head_e = self.anchor.head(self.stream)
+                for q in range(head_e["seq"] if head_e else 0, 0, -1):
+                    cand = self.anchor.get(self.stream, q)
+                    if cand is None or cand["decision_id"] != f"{dc.kind}-{q}":
+                        continue
+                    if cand["root"] == sha(build(q, ZERO if q == 1 else self.anchor.get(self.stream, q - 1)["root"])[1]):
+                        existing = cand
+                        break
+            if existing is not None:
+                seq = existing["seq"]
+                prev = ZERO if seq == 1 else self.anchor.get(self.stream, seq - 1)["root"]
+            else:
+                head_e = self.anchor.head(self.stream)
+                seq, prev = (head_e["seq"] + 1, head_e["root"]) if head_e else (1, ZERO)
+            decision, raw, side = build(seq, prev)
+            if existing is not None and existing["root"] != sha(raw):
+                return CallResult("UNAVAILABLE", {"reason": "anchor_unavailable"})   # the rebuilt envelope is not the anchored one
+            receipt = existing if existing is not None else self.anchor.append(self.stream, seq, decision["decision_id"], sha(raw))
             self.history.put(f"decidx/{seq:010d}", canonical_bytes(self._index(dc, decision["decision_id"], seq, ok)))
             self.history.put(f"receipt/{seq:010d}", canonical_bytes(receipt))
             self.history.put(f"env/{seq:010d}", raw)
             if "digest_omission" in self.mutants:
                 self.history.put(f"side/{seq:010d}", side.encode())
             return result
+        except AnchorUnavailable:   # G5: the dependency was lost mid-decision; a commit may or may not be anchored
+            if "anchor_skipped_when_unavailable" in self.mutants:   # BUG: acknowledge now, anchor "later"
+                return result
+            if self.g5:
+                return CallResult("UNKNOWN", {"reason": "in_doubt"}) if result.status == "OK" else \
+                    CallResult("UNAVAILABLE", {"reason": "dependency_unavailable", "dependency": "ANCHOR"})
+            return CallResult("UNAVAILABLE", {"reason": "anchor_unavailable"})
         except AnchorError:
             return CallResult("UNAVAILABLE", {"reason": "anchor_unavailable"})
         except (TypeError, ValueError):

@@ -19,6 +19,13 @@ def fingerprint(subject: str, on_behalf_of: str | None, operation: str, inputs: 
     return hashlib.sha256(json.dumps(doc, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
+def approval_fingerprint(subject: str, on_behalf_of: str | None, operation: str, inputs) -> str:
+    """G5-E11: the canonical approval fingerprint (RECOVERY_VIEW approvals_open): sha256 hex of extadapter.canon_json."""
+    from r3_shared.extadapter import canon_json
+    doc = {"subject": subject, "on_behalf_of": on_behalf_of, "operation": operation, "inputs": dict(inputs)}
+    return hashlib.sha256(canon_json(doc).encode()).hexdigest()
+
+
 def init(handle) -> None:
     handle._con.executescript(DDL)
 
@@ -44,6 +51,10 @@ def approvals_open(handle, fp: str) -> list[tuple[int, str]]:
 
 def approval_consume(handle, approval_id: int) -> None:
     handle._con.execute("UPDATE conv_approvals SET consumed=1 WHERE id=?", (approval_id,))
+
+
+def approvals_open_all(handle) -> list[str]:
+    return [r[0] for r in handle._con.execute("SELECT fingerprint FROM conv_approvals WHERE consumed=0 ORDER BY id")]
 
 
 def authority_put(handle, version: int, spec: dict) -> None:
@@ -78,6 +89,9 @@ class AuxStore:
 
     def approval_consume(self, h, aid, tx=None) -> None:
         approval_consume(h, aid)
+
+    def approvals_open_all(self, h) -> list[str]:
+        return approvals_open_all(h)
 
     def approval_restore(self, h, aid) -> None:
         h._con.execute("UPDATE conv_approvals SET consumed=0 WHERE id=?", (aid,))

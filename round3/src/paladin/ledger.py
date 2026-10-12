@@ -16,6 +16,7 @@ request is in doubt): changed -> the request committed (finalize); unchanged -> 
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 import threading
@@ -25,7 +26,7 @@ _SCHEMA = """
 CREATE TABLE IF NOT EXISTS requests(rid TEXT PRIMARY KEY, fp TEXT NOT NULL, state TEXT NOT NULL, pre TEXT,
   sub TEXT, obo TEXT, op TEXT, status TEXT, body_json TEXT);
 CREATE TABLE IF NOT EXISTS approvals(id INTEGER PRIMARY KEY AUTOINCREMENT, fp TEXT NOT NULL, approver TEXT NOT NULL,
-  claimed_by TEXT);
+  claimed_by TEXT, cfp TEXT);
 CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT NOT NULL);
 """
 
@@ -80,13 +81,14 @@ class Ledger:
             self._con.execute("UPDATE approvals SET claimed_by=NULL WHERE claimed_by=?", (rid,))
             self._con.execute("COMMIT")
 
-    def recover(self, digest_now: str) -> list[tuple[str, str]]:
-        """Resolve PREPARED rows left by a crash. Returns [(rid, 'committed'|'aborted')]."""
+    def recover(self, digest_now: str, salt: bytes | None = None) -> list[tuple[str, str]]:
+        """Resolve PREPARED rows left by a crash. Returns [(rid, 'committed'|'aborted')].
+        `salt` is the nondeterministic_recovery MUTANT: which candidate record wins is decided by a per-process random salt."""
         out = []
         with self._lock:
             rows = self._con.execute("SELECT rid,pre FROM requests WHERE state='PREPARED'").fetchall()
             for rid, pre in rows:
-                if pre != digest_now:  # the world moved after prepare: the commit happened, only the ack was lost
+                if (pre != digest_now) if salt is None else bool(hashlib.sha256(salt + rid.encode()).digest()[0] & 1):  # the world moved after prepare: the commit happened, only the ack was lost
                     self._con.execute("UPDATE requests SET state='COMMITTED', status='OK', body_json=?, pre=NULL WHERE rid=?",
                                       (json.dumps({"recovered": True}), rid))
                     self._con.execute("DELETE FROM approvals WHERE claimed_by=?", (rid,))
@@ -97,12 +99,12 @@ class Ledger:
         return out
 
     # ---- approvals (single use, durable) ------------------------------------------------------
-    def add_approval(self, fp: str, approver: str, decision_id: str | None = None) -> None:
+    def add_approval(self, fp: str, approver: str, decision_id: str | None = None, cfp: str | None = None) -> None:
         with self._lock:
             if self.volatile:
-                self._mem_appr.append({"fp": fp, "approver": approver})
+                self._mem_appr.append({"fp": fp, "approver": approver, "cfp": cfp})
                 return
-            self._con.execute("INSERT INTO approvals(fp,approver) VALUES(?,?)", (fp, approver))
+            self._con.execute("INSERT INTO approvals(fp,approver,cfp) VALUES(?,?,?)", (fp, approver, cfp))
 
     def claim_approval(self, fp: str, rid: str, verify=None) -> str | None:
         """Claim the oldest unused approval for this exact request fingerprint; returns the approver pid."""
@@ -119,6 +121,13 @@ class Ledger:
                 return None
             self._con.execute("UPDATE approvals SET claimed_by=? WHERE id=?", (rid, r[0]))
             return r[1]
+
+    def open_approvals(self) -> list[str]:
+        """Fingerprints of the single-use approvals neither claimed nor consumed (H29 RECOVERY_VIEW approvals_open)."""
+        with self._lock:
+            if self.volatile:
+                return [a["cfp"] for a in self._mem_appr if a.get("cfp")]
+            return [r[0] for r in self._con.execute("SELECT cfp FROM approvals WHERE claimed_by IS NULL AND cfp IS NOT NULL ORDER BY id")]
 
     def consume(self, rid: str) -> None:
         with self._lock:
