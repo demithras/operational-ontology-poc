@@ -13,6 +13,7 @@ from r3_shared import extcap
 from r3_shared.anchor import AnchorError, AnchorUnavailable, require_anchor, start_anchor
 from r3_shared.extadapter import payload_digest
 from r3_shared.extsystems import load_systems
+from r3_shared.extobs import validate_audit_row
 from r3_shared.extworld import ExternalError, ExternalUnavailable, _call, start_external
 from r3_shared.extworld_core import REFUSALS, REFUSALS_G5, ExternalWorldCore, Unavailable
 from r3_shared.faultplane import DependencyUnavailable
@@ -116,7 +117,7 @@ def test_unavailable_is_appended_after_the_frozen_reasons_but_evaluated_first():
             c.write(token, "expedite", TARGET, PAY, "adp")
     rows = audit(c)
     assert [r["reason"] for r in rows if r["tick"] == 2] == ["unavailable", "unavailable"]      # BEFORE bad_signature / any frozen reason
-    assert all(r["outcome"] == "refused" and r["deployment"] == "dep1" and r["system"] == "ERP" for r in rows if r["tick"] == 2)
+    assert all(r["outcome"] == "refused" and r["deployment"] == "" and r["system"] == "" for r in rows if r["tick"] == 2)  # G5-E4
     assert eff_count(c) == 0
     c.advance(5)
     assert c.write(cap, "expedite", TARGET, PAY, "adp")["status"] == "applied"                    # window is [from, to)
@@ -169,3 +170,67 @@ def test_client_sees_external_unavailable_over_the_socket(tmp_path):
     con = sqlite3.connect(f"file:{Path(p.ext_dir) / 'external.db'}?mode=ro", uri=True)
     assert [r[0] for r in con.execute("SELECT reason FROM audit ORDER BY seq")] == ["unavailable", ""]
     con.close()
+
+
+# ---- G5-E4: `unavailable` rows never attribute from unverified claims ------------------------------------------------
+def _forged(c, **kw):
+    nonce, steps, _ = extcap._decode(cap_for(c, **kw))
+    return extcap._encode(nonce, steps, bytes(32))
+
+
+def _outage(c, to=5):
+    c.fault({"op": "outage", "deployment": "dep1", "target": "ERP", "from_tick": 1, "to_tick": to, "mode": "drop"})
+    c.advance(1)
+
+
+def test_g5e4_honest_cap_in_outage_row_is_unattributed_with_separate_unverified_claim():
+    c = ExternalWorldCore(tempfile.mkdtemp(prefix="r3x"), load_systems("manufacturing"), root_key=KEY)
+    cap = cap_for(c)
+    _outage(c)
+    with pytest.raises(Unavailable):
+        c.write(cap, "expedite", TARGET, PAY, "adp")
+    row = audit(c)[-1]
+    assert row["reason"] == "unavailable" and row["deployment"] == "" and row["system"] == "" and row["cap_chain"] == ""
+    assert row["correlation"] == ""
+    claim = c.unverified_claims()[row["seq"]]
+    assert claim["deployment"] == "dep1" and claim["system"] == "ERP" and ["correlation", "r1#0"] in claim["caveats"]
+    assert eff_count(c) == 0
+
+
+def test_g5e4_forged_cap_claiming_a_deployment_in_outage_is_unavailable_with_no_effect_and_no_attribution():
+    c = ExternalWorldCore(tempfile.mkdtemp(prefix="r3x"), load_systems("manufacturing"), root_key=KEY)
+    forged = _forged(c)
+    _outage(c)
+    with pytest.raises(Unavailable):
+        c.write(forged, "expedite", TARGET, PAY, "adp")
+    row = audit(c)[-1]
+    assert row["reason"] == "unavailable" and row["deployment"] == "" and row["system"] == "" and eff_count(c) == 0
+    assert c.unverified_claims()[row["seq"]]["deployment"] == "dep1"
+    assert [r for r in audit(c) if r["deployment"] == "dep1"] == []                  # nothing attributed to dep1
+
+
+def test_g5e4_same_forged_cap_outside_the_outage_is_still_bad_signature():
+    c = ExternalWorldCore(tempfile.mkdtemp(prefix="r3x"), load_systems("manufacturing"), root_key=KEY)
+    forged = _forged(c)
+    c.fault({"op": "outage", "deployment": "dep1", "target": "ERP", "from_tick": 3, "to_tick": 5, "mode": "drop"})
+    assert c.write(forged, "expedite", TARGET, PAY, "adp")["reason"] == "bad_signature"      # tick 0: before the window
+    c.advance(5)
+    assert c.write(forged, "expedite", TARGET, PAY, "adp")["reason"] == "bad_signature"      # after the window
+    assert c.unverified_claims() == {} and eff_count(c) == 0
+
+
+def test_g5e4_schema_rejects_an_unavailable_row_with_a_deployment_or_other_attribution():
+    c = ExternalWorldCore(tempfile.mkdtemp(prefix="r3x"), load_systems("manufacturing"), root_key=KEY)
+    cap = cap_for(c)
+    _outage(c)
+    with pytest.raises(Unavailable):
+        c.write(cap, "expedite", TARGET, PAY, "adp")
+    row = audit(c)[-1]
+    good = {k: v for k, v in row.items()}
+    good["unverified_claim"] = c.unverified_claims()[row["seq"]]
+    validate_audit_row(good)
+    validate_audit_row({**good, "deployment": None})
+    for bad in ({**good, "deployment": "dep1"}, {**good, "system": "ERP"}, {**good, "cap_chain": "a" * 64},
+                {**good, "reason": "bad_signature"}, {**good, "unverified_claim": {"system": "ERP"}}):
+        with pytest.raises(ValueError):
+            validate_audit_row(bad)
