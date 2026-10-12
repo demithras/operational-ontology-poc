@@ -54,7 +54,8 @@ def _request(R, row, e, ctx, phi, versions, renew, crashed, rep, state, process_
     input_invalid = spec is None or not ops_model.validate_args(spec, args)[0]
     rec = {"n": e["n"], "t": t, "rid": rid, "k": e["k"], "op": op, "cls": cls.kind, "down": cls.down, "strict": cls.strict, "status": status or err,
            "reason": body.get("reason") if isinstance(body, dict) else None, "dep": body.get("dependency") if isinstance(body, dict) else None,
-           "oracle": dec.kind, "committed": committed, "eligible": False, "progressed": False, "spurious": None, "fclasses": active(cw, t)}
+           "oracle": dec.kind, "committed": committed, "eligible": False, "progressed": False, "spurious": None, "fclasses": active(cw, t),
+           "phi": sorted(phi.down(t))}
     if e.get("tag") == "stale":                     # F6: truly stale-sensitive = OK under version 0, not OK under the version in force
         old, _ = rep.decide(versions[0]["doc"], e["principal"], None, op, args, base + t, None)
         rec["stale_sensitive"] = old.kind == "OK" and dec.kind != "OK"
@@ -97,7 +98,7 @@ def _read(R, row, e, phi, graph, dom, renew, versions, rep, doc_at, ops, cw):
     rec = {"n": e["n"], "t": t, "k": "read", "op": "read:" + e["operation"], "cls": cls.kind, "down": cls.down, "strict": cls.strict,
            "status": status or err, "reason": body.get("reason") if isinstance(body, dict) else None,
            "dep": body.get("dependency") if isinstance(body, dict) else None, "oracle": exp[0], "committed": False, "eligible": False,
-           "progressed": False, "spurious": None, "fclasses": active(cw, t), "rid": None}
+           "progressed": False, "spurious": None, "fclasses": active(cw, t), "rid": None, "phi": sorted(phi.down(t))}
     row["req"].append(rec)
     if status == "OK":
         if (exp[0], exp[1]) != ("OK", body):

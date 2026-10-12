@@ -152,7 +152,7 @@ def _judge(R: dict, ctx: Ctx, row: dict) -> dict:
             dec, akey = rep.decide(doc_at(t), e["principal"], None, e["operation"], e["args"], base + t, None)
             if dec.kind != "OK":
                 mark_cls("forbidden_effect", {"rid": e["rid"], "world_seq": m["seq"], "oracle": dec.reason}, t)
-            elif m["data"].get("authority_version") != A(t):
+            if m["data"].get("authority_version") != A(t):             # R29-1: independent of the oracle decision ("even if the oracle would also allow it")
                 mark_cls("stale_authority_commit", {"rid": e["rid"], "world_seq": m["seq"], "bound": m["data"].get("authority_version"), "in_force": A(t)}, t)
             if dec.kind == "OK":
                 rep.commit(dec, akey, e["rid"])

@@ -76,7 +76,7 @@ def _worker(root, i, variant, mutants, exp_id, seed, my_jobs, out, workroot, ext
 
 
 def run_variant(root: str, variant: str, vname: str, out: Path, exp_id: str, seed: int, n_env: int, n_ctrl: int, n_bnd: int, workers: int,
-                mutants=(), extra_paths=(), workroot: str | None = None, in_process: bool = False) -> dict:
+                mutants=(), extra_paths=(), workroot: str | None = None, in_process: bool = False, job_list=None) -> dict:
     """root = the service-set directory (anchor-i / ext-i / auth-i for i < max(workers,1)). Returns run-pre."""
     if mp.get_start_method(allow_none=True) not in (None, "spawn") and not in_process:
         raise RuntimeError("multiprocessing start method must be 'spawn'")
@@ -85,7 +85,7 @@ def run_variant(root: str, variant: str, vname: str, out: Path, exp_id: str, see
     if raw.exists():
         raise FileExistsError(f"refusing to overwrite {raw}")
     W = max(1, workers)
-    allj = [(j, s, i) for j, (s, i) in enumerate(jobs(n_env, n_ctrl, n_bnd))]
+    allj = [(j, s, i) for j, (s, i) in enumerate(job_list if job_list is not None else jobs(n_env, n_ctrl, n_bnd))]
     sysseed = None
     for i in range(W):
         sysseed = seed_external(services_for(root, i))
