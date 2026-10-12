@@ -1,0 +1,13 @@
+{
+  "recorded_at": "2026-10-12",
+  "note": "Gate 5 frozen design (tag r3-g5-freeze), recorded before any Gate 5 implementation. Evaluators compare against these hashes. Manifest files created by P1g (envelope-ops.json, dependency graph, reason map, fault catalogue) are added in the commit that creates them.",
+  "files": {
+    "spec/protections/PROT-H29.md": "1bda71bb5b23cbab1a39ccbb8a1c6415aff6e81c1ebc55c74623fa84fa44221b",
+    "spec/gate5/PROTOCOL-P1g.md": "c26d360b2baf2e5014336d947b01a9384680034dc9ffbea674709e6b20010b9e",
+    "spec/gate5/ORACLE-AND-HARNESS-G5.md": "310c59734665910e8ba63b65cd138641add0fba15dd261800b650dda95c2d4f9",
+    "spec/gate5/EQUIVALENCE-G5.md": "d7593eb5e29ca4cbbf5e925ae4e03c9481fd0e67fb21bb96b8cac77d10dd567d",
+    "spec/gate5/OPEN-QUESTIONS.md": "0e061eebd90e4f78a584cad9d139829e0281971bd935502c424f13d10ea952da",
+    "protocol/AUTHOR_DECISIONS_2026-10-12.md": "57c5ed40e369dcbe3ffffe407cbb4a4ebbacee9576b30c432b9ab777fa446a8d",
+    "threat_model/survivability_envelope.json": "b97048a68e26c69f56d4ee10a9e966f698c62cf760846a5bc403ff30f283658d"
+  }
+}
