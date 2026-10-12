@@ -109,6 +109,25 @@ class G5Rig:
     def d(self, sub, op, args, rid, obo=None):
         return self.dep.direct(self.token(sub), op, args, obo, rid)
 
+    def host(self, resume=False, mutants=(), tick=None):
+        """A real variant host process (r3_shared.host): crash points SIGKILL it; resume = a NEW process over the same stores."""
+        from r3_shared.host import DeploymentProxy
+        spec = {"domain": "manufacturing", "ops_spec_path": str(ROOT / "spec" / "ops" / "manufacturing.json"), "auth_spec": V0,
+                "world_path": str(self.tmp / "w.db"), "secret": "test-secret-123", "clock_start": self.clock.now() if tick is None else tick,
+                "state_dir": None, "history_path": str(self.tmp / "hist.db"), "anchor_sock": self.anchor._sock, "governance": None,
+                "resume": resume, "deployment_id": DEP,
+                "authority": {"sock": self.auth.sock_path, "lease": 4, "graph_path": str(ROOT / "spec" / "gate5" / "dependency-graph.json")},
+                "external": None}
+        if self.binding is not None:
+            spec["external"] = {"systems": self.systems, "data_sock": self.ext.sock_path, "root_caps": self.binding.root_caps,
+                                "observer": {"ext_dir": str(self.tmp / "ext"), "key": self.ectl.observer_key(DEP), "fault": None},
+                                "window": self.systems["window"], "adapter_factory": "tests.conventional.conv_g5_util:honest_factory"}
+        w = self.tmp / "work"
+        w.mkdir(exist_ok=True)
+        px = DeploymentProxy.start("conventional", mutants, spec, str(w), extra_paths=[str(ROOT)])
+        self.hosts.append(px)
+        return px
+
     def commits(self):
         return [x["data"]["request_id"] for x in self.reader.log() if x["kind"] == "mark" and x["ref"] == "commit"]
 
@@ -134,7 +153,7 @@ def stop_all():
         LIVE.pop().stop()
 
 
-def make_g5(tmp_path, mutants=(), ext=False, start=2) -> G5Rig:
+def make_g5(tmp_path, mutants=(), ext=False, start=2, deploy=True) -> G5Rig:
     tmp = Path(tmp_path)
     tmp.mkdir(parents=True, exist_ok=True)
     short = tempfile.mkdtemp(prefix="r3g5")
@@ -167,6 +186,6 @@ def make_g5(tmp_path, mutants=(), ext=False, start=2) -> G5Rig:
         recs = {s: Honest(rig.ectl.data_only()) for s in systems["systems"]}
         obs = ObservationClient(str(tmp / "ext"), rig.ectl.observer_key(DEP), systems, None)
         rig.binding = ExternalBinding(systems, recs, {s: rig.ectl.issue_root(DEP, s) for s in systems["systems"]}, obs, systems["window"])
-    rig.dep = rig.deploy()
+    rig.dep = rig.deploy() if deploy else None
     LIVE.append(rig)
     return rig
