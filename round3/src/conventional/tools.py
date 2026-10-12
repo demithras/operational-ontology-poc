@@ -30,7 +30,10 @@ class ToolSurface:
                   request_id: str | None = None) -> CallResult:
         if self._svc.crashed:
             return CallResult("UNAVAILABLE", {"reason": "crashed"})
+        gate = self._svc._g5_pregate("execute", name, name, args, on_behalf_of, request_id, True)   # G5: a blocked dependency first
+        if gate is not None:
+            return gate
         if self._svc.authenticate(token) is None:
             return CallResult("DENIED", {"reason": "invalid_token"})
         hidden = name not in self.visible(token)  # a hidden tool is still a governed refusal: the service decides (E-8)
-        return self._svc.execute(token, name, args, on_behalf_of, request_id, _kind="call_tool", _hidden=hidden)
+        return self._svc.execute(token, name, args, on_behalf_of, request_id, _kind="call_tool", _hidden=hidden, _pregated=True)

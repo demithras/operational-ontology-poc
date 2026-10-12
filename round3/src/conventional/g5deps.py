@@ -64,14 +64,14 @@ class BulkheadFull(Exception):
 
 
 class DepGraph:
-    """spec/gate5/dependency-graph.json (r3-depgraph-1) as handed over by AuthorityBinding.graph. Data only."""
+    """The frozen dependency graph (r3-depgraph-1) as handed over by AuthorityBinding.graph. Data only."""
 
     def __init__(self, doc: dict):
         self.doc = doc
 
     def surface_of(self, domain: str, name: str | None) -> str:
         ops = self.doc["operations"]
-        ent = (ops.get(domain) or {}).get(name) or ops["*"].get(name) if name is not None else None
+        ent = ((ops.get(domain) or {}).get(name) or ops["*"].get(name)) if isinstance(name, str) else None
         return ent["surface"] if ent else "governed_mutation"
 
     def decision_nodes(self, domain: str, name: str | None = None, surface: str | None = None) -> list[str]:

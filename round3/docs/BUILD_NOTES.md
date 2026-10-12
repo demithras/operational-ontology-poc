@@ -603,3 +603,16 @@ Tests: tests/paladin/test_pal_g4_*.py (rig g4_rig.py, adapters g4_adapters.py). 
   harness adapter wrapper (not built here).
 - Fakes: tests/fakes/fake_g5.py (FakeG5Variant honest; FakeStaleCacheVariant keeps a module-level lease cache and reports it unconditionally).
 - Tests: tests/test_p1g_{authsvc,faultplane,faultctl,host,recovery,misc,e2e}.py, helper tests/p1g_util.py.
+
+## G5 conventional H29 (branch r3-conv, tag r3-g5-conventional)
+- New modules in `src/conventional/`: `g5deps.py` (dependency graph as data, Breaker, Bulkhead, Guard), `g5svc.py` (Service mixin: lease gate,
+  adoption, anchor pre-flight, journal completion, resume mutants, `recovery_view`, `dependency_status`), `g5journal.py` (anchor journal table
+  `conv_journal`, written in the effect transaction). Touched: `service.py` (deploy params, resume branch, pre-gates, leased-digest claims),
+  `authority_ops.py`, `lowreads.py`, `tools.py`, `provenance.py` (`AnchorUnavailable` -> in_doubt, repair of an anchored entry), `extout.py` /
+  `extrecon.py` / `extsvc.py` (breaker hooks, an EXT outage is not an attempt), `store.py` / `histledger.py` (`approvals_open_all`), `variant.py`.
+- Design: the lease lives in memory only; a fresh process trusts no durable copy and fetches before its first governed decision. Breaker cooldown
+  is 0 ticks on purpose (an open breaker would answer UNAVAILABLE for a node the oracle already sees healthy). The pre-flight anchor `head()` keeps
+  the dropped-anchor case an UNAVAILABLE with zero effects; the in-doubt UNKNOWN is only for a root lost after the world commit.
+- Tests: `tests/conventional/test_conv_g5_{lease,deps,recovery,hostkill,progress,mutants}.py` + `conv_g5_util.py` (real AuthorityService, anchor with
+  control plane, ExternalWorld, SIGKILL hosts). Mutants: `spec/protections/H29-conventional.md`.
+- Gaps in the frozen text: listed at the end of `spec/protections/H29-conventional.md` (G1-G4) and in the report.

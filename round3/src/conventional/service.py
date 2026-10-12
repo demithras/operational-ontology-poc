@@ -252,13 +252,14 @@ class Service(AuthorityOps, GovernanceOps, ExternalOps, G5Ops, LowReads, LowProv
     # -- the write path ------------------------------------------------------------------------
     def execute(self, token: str, operation: str, args: dict, on_behalf_of: str | None = None,
                 request_id: str | None = None, *, _enforce: bool = True, _kind: str = "direct",
-                _hidden: bool = False) -> CallResult:
+                _hidden: bool = False, _pregated: bool = False) -> CallResult:
         with self._guarded():
             if self.crashed:
                 return CallResult("UNAVAILABLE", {"reason": "crashed"})
             if self._authority_unresolved:  # E-7: the authority a decision depends on cannot be trusted: no effects
                 return CallResult("UNAVAILABLE", {"reason": "history_unresolved"})
-            gate = self._g5_pregate("execute", operation, operation, args, on_behalf_of, request_id, _kind == "call_tool")
+            gate = None if _pregated else self._g5_pregate("execute", operation, operation, args, on_behalf_of, request_id,
+                                                            _kind == "call_tool")
             if gate is not None:
                 return gate
             dc = DecisionCtx(_kind, request_id if isinstance(request_id, str) and request_id.strip() else None, None,
