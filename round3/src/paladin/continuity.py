@@ -45,11 +45,8 @@ class ContinuityMixin:
         if self._h29:
             self._deps = DepGraph(self._binding.graph, c.domain)
             self._gate = LeaseGate(self._binding, c.ledger, c.clock, c.mutants, self._resume)
-            if self._resume:
-                try:
-                    self.complete_anchors()   # on resume: anchor what can be anchored now (a down ANCHOR is retried at the first call after heal)
-                except Exception:   # noqa: BLE001 - recovery must never prevent the deployment from coming up
-                    pass
+            # G5-E25 / P1g-2: a resumed deployment appends NOTHING to the anchor before the first API call after recovery_view();
+            # an unanchored commit (G5-E12) is completed by guarded()/_dispatch/_reconcile at that first call.
             if "stale_cache_after_restart" in c.mutants and self._gate.held is not None:
                 self._adopted = self._gate.held.digest   # MUTANT: the cached version is believed to be the installed one
                 c.lease_version = self._adopted
