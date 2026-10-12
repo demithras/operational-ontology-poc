@@ -1,0 +1,10 @@
+STEP start 15:57:59 head=7da79e5 tag=r3-g4-cand2
+STEP run exit=0
+STEP eval exit=0
+{"paladin_verdict": "SUPPORTED", "conventional_verdict": "SUPPORTED"}
+conventional: SUPPORTED []
+paladin: SUPPORTED []
+STEP verify exit=0
+evidence hashes ok
+verdict reproduces
+DONE 16:29:19

@@ -1,0 +1,46 @@
+{
+ "behavioural": {
+  "artefact_probe_cases": 1356,
+  "artefact_probe_hits": [],
+  "oracle_decision_mismatches": [],
+  "twin_differential": [],
+  "twin_pairs": 5600
+ },
+ "self_test": {
+  "honest_reference": {
+   "behavioural": {
+    "cases": 60,
+    "governance_in_adapter": 0,
+    "oracle_denied_variant_ok": 0
+   },
+   "static_hits": 0
+  },
+  "ok": true,
+  "policy_gate_in_adapter": {
+   "behavioural": {
+    "cases": 60,
+    "governance_in_adapter": 82,
+    "oracle_denied_variant_ok": 65
+   },
+   "static_hits": 2
+  },
+  "run": true
+ },
+ "static": {
+  "declared": true,
+  "files": [
+   "src/conventional/extout.py",
+   "src/conventional/extrecon.py"
+  ],
+  "hits": [],
+  "missing_modules": [],
+  "modules": [
+   "conventional.extout",
+   "conventional.extrecon"
+  ],
+  "resolutions_file": "spec/gate4/ADAPTER-AUDIT-RESOLUTIONS.json",
+  "resolutions_present": true,
+  "resolved": [],
+  "unresolved_count": 0
+ }
+}

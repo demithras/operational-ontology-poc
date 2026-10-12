@@ -1,0 +1,77 @@
+{
+ "honest_controls": 1000,
+ "positive_controls": {
+  "manufacturing": 429,
+  "project": 286
+ },
+ "shared_cases": [],
+ "shared_trust_root": false,
+ "topology": {
+  "deployment": "exp-h28-001r:paladin:byz-000000:byz",
+  "reasons": [],
+  "shared_trust_root": false,
+  "systems": {
+   "ERP": {
+    "action": {
+     "adapter_id": "L1",
+     "cap_root_id": "c97db6e0ac72",
+     "socket": "/private/tmp/r3h28.GJBpox/ext.sock"
+    },
+    "observation": {
+     "connection": "own sqlite connection",
+     "db_open_mode": "ro",
+     "db_path": "/private/tmp/r3h28.GJBpox/ext/external.db",
+     "observer_key_id": "7aac16479234"
+    },
+    "shared_trust_root": false,
+    "why": []
+   },
+   "GEN-NULL": {
+    "action": {
+     "adapter_id": "L1",
+     "cap_root_id": "06ec936e4f45",
+     "socket": "/private/tmp/r3h28.GJBpox/ext.sock"
+    },
+    "observation": {
+     "connection": "own sqlite connection",
+     "db_open_mode": "ro",
+     "db_path": "/private/tmp/r3h28.GJBpox/ext/external.db",
+     "observer_key_id": "7aac16479234"
+    },
+    "shared_trust_root": false,
+    "why": []
+   },
+   "MES": {
+    "action": {
+     "adapter_id": "L1",
+     "cap_root_id": "5416e87c1340",
+     "socket": "/private/tmp/r3h28.GJBpox/ext.sock"
+    },
+    "observation": {
+     "connection": "own sqlite connection",
+     "db_open_mode": "ro",
+     "db_path": "/private/tmp/r3h28.GJBpox/ext/external.db",
+     "observer_key_id": "7aac16479234"
+    },
+    "shared_trust_root": false,
+    "why": []
+   },
+   "WMS": {
+    "action": {
+     "adapter_id": "L1",
+     "cap_root_id": "29c516d88ebb",
+     "socket": "/private/tmp/r3h28.GJBpox/ext.sock"
+    },
+    "observation": {
+     "connection": "own sqlite connection",
+     "db_open_mode": "ro",
+     "db_path": "/private/tmp/r3h28.GJBpox/ext/external.db",
+     "observer_key_id": "7aac16479234"
+    },
+    "shared_trust_root": false,
+    "why": []
+   }
+  }
+ },
+ "transcript_sha256": "363f1b801f499a8e0464f878b144b9065fe2e922bdde1148058b4a8937cb1647"
+}
