@@ -149,6 +149,22 @@ class ExternalWorldCore:
                 return w, system, dep
         return None, system, dep
 
+    @staticmethod
+    def _claim(cap: str, system: str, dep: str) -> dict:
+        """What an UNVERIFIED cap says about itself. Never an attribution field (G5-E4)."""
+        try:
+            cav = [[n, v] for n, v in extcap.caveats_of(cap)]
+        except (extcap.CapError, TypeError, IndexError):
+            cav = []
+        return {"system": system, "deployment": dep, "caveats": cav}
+
+    def unverified_claims(self) -> dict:
+        """audit seq -> unverified_claim for `unavailable` rows (separate from the attributed audit columns)."""
+        with self.lock:
+            if self.con.execute("SELECT 1 FROM sqlite_master WHERE name='unverified_claim'").fetchone() is None:
+                return {}
+            return {r[0]: json.loads(r[1]) for r in self.con.execute("SELECT audit_seq, claim_json FROM unverified_claim")}
+
     def write(self, cap: str, operation: str, target: str, payload: dict, adapter_id: str) -> dict:
         if not self.faults:
             return self._write(cap, operation, target, payload, adapter_id)
@@ -157,7 +173,11 @@ class ExternalWorldCore:
             if w is None:
                 return self._write(cap, operation, target, payload, adapter_id)
             if w["mode"] == "drop":  # evaluated BEFORE bad_signature (Q12): no effect, one refused/unavailable audit row
-                self._audit(dep, system, operation, target, payload_digest(payload), "", "", adapter_id, "refused", "unavailable")
+                # G5-E4: the claim is unverified, so the row attributes NOTHING (deployment/system/chain/correlation empty);
+                # the claimed (system, deployment, caveats) are kept apart under "unverified_claim".
+                seq = self._audit("", "", operation, target, payload_digest(payload), "", "", adapter_id, "refused", "unavailable")
+                self.con.execute("CREATE TABLE IF NOT EXISTS unverified_claim(audit_seq INTEGER PRIMARY KEY, claim_json TEXT NOT NULL)")
+                self.con.execute("INSERT INTO unverified_claim VALUES(?,?)", (seq, canon_json(self._claim(cap, system, dep))))
                 raise Unavailable(system)
             self._write(cap, operation, target, payload, adapter_id)  # reply_lost: applied (or refused) as usual, reply dropped
             raise Unavailable(system)
