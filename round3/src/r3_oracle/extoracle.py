@@ -78,6 +78,12 @@ def load_ledger(ext_dir) -> dict:
         led = {"effects": rows("SELECT * FROM effects ORDER BY seq"), "audit": rows("SELECT * FROM audit ORDER BY seq"),
                "sysstate": {(r["system"], r["key"]): json.loads(r["props_json"]) for r in rows("SELECT * FROM sysstate")},
                "issued": rows("SELECT * FROM issued")}
+        # G5-E4: `unavailable` audit rows attribute nothing; the (unverified) claim of the cap sits in a side table, joined here by audit seq
+        if con.execute("SELECT 1 FROM sqlite_master WHERE name='unverified_claim'").fetchone() is not None:
+            claims = {r["audit_seq"]: json.loads(r["claim_json"]) for r in rows("SELECT * FROM unverified_claim")}
+        else:
+            claims = {}
+        led["unverified"] = [{**a, "claim": claims[a["seq"]]} for a in led["audit"] if a["seq"] in claims]
     finally:
         con.close()
     return led
