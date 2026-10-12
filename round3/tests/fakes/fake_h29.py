@@ -25,6 +25,9 @@ from r3_shared.variant import CallResult
 from tests.fakes import fake_h28_adapt as A
 from tests.fakes.fake_h28 import H28Dep
 
+import threading
+
+_WLOCK = threading.Lock()
 _MODULE_CACHE: dict = {}      # FakeSurvivesCoopCrash: dies with the process (a hard kill)
 
 
@@ -58,9 +61,10 @@ class H29Dep(H28Dep):
 
     # ---- durable helpers ------------------------------------------------------------------------------------------
     def _w(self, name, obj):
-        tmp = self.sdir / (name + ".tmp")
-        tmp.write_text(json.dumps(obj, sort_keys=True))
-        os.replace(tmp, self.sdir / name)         # atomic: a SIGKILL never leaves a truncated record
+        with _WLOCK:                              # concurrent redeliveries share the fake's files
+            tmp = self.sdir / f"{name}.{os.getpid()}.{threading.get_ident()}.tmp"
+            tmp.write_text(json.dumps(obj, sort_keys=True))
+            os.replace(tmp, self.sdir / name)     # atomic: a SIGKILL never leaves a truncated record
 
     def _g4_save(self):
         self._w("g4.json", self.g4)

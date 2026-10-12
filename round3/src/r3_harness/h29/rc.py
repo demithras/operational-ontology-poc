@@ -10,6 +10,7 @@ from r3_oracle import continuity as C
 from r3_shared.world import WorldReader
 
 from . import faults, services
+from .driver import _res
 
 
 def do_tamper(r, st) -> None:
@@ -96,12 +97,12 @@ def rc2(r) -> None:
     r.obs_apply()
     ext_rids = sorted({e["rid"] for e in r.ev if e["k"] == "request" and e.get("rid") and C.outcome_deps(r.graph, r.seq["domain"], e["operation"])})
     res, err = r.call("dispatch_pending")
-    r.event("dispatch", res={"status": res.status, "body": res.body} if res is not None else None, err=err, rc2=True)
+    r.event("dispatch", res=_res(res) if res is not None else None, err=err, rc2=True)
     last = max([e["t"] for e in r.ev if e["k"] in ("request", "redeliver")] + [r.t])
     r.tick_to(max(r.t, last + r.systems["window"] + 2))
     for rid in ext_rids:
         x, e = r.call("reconcile", rid, r.base + r.t)
-        r.event("reconcile", rid=rid, watermark=r.t, res={"status": x.status, "body": x.body} if x is not None else None, err=e,
+        r.event("reconcile", rid=rid, watermark=r.t, res=_res(x) if x is not None else None, err=e,
                 fault=None, rc2=True)
     t_probe = r.t
     admin = next((p["id"] for p in r.auth0["principals"] if "admin" in p.get("roles", [])), r.auth0["principals"][0]["id"])

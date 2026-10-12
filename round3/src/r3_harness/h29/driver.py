@@ -24,8 +24,18 @@ ROUND3 = Path(__file__).resolve().parents[3]
 FACTORY = "r3_harness.h29.adapters_h29:build"
 
 
+def _norm(x):
+    """Ledger row seqs (outcome `evidence`) are local to the service instance: the record keeps only whether any exist (the union of two seq spaces can collide, so even the count is layout dependent) so the evidence bytes do not
+    depend on how many workers / service sets a run used (serial-vs-parallel byte identity)."""
+    if isinstance(x, dict):
+        return {k: (([0] if v else []) if k == "evidence" and isinstance(v, list) else _norm(v)) for k, v in x.items()}
+    if isinstance(x, list):
+        return [_norm(v) for v in x]
+    return x
+
+
 def _res(r) -> dict:
-    return {"status": r.status, "body": r.body}
+    return {"status": r.status, "body": _norm(r.body)}
 
 
 class Run:
