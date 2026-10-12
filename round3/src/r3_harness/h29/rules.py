@@ -30,6 +30,7 @@ OPTIONAL = {"request": ("tag", "invalid_probe", "attacker"), "read": ("tag",), "
 SURFACES = ("call_tool", "direct")
 FAULT_MODES = ("drop", "reply_lost")
 TAMPER_KINDS = ("forge_approval", "delete_idempotency", "rewrite_meta")
+BOUNDARY_TAMPER = ("delete_store",)       # B4 only (PROT-H29 s9): world store + HistoryStore deleted
 CLASSES = ("F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8")
 
 
