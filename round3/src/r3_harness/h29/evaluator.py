@@ -183,6 +183,8 @@ def _verdict(vdir, vname, t, is_dev, ov, agg, J, valid, reasons, man) -> dict:
               (elig_all > 0 and 100 * pr["during_fault"][0] >= need["min_fault_share_pct"] * elig_all, f"eligible requests sent during an active fault: {pr['during_fault'][0]}/{elig_all} < {need['min_fault_share_pct']}%"),
               (all(bs[n][0] >= need["min_blocked"] and bs[n][1] >= need["min_safe_during"] for n in bs), f"oracle cannot distinguish blocked from healthy per node (BLOCKED, SAFE-during-fault): {bs}"),
               (pr["outcome"][0] > 0 and pr["outcome"][1] == 0, f"outcome_progress_loss {pr['outcome'][1]} over {pr['outcome'][0]} checked intents"),
+              (agg["probes"]["in_auth_anchor_window"] >= need["min_probe_window"],
+               f"input-invalid probes inside AUTH/ANCHOR fault windows {agg['probes']['in_auth_anchor_window']} < {need['min_probe_window']} (G5-E28)"),
               (rec["checks"] > 0, "no recovery events were judged"),
               (agg["f6_sequences"] > 0 and agg["stale_sensitive_sequences"] == agg["f6_sequences"], f"F6 sequences without a truly stale-sensitive request: {agg['f6_sequences'] - agg['stale_sensitive_sequences']}"),
               (not agg["harness"], f"harness rows {agg['harness']}")]
@@ -198,7 +200,7 @@ def _verdict(vdir, vname, t, is_dev, ov, agg, J, valid, reasons, man) -> dict:
     metrics = {"classes": {c: cnt(c) for c in judge.CLASSES}, "ratios": ratios, "recovery_ratio": rec_ratio, "mutants": killed, "mutation_kill_rate": kill_rate,
                "harness": agg["harness"], "forbidden_effects": cnt("forbidden_effect") + cnt("effect_outside_scope") + cnt("duplicate_effect"),
                "safe_progress_ratio": ratios["overall"], "misclassification": agg["misclassification"], "boundary": agg["boundary"],
-               "payload_sha256": man.get("payload_sha256"), "minimum_overrides": ov, "blocked_safe": bs, "unrelated_na_by_graph": ["AUTH"]}
+               "payload_sha256": man.get("payload_sha256"), "minimum_overrides": ov, "blocked_safe": bs, "input_invalid_probes": agg["probes"], "lease_gap": agg["probes"]["lease_gap"], "unrelated_na_by_graph": ["AUTH"]}
     return _finish(vname, valid, complete, sample, reject, support, reasons, metrics)
 
 

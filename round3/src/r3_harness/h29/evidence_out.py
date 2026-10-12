@@ -76,7 +76,8 @@ def unavailability_file(J: dict) -> dict:
             if q.get("cls") in ("BLOCKED_BY_DEPENDENCY", "UNRESOLVED") and q.get("down"):
                 per.append({"seq": row["seq"], "n": q["n"], "t": q["t"], "rid": q.get("rid"), "cls": q["cls"], "down": q["down"],
                             "status": q["status"], "reason": q["reason"], "dep": q["dep"]})
-    return {"requests_with_dependency_down": len(per), "per_request": per[:20000], "misclassification": J["agg"]["misclassification"]}
+    return {"requests_with_dependency_down": len(per), "per_request": per[:20000], "misclassification": J["agg"]["misclassification"],
+            "input_invalid_probes": J["agg"]["probes"]}                       # G5-E28: per-shape counts, in-window counts, lease_gap
 
 
 def recovery_file(J: dict) -> dict:

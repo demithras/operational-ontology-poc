@@ -129,7 +129,7 @@ def _judge(R: dict, ctx: Ctx, row: dict) -> dict:
         by_rid[m["data"].get("request_id")].append(m)
     sends = [{"kind": "request" if e["k"] in REQ_KINDS else e["k"], "op": e.get("operation"), "t": e["t"], "invalid_probe": e.get("invalid_probe", False)}
              for e in ev if e["k"] in REQ_KINDS + ("read", "approve") and e.get("err") != "no_host"]
-    renew = C.lease_sends(sends, phi, graph, dom)
+    renew = C.renew_pair(sends, phi, graph, dom)             # G5-E28 (c): obligation list + .adm admissibility window
     crashed = {e["rid"] for e in ev if e["k"] in REQ_KINDS and e.get("err") == "no_reply"}
     tamper_t = next((e["t"] for e in ev if e["k"] == "tamper"), None)
     A = lambda t: C.authority_in_force(versions, t)            # noqa: E731

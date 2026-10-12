@@ -45,6 +45,8 @@ class H29Machine(RuleBasedStateMachine):
         p = gen_draw.draw(self.plan, self.ch, "ok")
         if p is not None:
             E.request(self.plan, p)
+        if s % 4 == 0:
+            E.probe(self.plan, self.ch)                        # G5-E28 (a): an input-invalid probe is a `request` step (invalid_probe, probe_shape)
 
     @precondition(lambda self: E.healthy(self.plan))
     @rule(s=st.integers(0, 10 ** 6))

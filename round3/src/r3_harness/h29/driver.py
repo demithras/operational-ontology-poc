@@ -256,7 +256,7 @@ class Run:
         r, err = self.call(fn, tok, st["operation"], dict(st["args"]), st["obo"], st["rid"])
         head = self.anchor_head_after_ok(r)
         return self.event(kind, i=st.get("i"), rid=st["rid"], principal=st["principal"], operation=st["operation"], surface=st["surface"],
-                          tag=st.get("tag"), copy=copy, attacker=bool(st.get("attacker")), invalid_probe=bool(st.get("invalid_probe")),
+                          tag=st.get("tag"), copy=copy, attacker=bool(st.get("attacker")), invalid_probe=bool(st.get("invalid_probe")), probe_shape=st.get("probe_shape"),
                           t=t0, args=st["args"], res=_res(r) if r is not None else None, err=err, inc=len(self.rec["incarnations"]) - 1,
                           anchor_head_at_reply=head)
 
