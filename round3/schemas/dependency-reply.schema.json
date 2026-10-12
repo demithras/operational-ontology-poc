@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "r3-dependency-reply-1",
+  "title": "H29 reply forms (P1g-5): {status, body}",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "body"],
+  "properties": {"status": {"enum": ["UNAVAILABLE", "UNKNOWN"]}, "body": {"type": "object"}},
+  "oneOf": [
+    {"properties": {"status": {"const": "UNAVAILABLE"},
+       "body": {"type": "object", "additionalProperties": false, "required": ["reason", "dependency"],
+                "properties": {"reason": {"const": "dependency_unavailable"}, "dependency": {"type": "string", "minLength": 1}}}}},
+    {"properties": {"status": {"const": "UNKNOWN"},
+       "body": {"type": "object", "additionalProperties": false, "required": ["reason"],
+                "properties": {"reason": {"const": "in_doubt"}}}}},
+    {"properties": {"status": {"const": "UNAVAILABLE"},
+       "body": {"type": "object", "additionalProperties": false, "required": ["reason"],
+                "properties": {"reason": {"const": "state_lost"}}}}}
+  ]
+}

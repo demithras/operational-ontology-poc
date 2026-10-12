@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "r3-fault-control-1",
+  "title": "Server-side fault control command (P1g-3): outage/partition window [from_tick, to_tick) for one deployment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["op", "deployment", "from_tick", "to_tick", "mode"],
+  "properties": {
+    "op": {"enum": ["outage", "partition"]},
+    "deployment": {"type": "string", "minLength": 1},
+    "target": {"type": "string", "minLength": 1, "description": "system name (ExternalWorld) or stream (AnchorServer); absent for AuthorityService"},
+    "from_tick": {"type": "integer", "minimum": 0},
+    "to_tick": {"type": "integer", "minimum": 1},
+    "mode": {"enum": ["drop", "reply_lost"]}
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "r3-recovery-1",
+  "title": "RECOVERY_VIEW (P1g-8): exactly these keys",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["form", "committed", "intents", "authority", "approvals_open"],
+  "properties": {
+    "form": {"const": "r3-recovery-1"},
+    "committed": {"type": "array", "items": {
+      "type": "object", "additionalProperties": false, "required": ["request_id", "world_seq", "authority_version"],
+      "properties": {"request_id": {"type": ["string", "null"], "minLength": 1},
+                     "world_seq": {"type": "integer", "minimum": 1},
+                     "authority_version": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}}},
+    "intents": {"type": "array", "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["request_id", "effect_index", "system", "chain_ids", "state", "confidence"],
+      "properties": {"request_id": {"type": "string", "minLength": 1}, "effect_index": {"type": "integer", "minimum": 0},
+                     "system": {"type": "string", "minLength": 1}, "chain_ids": {"type": "integer", "minimum": 0},
+                     "state": {"enum": ["PENDING", "RECONCILED_SUCCESS", "RECONCILED_FAILED", "DIVERGED", "UNKNOWN"]},
+                     "confidence": {"enum": ["full", "low"]}}}},
+    "authority": {"type": "object", "additionalProperties": false, "required": ["version", "lease_until"],
+                  "properties": {"version": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+                                 "lease_until": {"type": ["integer", "null"], "minimum": 0}}},
+    "approvals_open": {"type": "array", "items": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+  }
+}

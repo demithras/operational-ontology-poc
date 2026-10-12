@@ -1,0 +1,164 @@
+{
+  "nodes": [
+    "AUTH",
+    "ANCHOR",
+    "OBS",
+    "EXT:*"
+  ],
+  "operations": {
+    "*": {
+      "approve": {
+        "outcome": [],
+        "surface": "governed_mutation"
+      },
+      "delegate": {
+        "outcome": [],
+        "surface": "governed_mutation"
+      },
+      "revoke": {
+        "outcome": [],
+        "surface": "governed_mutation"
+      }
+    },
+    "manufacturing": {
+      "expedite_purchase_order": {
+        "outcome": [
+          "EXT:ERP",
+          "OBS"
+        ],
+        "surface": "governed_mutation"
+      },
+      "reschedule_work_order": {
+        "outcome": [
+          "EXT:MES",
+          "OBS"
+        ],
+        "surface": "governed_mutation"
+      },
+      "transfer_inventory": {
+        "outcome": [
+          "EXT:WMS",
+          "OBS"
+        ],
+        "surface": "governed_mutation"
+      }
+    },
+    "project": {
+      "attach_evidence": {
+        "outcome": [],
+        "surface": "governed_mutation"
+      },
+      "create_hypothesis": {
+        "outcome": [],
+        "surface": "governed_mutation"
+      },
+      "edit_threshold": {
+        "outcome": [],
+        "surface": "governed_mutation"
+      },
+      "evaluate_hypothesis": {
+        "outcome": [],
+        "surface": "governed_mutation"
+      },
+      "flag_orphan_component": {
+        "outcome": [],
+        "surface": "governed_mutation"
+      },
+      "new_experiment_version": {
+        "outcome": [],
+        "surface": "governed_mutation"
+      },
+      "notify_reviewer": {
+        "outcome": [
+          "EXT:NOTIFY",
+          "OBS"
+        ],
+        "surface": "governed_mutation"
+      },
+      "preregister_hypothesis": {
+        "outcome": [],
+        "surface": "governed_mutation"
+      },
+      "publish_result": {
+        "outcome": [
+          "EXT:REGISTRY",
+          "OBS"
+        ],
+        "surface": "governed_mutation"
+      },
+      "record_decision": {
+        "outcome": [],
+        "surface": "governed_mutation"
+      },
+      "start_run": {
+        "outcome": [],
+        "surface": "governed_mutation"
+      },
+      "supersede_hypothesis": {
+        "outcome": [],
+        "surface": "governed_mutation"
+      }
+    }
+  },
+  "surfaces": {
+    "explain": {
+      "decision": [
+        "ANCHOR"
+      ]
+    },
+    "governed_mutation": {
+      "decision": [
+        "AUTH",
+        "ANCHOR"
+      ]
+    },
+    "read": {
+      "decision": [
+        "AUTH"
+      ]
+    },
+    "reconcile": {
+      "outcome": [
+        "OBS"
+      ]
+    },
+    "replay": {
+      "decision": [
+        "ANCHOR"
+      ]
+    }
+  },
+  "systems": {
+    "manufacturing": {
+      "ERP": [
+        "EXT:ERP",
+        "OBS"
+      ],
+      "GEN-NULL": [
+        "EXT:GEN-NULL"
+      ],
+      "MES": [
+        "EXT:MES",
+        "OBS"
+      ],
+      "WMS": [
+        "EXT:WMS",
+        "OBS"
+      ]
+    },
+    "project": {
+      "GEN-NULL": [
+        "EXT:GEN-NULL"
+      ],
+      "NOTIFY": [
+        "EXT:NOTIFY",
+        "OBS"
+      ],
+      "REGISTRY": [
+        "EXT:REGISTRY",
+        "OBS"
+      ]
+    }
+  },
+  "version": "r3-depgraph-1"
+}
