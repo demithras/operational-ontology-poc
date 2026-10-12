@@ -18,6 +18,14 @@ def load_raw(vdir: Path) -> list:
     return [json.loads(l) for l in (Path(vdir) / RAW).read_text().splitlines() if l.strip()]
 
 
+def note_anchor_seq(aseq: dict, e: dict) -> None:
+    """A request_id the corpus REUSES (conflicting redelivery) is anchored again later: the FIRST entry is the committed decision's, so the
+    unanchored_ack ordering check (G5-E20) must compare against the minimum, never the last entry (G5-E30 candidate: harness artefact, conventional
+    env-000006 r004 entry_seq 7 head_at_reply 3)."""
+    k = (e["stream"], e["decision_id"])
+    aseq[k] = min(aseq.get(k, e["seq"]), e["seq"])
+
+
 def load_services(svc_root: Path, W: int, closes: dict | None = None) -> dict:
     """Closed ledgers (merged: deployments are world-private), anchor entries, integrity verdicts of the three service kinds."""
     ledgers, anchor, aseq, integ = [], set(), {}, {"anchor": [], "auth": [], "ext": []}
@@ -29,7 +37,7 @@ def load_services(svc_root: Path, W: int, closes: dict | None = None) -> dict:
             if line.strip():
                 e = json.loads(line)
                 anchor.add((e["stream"], e["decision_id"]))
-                aseq[(e["stream"], e["decision_id"])] = e["seq"]
+                note_anchor_seq(aseq, e)
         exp = ((closes or {}).get("anchor") or [{}] * W)[i].get("head") if closes else None
         integ["anchor"].append(verify_anchor_log(ad, expected_head=exp) if exp else verify_anchor_log(ad))
         authv = verify_log(Path(svc_root) / f"auth-{i}")

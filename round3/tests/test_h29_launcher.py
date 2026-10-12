@@ -90,3 +90,19 @@ def test_every_evaluator_dev_branch_has_a_launcher_refusal_and_a_test():
     for b in branches:
         assert f'Refusal("{b}"' in launch_src, b
         assert f"def test_refuses_{b}" in me, b
+
+
+def test_refuses_reason_map(tmp_path, monkeypatch):
+    """G5-E29(d): a missing reason map is a launcher refusal for a non-dev id (the evaluator marks the run invalid via refuse_unless_dev)."""
+    from r3_harness.h29 import reasonmap
+    monkeypatch.setattr(reasonmap, "DEFAULT_PATH", tmp_path / "absent.json")
+    sv = SvcSet(1)
+    try:
+        with pytest.raises(launch.Refusal) as e:
+            launch.guard(args(candidate_tag="HEAD"), tmp_path, env=env_for(sv))
+        assert e.value.branch == "reason_map"
+    finally:
+        sv.cleanup()
+    reasons: list = []
+    assert evaluator.refuse_unless_dev(False, "reason_map", reasonmap.load() is None, "absent", reasons) and reasons
+    assert not evaluator.refuse_unless_dev(True, "reason_map", True, "absent", [])

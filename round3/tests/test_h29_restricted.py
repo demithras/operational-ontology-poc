@@ -197,3 +197,15 @@ def test_g5_e25_honest_fake_clean_and_dispatching_fake_rejected():
         (Path(d) / evidence_out.FILES[5]).write_text("{}")
         v = evaluator._verdict(Path(d), "v", t, True, {}, J["agg"], J, True, [], {})
     assert v["verdict"] == "REJECTED" and "recovery_divergence" in str(v["metrics"]["classes"]), v["reasons"]
+
+
+def test_anchor_seq_of_a_reused_request_id_is_the_first_entry():
+    """Fix1-3 investigation (conventional env-000006, r004): the same request_id anchored again at seq 7 after an OK reply at head 3 is a harness
+    artefact, not unanchored_ack: the committed decision's entry is the FIRST one."""
+    from r3_harness.h29 import finalize
+    a: dict = {}
+    for seq in (3, 7):
+        finalize.note_anchor_seq(a, {"stream": "s", "decision_id": "r004", "seq": seq})
+    assert a == {("s", "r004"): 3}
+    finalize.note_anchor_seq(a, {"stream": "s", "decision_id": "r004", "seq": 2})
+    assert a[("s", "r004")] == 2
