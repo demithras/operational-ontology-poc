@@ -159,10 +159,12 @@ def test_r29_6_commit_never_anchored_stays_in_doubt_not_ok(rig):
             raise AnchorUnavailable("test")      # the append never reached the anchor
     c.prov.a = Dropped()
     assert rig.call("planner-1", "transfer_inventory", TR, "i2").status == "UNKNOWN"
-    c.prov.a = real
-    for _ in range(2):
+    for _ in range(2):                                                                         # the anchor still refuses the append: in doubt, never OK
         again = rig.call("planner-1", "transfer_inventory", TR, "i2")
         assert (again.status, again.body) == ("UNKNOWN", {"reason": "in_doubt"})               # an OK needs an anchor entry (R29-4)
+    c.prov.a = real                                                                            # healed: G5-E12 - the missing entry is completed, not in doubt for ever
+    again = rig.call("planner-1", "transfer_inventory", TR, "i2")
+    assert again.status == "OK" and again.body.get("replayed") is True
     assert rig.commits().count("i2") == 1
 
 

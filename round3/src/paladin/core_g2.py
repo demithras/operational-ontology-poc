@@ -7,6 +7,7 @@ the marks of PROT-H24 s4: `authority` {op, ...} (mutations) and `commit` {reques
 from __future__ import annotations
 
 import copy
+import json
 import threading
 from typing import Any
 
@@ -133,6 +134,8 @@ class G2Mixin:
         if err == "float_in_artifact":
             return CallResult("INVALID", {"reason": err})
         if not err:
+            if res.status == "OK":
+                self.pend_drop(d["rid"])
             self.note_decision(d, res)  # PROT-H26 s4: what the provenance views need about this anchored decision
         return CallResult("UNAVAILABLE", {"reason": err}) if err else res
 
@@ -271,6 +274,8 @@ class G2Mixin:
                                       "version": ver})
                 seq = tx.mark("commit", {"request_id": rid, "kind": kind, "authority_version": ver})
                 body = {"edge_id": payload["id"]} if kind == "delegate" else {}
+                d.update(doc=new)
+                self.pend_put(d)
                 self.hook("before_commit")  # armed crash: the transaction rolls back, the change is absent
                 self.persist(new)  # durable before the world commit completes; undone below on any failure
                 persisted = True
@@ -296,6 +301,20 @@ class G2Mixin:
         pending, self._deferred = self._deferred, []
         for sub, payload, rid, fp in pending:
             self.apply_authority("revoke", sub, payload, rid, fp, self.new_decision("revoke", sub, None, None, self.decision_args("revoke", payload), rid, None))
+
+    # ---- H29 / G5-E12: the decision of a commit is journaled BEFORE the world COMMIT so a lost anchor entry can be completed later ----
+    PEND = "led/pend/"
+
+    def pend_put(self, d: dict) -> None:
+        """Durable record of everything the missing anchor entry needs (the pre-commit evidence and document cannot be re-read after the fact)."""
+        if not getattr(self, "h29", False) or self.prov is None or not isinstance(d.get("rid"), str):
+            return
+        rec = {k: d[k] for k in ("kind", "sub", "obo", "op", "args", "rid", "art_op", "path", "evidence", "doc")}
+        self.history.put(self.PEND + d["rid"], json.dumps(rec, sort_keys=True).encode())
+
+    def pend_drop(self, rid: Any) -> None:
+        if getattr(self, "h29", False) and self.prov is not None and isinstance(rid, str):
+            self.history.delete(self.PEND + rid)
 
     def guard_history(self, rid: str) -> CallResult | None:
         """R27-5: a request id the anchor knows as a committed decision, but whose idempotency record is gone, never commits twice."""

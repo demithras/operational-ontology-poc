@@ -23,9 +23,8 @@ def rig():
 
 
 def kill_at(rig, cp, rid, op="transfer_inventory", args=TR, sub="planner-1"):
-    """Arm `cp`, send the request, return once the host is dead. r3_shared.faultplane._kill is an ASYNCHRONOUS self-SIGKILL: on a loaded
-    box the process can run on for a moment (a CP1 kill can then lose the race with COMMIT; a CP3 reply can still leave) - reported as a
-    P1g defect; the recovery assertions below therefore hold for whichever side of the race the host died on."""
+    """Arm `cp`, send the request, return once the host is dead. After P1g fix2 (G5-E15) a crash point never returns after the
+    SIGKILL, so every crash point has exactly ONE deterministic outcome and the tests below assert it (no retry, no skip)."""
     px = rig.host()
     px.arm(cp, rid)
     try:
@@ -52,13 +51,9 @@ def restrict(rig, frm, to):
 
 
 def test_r29_8_kill_before_commit_leaves_nothing_and_redelivery_commits_exactly_once(rig):
-    for n in range(4):                                                           # (retry only when the shared self-kill lost the race with COMMIT)
-        rid = f"k1-{n}"
-        kill_at(rig, "CP1_before_commit", rid)
-        if rid not in rig.commits():
-            break
-    else:
-        pytest.skip("shared faultplane._kill lost the race with COMMIT four times (host too loaded)")
+    rid = "k1-0"
+    kill_at(rig, "CP1_before_commit", rid)
+    assert rid not in rig.commits()                                              # CP1 never loses a race with COMMIT (G5-E15)
     px = rig.host(resume=True)                                                   # a NEW process: nothing of the old one survives
     v = validate_recovery_view(px.recovery_view())
     assert rid not in [c["request_id"] for c in v["committed"]] and [i for i in v["intents"] if i["request_id"] == rid] == []   # no intent without its commit
@@ -69,20 +64,21 @@ def test_r29_8_kill_before_commit_leaves_nothing_and_redelivery_commits_exactly_
     assert [r[0] for r in ledger_rows(rig)].count(f"{rid}#0") == 1             # the intent registered before the aborted COMMIT was voided and re-made
 
 
-def test_r29_8_kill_after_commit_before_anchor_is_in_doubt_not_ok_and_never_commits_twice(rig):
+def test_r29_8_kill_after_commit_before_anchor_is_completed_on_resume_and_never_commits_twice(rig):
     kill_at(rig, "CP2_after_commit", "k2")
     assert rig.commits() == ["k2"]
-    px = rig.host(resume=True)
+    px = rig.host(resume=True)                                                   # G5-E12: resume anchors the missing entry (ANCHOR is up)
     v = validate_recovery_view(px.recovery_view())
     assert [c["request_id"] for c in v["committed"]] == ["k2"]
     assert [(i["request_id"], i["state"]) for i in v["intents"]] == [("k2", "PENDING")]    # durable BEFORE the COMMIT: not lost with the ack
+    head = rig.reader.snapshot()["log_head"]
     again = px.direct(rig.token("planner-1"), "transfer_inventory", TR, None, "k2")
-    assert (again.status, again.body) == ("UNKNOWN", {"reason": "in_doubt"})      # committed, never anchored: no OK without an anchor entry
-    assert rig.commits() == ["k2"]
-    assert px.dispatch_pending().body == {"submitted": 0}                        # no provable (anchored) decision envelope: the adapter is never called
+    assert again.status == "OK" and again.body.get("replayed") is True            # the original decision, now provable from the anchor
+    assert rig.commits() == ["k2"] and rig.reader.snapshot()["log_head"] == head   # zero new world rows
+    assert px.dispatch_pending().body == {"submitted": 1}                        # a committed intent is dispatched like any other
     rig.tick(12, px)
-    out = px.reconcile("k2", rig.clock.now() + 1).body["outcomes"]               # the observer sees no effect past the cap expiry (P1f-6 rule F)
-    assert ledger_rows(rig) == [] and [o["state"] for o in out] == ["RECONCILED_FAILED"]
+    assert px.reconcile("k2", rig.clock.now() + 1).status == "OK"
+    assert [r[0] for r in ledger_rows(rig)] == ["k2#0"]                          # exactly one external effect
 
 
 def test_r29_8_kill_after_anchor_append_redelivery_is_the_original_ok(rig):
@@ -140,7 +136,7 @@ def test_r29_11_rc2_view_equals_the_prediction_from_the_services_and_redelivery_
     rc1 = px2.recovery_view()
     assert [c["request_id"] for c in rc1["committed"]] == ["q1", "q2", "q3"] and rc1["authority"]["version"] is None
     rig.tick(3, px2)                                                              # t=5: every fault healed (windows are [2,4))
-    assert px2.dispatch_pending().body["submitted"] == 2                          # q3 was never anchored: no provable envelope, no dispatch
+    assert px2.dispatch_pending().body["submitted"] == 3                          # G5-E12: q3's missing anchor entry is completed first, then its intent dispatches
     rig.tick(12, px2)
     for rid in ("q1", "q2", "q3"):
         assert px2.reconcile(rid, rig.clock.now() + 1).status == "OK"
@@ -152,16 +148,17 @@ def test_r29_11_rc2_view_equals_the_prediction_from_the_services_and_redelivery_
     expected = {"form": "r3-recovery-1", "authority": {"version": A, "lease_until": t + 4}, "approvals_open": [],
                 "committed": [{"request_id": m["request_id"], "world_seq": c["world_seq"], "authority_version": m["authority_version"]}
                               for m, c in zip(marks, rc2["committed"])],
-                "intents": [{"request_id": r, "effect_index": 0, "system": s, "chain_ids": 1, "state": "RECONCILED_SUCCESS" if r != "q3" else "RECONCILED_FAILED",
+                "intents": [{"request_id": r, "effect_index": 0, "system": s, "chain_ids": 1, "state": "RECONCILED_SUCCESS",
                              "confidence": "full" if s != "MES" else "low"} for r, s in (("q1", "WMS"), ("q2", "ERP"), ("q3", "MES"))]}
     assert canon_json(rc2) == canon_json(expected)
-    assert sorted(r[0] for r in ledger_rows(rig)) == ["q1#0", "q2#0"]               # every anchored effect exactly once, the unanchored one never
+    assert sorted(r[0] for r in ledger_rows(rig)) == ["q1#0", "q2#0", "q3#0"]       # every committed effect exactly once
     head = rig.reader.snapshot()["log_head"]
     n_rows = len(ledger_rows(rig))
     for rid, op, args in (("q1", "transfer_inventory", TR), ("q2", "expedite_purchase_order", EXP)):
         again = px2.direct(tok, op, args, None, rid)
         assert again.status == "OK" and again.body.get("replayed") is True        # the original decision
-    assert px2.direct(tok, "reschedule_work_order", {"work_order_id": "WO-43", "new_planned_start": 55}, None, "q3").status == "UNKNOWN"
+    again = px2.direct(tok, "reschedule_work_order", {"work_order_id": "WO-43", "new_planned_start": 55}, None, "q3")
+    assert again.status == "OK" and again.body.get("replayed") is True              # completed anchor: the original decision, not in_doubt
     assert rig.reader.snapshot()["log_head"] == head and len(ledger_rows(rig)) == n_rows   # zero new world rows, zero new ledger rows
 
 

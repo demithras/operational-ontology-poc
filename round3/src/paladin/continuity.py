@@ -9,16 +9,25 @@ otherwise the unchanged Core pipeline; a commit the anchor never confirmed answe
 """
 from __future__ import annotations
 
+import hashlib
 import json
 
 from paladin.depgraph import DepGraph
 from paladin.engine import canon as _canon
 from paladin.leasing import LeaseGate
+from paladin.worldbridge import tx_rows
 from paladin.surface import SurfaceFactory
 from r3_shared.authgraph import authority_digest
+from r3_shared.extadapter import canon_json
 from r3_shared.faultplane import CanonicalStateLost, DependencyUnavailable
 from r3_shared.recovery import DEP_UNAVAILABLE, FORM, IN_DOUBT  # noqa: F401  (IN_DOUBT documents the Core reply)
 from r3_shared.variant import CallResult
+
+
+def approval_fingerprint(requester, on_behalf_of, operation, args) -> str:
+    """G5-E11: sha256 hex of canon_json({subject, on_behalf_of (null when absent), operation, inputs}) - the RECOVERY_VIEW form."""
+    doc = {"subject": requester, "on_behalf_of": on_behalf_of or None, "operation": operation, "inputs": args}
+    return hashlib.sha256(canon_json(doc).encode()).hexdigest()
 
 
 class ContinuityMixin:
@@ -36,6 +45,11 @@ class ContinuityMixin:
         if self._h29:
             self._deps = DepGraph(self._binding.graph, c.domain)
             self._gate = LeaseGate(self._binding, c.ledger, c.clock, c.mutants, self._resume)
+            if self._resume:
+                try:
+                    self.complete_anchors()   # on resume: anchor what can be anchored now (a down ANCHOR is retried at the first call after heal)
+                except Exception:   # noqa: BLE001 - recovery must never prevent the deployment from coming up
+                    pass
             if "stale_cache_after_restart" in c.mutants and self._gate.held is not None:
                 self._adopted = self._gate.held.digest   # MUTANT: the cached version is believed to be the installed one
                 c.lease_version = self._adopted
@@ -103,10 +117,62 @@ class ContinuityMixin:
             node = self._probe(self._deps.mutation(op) if kind == "mutation" else self._deps.surface(kind))
             if node is not None:
                 return self._blocked(node, token, op if kind == "mutation" and op in self._c.ops else None, args)
+        if known and self._c.prov is not None:
+            self.complete_anchors()   # first call after heal: a lost anchor entry is completed before anything else is decided
         res = fn()
         if isinstance(res, CallResult) and res.status == "UNAVAILABLE" and res.body.get("reason") == "anchor_unavailable":
             return CallResult("UNAVAILABLE", {"reason": DEP_UNAVAILABLE, "dependency": "ANCHOR"})   # zero effects: nothing committed
         return res
+
+    # ---- G5-E12: commit in the world but not anchored (crash at CP2 / ANCHOR reply lost) ------------------------------------
+    def complete_anchors(self) -> int:
+        """Append the missing anchor entry of every commit the world holds but the anchor never confirmed (best effort: a down
+        ANCHOR just leaves the journal record for the next attempt). Needs the Core lock; no-op without a journal."""
+        c = self._c
+        if not self._h29 or c is None or c.prov is None:
+            return 0
+        from r3_shared.anchor import AnchorError  # noqa: PLC0415
+        done = 0
+        with c.lock:
+            for key in c.history.keys(c.PEND):
+                rid = key[len(c.PEND):]
+                raw = c.history.get(key)
+                try:
+                    rec = json.loads(raw) if raw else None
+                except ValueError:
+                    rec = None
+                mark = self._commit_mark(rid)
+                if rec is None or mark is None:
+                    c.history.delete(key)   # the transaction never committed (or the record is unusable): nothing to anchor
+                    continue
+                try:
+                    if c.prov.anchored_decision(rid) is not None:
+                        c.history.delete(key)
+                        continue
+                except (AnchorError, DependencyUnavailable):
+                    break
+                except LookupError:
+                    continue
+                d = c.new_decision(rec["kind"], rec["sub"], rec["obo"], rec["op"], rec["args"], rid, rec["art_op"])
+                d.update(path=rec["path"], evidence=rec["evidence"], doc=rec["doc"], world_seq=mark["seq"], tick=mark["tick"],
+                         rows=tx_rows(c._svc, mark["tx"]), committed=True)
+                try:
+                    res = c.finish(d, CallResult("OK", {}))
+                except (AnchorError, DependencyUnavailable):
+                    c.prov._head = None
+                    break
+                if res.status != "OK":
+                    c.prov._head = None
+                    break
+                done += 1
+        return done
+
+    def _commit_mark(self, rid: str) -> dict | None:
+        rows = self._c._svc._con.execute("SELECT seq,tx,tick,data_json FROM world_log WHERE kind='mark' AND ref='commit' ORDER BY seq").fetchall()
+        for seq, tx, tick, raw in rows:
+            if json.loads(raw).get("request_id") == rid:
+                return {"seq": seq, "tx": tx, "tick": tick}
+        return None
 
     # ---- G5 self-reports ----------------------------------------------------------------------------------------------------
     def dependency_status(self) -> dict:

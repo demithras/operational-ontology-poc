@@ -45,3 +45,14 @@ rebuild is a projection of those stores plus the tick (`recovery_view`), and not
 - A decision committed in the world but never anchored (crash between COMMIT and anchor append) answers UNKNOWN in_doubt on every redelivery
   and its intent is never dispatched (no provable envelope); the observer then shows no effect and P1f-6 rule F gives RECONCILED_FAILED after E.
 - No Engine patch is needed for Gate 5 (VENDORED.json unchanged).
+
+## G5 fix1 (errata G5-E10..E15)
+- E12: the decision of every H29 commit (kind, subject, on_behalf_of, operation, args, pre-commit evidence, authority document, edge path) is journaled in the
+  HistoryStore under `led/pend/<request_id>` inside the commit transaction and dropped once its anchor entry exists. `ContinuityMixin.complete_anchors` rebuilds the
+  decision from that record plus the world's own commit mark (world_seq, tick, tx rows) and appends the missing entry: on resume, on the first governed call after heal,
+  in dispatch_pending and in reconcile. Before the heal a redelivery answers UNKNOWN in_doubt / UNAVAILABLE ANCHOR; after it, the original OK with zero new rows.
+  Paladin requires a request_id on every mutating call (INVALID before any commit), so the "commit without request_id" case cannot arise on this variant.
+- E11: approvals_open = sha256(canon_json({subject, on_behalf_of|null, operation, inputs})), stored beside the claim fingerprint (`cfp`).
+- E13/E14: unchanged behaviour, now covered by tests; authenticated callers get an INPUT_INVALID_REASONS reason while blocked, unauthenticated callers
+  UNAVAILABLE naming the down node (token precedes schema in the frozen check order; both admissible under R29-7).
+- E10: committed[].authority_version is the leased digest (test_e10). E15: the recovery tests assert one deterministic outcome per crash point.

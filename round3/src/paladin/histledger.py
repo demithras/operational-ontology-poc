@@ -92,11 +92,11 @@ class HistLedger:
     def _appr_keys(self) -> list[str]:
         return self.h.keys(APPR)
 
-    def add_approval(self, fp: str, approver: str, decision_id: str | None = None) -> None:
+    def add_approval(self, fp: str, approver: str, decision_id: str | None = None, cfp: str | None = None) -> None:
         with self._lock:
             ks = self._appr_keys()
             n = (max(int(k[len(APPR):]) for k in ks if k[len(APPR):].isdigit()) + 1) if ks else 1
-            self._store(f"{APPR}{n:08d}", {"fp": fp, "approver": approver, "claimed_by": None, "decision_id": decision_id})
+            self._store(f"{APPR}{n:08d}", {"fp": fp, "approver": approver, "claimed_by": None, "decision_id": decision_id, "cfp": cfp})
 
     def claim_approval(self, fp: str, rid: str, verify: Callable[[dict], bool] | None = None) -> str | None:
         with self._lock:
@@ -115,8 +115,8 @@ class HistLedger:
             out = []
             for k in self._appr_keys():
                 r = self._load(k)
-                if r and not r.get("_corrupt") and r.get("claimed_by") is None and isinstance(r.get("fp"), str):
-                    out.append(r["fp"])
+                if r and not r.get("_corrupt") and r.get("claimed_by") is None and isinstance(r.get("cfp"), str):
+                    out.append(r["cfp"])   # G5-E11: the canonical approval fingerprint, not the claim key
             return out
 
     def _drop_claims(self, rid: str, consume: bool) -> None:

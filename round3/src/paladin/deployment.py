@@ -8,7 +8,7 @@ import threading
 
 from paladin import evid, replay as _replay
 from paladin.authreplay import Reauth
-from paladin.continuity import ContinuityMixin
+from paladin.continuity import ContinuityMixin, approval_fingerprint
 from paladin.core import AUDIENCE, Core, Crash, fingerprint, plain
 from paladin.engine import CapabilityError, InvalidRequest, Principal
 from paladin.prov import HISTORY_LAYOUT, stream_for
@@ -320,7 +320,8 @@ class PaladinDeployment(ContinuityMixin):
                 return c.finish(d, CallResult("DENIED", {"gate": "approval", "reason": "approver holds no approval capability for this request"}))
             res = c.finish(d, CallResult("OK", {"approval": "recorded"}))  # the approval is itself an anchored decision
             if res.status == "OK":
-                c.ledger.add_approval(fingerprint(requester, on_behalf_of, operation, clean), sub, d["rid"])
+                c.ledger.add_approval(fingerprint(requester, on_behalf_of, operation, clean), sub, d["rid"],
+                                      approval_fingerprint(requester, on_behalf_of, operation, clean))
             return res
 
     # ---- Gate 2: delegation, revocation, historical authority (PROT-H24) ---------------------------------------------
@@ -388,6 +389,7 @@ class PaladinDeployment(ContinuityMixin):
         if c.ext is None:
             return CallResult("OK", {"submitted": 0})
         with c.lock:
+            self.complete_anchors()   # G5-E12: a commit whose anchor entry was lost is anchored first, so its intents become dispatchable
             return CallResult("OK", {"submitted": c.ext.dispatch(self._envelope_of)})
 
     def reconcile(self, request_id: str, watermark: int) -> CallResult:
@@ -396,6 +398,7 @@ class PaladinDeployment(ContinuityMixin):
     def _reconcile(self, request_id, watermark) -> CallResult:
         c = self._c
         with c.lock:
+            self.complete_anchors()
             outs = c.ext.reconcile(request_id, watermark) if c.ext is not None and isinstance(request_id, str) else None
         return CallResult("OK", {"outcomes": outs}) if outs else CallResult("INVALID", {"reason": "unknown_request"})
 

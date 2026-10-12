@@ -26,7 +26,7 @@ _SCHEMA = """
 CREATE TABLE IF NOT EXISTS requests(rid TEXT PRIMARY KEY, fp TEXT NOT NULL, state TEXT NOT NULL, pre TEXT,
   sub TEXT, obo TEXT, op TEXT, status TEXT, body_json TEXT);
 CREATE TABLE IF NOT EXISTS approvals(id INTEGER PRIMARY KEY AUTOINCREMENT, fp TEXT NOT NULL, approver TEXT NOT NULL,
-  claimed_by TEXT);
+  claimed_by TEXT, cfp TEXT);
 CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT NOT NULL);
 """
 
@@ -99,12 +99,12 @@ class Ledger:
         return out
 
     # ---- approvals (single use, durable) ------------------------------------------------------
-    def add_approval(self, fp: str, approver: str, decision_id: str | None = None) -> None:
+    def add_approval(self, fp: str, approver: str, decision_id: str | None = None, cfp: str | None = None) -> None:
         with self._lock:
             if self.volatile:
-                self._mem_appr.append({"fp": fp, "approver": approver})
+                self._mem_appr.append({"fp": fp, "approver": approver, "cfp": cfp})
                 return
-            self._con.execute("INSERT INTO approvals(fp,approver) VALUES(?,?)", (fp, approver))
+            self._con.execute("INSERT INTO approvals(fp,approver,cfp) VALUES(?,?,?)", (fp, approver, cfp))
 
     def claim_approval(self, fp: str, rid: str, verify=None) -> str | None:
         """Claim the oldest unused approval for this exact request fingerprint; returns the approver pid."""
@@ -126,8 +126,8 @@ class Ledger:
         """Fingerprints of the single-use approvals neither claimed nor consumed (H29 RECOVERY_VIEW approvals_open)."""
         with self._lock:
             if self.volatile:
-                return [a["fp"] for a in self._mem_appr]
-            return [r[0] for r in self._con.execute("SELECT fp FROM approvals WHERE claimed_by IS NULL ORDER BY id")]
+                return [a["cfp"] for a in self._mem_appr if a.get("cfp")]
+            return [r[0] for r in self._con.execute("SELECT cfp FROM approvals WHERE claimed_by IS NULL AND cfp IS NOT NULL ORDER BY id")]
 
     def consume(self, rid: str) -> None:
         with self._lock:
