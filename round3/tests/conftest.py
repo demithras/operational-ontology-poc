@@ -9,7 +9,8 @@ import subprocess
 import tempfile
 import time
 
-MARKS = ("r3_shared.anchor_server", "r3_shared.extworld_server")  # H27 anchor + H28 ExternalWorld (P1f-2)
+MARKS = ("r3_shared.anchor_server", "r3_shared.extworld_server", "r3_shared.authsvc_server",
+         "r3_shared.host")  # H27 anchor, H28 ExternalWorld (P1f-2), G5 AuthorityService + variant host (P1g-2, P1g-6)
 _ROOT = os.path.realpath(tempfile.mkdtemp(prefix="r3s", dir="/tmp"))  # short path: AF_UNIX limit
 os.environ["TMPDIR"] = _ROOT
 tempfile.tempdir = _ROOT
@@ -19,7 +20,7 @@ _SHARD_LIST = os.environ.pop("R3_SHARD_FILES", None)
 
 
 def _anchors() -> dict:
-    """pid -> command line of every live anchor_server / extworld_server process (all sessions)."""
+    """pid -> command line of every live anchor_server / extworld_server / authsvc_server / host process (all sessions)."""
     out = subprocess.run(["ps", "-axo", "pid=,command="], capture_output=True, text=True).stdout
     res = {}
     for line in out.splitlines():
@@ -74,7 +75,7 @@ def pytest_sessionfinish(session, exitstatus):
         except ProcessLookupError:
             pass
     if leaked:
-        print(f"\nANCHOR LEAK: {len(leaked)} r3_shared.anchor_server/extworld_server process(es) started by this session were still alive: "
+        print(f"\nANCHOR LEAK: {len(leaked)} r3_shared.anchor_server/extworld_server/authsvc_server/host process(es) started by this session were still alive: "
               f"{sorted(leaked)} (killed)")
         for p, c in sorted(leaked.items()):
             print(f"  leaked {p}: {c[-160:]}")

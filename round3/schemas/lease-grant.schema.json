@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "r3-lease-grant-1",
+  "title": "Lease grant (P1g-2): exactly these five keys; mac is HMAC-SHA256 hex over deployment, digest, granted_tick, lease_until",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["digest", "doc", "granted_tick", "lease_until", "mac"],
+  "properties": {
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "doc": {"type": "object"},
+    "granted_tick": {"type": "integer", "minimum": 0},
+    "lease_until": {"type": "integer", "minimum": 1},
+    "mac": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

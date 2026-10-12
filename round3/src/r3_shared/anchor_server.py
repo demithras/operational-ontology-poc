@@ -22,6 +22,13 @@ class State:
         self.by_dec: dict[tuple[str, str], dict] = {}
         self.heads: dict[str, dict] = {}
         self.closed = False
+        self.tick, self.faults, self.fault_log = 0, [], []  # G5 (P1g-3): server tick + partition windows + activation log
+
+    def window(self, stream):
+        for w in self.faults:
+            if w["deployment"] == stream and w["from_tick"] <= self.tick < w["to_tick"]:
+                return w
+        return None
 
     def head_all(self) -> dict:
         return {"entries": self.i, "last_entry_sha": self.prev}
@@ -55,6 +62,14 @@ class State:
         return {"key": self.key.hex(), "head": head}
 
 
+class Unavail(Exception):
+    """Internal: a drop window covers the call; the client sees `unavailable`."""
+
+
+DATA_OPS = ("append", "get", "lookup", "head", "close", "ping")
+CONTROL_OPS = ("advance", "tick", "partition", "clear_faults", "fault_log", "ping")
+
+
 class Handler(socketserver.StreamRequestHandler):
     def handle(self):
         st: State = self.server.st
@@ -65,6 +80,23 @@ class Handler(socketserver.StreamRequestHandler):
                 if st.closed:
                     raise ValueError("anchor closed")
                 op = r.get("op")
+                if getattr(self.server, "plane", "data") == "control":
+                    out = self.control(st, op, r)
+                    self.wfile.write(canon({"ok": True, **out}) + b"\n")
+                    self.wfile.flush()
+                    return
+                w = st.window(r.get("stream")) if st.faults and op in ("append", "get", "lookup", "head") else None
+                if w is not None and w["mode"] == "drop":
+                    st.fault_log.append({"tick": st.tick, "stream": r.get("stream"), "op": op, "mode": "drop", "applied": False})
+                    raise Unavail()
+                if w is not None:  # reply_lost: reads/appends are applied (and logged), then the connection is closed unanswered
+                    if op == "append":
+                        st.append(r)
+                    st.fault_log.append({"tick": st.tick, "stream": r.get("stream"), "op": op, "mode": "reply_lost",
+                                         "applied": op == "append"})
+                    return  # no reply written: the client sees a closed connection -> AnchorUnavailable
+                if op not in DATA_OPS:
+                    raise ValueError(f"unknown op {op!r}")
                 if op == "append":
                     out = {"entry": st.append(r)}
                 elif op == "get":
@@ -81,6 +113,8 @@ class Handler(socketserver.StreamRequestHandler):
                 else:
                     raise ValueError(f"unknown op {op!r}")
             resp = {"ok": True, **out}
+        except Unavail:
+            resp = {"ok": False, "error": "unavailable", "unavailable": True}
         except Exception as exc:  # protocol-level refusal; never crash the service
             resp = {"ok": False, "error": str(exc)}
         self.wfile.write(canon(resp) + b"\n")
@@ -89,6 +123,32 @@ class Handler(socketserver.StreamRequestHandler):
             # Only now stop the server: shutting down before the reply was flushed let main() exit (daemon handler thread
             # killed) so the client read an EMPTY close reply under load.
             threading.Thread(target=self.server.shutdown, daemon=True).start()
+
+
+    @staticmethod
+    def control(st: State, op, r: dict) -> dict:
+        from r3_shared.faultplane import validate_fault_command
+        if op == "advance":
+            if not isinstance(r.get("tick"), int) or isinstance(r.get("tick"), bool) or r["tick"] < st.tick:
+                raise ValueError(f"tick must be an int >= current tick {st.tick}")
+            st.tick = r["tick"]
+            return {"tick": st.tick}
+        if op == "tick":
+            return {"tick": st.tick}
+        if op == "partition":
+            cmd = validate_fault_command(r["cmd"])
+            if cmd["op"] != "partition":
+                raise ValueError("anchor accepts partition commands only")
+            st.faults.append(dict(cmd))
+            return {"n": len(st.faults)}
+        if op == "clear_faults":
+            st.faults = []
+            return {}
+        if op == "fault_log":
+            return {"log": list(st.fault_log), "windows": list(st.faults)}
+        if op == "ping":
+            return {"pid": os.getpid(), "plane": "control"}
+        raise ValueError(f"op {op!r} is not available on the control plane")
 
 
 class Server(socketserver.ThreadingUnixStreamServer):
@@ -100,6 +160,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", required=True)
     ap.add_argument("--sock", required=True)
+    ap.add_argument("--control", action="store_true", help="G5: also serve the control plane on <sock>.ctl")
     a = ap.parse_args(argv)
     d = Path(a.dir)
     d.mkdir(parents=True, exist_ok=True)
@@ -109,9 +170,20 @@ def main(argv=None) -> int:
     srv = Server(a.sock, Handler)
     srv.st = st
     os.chmod(a.sock, 0o600)
+    ctl = None
+    if a.control:
+        if os.path.exists(a.sock + ".ctl"):
+            os.unlink(a.sock + ".ctl")
+        ctl = Server(a.sock + ".ctl", Handler)
+        ctl.st, ctl.plane = st, "control"
+        os.chmod(a.sock + ".ctl", 0o600)
+        threading.Thread(target=ctl.serve_forever, daemon=True).start()
     print(f"READY {os.getpid()}", flush=True)
     srv.serve_forever()
     srv.server_close()
+    if ctl is not None:
+        ctl.shutdown()
+        ctl.server_close()
     return 0
 
 

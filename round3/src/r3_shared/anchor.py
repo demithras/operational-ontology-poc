@@ -11,12 +11,24 @@ import subprocess
 import sys
 from pathlib import Path
 
+from . import faultplane
+from .faultplane import DependencyUnavailable
+
 ZERO = "0" * 64
 LOG_NAME, KEY_NAME, HEAD_NAME = "anchor.log", "KEY.revealed", "HEAD.final"
 
 
 class AnchorError(Exception):
     """Anchor refused or is unreachable (seq gap/duplicate, closed, socket failure)."""
+
+
+class AnchorUnavailable(AnchorError, DependencyUnavailable):
+    """G5: the anchor is inside a server-side drop window, or dropped the reply (reply_lost). An append may
+    or may not have been applied: the caller must treat the commit as in doubt. str(e) == "ANCHOR"."""
+
+    def __init__(self, detail: str = ""):
+        DependencyUnavailable.__init__(self, "ANCHOR")
+        self.detail = detail
 
 
 def canon(x) -> bytes:
@@ -47,16 +59,22 @@ class AnchorClient:
                     if not chunk:
                         break
                     buf += chunk
+            if buf == b"":  # connection closed without a reply: reply_lost window (G5) -> commit status in doubt
+                raise AnchorUnavailable("connection closed without a reply")
             resp = json.loads(buf)
         except (OSError, ValueError) as exc:
             raise AnchorError(f"anchor unreachable: {exc}") from exc
         if not resp.get("ok"):
+            if resp.get("unavailable"):
+                raise AnchorUnavailable("anchor partitioned")
             raise AnchorError(resp.get("error", "anchor error"))
         return resp
 
     def append(self, stream: str, seq: int, decision_id: str, root: str) -> dict:
         """Receipt = the committed log entry (with mac). AnchorError on seq != head+1 (gap) or a second append."""
-        return self._call({"op": "append", "stream": stream, "seq": seq, "decision_id": decision_id, "root": root})["entry"]
+        entry = self._call({"op": "append", "stream": stream, "seq": seq, "decision_id": decision_id, "root": root})["entry"]
+        faultplane.crashpoint("CP3_after_anchor_append", decision_id)  # G5: no-op unless a host armed it
+        return entry
 
     def get(self, stream: str, seq: int) -> dict | None:
         return self._call({"op": "get", "stream": stream, "seq": seq})["entry"]
@@ -68,9 +86,37 @@ class AnchorClient:
         return self._call({"op": "head", "stream": stream})["entry"]
 
 
+class AnchorControl:
+    """Harness only (G5): the anchor's control plane on <sock>.ctl."""
+
+    def __init__(self, ctl_path: str, timeout: float = 10.0):
+        self._c = AnchorClient(ctl_path, timeout)
+
+    def advance(self, tick: int) -> int:
+        return self._c._call({"op": "advance", "tick": tick})["tick"]
+
+    def tick(self) -> int:
+        return self._c._call({"op": "tick"})["tick"]
+
+    def partition(self, stream: str, from_tick: int, to_tick: int, mode: str = "drop") -> None:
+        self._c._call({"op": "partition", "cmd": {"op": "partition", "deployment": stream, "from_tick": from_tick,
+                                                  "to_tick": to_tick, "mode": mode}})
+
+    def clear_faults(self) -> None:
+        self._c._call({"op": "clear_faults"})
+
+    def fault_log(self) -> dict:
+        r = self._c._call({"op": "fault_log"})
+        return {"log": r["log"], "windows": r["windows"]}
+
+
 class AnchorProcess:
     def __init__(self, proc: subprocess.Popen, anchor_dir: str, sock_path: str):
         self.proc, self.pid, self.anchor_dir, self.sock_path = proc, proc.pid, str(anchor_dir), str(sock_path)
+        self.ctl_path = self.sock_path + ".ctl"
+
+    def control(self) -> AnchorControl:
+        return AnchorControl(self.ctl_path)
 
     def client(self) -> AnchorClient:
         return AnchorClient(self.sock_path)
@@ -87,13 +133,13 @@ class AnchorProcess:
         return {"key": resp["key"], "head": resp["head"]}
 
 
-def start_anchor(anchor_dir, sock_path) -> AnchorProcess:
+def start_anchor(anchor_dir, sock_path, control: bool = False) -> AnchorProcess:
     """Harness/runner only: start the anchor as a separate OS process (E1). Refuses an anchor dir that already has a log."""
     Path(anchor_dir).mkdir(parents=True, exist_ok=True)
     if (Path(anchor_dir) / LOG_NAME).exists():
         raise AnchorError("anchor dir already holds a log")
     env = {**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1]) + os.pathsep + os.environ.get("PYTHONPATH", "")}
-    proc = subprocess.Popen([sys.executable, "-m", "r3_shared.anchor_server", "--dir", str(anchor_dir), "--sock", str(sock_path)],
+    proc = subprocess.Popen([sys.executable, "-m", "r3_shared.anchor_server", "--dir", str(anchor_dir), "--sock", str(sock_path)] + (["--control"] if control else []),
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     line = proc.stdout.readline()
     if not line.startswith(b"READY"):
@@ -170,3 +216,19 @@ def close_anchor(sock_path) -> dict:
     """Close an anchor by socket (runner use): reveals the key, returns {"key", "head"}."""
     r = AnchorClient(str(sock_path))._call({"op": "close"})
     return {"key": r["key"], "head": r["head"]}
+
+
+def require_anchor(exp_id: str, env=None) -> tuple[str, str]:
+    """G3-E31b pattern for the H29 runner: a non-dev experiment id REFUSES to run unless the launcher started the anchor
+    (R3_ANCHOR_SOCK and R3_ANCHOR_DIR set and the socket answers a ping). Returns (sock, dir). Dev ids without a configured
+    anchor get AnchorError too; the caller may then start its own (start_anchor)."""
+    env = os.environ if env is None else env
+    sock, d = env.get("R3_ANCHOR_SOCK"), env.get("R3_ANCHOR_DIR")
+    if not (sock and d):
+        raise AnchorError(f"refusing: experiment id {exp_id!r} requires R3_ANCHOR_SOCK/R3_ANCHOR_DIR (launch through the H29 launcher "
+                          "so the anchor runs outside the sandbox)" if "-dev" not in exp_id else "no anchor configured (dev id: start one with start_anchor)")
+    try:
+        AnchorClient(sock)._call({"op": "ping"})
+    except AnchorError as exc:
+        raise AnchorError(f"refusing: anchor at {sock} is not running: {exc}") from exc
+    return sock, d

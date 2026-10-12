@@ -1,0 +1,35 @@
+{
+  "version": "r3-envelope-ops-1",
+  "envelope": {"file": "threat_model/survivability_envelope.json", "version": "r3-draft-1", "ruling": "OPEN-QUESTIONS Q2 (AUTHOR 2026-10-12)"},
+  "constants": {"LEASE": 4, "PARTITION_MAX": 12, "LAG_MAX": 3, "WINDOW": 8, "REDELIVERY_MAX": 3, "CRASHES_PER_SEQUENCE_MAX": 3},
+  "crash_points": ["CP1_before_commit", "CP2_after_commit", "CP3_after_anchor_append", "CP4_adapter_before_apply",
+                   "CP5_adapter_after_apply", "CP6_idle", "CP7_reconcile_after_read", "CP8_during_recovery"],
+  "classes": {
+    "F1": {"envelope": "single process crash/restart", "injection": "SIGKILL of the variant host at a crash point, resume in a new process", "bounds": {"concurrent": 1, "per_sequence_max": 3}},
+    "F2": {"envelope": "single policy or authority dependency unavailable", "injection": "AuthorityService outage(deployment, [from, to))", "nodes": ["AUTH"], "bounds": {"max_ticks": 12}},
+    "F3": {"envelope": "single adapter unavailable or Byzantine", "injection": "ExternalWorld outage(system, deployment, [from, to)); frozen H28 catalogue for Byzantine", "nodes": ["EXT:*"], "bounds": {"systems_per_sequence": 1}},
+    "F4": {"envelope": "event duplication/delay/reorder", "injection": "harness request path redelivery, approve/request reorder, H28 R1/O2, observer lag", "bounds": {"redelivery_max": 3, "lag_max": 3}},
+    "F5": {"envelope": "bounded network partition", "injection": "server-side partition(deployment, nodes, [from, to), mode) on AUTH/ANCHOR/EXT; ObserverFault for OBS", "modes": ["drop", "reply_lost"], "bounds": {"nodes_max": 2, "max_ticks": 12}},
+    "F6": {"envelope": "stale local cache after authority or policy version change", "injection": "AuthorityService publish while the variant holds a lease, while AUTH is faulted, or while ENGINE is down", "bounds": {"stale_sensitive_requests_min": 1}},
+    "F7": {"envelope": "single compromised agent identity", "injection": "one fixture agent token driven by the attacker schedule", "bounds": {"identities": 1}},
+    "F8": {"envelope": "single mutable evidence store tamper with independent anchor intact", "injection": "H27 TamperView mutation of the HistoryStore between kill and resume", "bounds": {"tamper_events_per_sequence": 1}}
+  },
+  "composition": {
+    "max_concurrent_classes": 2,
+    "different_components_required": true,
+    "forbidden_node_sets": [["AUTH", "ANCHOR", "OBS"]],
+    "crashes_overlap": false,
+    "crash_during_recovery": "sequential (CP8 follows the resume)"
+  },
+  "catastrophic_sets": {
+    "B1": "AUTH permanently unavailable past LEASE",
+    "B2": "anchor log unreachable permanently",
+    "B3": "OBS permanently unavailable",
+    "B4": "world store and HistoryStore deleted"
+  },
+  "external_world_refusal_order": {
+    "reasons_appended_after_P1f-2": ["unavailable"],
+    "check_order_first": "unavailable",
+    "note": "unavailable is evaluated before bad_signature: a down system authenticates nothing (Q12)"
+  }
+}

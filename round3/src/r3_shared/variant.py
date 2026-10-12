@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Iterable, Literal, Protocol, runtime_checkable
 
 from .anchor import AnchorClient
+from .authsvc import AuthorityClient
 from .clock import LogicalClock
 from .extadapter import ActionAdapter
 from .extobs import ObservationClient
@@ -63,6 +64,16 @@ class ExternalBinding:
     root_caps: dict         # system name -> root capability token issued by ExternalWorld for this deployment
     observer: ObservationClient
     window: int
+
+
+@dataclass(frozen=True)
+class AuthorityBinding:
+    """PROT-H29 / P1g-1. Built by the harness (or the variant host), handed to Variant.deploy(authority_source=...). `client` is the
+    data plane only, bound to this deployment id; `lease` is the frozen LEASE in ticks (informational); `graph` is the frozen
+    spec/gate5/dependency-graph.json document, to be read as DATA (no per-domain dependency code)."""
+    client: AuthorityClient
+    lease: int
+    graph: dict
 
 
 @runtime_checkable
@@ -144,6 +155,15 @@ class Deployment(Protocol):
         """Self-report of the current outcome records WITHOUT reading the observer (harness cross-check ONLY, never ground
         truth). OK {"outcomes": [...]}; INVALID unknown_request."""
 
+    # ---- Gate 5 (PROTOCOL-P1g P1g-1). Missing -> NotImplementedError("not implemented yet - G5") via g5_call.
+    def recovery_view(self) -> dict:
+        """Self-report of the rebuilt canonical state in the frozen form RECOVERY_VIEW (r3_shared.recovery, P1g-8). Pure: no
+        dependency I/O, no mutation; harness/oracle cross-check ONLY, never ground truth."""
+
+    def dependency_status(self) -> dict:
+        """Self-report {node: "UP"|"DOWN"|"UNKNOWN"} of the variant's current belief per node of deps it uses (descriptive,
+        e.g. circuit-breaker state; never compared, recorded for attribution)."""
+
     # ---- Gate 3 (PROTOCOL-P1e P1e-2, P1e-5). Missing -> NotImplementedError("not implemented yet - G3") via g3_call.
     def constitutional(self, token: str, action: dict, request_id: str) -> CallResult:
         """PROT-H25 s3. Mutating (thread-safe, arm_crash applies, request_id idempotent); one `governance` mark per OK."""
@@ -193,7 +213,8 @@ class Variant(Protocol):
                ops_spec: dict, auth_spec: dict, clock: LogicalClock,
                state_dir: str | None = None, history: HistoryStore | None = None,
                anchor: AnchorClient | None = None, governance: dict | None = None,
-               external: ExternalBinding | None = None) -> Deployment:
+               external: ExternalBinding | None = None, authority_source: AuthorityBinding | None = None,
+               resume: bool = False) -> Deployment:
         """state_dir: a private directory that survives crash()/restart() (the world store survives too);
         everything held in memory is lost on crash.
         history (H27 runs): every durable variant record other than the world store (envelopes, receipts, artifacts,
@@ -204,7 +225,15 @@ class Variant(Protocol):
         external (Gate 4, P1f-1): None -> the legacy in-transaction WorldHandle.external_write path, unchanged (H23-H27).
         Given -> the variant MUST NOT call WorldHandle.external_write at all; every ops-spec `external` effect goes through the
         adapter of its system AFTER the world commit (outbox: the intent - request_id, effect_index, I, cap - is durable
-        before dispatch so restart() can resubmit with the same cap). An adapter reply never changes the decision status."""
+        before dispatch so restart() can resubmit with the same cap). An adapter reply never changes the decision status.
+        authority_source (Gate 5, P1g-1): None -> legacy set_authority path, unchanged (H23-H28). Given -> auth_spec is the version-0
+        document the AuthorityService also starts with; the harness NEVER calls set_authority; the variant obtains every authority/
+        policy version through authority_source.client.fetch() and decides each governed request under a version whose lease is
+        valid at the decision tick (granted_tick <= t < lease_until).
+        resume (Gate 5): True -> the durable stores (world file, state_dir or HistoryStore) already hold a previous incarnation's
+        state: rebuild exactly as restart() would (no re-seeding), and do not append to the anchor, fetch a lease, write ExternalWorld
+        or read the observer before the first API call after recovery_view(). Durable state absent or unreadable ->
+        raise r3_shared.faultplane.CanonicalStateLost; never start empty."""
 
 
 G2_METHODS = ("delegate", "revoke", "authority_used", "replay", "explain")
@@ -261,3 +290,29 @@ def g4_deploy(variant, *args, external: ExternalBinding, **kwargs):
     if "external" not in params and not any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values()):
         raise NotImplementedError(G4_MISSING)
     return variant.deploy(*args, external=external, **kwargs)
+
+
+G5_METHODS = ("recovery_view", "dependency_status")
+G5_MISSING = "not implemented yet - G5"
+
+
+def g5_call(deployment, method: str, *args, **kwargs):
+    """Harness entry for the Gate 5 methods: a deployment that lacks one raises NotImplementedError("not implemented yet -
+    G5"), which the harness labels `unsupported` (never SUPPORTED)."""
+    if method not in G5_METHODS:
+        raise ValueError(f"not a Gate 5 method: {method}")
+    fn = getattr(deployment, method, None)
+    if not callable(fn):
+        raise NotImplementedError(G5_MISSING)
+    return fn(*args, **kwargs)
+
+
+def g5_deploy(variant, *args, authority_source: AuthorityBinding | None, resume: bool = False, **kwargs):
+    """Harness entry for deploy(authority_source=..., resume=...): a variant whose deploy() does not take BOTH parameters yet raises
+    NotImplementedError("not implemented yet - G5") instead of a TypeError. With authority_source=None and resume=False callers
+    use deploy() as before."""
+    import inspect
+    params = inspect.signature(variant.deploy).parameters
+    if not any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values()) and not {"authority_source", "resume"} <= set(params):
+        raise NotImplementedError(G5_MISSING)
+    return variant.deploy(*args, authority_source=authority_source, resume=resume, **kwargs)

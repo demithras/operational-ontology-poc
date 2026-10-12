@@ -9,6 +9,8 @@ import sqlite3
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from . import faultplane
+
 import jsonschema
 
 DB_NAME = "external.db"
@@ -154,4 +156,5 @@ class ObservationClient:
         snap = ObsSnapshot(watermark, eff, aud, ct)
         self.transcript.append({"watermark": watermark, "complete_through_tick": ct,
                                 "effects": [r.seq for r in eff], "audit": [r.seq for r in aud]})
+        faultplane.crashpoint("CP7_reconcile_after_read", faultplane.context_key())  # G5: no-op unless armed
         return snap

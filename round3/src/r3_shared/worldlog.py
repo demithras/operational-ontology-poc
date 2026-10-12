@@ -22,6 +22,7 @@ class Tx:
 
     def __init__(self, handle, id_: int, tag: str | None, tick: int):
         self._h, self.id, self.tag, self.tick, self._open = handle, id_, tag, tick, True
+        self.commit_keys: list[str] = []  # request_ids of `commit` marks (G5 crash points CP1/CP2)
 
     def mark(self, kind: str, payload: dict) -> int:
         """Append a `mark` row (ref = kind) in this transaction; returns its seq."""
@@ -29,4 +30,6 @@ class Tx:
             raise RuntimeError("transaction is closed")
         if not isinstance(kind, str) or not kind:
             raise ValueError("mark kind must be a non-empty string")
+        if kind == "commit" and isinstance(payload, dict) and isinstance(payload.get("request_id"), str):
+            self.commit_keys.append(payload["request_id"])
         return self._h._append(self, "mark", kind, payload)

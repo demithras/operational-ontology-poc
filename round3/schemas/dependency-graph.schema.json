@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "r3-depgraph-1",
+  "title": "Dependency graph (P1g-4): node ids, per-surface decision/outcome dependency sets, per-domain operations",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "nodes", "surfaces", "operations", "systems"],
+  "$defs": {
+    "node": {"type": "string", "pattern": "^(AUTH|ANCHOR|OBS|EXT:[A-Z][A-Z0-9-]*)$"},
+    "nodes": {"type": "array", "items": {"$ref": "#/$defs/node"}, "uniqueItems": true},
+    "op": {"type": "object", "additionalProperties": false, "required": ["surface"],
+           "properties": {"surface": {"const": "governed_mutation"}, "outcome": {"$ref": "#/$defs/nodes"}}}
+  },
+  "properties": {
+    "version": {"const": "r3-depgraph-1"},
+    "nodes": {"const": ["AUTH", "ANCHOR", "OBS", "EXT:*"]},
+    "surfaces": {
+      "type": "object", "additionalProperties": false,
+      "required": ["governed_mutation", "read", "replay", "explain", "reconcile"],
+      "properties": {
+        "governed_mutation": {"type": "object", "additionalProperties": false, "required": ["decision"], "properties": {"decision": {"const": ["AUTH", "ANCHOR"]}}},
+        "read": {"type": "object", "additionalProperties": false, "required": ["decision"], "properties": {"decision": {"const": ["AUTH"]}}},
+        "replay": {"type": "object", "additionalProperties": false, "required": ["decision"], "properties": {"decision": {"const": ["ANCHOR"]}}},
+        "explain": {"type": "object", "additionalProperties": false, "required": ["decision"], "properties": {"decision": {"const": ["ANCHOR"]}}},
+        "reconcile": {"type": "object", "additionalProperties": false, "required": ["outcome"], "properties": {"outcome": {"const": ["OBS"]}}}
+      }
+    },
+    "operations": {
+      "type": "object", "additionalProperties": false, "required": ["manufacturing", "project", "*"],
+      "properties": {
+        "manufacturing": {"type": "object", "additionalProperties": {"$ref": "#/$defs/op"}},
+        "project": {"type": "object", "additionalProperties": {"$ref": "#/$defs/op"}},
+        "*": {"type": "object", "additionalProperties": false, "required": ["approve", "delegate", "revoke"],
+              "properties": {"approve": {"$ref": "#/$defs/op"}, "delegate": {"$ref": "#/$defs/op"}, "revoke": {"$ref": "#/$defs/op"}}}
+      }
+    },
+    "systems": {
+      "type": "object", "additionalProperties": false, "required": ["manufacturing", "project"],
+      "properties": {
+        "manufacturing": {"type": "object", "additionalProperties": {"$ref": "#/$defs/nodes"}},
+        "project": {"type": "object", "additionalProperties": {"$ref": "#/$defs/nodes"}}
+      }
+    }
+  }
+}

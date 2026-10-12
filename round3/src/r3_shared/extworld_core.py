@@ -16,6 +16,7 @@ from .extobs import DB_NAME, key_hash
 from .extsem import SEMANTICS
 from .extsystems import validate_systems
 
+REFUSALS_G5 = ("unavailable",)  # P1g-3/Q12: appended AFTER the frozen P1f-2 reasons, but evaluated FIRST
 REFUSALS = ("bad_signature", "unknown_root", "system_mismatch", "operation_mismatch", "target_mismatch", "payload_mismatch",
             "correlation_missing", "expired", "uses_exhausted")
 KEY_NAME, HEAD_NAME = "KEY.revealed", "HEAD.final"
@@ -35,6 +36,10 @@ CREATE TABLE meta(k TEXT PRIMARY KEY, v TEXT NOT NULL);
 """
 
 
+class Unavailable(Exception):
+    """Raised by ExternalWorldCore.write under an armed outage/partition window; the server maps it to an `unavailable` reply."""
+
+
 class ExternalWorldCore:
     def __init__(self, ext_dir, systems: dict, root_key: bytes | None = None):
         self.dir, self.systems = Path(ext_dir), validate_systems(systems)
@@ -43,6 +48,7 @@ class ExternalWorldCore:
         if db.exists():
             raise FileExistsError(f"{db} already exists: refusing to reuse an external ledger")
         self.key, self.lock, self.tick, self.closed = root_key or os.urandom(32), threading.RLock(), 0, False
+        self.faults: list[dict] = []  # G5 outage/partition windows (P1g-3); empty -> write() is exactly the G4 path
         self.con = sqlite3.connect(str(db), isolation_level=None, check_same_thread=False)
         self.con.execute("PRAGMA journal_mode=WAL")
         self.con.executescript(_DDL)
@@ -101,7 +107,62 @@ class ExternalWorldCore:
                                 "adapter_id,outcome,reason) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
                                 (self.tick, dep, system, op, target, dig, chain, cor, adapter, outcome, reason)).lastrowid
 
+    # ---- G5 fault controls (control plane only) ---------------------------------------------------------------------
+    def fault(self, cmd: dict) -> int:
+        """outage/partition window for (target system, deployment); validated form faultplane.validate_fault_command.
+        outage = mode drop; partition = drop or reply_lost. Logged in fault_log (created lazily: G4 ledgers keep their DDL)."""
+        from .faultplane import validate_fault_command
+        with self.lock:
+            validate_fault_command(cmd)
+            if cmd.get("target") not in self.systems["systems"]:
+                raise ValueError(f"fault target must be a declared system, got {cmd.get('target')!r}")
+            if cmd["op"] == "outage" and cmd["mode"] != "drop":
+                raise ValueError("an outage is mode drop")
+            self.con.execute("CREATE TABLE IF NOT EXISTS fault_log(seq INTEGER PRIMARY KEY AUTOINCREMENT, tick INTEGER NOT NULL,"
+                             " deployment TEXT NOT NULL, system TEXT NOT NULL, op TEXT NOT NULL, mode TEXT NOT NULL,"
+                             " from_tick INTEGER NOT NULL, to_tick INTEGER NOT NULL)")
+            self.con.execute("INSERT INTO fault_log(tick,deployment,system,op,mode,from_tick,to_tick) VALUES(?,?,?,?,?,?,?)",
+                             (self.tick, cmd["deployment"], cmd["target"], cmd["op"], cmd["mode"], cmd["from_tick"], cmd["to_tick"]))
+            self.faults.append(dict(cmd))
+            return len(self.faults)
+
+    def clear_faults(self) -> None:
+        with self.lock:
+            self.faults = []
+
+    def fault_log(self) -> list[dict]:
+        with self.lock:
+            if self.con.execute("SELECT 1 FROM sqlite_master WHERE name='fault_log'").fetchone() is None:
+                return []
+            cols = ("seq", "tick", "deployment", "system", "op", "mode", "from_tick", "to_tick")
+            return [dict(zip(cols, r)) for r in self.con.execute("SELECT " + ",".join(cols) + " FROM fault_log ORDER BY seq")]
+
+    def _window(self, cap: str):
+        """Active fault window for the (system, deployment) a cap CLAIMS (unverified peek: a down system authenticates nothing)."""
+        try:
+            cav = extcap.caveats_of(cap)
+            system, dep = cav[0][1], cav[1][1]
+        except (extcap.CapError, IndexError, TypeError):
+            return None, "", ""
+        for w in self.faults:
+            if w["target"] == system and w["deployment"] == dep and w["from_tick"] <= self.tick < w["to_tick"]:
+                return w, system, dep
+        return None, system, dep
+
     def write(self, cap: str, operation: str, target: str, payload: dict, adapter_id: str) -> dict:
+        if not self.faults:
+            return self._write(cap, operation, target, payload, adapter_id)
+        with self.lock:
+            w, system, dep = self._window(cap) if not self.closed else (None, "", "")
+            if w is None:
+                return self._write(cap, operation, target, payload, adapter_id)
+            if w["mode"] == "drop":  # evaluated BEFORE bad_signature (Q12): no effect, one refused/unavailable audit row
+                self._audit(dep, system, operation, target, payload_digest(payload), "", "", adapter_id, "refused", "unavailable")
+                raise Unavailable(system)
+            self._write(cap, operation, target, payload, adapter_id)  # reply_lost: applied (or refused) as usual, reply dropped
+            raise Unavailable(system)
+
+    def _write(self, cap: str, operation: str, target: str, payload: dict, adapter_id: str) -> dict:
         """Verify the cap chain and every caveat; apply or refuse; ALWAYS append one audit row. Frozen refusal order:
         bad_signature, unknown_root, system_mismatch, operation_mismatch, target_mismatch, payload_mismatch, correlation_missing,
         expired, uses_exhausted."""

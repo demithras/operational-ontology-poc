@@ -12,6 +12,7 @@ from pathlib import Path
 from contextlib import contextmanager
 from typing import Any, Callable
 
+from . import faultplane
 from .worldlog import LOG_SCHEMA, Tx
 
 SCHEMA = """
@@ -136,12 +137,18 @@ class WorldHandle:
             tid = self._con.execute("SELECT v FROM world_meta WHERE k='tx'").fetchone()[0]
             tx = self._tx = Tx(self, tid, tag, self._clock.now() if self._clock is not None else 0)
             yield tx
+            if faultplane._ARMED is not None:  # G5 crash points: no-op unless a host armed one (CP1 before COMMIT)
+                for k in tx.commit_keys:
+                    faultplane.crashpoint("CP1_before_commit", k)
         except BaseException:
             if self._con.in_transaction:
                 self._con.execute("ROLLBACK")
             raise
         else:
             self._con.execute("COMMIT")
+            if faultplane._ARMED is not None:  # CP2 immediately after COMMIT
+                for k in tx.commit_keys:
+                    faultplane.crashpoint("CP2_after_commit", k)
         finally:
             if self._tx is not None:
                 self._tx._open = False
