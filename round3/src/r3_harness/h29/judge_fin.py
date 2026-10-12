@@ -129,6 +129,16 @@ def _boundary(R, ctx, row):
             ok_reply = ok_reply or (b == "B2" and res.get("status") == "UNKNOWN" and body.get("reason") == "in_doubt") or e.get("err") == "no_reply"
             if not ok_reply:
                 v.append({"t": e["t"], "status": res.get("status") or e.get("err"), "body": body, "node": node})
+        if b == "B2":
+            t0 = min((x["t"] for x in ev if x["k"] == "fault_start" and x.get("node") == "ANCHOR"), default=None)
+            for e in (x for x in ev if x["k"] == "request" and t0 is not None and x["t"] >= t0 and (x.get("res") or {}).get("status") == "OK"):
+                v.append({"t": e["t"], "rid": e.get("rid"), "status": "OK", "node": "ANCHOR", "why": "OK governed result with the anchor permanently unreachable"})
+            probes = [x for x in ev if x["k"] == "replay_probe"]
+            for e in probes:
+                if e.get("status") == "VERIFIED":
+                    v.append({"t": e["t"], "rid": e["rid"], "status": "VERIFIED", "why": "replay VERIFIED with the anchor permanently unreachable"})
+            if t0 is None or not probes:
+                row["harness"].append("injection_miss")
     elif b == "B3":
         for e in (x for x in ev if x["k"] == "reconcile"):
             res = e.get("res") or {}

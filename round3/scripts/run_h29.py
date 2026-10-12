@@ -16,7 +16,7 @@ from pathlib import Path
 ROUND3 = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROUND3 / "src"))
 
-from r3_harness.h29 import evalchecks as EC, evidence_out, finalize, launch, mutation, runner  # noqa: E402
+from r3_harness.h29 import evalchecks as EC, evidence_out, finalize, launch, mutation, reasonmap, runner  # noqa: E402
 
 
 def die(msg: str, code: int = 2):
@@ -75,7 +75,7 @@ def main(argv=None) -> int:
     pre = json.loads((out / "run-pre.json").read_text())
     closes = json.loads(a.closed) if a.closed else {}
     W = pre["workers"]
-    J = finalize.judge_all(out, out / "svc", W, pre, closes)
+    J = finalize.judge_all(out, out / "svc", W, pre, closes, reasonmap.for_variant(vname))
     mut = {}
     if a.mutants:
         work = tempfile.mkdtemp(prefix="h29m", dir="/tmp")

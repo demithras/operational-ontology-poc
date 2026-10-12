@@ -157,7 +157,7 @@ def build_bnd(idx: int, seed: int, stats: dict) -> dict | None:
         E.fill(plan, ch, 1, want="deny")
     elif b == "B2":
         plan.advance(1)
-        plan.fault("B2", "ANCHOR", "drop", 60)
+        plan.fault("B2", "ANCHOR", "drop", 100000)   # permanent: never heals within the sequence (PROT-H29 s9)
         E.fill(plan, ch, 4, gap=2)
     elif b == "B3":
         s = ch.choice(G._ext_systems(plan))

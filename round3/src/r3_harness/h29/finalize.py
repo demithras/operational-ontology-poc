@@ -20,7 +20,7 @@ def load_raw(vdir: Path) -> list:
 
 def load_services(svc_root: Path, W: int, closes: dict | None = None) -> dict:
     """Closed ledgers (merged: deployments are world-private), anchor entries, integrity verdicts of the three service kinds."""
-    ledgers, anchor, integ = [], set(), {"anchor": [], "auth": [], "ext": []}
+    ledgers, anchor, aseq, integ = [], set(), {}, {"anchor": [], "auth": [], "ext": []}
     for i in range(W):
         led = extoracle.load_ledger(Path(svc_root) / f"ext-{i}")
         ledgers.append(led)
@@ -29,13 +29,14 @@ def load_services(svc_root: Path, W: int, closes: dict | None = None) -> dict:
             if line.strip():
                 e = json.loads(line)
                 anchor.add((e["stream"], e["decision_id"]))
+                aseq[(e["stream"], e["decision_id"])] = e["seq"]
         exp = ((closes or {}).get("anchor") or [{}] * W)[i].get("head") if closes else None
         integ["anchor"].append(verify_anchor_log(ad, expected_head=exp) if exp else verify_anchor_log(ad))
         authv = verify_log(Path(svc_root) / f"auth-{i}")
         integ["auth"].append({"ok": authv["ok"], "errors": authv["errors"]})
     merged = {"effects": [r for l in ledgers for r in l["effects"]], "audit": [r for l in ledgers for r in l["audit"]],
               "sysstate": {}, "issued": [r for l in ledgers for r in l["issued"]]}
-    return {"ledgers": ledgers, "merged": merged, "anchor": anchor, "integrity": integ}
+    return {"ledgers": ledgers, "merged": merged, "anchor": anchor, "anchor_seq": aseq, "integrity": integ}
 
 
 def sysstate_check(ledgers: list, sysseed: dict) -> dict:
@@ -47,7 +48,7 @@ def judge_all(vdir: Path, svc_root: Path, W: int, pre: dict, closes: dict | None
     from r3_harness.h28.judge import LedgerIndex
     raws = load_raw(vdir)
     sv = load_services(svc_root, W, closes)
-    ctx = judge.Ctx(LedgerIndex(sv["merged"]), sv["anchor"], reason_map)
+    ctx = judge.Ctx(LedgerIndex(sv["merged"]), sv["anchor"], reason_map, sv["anchor_seq"])
     rows = [judge.judge_seq(R, ctx) for R in raws]
     for r, R in zip(rows, raws):
         r["planned_cps"] = (R.get("seq_def") or {}).get("cp", [])

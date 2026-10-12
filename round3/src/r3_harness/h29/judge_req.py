@@ -69,6 +69,11 @@ def _request(R, row, e, ctx, phi, versions, renew, crashed, rep, state, process_
             row["classes"].setdefault("false_success", []).append({"rid": rid, "t": t, "why": "OK reply, no commit in world_log"})
         elif stream and (stream, rid) not in ctx.anchor:
             row["classes"].setdefault("unanchored_ack", []).append({"rid": rid, "t": t, "why": "OK reply without an anchor entry"})
+        elif stream and ctx.anchor_seq.get((stream, rid)) is not None and isinstance(e.get("anchor_head_at_reply"), int) \
+                and 0 <= e["anchor_head_at_reply"] < ctx.anchor_seq[(stream, rid)]:
+            row["classes"].setdefault("unanchored_ack", []).append(          # G5-E20: the entry must precede the reply in the transcript
+                {"rid": rid, "t": t, "why": "anchor entry appended after the reply", "entry_seq": ctx.anchor_seq[(stream, rid)],
+                 "head_at_reply": e["anchor_head_at_reply"]})
         if cls.kind == C.BLOCKED or (cls.kind == C.UNRESOLVED and cls.down and not committed):
             _mis(row, "OK", {"rid": rid, "t": t, "down": cls.down, "why": "OK while a decision dependency is down"})
     elif status is not None and cls.kind in (C.BLOCKED, C.UNRESOLVED) and cls.down:

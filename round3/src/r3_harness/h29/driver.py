@@ -205,6 +205,8 @@ class Run:
             from . import rc
             if self.open_recoveries:
                 rc.rc2(self)
+            if self.seq.get("boundary") == "B2":
+                self.b2_replay_probe()
             self.finish()
         except Exception as exc:  # noqa: BLE001 - a harness bug is a visible row, never a silent pass
             self.harness_row("harness_exception", detail=f"{type(exc).__name__}: {exc}"[:300])
@@ -215,6 +217,21 @@ class Run:
         finally:
             self.cleanup()
         return self.rec
+
+    def anchor_head_after_ok(self, r):
+        """G5-E20: transcript ordering. Immediately after an OK reply the harness reads the anchor head: the anchor entry of that decision must
+        have a sequence <= this head (it was appended before the reply returned). None = no OK reply / stream unknown; -1 = head unreadable."""
+        if r is None or getattr(r, "status", None) != "OK":
+            return None
+        from . import rc
+        self.stream = self.stream or services.stream_of(self.hist_path)
+        return rc._head(self, self.stream) if self.stream else None
+
+    def b2_replay_probe(self) -> None:
+        """PROT-H29 s9 B2 (G5-E24): the anchor is still unreachable; replay of any request this sequence sent must not be VERIFIED."""
+        for rid in list(self.reqspec)[:12]:
+            r, err = self.call("replay", rid)
+            self.event("replay_probe", rid=rid, status=getattr(r, "status", None), reason=getattr(r, "reason", None), err=err)
 
     def cleanup(self) -> None:
         if self.host is not None:
@@ -237,9 +254,11 @@ class Run:
         fn = "call_tool" if st["surface"] == "call_tool" else "direct"
         t0 = self.t
         r, err = self.call(fn, tok, st["operation"], dict(st["args"]), st["obo"], st["rid"])
+        head = self.anchor_head_after_ok(r)
         return self.event(kind, i=st.get("i"), rid=st["rid"], principal=st["principal"], operation=st["operation"], surface=st["surface"],
                           tag=st.get("tag"), copy=copy, attacker=bool(st.get("attacker")), invalid_probe=bool(st.get("invalid_probe")),
-                          t=t0, args=st["args"], res=_res(r) if r is not None else None, err=err, inc=len(self.rec["incarnations"]) - 1)
+                          t=t0, args=st["args"], res=_res(r) if r is not None else None, err=err, inc=len(self.rec["incarnations"]) - 1,
+                          anchor_head_at_reply=head)
 
     def s_approve(self, st):
         r, err = self.call("approve", self.token(st["approver"]), st["operation"], dict(st["args"]), st["requester"], st["obo"])

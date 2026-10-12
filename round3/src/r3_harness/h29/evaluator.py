@@ -14,7 +14,7 @@ from pathlib import Path
 from r3_shared import evidence, mutants
 from r3_shared.verdict import CommonEvaluation, DualVerdict, Verdict, evaluate_common
 
-from . import aggregate, evalchecks as EC, evidence_out, finalize, judge, specs
+from . import aggregate, evalchecks as EC, evidence_out, finalize, judge, reasonmap, specs
 
 DEV_BRANCHES = ("size_overrides", "freeze_manifest", "service_presence", "candidate_tag")
 EVAL_FILES = ("evaluator.py", "evalchecks.py", "judge.py", "judge_req.py", "judge_fin.py", "judge_ext.py", "judge_rec.py", "aggregate.py",
@@ -101,7 +101,7 @@ def evaluate_variant(vdir: Path, thresholds: dict, vname: str, is_dev: bool) -> 
     (vdir / ".cases.tmp").write_bytes(gzip.open(vdir / "cases.jsonl.gz").read())
     try:
         (vdir / "cases.jsonl").write_bytes((vdir / ".cases.tmp").read_bytes())
-        J = finalize.judge_all(vdir, vdir / "svc", W, pre, closes)
+        J = finalize.judge_all(vdir, vdir / "svc", W, pre, closes, reasonmap.for_variant(vname))
     finally:
         for f in (".cases.tmp", "cases.jsonl"):
             (vdir / f).unlink(missing_ok=True)

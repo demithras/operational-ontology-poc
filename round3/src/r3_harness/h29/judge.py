@@ -27,8 +27,9 @@ REQ_KINDS = ("request", "redeliver")
 class Ctx:
     """Run-wide judge context: the closed ledger index, the anchor log index, the frozen specs."""
 
-    def __init__(self, led, anchor_entries: set, reason_map: dict | None = None):
+    def __init__(self, led, anchor_entries: set, reason_map: dict | None = None, anchor_seq: dict | None = None):
         self.led, self.anchor, self.reason_map = led, anchor_entries, reason_map or {}
+        self.anchor_seq = anchor_seq or {}       # (stream, decision_id) -> anchor sequence (G5-E20 transcript ordering)
         self.graph = specs.graph()
         self.docs = {d: {C_digest: doc for C_digest, doc in ((_digest(x), x) for x in specs.family(d))} for d in specs.DOMAINS}
 
