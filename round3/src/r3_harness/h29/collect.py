@@ -35,7 +35,7 @@ def finish(r) -> None:
     deps = {r.dep, r.dep + "~rc1b"}
     try:
         lg = r.svc.auth.log()
-        ver = [{k: v for k, v in x.items() if k not in ("doc_json", "seq")} for x in lg["versions"] if x["requested_tick"] >= base]
+        ver = [{k: v for k, v in x.items() if k not in ("doc_json", "doc", "seq")} for x in lg["versions"] if x["requested_tick"] >= base]
         for n, v in enumerate(ver, 1):
             v["seq"] = n                                   # renumbered: service-global seq / MACs differ per service instance and worker
         drop = lambda rows: [{k: v for k, v in x.items() if k not in ("seq", "mac")} for x in rows if x["deployment"] in deps]  # noqa: E731

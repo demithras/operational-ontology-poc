@@ -117,5 +117,5 @@ def recovery(plan) -> None:
     plan.add({"op": "recovery_schedule"})
     end = max([w["to_tick"] for w in plan.windows] + [plan.t])
     last = max([q["t"] for q in plan.sends if q["kind"] == "request"] + [plan.t])
-    plan.t = max(end, last + faults.WINDOW + 2)
+    plan.t = max(end, last + faults.WINDOW + 2) + 1          # +1: the redelivery tick (rc.rc2)
     plan.open_rec = False

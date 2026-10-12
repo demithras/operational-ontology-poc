@@ -293,6 +293,7 @@ def f8_tamper(plan, ch, var: int) -> None:
     for r in ([rid] if rid else []) + rids[:1] + [key]:
         plan.add({"op": "redeliver", "rid": r, "copies": 1, "concurrent": False})
         plan.note_send("request", None, r)
+    E.fill(plan, ch, 3)
     E.recovery(plan)
     E.fill(plan, ch, 3, tag="post")
     plan.mark_class("F8", kill_t, plan.t + 1)

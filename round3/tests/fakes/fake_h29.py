@@ -183,8 +183,10 @@ class H29Dep(H28Dep):
 
     def _run_locked(self, token, op, args, obo, rid, backstop):
         sub = self._sub(token)
-        if rid is not None and any(d.get("request_id") == rid for _, d in self._commit_rows()):
-            return CallResult("OK", {"replayed": True})
+        if rid is not None:
+            done = [(sq, d) for sq, d in self._commit_rows() if d.get("request_id") == rid]
+            if done:                                                          # replay: the ack still waits for its anchor entry (R27-6)
+                return self._anchored(rid, done[0][0], self.clock.now(), CallResult("OK", {"replayed": True}))
         if not self._anchor_up() and "anchor_skipped_when_unavailable" not in self.mutants:
             return self._dep("ANCHOR")
         snap, akey = self.world_snapshot(), oracle_approvals.key(sub, obo, op, args)
@@ -235,6 +237,8 @@ class H29Dep(H28Dep):
             return ok
         head = None
         try:
+            if self.anchor.lookup(self.stream, rid) is not None:
+                return ok
             head = self.anchor.head(self.stream)
             n = (head["seq"] if head else 0) + 1
             raw = json.dumps({"rid": rid, "seq": seq, "tick": tick, "n": n}, sort_keys=True).encode()

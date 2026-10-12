@@ -109,6 +109,7 @@ def rc2(r) -> None:
     marks = _marks(r)
     before = len(marks)
     committed = sorted({m["data"].get("request_id") for m in marks if isinstance(m["data"].get("request_id"), str)})
+    r.tick_to(r.t + 1)                      # the redelivery tick is free of every other write: new ledger rows at it belong to the redelivery
     t_re = r.t
     redo = []
     for rid in committed:
