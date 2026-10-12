@@ -65,10 +65,14 @@ def layout_of(variant_name: str) -> dict:
         return {}
 
 
+OBS_LOG = "obs_reads.log"
+
+
 # ---- OBS gate: the observer opens <obs_dir>/external.db; the harness removes / restores the symlink (client-side outage) --------
 def obs_dir(root: Path, tag: str, ext_dir: str) -> Path:
     d = Path(root) / f"obs-{tag}"
     d.mkdir(parents=True, exist_ok=True)
+    (d / OBS_LOG).touch()                          # G5-E25: ObservationClient(read_log=...) appends one line per read attempt; absent file = harness INVALID
     link = d / "external.db"
     if not link.exists() and not link.is_symlink():
         link.symlink_to(Path(ext_dir) / "external.db")
@@ -142,4 +146,27 @@ def stream_of(hist_path: str) -> str | None:
             h.close()
         return raw.decode() if raw else None
     except Exception:  # noqa: BLE001
+        return None
+
+
+def anchor_head_from_log(anchor_dir, stream: str) -> int | None:
+    """Highest seq of `stream` in the anchor's log file (tail scan; 0 when the stream has no entry yet; None when the log is unreadable)."""
+    import json as _json
+    from r3_shared.anchor import LOG_NAME
+    try:
+        with open(Path(anchor_dir) / LOG_NAME, "rb") as f:
+            size, chunk = f.seek(0, 2), 1 << 14
+            while True:
+                start = max(0, size - chunk)
+                f.seek(start)
+                lines = f.read(size - start).split(b"\n")
+                for ln in reversed(lines[1:] if start else lines):
+                    if ln.strip():
+                        e = _json.loads(ln)
+                        if e.get("stream") == stream:
+                            return e["seq"]
+                if start == 0:
+                    return 0
+                chunk *= 4
+    except (OSError, ValueError):
         return None

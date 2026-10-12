@@ -9,7 +9,7 @@ from types import SimpleNamespace
 
 from r3_harness.h28.judge import LedgerIndex
 from r3_harness.h29 import aggregate, evaluator, judge, judge_fin, rc
-from tests.test_h29_fakes import run
+from tests.test_h29_fakes import classes, run
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -139,3 +139,96 @@ def test_g5_e27_unverified_ledger_rows_are_placed_by_the_claimed_deployment():
     from r3_harness.h29 import judge_ext
     dl = judge_ext.dep_ledger(Led(), "d1", 1000)
     assert [r["tick"] for r in dl["unverified"]] == [10]                              # by claim, relative frame; attribution evidence stays absent
+
+
+# ---- G5-E25 completeness: ExternalWorld request / observer read inside the restricted window ---------------------------------------------
+def _with_rc1(J, **kw):
+    raw = copy.deepcopy(_rc1_raw(J))
+    e = next(x for x in raw["events"] if x["k"] == "rc1")
+    e.update(kw)
+    return judge.judge_seq(raw, _ctx(J))
+
+
+def test_g5_e25_ext_request_inside_the_window_is_a_recovery_divergence():
+    J = run("FakeHonestG5")
+    row = _with_rc1(J, ext_restricted=3)
+    assert any("ExternalWorld" in d["detail"] and d["n"] == 3 for d in _restricted(row))
+
+
+def test_g5_e25_ext_request_after_the_first_api_call_is_not_counted():
+    """rc.py bounds the window by the ExternalWorld audit seq at the two RC1 marks: rows sequenced after the second mark are outside it."""
+    import sqlite3
+    d = Path(tempfile.mkdtemp(prefix="h29x", dir="/tmp"))
+    con = sqlite3.connect(d / "external.db")
+    con.executescript("CREATE TABLE audit(seq INTEGER PRIMARY KEY AUTOINCREMENT, deployment TEXT, tick INT);"
+                      "CREATE TABLE unverified_claim(audit_seq INTEGER PRIMARY KEY, claim_json TEXT);"
+                      "INSERT INTO audit(deployment,tick) VALUES('d',1),('d',7),('',7),('other',7),('d',7);"
+                      "INSERT INTO unverified_claim VALUES(3,'{\"deployment\":\"d~rc1b\"}');")
+    con.commit()
+    con.close()
+    r = SimpleNamespace(dep="d", svc=SimpleNamespace(ext_dir=str(d)))
+    assert rc._ext_seq(r) == 5
+    assert rc._ext_between(r, 1, 4) == 2            # seq 2 (attributed) + seq 3 (unverified, claimed d~rc1b); seq 4 is another deployment
+    assert rc._ext_between(r, 4, 4) == 0 and rc._ext_between(r, 4, 5) == 1 and rc._ext_between(r, None, 5) == 0
+    assert rc._ext_between(SimpleNamespace(dep="d", svc=SimpleNamespace(ext_dir=str(d / "none"))), 0, 5) == 0
+
+
+def test_g5_e25_observer_read_inside_the_window_and_missing_log_is_invalid():
+    J = run("FakeHonestG5")
+    assert any("observer" in d["detail"] for d in _restricted(_with_rc1(J, obs_reads_restricted=2)))
+    assert _with_rc1(J, obs_reads_restricted=0)["restricted_io"] == []             # after the first API call at the same tick: nothing
+    row = _with_rc1(J, obs_reads_restricted=None)
+    assert not _restricted(row) and row["obs_reads_instrumented"] is False
+    assert "observer_log_missing" in row["harness"]                                # a G5 run without the read log is a harness INVALID, not clean
+    assert all(r["obs_reads_instrumented"] and "observer_log_missing" not in r["harness"] for r in J["rows"] if r["stratum"] == "env")
+
+
+def _rc1_row(J):
+    return next(r for r in J["rows"] if any(e["k"] == "rc1" for e in next(x for x in J["raws"] if x["seq"] == r["seq"])["events"]))
+
+
+def test_g5_e25_honest_fake_clean_and_dispatching_fake_rejected():
+    assert all(not r["restricted_io"] for r in run("FakeHonestG5")["rows"])
+    J = run("FakeDispatchInRC1")
+    assert any(any("ExternalWorld" in d["detail"] for d in _restricted(r)) for r in J["rows"]), "no ExternalWorld request seen inside RC1"
+    assert "recovery_divergence" in classes(J)
+    t = json.loads((ROOT / "protocol/thresholds.json").read_text())["H29"]
+    with tempfile.TemporaryDirectory() as d:                       # the class reaches the VERDICT
+        (Path(d) / "mutants.json").write_text("{}")
+        from r3_harness.h29 import evidence_out
+        (Path(d) / evidence_out.FILES[5]).write_text("{}")
+        v = evaluator._verdict(Path(d), "v", t, True, {}, J["agg"], J, True, [], {})
+    assert v["verdict"] == "REJECTED" and "recovery_divergence" in str(v["metrics"]["classes"]), v["reasons"]
+
+
+def test_anchor_seq_lists_every_entry_of_a_reused_request_id():
+    from r3_harness.h29 import finalize
+    a: dict = {}
+    for seq in (7, 3):
+        finalize.note_anchor_seq(a, {"stream": "s", "decision_id": "r004", "seq": seq})
+    assert a == {("s", "r004"): [3, 7]}
+
+
+def test_anchor_entry_exact_match_cases():
+    """G5-E20 exact match (record level). seqs = entries with decision_id == request_id; before/after = heads read around the call."""
+    from r3_harness.h29.judge_req import _anchor_entry_violation as V
+    assert V([3], 2, 3, True) is None                                      # honest: entry in (before, after]
+    assert V([3], 2, 2, True)["why"] == "anchor entry appended after the reply"      # OK whose entry lands after the reply
+    assert V([3, 7], 2, 3, True) is None                                   # deny-then-succeed order irrelevant: first NEW entry is the success
+    assert V([3, 7], 6, 7, True) is None and V([3, 7], 6, 6, True)["entry_seq"] == 7  # success (7) after an earlier deny (3): judges seq 7, not 3
+    assert "earlier entry" in V([3], 5, 9, True)["why"]                    # fresh OK, only an old entry of a reused id: missing entry for THIS decision
+    assert V([3], 5, 9, False) is None                                     # idempotent replay may rest on the earlier entry
+    assert V([], 5, 9, True)["why"] == "no anchor entry"
+    assert V([3], None, 3, True) is None and V([3], 2, -1, True) is None   # unreadable head -> not judged
+
+
+def test_g5_e25_observer_reading_fake_is_rejected():
+    J = run("FakeObserveInRC1")
+    assert any(any("observer" in d["detail"] for d in _restricted(r)) for r in J["rows"]), "no observer read seen inside RC1"
+    t = json.loads((ROOT / "protocol/thresholds.json").read_text())["H29"]
+    with tempfile.TemporaryDirectory() as d:
+        (Path(d) / "mutants.json").write_text("{}")
+        from r3_harness.h29 import evidence_out
+        (Path(d) / evidence_out.FILES[5]).write_text("{}")
+        v = evaluator._verdict(Path(d), "v", t, True, {}, J["agg"], J, True, [], {})
+    assert v["verdict"] == "REJECTED" and "recovery_divergence" in str(v["metrics"]["classes"]), v["reasons"]

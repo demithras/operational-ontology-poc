@@ -162,7 +162,7 @@ def test_g5_e20_anchor_entry_must_precede_the_reply_in_the_transcript():
                                                                   and isinstance(e.get("anchor_head_at_reply"), int) for e in r["events"]))
     ev = next(e for e in raw["events"] if e["k"] == "request" and (e.get("res") or {}).get("status") == "OK" and isinstance(e.get("anchor_head_at_reply"), int))
     key = (raw["stream"], ev["rid"])
-    seq = J["services"]["anchor_seq"][key]
+    seq = [x for x in J["services"]["anchor_seq"][key] if x > ev["anchor_head_before"]][0]       # exact match: the first entry after the pre-call head
     assert seq <= ev["anchor_head_at_reply"]                                           # honest: entry first, then the reply
     ctx = judge.Ctx(LedgerIndex(J["services"]["merged"]), J["services"]["anchor"], None, dict(J["services"]["anchor_seq"]))
     assert not [x for x in judge.judge_seq(raw, ctx)["classes"].get("unanchored_ack", [])]

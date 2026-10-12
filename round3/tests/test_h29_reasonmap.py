@@ -43,3 +43,22 @@ def test_unmapped_raw_reason_is_a_misclassification_and_mapped_is_admissible():
     assert C.blocked_reply_ok(cls, "INVALID", {"reason": "unknown_op"}, True, table)[0]
     assert not C.blocked_reply_ok(cls, "INVALID", {"reason": "something_new"}, True, table)[0]
     assert not C.blocked_reply_ok(cls, "INVALID", {"reason": "unknown_op"}, False, table)[0]
+
+
+def test_real_reason_map_loads_and_covers_both_variants():
+    """G5-E29(d): the auditor's real spec/gate5/reason-map.json is present, valid, and has a non-empty table per real variant."""
+    assert reasonmap.DEFAULT_PATH.is_file()
+    t = reasonmap.load()
+    assert t is not None
+    for v in reasonmap.REAL_VARIANTS:
+        assert reasonmap.for_variant(v) and set(reasonmap.for_variant(v).values()) <= set(reasonmap.INPUT_INVALID_REASONS)
+    assert reasonmap.for_variant("FakeHonestG5") == {}
+
+
+def test_real_reason_map_loads_and_covers_both_variants():
+    """G5-E29(d): the auditor's real spec/gate5/reason-map.json is present, valid, and has a non-empty table per real variant."""
+    assert reasonmap.DEFAULT_PATH.is_file()
+    assert reasonmap.load() is not None
+    for v in reasonmap.REAL_VARIANTS:
+        assert reasonmap.for_variant(v) and set(reasonmap.for_variant(v).values()) <= set(reasonmap.INPUT_INVALID_REASONS)
+    assert reasonmap.for_variant("FakeHonestG5") == {}

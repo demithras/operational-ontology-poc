@@ -323,6 +323,15 @@ class H29Dep(H28Dep):
         return l if l.valid_at(self.clock.now()) else None
 
     def recovery_view(self) -> dict:
+        if self.fmode == "dispatch_in_rc1" and self._restarted and not getattr(self, "_rv_seen", False):
+            self._rv_seen = True                                  # known negative (G5-E25): drains the outbox inside the restricted window
+            self.dispatch_pending()
+        if self.fmode == "observe_in_rc1" and self._restarted and not getattr(self, "_rv_seen", False):
+            self._rv_seen = True                                  # known negative (G5-E25): reads the observer inside the restricted window
+            try:
+                self.external.observer.read(watermark=0)
+            except Exception:  # noqa: BLE001 - an unavailable read is still an attempt
+                pass
         marks = [{"request_id": d.get("request_id"), "world_seq": seq, "authority_version": d["authority_version"]} for seq, d in self._commit_rows()]
         salt = random.Random(os.getpid()).random() < 0.5
         intents = []
@@ -382,4 +391,6 @@ FakeDropOutbox = _named("FakeDropOutbox", ("outbox_dropped_on_restart",))
 FakeAckBeforeAnchor = _named("FakeAckBeforeAnchor", ("anchor_skipped_when_unavailable",))
 FakeAlwaysUnavailable = _named("FakeAlwaysUnavailable", (), "always_unavailable")
 FakeMisattributes = _named("FakeMisattributes", (), "misattribute")
+FakeDispatchInRC1 = _named("FakeDispatchInRC1", (), "dispatch_in_rc1")     # G5-E25: ExternalWorld request during the restricted phase
+FakeObserveInRC1 = _named("FakeObserveInRC1", (), "observe_in_rc1")       # G5-E25: observer read during the restricted phase
 FakeSurvivesCoopCrash = _named("FakeSurvivesCoopCrash", (), "honest")      # module cache only a cooperative crash could keep: 0 classes

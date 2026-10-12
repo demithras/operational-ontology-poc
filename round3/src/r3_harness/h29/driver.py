@@ -134,7 +134,7 @@ class Run:
                 "history_path": paths["hist"], "anchor_sock": self.svc.anchor_sock, "governance": None, "resume": resume,
                 "deployment_id": dep, "authority": {"sock": self.svc.auth_sock, "lease": faults.LEASE, "graph_path": str(specs.GRAPH_PATH)},
                 "external": {"systems": self.systems, "data_sock": self.svc.ext_sock, "root_caps": roots,
-                             "observer": {"ext_dir": str(obs_d), "key": self.svc.ext.observer_key(dep),
+                             "observer": {"ext_dir": str(obs_d), "key": self.svc.ext.observer_key(dep), "read_log": str(obs_d / services.OBS_LOG),
                                           "fault": {"kind": "lagging", "k": lag} if lag else None},
                              "window": self.systems["window"], "adapter_factory": FACTORY,
                              "adapter_args": {"domain": self.seq["domain"], "byz": ({**self.seq["byz"], "system": self.byz_system()}
@@ -218,6 +218,17 @@ class Run:
             self.cleanup()
         return self.rec
 
+    def anchor_head_before(self):
+        """G5-E20 (exact entry match): the anchor head BEFORE the call, read from the anchor's own append-only log file (fsync'd before every
+        reply), so no data-plane call is added inside ANCHOR fault windows. 0 = stream not yet known / empty; None = unreadable."""
+        stream = self.stream or services.stream_of(self.hist_path)
+        if not stream:
+            return 0
+        if self.svc.anchor_dir:
+            return services.anchor_head_from_log(self.svc.anchor_dir, stream)
+        from . import rc
+        return rc._head(self, stream)
+
     def anchor_head_after_ok(self, r):
         """G5-E20: transcript ordering. Immediately after an OK reply the harness reads the anchor head: the anchor entry of that decision must
         have a sequence <= this head (it was appended before the reply returned). None = no OK reply / stream unknown; -1 = head unreadable."""
@@ -253,12 +264,13 @@ class Run:
         tok = self.token(st["principal"])
         fn = "call_tool" if st["surface"] == "call_tool" else "direct"
         t0 = self.t
+        before = self.anchor_head_before()
         r, err = self.call(fn, tok, st["operation"], dict(st["args"]), st["obo"], st["rid"])
         head = self.anchor_head_after_ok(r)
         return self.event(kind, i=st.get("i"), rid=st["rid"], principal=st["principal"], operation=st["operation"], surface=st["surface"],
                           tag=st.get("tag"), copy=copy, attacker=bool(st.get("attacker")), invalid_probe=bool(st.get("invalid_probe")), probe_shape=st.get("probe_shape"),
                           t=t0, args=st["args"], res=_res(r) if r is not None else None, err=err, inc=len(self.rec["incarnations"]) - 1,
-                          anchor_head_at_reply=head)
+                          anchor_head_at_reply=head, anchor_head_before=before)
 
     def s_approve(self, st):
         r, err = self.call("approve", self.token(st["approver"]), st["operation"], dict(st["args"]), st["requester"], st["obo"])

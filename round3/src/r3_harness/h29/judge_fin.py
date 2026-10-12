@@ -62,6 +62,16 @@ def _finish(R, row, ctx, ev, phi, versions, rep, state, systems, cw, base, dep, 
         if e["k"] == "rc1" and e.get("auth_refused_restricted"):      # G5-E25: bounded by transcript order (service sequence), not by tick
             row["restricted_io"].append({"resume": e["resume"], "what": "AuthorityService fetch refused during the restricted phase",
                                          "n": e["auth_refused_restricted"]})
+    for e in ev:
+        if e["k"] == "rc1" and e.get("ext_restricted"):                # G5-E25 (ii): ExternalWorld request inside the window (service seq order)
+            row["restricted_io"].append({"resume": e["resume"], "what": "ExternalWorld request by the resumed deployment during the restricted phase",
+                                         "n": e["ext_restricted"]})
+        if e["k"] == "rc1" and e.get("obs_reads_restricted"):          # G5-E25 (iii): observer read inside the window (None = not instrumented)
+            row["restricted_io"].append({"resume": e["resume"], "what": "observer read by the resumed deployment during the restricted phase",
+                                         "n": e["obs_reads_restricted"]})
+    row["obs_reads_instrumented"] = all(e.get("obs_reads_restricted") is not None for e in ev if e["k"] == "rc1")
+    if not row["obs_reads_instrumented"]:
+        row["harness"].append("observer_log_missing")                  # a G5 run without the observer read log is INVALID, never clean
     for item in row["restricted_io"]:                                  # G5-E25 / R29-10: every restricted_io item is a recovery_divergence
         row["classes"].setdefault("recovery_divergence", []).append({**item, "what": "restricted_io", "detail": item["what"]})
     w = R.get("world")

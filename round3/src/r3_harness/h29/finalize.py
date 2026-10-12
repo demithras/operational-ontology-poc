@@ -18,6 +18,14 @@ def load_raw(vdir: Path) -> list:
     return [json.loads(l) for l in (Path(vdir) / RAW).read_text().splitlines() if l.strip()]
 
 
+def note_anchor_seq(aseq: dict, e: dict) -> None:
+    """(stream, decision_id) -> sorted list of the anchor seqs of EVERY entry carrying that decision_id. A request_id the corpus reuses (deny, then
+    succeed) is anchored once per decision; the judge picks the entry that records the OK decision by position relative to the head read before
+    the call (G5-E20, exact match; the entry carries stream, seq, decision_id, root - only decision_id + seq are usable by the harness)."""
+    aseq.setdefault((e["stream"], e["decision_id"]), []).append(e["seq"])
+    aseq[(e["stream"], e["decision_id"])].sort()
+
+
 def load_services(svc_root: Path, W: int, closes: dict | None = None) -> dict:
     """Closed ledgers (merged: deployments are world-private), anchor entries, integrity verdicts of the three service kinds."""
     ledgers, anchor, aseq, integ = [], set(), {}, {"anchor": [], "auth": [], "ext": []}
@@ -29,7 +37,7 @@ def load_services(svc_root: Path, W: int, closes: dict | None = None) -> dict:
             if line.strip():
                 e = json.loads(line)
                 anchor.add((e["stream"], e["decision_id"]))
-                aseq[(e["stream"], e["decision_id"])] = e["seq"]
+                note_anchor_seq(aseq, e)
         exp = ((closes or {}).get("anchor") or [{}] * W)[i].get("head") if closes else None
         integ["anchor"].append(verify_anchor_log(ad, expected_head=exp) if exp else verify_anchor_log(ad))
         authv = verify_log(Path(svc_root) / f"auth-{i}")

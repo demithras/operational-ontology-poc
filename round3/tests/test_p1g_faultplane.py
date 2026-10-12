@@ -177,3 +177,22 @@ def test_a_returning_kill_goes_red(tmp_path):
     old = ("lambda: (__import__('threading').Timer(0.2, lambda: __import__('os').kill(__import__('os').getpid(), 9)).start())")
     runs = [_run_hot(tmp_path, i, old) for i in range(5)]
     assert all(r != (-9, "", 0) for r in runs), runs          # every run passed the crash point and landed its commit
+
+
+def test_observer_read_log_line_is_written_even_when_the_read_raises(tmp_path):
+    """G5-E25: ObservationClient(read_log=...) records every read ATTEMPT before the fault check; default None writes nothing."""
+    import json as _json
+    from r3_shared.extobs import ObserverFault, ObserverUnavailable, ObservationClient
+    from r3_shared.extsystems import load_systems
+    from r3_shared.extworld_core import ExternalWorldCore
+    core = ExternalWorldCore(tmp_path / "e", load_systems("manufacturing"))
+    log = tmp_path / "reads.log"
+    key = core.observer_key("dep")
+    obs = ObservationClient(str(tmp_path / "e"), key, load_systems("manufacturing"), ObserverFault.unavailable(reads=(1,)), str(log))
+    obs.read(4)
+    with pytest.raises(ObserverUnavailable):
+        obs.read(5)
+    assert [_json.loads(x) for x in log.read_text().splitlines()] == [{"n": 0, "watermark": 4}, {"n": 1, "watermark": 5}]
+    quiet = ObservationClient(str(tmp_path / "e"), key, load_systems("manufacturing"))
+    quiet.read(1)
+    assert len(log.read_text().splitlines()) == 2 and not (tmp_path / "e" / "obs_reads.log").exists()

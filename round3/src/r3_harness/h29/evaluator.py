@@ -16,7 +16,7 @@ from r3_shared.verdict import CommonEvaluation, DualVerdict, Verdict, evaluate_c
 
 from . import aggregate, evalchecks as EC, evidence_out, finalize, judge, reasonmap, specs
 
-DEV_BRANCHES = ("size_overrides", "freeze_manifest", "service_presence", "candidate_tag")
+DEV_BRANCHES = ("size_overrides", "freeze_manifest", "service_presence", "candidate_tag", "reason_map")
 EVAL_FILES = ("evaluator.py", "evalchecks.py", "judge.py", "judge_req.py", "judge_fin.py", "judge_ext.py", "judge_rec.py", "aggregate.py",
               "finalize.py", "evidence_out.py", "runner.py", "driver.py", "rc.py", "inject.py", "collect.py", "gen.py", "gen_eps.py", "gen_emit.py",
               "gen_draw.py", "gen_model.py", "mutation.py", "services.py", "specs.py")
@@ -72,6 +72,7 @@ def evaluate_variant(vdir: Path, thresholds: dict, vname: str, is_dev: bool) -> 
     have_svc = all(len(closes.get(k) or []) == W and all("error" not in c for c in closes[k]) for k in ("anchor", "ext", "auth"))
     valid &= not refuse_unless_dev(is_dev, "service_presence", not have_svc, "anchor / ExternalWorld / AuthorityService close() outputs missing", reasons)
     valid &= not refuse_unless_dev(is_dev, "candidate_tag", ro.get("candidate", {}).get("head_matches_tag") is not True, "HEAD != candidate tag", reasons)
+    valid &= not refuse_unless_dev(is_dev, "reason_map", reasonmap.load() is None, "spec/gate5/reason-map.json is absent (G5-E29d)", reasons)
     ok, bad = EC.oracle_isolation()
     if not ok:
         valid = False

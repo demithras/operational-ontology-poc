@@ -47,7 +47,7 @@ def test_g5_e28a_probes_reach_the_transcript_in_healthy_phases_and_in_auth_ancho
     assert any(not q["phi"] for q in recs) and any(set(q["phi"]) & {"AUTH", "ANCHOR"} for q in recs)
     p = J["agg"]["probes"]
     nb = sum(len((r.get("boundary") or {}).get("probes", [])) for r in J["rows"])
-    assert p["total"] == len(recs) + nb and p["in_auth_anchor_window"] > 0 and set(p["per_shape"]) == set(rules.PROBE_SHAPES), p
+    assert p["total"] == len(recs) and p["boundary_total"] == nb and p["in_auth_anchor_window"] > 0 and set(p["per_shape"]) == set(rules.PROBE_SHAPES), p
     assert all(q["input_invalid"] for q in recs) and not any(q["input_invalid"] for r in J["rows"] for q in r["req"] if not q.get("probe") and q.get("k") == "request" and q["rid"] and q["oracle"] == "OK")
 
 
@@ -221,3 +221,28 @@ def test_g5_e28a_probe_answered_ok_without_a_commit_is_false_success():
     bad = copy.deepcopy(raw)
     next(x for x in bad["events"] if x["n"] == e["n"])["res"] = {"status": "OK", "body": {}}
     assert judge.judge_seq(bad, _ctx(J))["classes"].get("false_success")
+
+
+def test_g5_e29b_boundary_probes_never_count_toward_the_floor():
+    """G5-E29(b): a run whose only in-window probes are S-bnd (B1/B2) probes misses the >= 50 floor."""
+    import json
+    import tempfile
+    from pathlib import Path
+    from r3_harness.h29 import aggregate, evaluator, evidence_out
+    from tests.test_h29_restricted import ROOT
+    J = run("FakeHonestG5")
+    rows = copy.deepcopy(J["rows"])
+    for r in rows:
+        if r["stratum"] != "bnd":
+            for q in r["req"]:
+                q["probe"] = False                                             # no main-corpus probe at all
+        else:
+            r["boundary"] = {**(r["boundary"] or {}), "probes": [{"shape": "missing_input"}] * 60}
+    agg = aggregate.aggregate(rows)
+    assert agg["probes"]["in_auth_anchor_window"] == 0 and agg["probes"]["boundary_total"] >= 60
+    assert agg["probes"]["total"] == 0
+    t = json.loads((ROOT / "protocol/thresholds.json").read_text())["H29"]
+    with tempfile.TemporaryDirectory() as d:
+        (Path(d) / evidence_out.FILES[5]).write_text("{}")
+        v = evaluator._verdict(Path(d), "v", t, True, {}, agg, J, True, [], {})
+    assert any("G5-E28" in r for r in v["reasons"]) and v["verdict"] != "SUPPORTED", v["reasons"]

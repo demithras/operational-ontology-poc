@@ -15,7 +15,7 @@ from r3_shared.anchor import AnchorClient
 from r3_shared.authsvc import AuthorityClient
 from r3_shared.extworld import ExternalClient
 
-from . import evalchecks as EC, runner
+from . import evalchecks as EC, reasonmap, runner
 
 ROUND3 = Path(__file__).resolve().parents[3]
 
@@ -73,6 +73,8 @@ def guard(a, out: Path, env=None) -> dict:
             raise Refusal("candidate_tag", f"HEAD != {a.candidate_tag}")
     except subprocess.CalledProcessError:
         raise Refusal("candidate_tag", f"candidate tag {a.candidate_tag} not found") from None
+    if reasonmap.load() is None:
+        raise Refusal("reason_map", "spec/gate5/reason-map.json is absent: a non-dev run cannot judge INVALID replies (G5-E29d)")
     frozen, cur = EC.freeze_state()
     drift = [f for f, h in frozen.items() if cur.get(f) != h]
     if drift:

@@ -42,6 +42,21 @@ def _unrelated(row, phi, graph, dom, kind, op, t, progressed):
             u[1] += 1 if progressed else 0
 
 
+def _anchor_entry_violation(seqs: list, before, after, fresh: bool):
+    """G5-E20, exact match. `seqs` = anchor seqs of every entry whose decision_id is the request_id. The entry recording THIS OK decision is the
+    first one appended after the head read before the call (before, seq]; it must be <= the head read right after the reply. No such entry: only
+    an idempotent replay (the commit already existed, not created by this call) may rest on an earlier entry. -> None | {why, ...}"""
+    if not isinstance(after, int) or after < 0:
+        return None                                                    # head unreadable at the reply: nothing to order against
+    b = before if isinstance(before, int) and before >= 0 else 0
+    new = [x for x in seqs if x > b]
+    if new:
+        return None if new[0] <= after else {"why": "anchor entry appended after the reply", "entry_seq": new[0], "head_at_reply": after}
+    if fresh or not any(x <= b for x in seqs):
+        return {"why": "no anchor entry records this OK decision (only an earlier entry for a reused request_id)" if seqs else "no anchor entry", "head_before": b}
+    return None
+
+
 def _request(R, row, e, ctx, phi, versions, renew, crashed, rep, state, process_marks, cw, base, ops, graph, dom, doc_at):
     from .judge import active
     t, rid, op, args = e["t"], e["rid"], e["operation"], e["args"]
@@ -75,11 +90,10 @@ def _request(R, row, e, ctx, phi, versions, renew, crashed, rep, state, process_
             row["classes"].setdefault("false_success", []).append({"rid": rid, "t": t, "why": "OK reply, no commit in world_log"})
         elif stream and (stream, rid) not in ctx.anchor:
             row["classes"].setdefault("unanchored_ack", []).append({"rid": rid, "t": t, "why": "OK reply without an anchor entry"})
-        elif stream and ctx.anchor_seq.get((stream, rid)) is not None and isinstance(e.get("anchor_head_at_reply"), int) \
-                and 0 <= e["anchor_head_at_reply"] < ctx.anchor_seq[(stream, rid)]:
-            row["classes"].setdefault("unanchored_ack", []).append(          # G5-E20: the entry must precede the reply in the transcript
-                {"rid": rid, "t": t, "why": "anchor entry appended after the reply", "entry_seq": ctx.anchor_seq[(stream, rid)],
-                 "head_at_reply": e["anchor_head_at_reply"]})
+        elif stream:
+            bad = _anchor_entry_violation(ctx.anchor_seq.get((stream, rid)) or [], e.get("anchor_head_before"), e.get("anchor_head_at_reply"), m is not None)
+            if bad:
+                row["classes"].setdefault("unanchored_ack", []).append({"rid": rid, "t": t, **bad})
         if cls.kind == C.BLOCKED or (cls.kind == C.UNRESOLVED and cls.down and not committed):
             _mis(row, "OK", {"rid": rid, "t": t, "down": cls.down, "why": "OK while a decision dependency is down"})
     elif status is not None and cls.kind in (C.BLOCKED, C.UNRESOLVED) and cls.down:
