@@ -216,3 +216,19 @@ def close_anchor(sock_path) -> dict:
     """Close an anchor by socket (runner use): reveals the key, returns {"key", "head"}."""
     r = AnchorClient(str(sock_path))._call({"op": "close"})
     return {"key": r["key"], "head": r["head"]}
+
+
+def require_anchor(exp_id: str, env=None) -> tuple[str, str]:
+    """G3-E31b pattern for the H29 runner: a non-dev experiment id REFUSES to run unless the launcher started the anchor
+    (R3_ANCHOR_SOCK and R3_ANCHOR_DIR set and the socket answers a ping). Returns (sock, dir). Dev ids without a configured
+    anchor get AnchorError too; the caller may then start its own (start_anchor)."""
+    env = os.environ if env is None else env
+    sock, d = env.get("R3_ANCHOR_SOCK"), env.get("R3_ANCHOR_DIR")
+    if not (sock and d):
+        raise AnchorError(f"refusing: experiment id {exp_id!r} requires R3_ANCHOR_SOCK/R3_ANCHOR_DIR (launch through the H29 launcher "
+                          "so the anchor runs outside the sandbox)" if "-dev" not in exp_id else "no anchor configured (dev id: start one with start_anchor)")
+    try:
+        AnchorClient(sock)._call({"op": "ping"})
+    except AnchorError as exc:
+        raise AnchorError(f"refusing: anchor at {sock} is not running: {exc}") from exc
+    return sock, d
