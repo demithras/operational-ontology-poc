@@ -9,7 +9,7 @@ from pathlib import Path
 
 from r3_shared.authsvc import Lease, validate_lease
 from r3_shared.faultplane import CanonicalStateLost, DependencyUnavailable
-from r3_shared.recovery import DEP_UNAVAILABLE, validate_recovery_view
+from r3_shared.recovery import DEP_UNAVAILABLE, IN_DOUBT, validate_recovery_view
 from r3_shared.variant import CallResult
 from tests.fakes.fake_variant import FakeDeployment, FakeVariant
 
@@ -96,6 +96,13 @@ class FakeG5Deployment(FakeDeployment):
             if g is not None:
                 return g
         return super().approve(token, operation, args, requester, on_behalf_of)
+
+    def _g2_anchor(self, request_id, kind, sub, seq, tick, body):
+        """The world commit precedes the anchor append (R27-6 orders the ACK): an anchor failure leaves commit status in doubt."""
+        res = super()._g2_anchor(request_id, kind, sub, seq, tick, body)
+        if res.status == "UNAVAILABLE" and res.body.get("reason") == "anchor_unavailable":
+            return CallResult("UNKNOWN", {"reason": IN_DOUBT})
+        return res
 
     def restart(self):
         super().restart()
