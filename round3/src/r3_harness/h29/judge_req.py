@@ -47,7 +47,7 @@ def _anchor_entry_violation(seqs: list, before, after, fresh: bool):
     first one appended after the head read before the call (before, seq]; it must be <= the head read right after the reply. No such entry: only
     an idempotent replay (the commit already existed, not created by this call) may rest on an earlier entry. -> None | {why, ...}"""
     if not isinstance(after, int) or after < 0:
-        return None                                                    # head unreadable at the reply: nothing to order against
+        return {"harness": "anchor_head_unreadable", "why": "anchor head unreadable after an OK reply (G5-E31)"}   # never "nothing to order against"
     b = before if isinstance(before, int) and before >= 0 else 0
     new = [x for x in seqs if x > b]
     if new:
@@ -90,9 +90,11 @@ def _request(R, row, e, ctx, phi, versions, renew, crashed, rep, state, process_
             row["classes"].setdefault("false_success", []).append({"rid": rid, "t": t, "why": "OK reply, no commit in world_log"})
         elif stream and (stream, rid) not in ctx.anchor_of(R):
             row["classes"].setdefault("unanchored_ack", []).append({"rid": rid, "t": t, "why": "OK reply without an anchor entry"})
-        elif stream:
+        elif stream and "anchor_head_at_reply" in e:          # concurrent redelivery copies (driver.s_redeliver) take no head reads: idempotent, the first OK was ordered
             bad = _anchor_entry_violation(ctx.anchor_seq_of(R).get((stream, rid)) or [], e.get("anchor_head_before"), e.get("anchor_head_at_reply"), m is not None)
-            if bad:
+            if bad and bad.get("harness"):
+                row["harness"].append(bad["harness"])
+            elif bad:
                 row["classes"].setdefault("unanchored_ack", []).append({"rid": rid, "t": t, **bad})
         if cls.kind == C.BLOCKED or (cls.kind == C.UNRESOLVED and cls.down and not committed):
             _mis(row, "OK", {"rid": rid, "t": t, "down": cls.down, "why": "OK while a decision dependency is down"})

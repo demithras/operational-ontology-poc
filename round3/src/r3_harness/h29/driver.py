@@ -230,13 +230,14 @@ class Run:
         return rc._head(self, stream)
 
     def anchor_head_after_ok(self, r):
-        """G5-E20: transcript ordering. Immediately after an OK reply the harness reads the anchor head: the anchor entry of that decision must
-        have a sequence <= this head (it was appended before the reply returned). None = no OK reply / stream unknown; -1 = head unreadable."""
+        """G5-E20/E31: transcript ordering. Immediately after an OK reply the anchor head is read from the anchor's append-only log FILE (never
+        through the anchor service, which may be dropped or partitioned): the anchor entry of that decision must have a sequence <= this head.
+        None = no OK reply; 0 = stream empty/unknown; None from the reader (OK reply) is recorded as -1 = head unreadable."""
         if r is None or getattr(r, "status", None) != "OK":
             return None
-        from . import rc
         self.stream = self.stream or services.stream_of(self.hist_path)
-        return rc._head(self, self.stream) if self.stream else None
+        h = self.anchor_head_before()
+        return -1 if h is None else h
 
     def b2_replay_probe(self) -> None:
         """PROT-H29 s9 B2 (G5-E24): the anchor is still unreachable; replay of any request this sequence sent must not be VERIFIED."""

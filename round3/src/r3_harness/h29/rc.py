@@ -92,8 +92,11 @@ def _auth_refused_between(r, lo, hi) -> int:
 
 
 def _head(r, stream):
+    """G5-E31: read from the anchor's append-only log file when the anchor directory is known (independent of the service being up)."""
     if not stream:
         return None
+    if getattr(r.svc, "anchor_dir", None):
+        return services.anchor_head_from_log(r.svc.anchor_dir, stream)
     try:
         h = r.svc.anchor.head(stream)
         return None if h is None else h["seq"]
