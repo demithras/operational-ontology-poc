@@ -219,7 +219,7 @@ def test_anchor_entry_exact_match_cases():
     assert "earlier entry" in V([3], 5, 9, True)["why"]                    # fresh OK, only an old entry of a reused id: missing entry for THIS decision
     assert V([3], 5, 9, False) is None                                     # idempotent replay may rest on the earlier entry
     assert V([], 5, 9, True)["why"] == "no anchor entry"
-    assert V([3], None, 3, True) is None and V([3], 2, -1, True) is None   # unreadable head -> not judged
+    assert V([3], None, 3, True) is None and V([3], 2, -1, True)["harness"] == "anchor_head_unreadable"   # G5-E31: unreadable head after OK is a harness row
 
 
 def test_g5_e25_observer_reading_fake_is_rejected():

@@ -269,3 +269,13 @@ G5-E30 (a) Input-invalid probes (G5-E28) are never eligible for progress: judge_
       anchors of independent workers is a harness defect (dev1: 58 of Paladin's 59 unanchored_ack vanish under a per-anchor index;
       the 59th is to be explained by the harness fix). Evidence keeps per-class detail rows (request id, tick, reason) for every
       class hit, not only counts, so SUMMARY attribution can cite cases.
+
+## Erratum G5-E31 (orch, 2026-10-13, from the G5 fix4 paladin report (dev run exp-h29-dev2), before any official run)
+G5-E31 The unanchored_ack ordering check (G5-E20) must not depend on the anchor service being reachable. The harness reads BOTH
+      anchor_head_before and anchor_head_at_reply from the anchor's own append-only log file (as anchor_head_before already does),
+      never through the anchor service, so an OK reply given while ANCHOR is dropped or partitioned is ordered against the entries
+      that existed at the reply. An unreadable head after an OK reply is a harness row (blocking: the run cannot be clean), never
+      "nothing to order against" (judge_req._anchor_entry_violation skipped it: an ack before anchoring during an ANCHOR outage,
+      completed after heal by the same incarnation, was invisible in either variant). The frozen mutant definition stands as written
+      ("ANCHOR down -> ack OK and anchor later"): the anchor-later step may happen after heal in the same incarnation, and the judge
+      must kill it there.

@@ -18,7 +18,7 @@ from . import faults, judge_ext as JE, judge_rec as JR, specs
 CLASSES = ("forbidden_effect", "stale_authority_commit", "stale_authority_after_restart", "effect_outside_scope", "disclosure_leak",
            "unanchored_ack", "tampered_record_trusted", "false_success", "false_reconciled_success", "duplicate_effect", "duplicate_commit",
            "misclassified_dependency_failure", "recovery_nondeterministic", "recovery_divergence", "boundary_not_explicit")
-BLOCKING = ("unsupported", "host_spawn_failure", "harness_exception", "generator_redraw_exhausted", "service_log_unavailable", "observer_log_missing")
+BLOCKING = ("unsupported", "host_spawn_failure", "harness_exception", "generator_redraw_exhausted", "service_log_unavailable", "observer_log_missing", "anchor_head_unreadable")
 HARNESS = BLOCKING + ("injection_miss", "call_timeout", "world_lock_timeout", "redeliver_unknown_rid", "tamper_host_alive", "stride_exceeded")
 MIS_KINDS = ("OK", "DENIED", "INVALID", "UNAVAILABLE", "UNKNOWN", "outcome-plane")
 REQ_KINDS = ("request", "redeliver")
