@@ -65,6 +65,8 @@ def test_changed_frozen_file_makes_the_run_invalid(exp, tmp_path, monkeypatch):
 
 
 def test_non_dev_id_refuses_without_services_and_writes_nothing(tmp_path):
+    # services-up case: the refusal must NOT depend on freeze/manifest state (a complete freeze once let it launch a full official run),
+    # so it uses a candidate tag != HEAD, which guard() refuses right after the service check.
     for stopped in ("anchor", "ext", "auth", None):
         sv = SvcSet(1)
         try:
@@ -72,10 +74,12 @@ def test_non_dev_id_refuses_without_services_and_writes_nothing(tmp_path):
                 a, x, u = sv.procs[0]
                 {"anchor": a, "ext": x, "auth": u}[stopped].proc.kill()
             env = {**ENV, "R3_H29_SVC": str(sv.root), "R3_H29_WORKERS": "1"}
-            r = subprocess.run([PY, str(R3 / "scripts/run_h29.py"), "run", "--exp-id", "exp-h29-001", "--variant", "paladin", "--candidate-tag", "HEAD",
-                                "--out-root", str(tmp_path)], capture_output=True, text=True, env=env)
-            assert r.returncode == 2, r.stderr[-500:]                                              # None: services up, manifest not in FREEZE_G5
-            assert "refusing" in r.stderr and not (tmp_path / "exp-h29-001").exists()
+            r = subprocess.run([PY, str(R3 / "scripts/run_h29.py"), "run", "--exp-id", "exp-h29-001", "--variant", "paladin", "--candidate-tag", "HEAD~1",
+                                "--out-root", str(tmp_path)], capture_output=True, text=True, env=env, timeout=120)
+            assert r.returncode == 2, r.stderr[-500:]
+            branch = "service_presence" if stopped else "candidate_tag"
+            assert f"refusing [{branch}]" in r.stderr, r.stderr[-500:]
+            assert not (tmp_path / "exp-h29-001").exists()
         finally:
             sv.cleanup()
 

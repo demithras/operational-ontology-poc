@@ -18,7 +18,7 @@ def _sh(*a, env_extra=None, drop=()):
     env = {**os.environ, "PYTHONPATH": str(ROOT / "src"), **(env_extra or {})}
     for k in drop:
         env.pop(k, None)
-    return subprocess.run(list(a), capture_output=True, text=True, cwd=ROOT, env=env)
+    return subprocess.run(list(a), capture_output=True, text=True, cwd=ROOT, env=env, timeout=300)
 
 
 def test_official_id_without_anchor_is_refused(tmp_path):
