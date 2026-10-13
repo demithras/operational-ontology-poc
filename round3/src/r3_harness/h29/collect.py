@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from r3_shared.world import WorldReader
 
+from . import wlog
+
 
 def _rel(rows, base, keys=("tick", "from_tick", "to_tick", "granted_tick", "lease_until", "requested_tick", "effective_tick")):
     out = []
@@ -26,11 +28,14 @@ def finish(r) -> None:
             log, snap = rd.log(), rd.snapshot()
         finally:
             rd.close()
+        wlog.observe_rows(r, "end", log)                           # G5-E33 (d)
         rec["world"] = {"marks": [{"seq": x["seq"], "tick": x["tick"] - base, "data": x["data"], "writer": x["writer"]} for x in log
                                   if x["kind"] == "mark" and x["ref"] == "commit"],
                         "rows": len(log), "objects": {k: v["props"] for k, v in snap["objects"].items()}, "links": snap["links"]}
     except Exception as exc:  # noqa: BLE001 - B4 deletes the store on purpose
         rec["world"] = None
+        r.wl = getattr(r, "wl", [])
+        r.wl.append({"where": "end", "t": r.t, "error": f"{type(exc).__name__}: {exc}"[:160]})
         rec["world_error"] = f"{type(exc).__name__}: {exc}"[:200]
     deps = {r.dep, r.dep + "~rc1b"}
     try:
@@ -57,6 +62,7 @@ def finish(r) -> None:
     except Exception as exc:  # noqa: BLE001
         rec["ext"] = None
         r.harness_row("service_log_unavailable", service="ext", detail=str(exc)[:120])
+    rec["wl"] = list(getattr(r, "wl", []))
     rec["kills"] = [dict(k) for k in r.kills]
     rec["obs_windows"] = [dict(w) for w in r.obs_windows]
     rec["faults"] = {k: dict(v) for k, v in r.faults.items()}

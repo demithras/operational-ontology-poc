@@ -23,7 +23,7 @@ EXPECT = {
     "FakeRandomRecovery": {"recovery_nondeterministic"},
     "FakeDenyOnOutage": {"misclassified_dependency_failure"},
     "FakeDropOutbox": {"recovery_divergence"},
-    "FakeAckBeforeAnchor": {"unanchored_ack", "misclassified_dependency_failure"},
+    "FakeAckBeforeAnchor": {"unanchored_ack", "misclassified_dependency_failure", "recovery_divergence"},   # + G5-E33 (a): the OK commit has no anchor entry
     "FakeMisattributes": {"misclassified_dependency_failure"},
 }
 _cache: dict = {}
@@ -170,3 +170,9 @@ def test_g5_e20_anchor_entry_must_precede_the_reply_in_the_transcript():
     next(e for e in late["events"] if e["n"] == ev["n"])["anchor_head_at_reply"] = seq - 1
     got = judge.judge_seq(late, ctx)["classes"].get("unanchored_ack", [])
     assert any(x["rid"] == ev["rid"] and x["why"] == "anchor entry appended after the reply" for x in got), got
+
+
+def test_ack_before_anchor_fake_is_caught_by_the_g5_e33_commit_to_anchor_check():
+    J = run("FakeAckBeforeAnchor")
+    wh = {d.get("what") for r in J["rows"] for d in r["classes"].get("recovery_divergence", [])}
+    assert "unanchored_commit" in wh, wh
