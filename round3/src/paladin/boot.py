@@ -44,6 +44,17 @@ def bindings_for(domain: str, ir: dict, ops_spec: dict) -> LogicBindings:
     return b
 
 
+class _ThreadHandle:
+    """Resolves the writer's handle on every call (the factory is per thread under the unsynchronized_commit mutant), so a
+    write inside a world transaction reuses the transaction's own connection instead of queueing behind it (15 s busy wait)."""
+
+    def __init__(self, factory: Callable, name: str):
+        self._factory, self._name = factory, name
+
+    def __getattr__(self, attr: str):
+        return getattr(self._factory(self._name), attr)
+
+
 @dataclass
 class Booted:
     engine: Engine
@@ -76,7 +87,10 @@ def boot(domain: str, ops_spec: dict, auth_spec: dict, handle_factory: Callable,
             for e in op["effects"]:
                 if e["kind"] in ("create", "update"):
                     fields.setdefault((op["name"], e["kind"], e["type"]), set()).update(e["props"])
-        git = WorldGitAdapter(service_handle, fields, pre_apply)
+        git_handle = service_handle
+        if "unsynchronized_commit" in mutants:   # MUTANT: handles are per thread; the adapter must write through the committing thread's
+            git_handle = _ThreadHandle(handle_factory, "paladin-service")   # own handle, else its BEGIN IMMEDIATE waits on that thread's tx
+        git = WorldGitAdapter(git_handle, fields, pre_apply)
         adapters[("git_change", "*")] = git
     bind_spec = ops_spec
     if "policy_gate_in_adapter" in mutants:     # MUTANT: the gating rules leave the decision plane (see extgate_mut)
