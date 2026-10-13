@@ -52,7 +52,7 @@ def _finish(R, row, ctx, ev, phi, versions, rep, state, systems, cw, base, dep, 
                 row["outcome_progress"]["checked"] += 1
                 if oc["oracle"][k][0] == "RECONCILED_SUCCESS" and oc["got"].get(k) != "RECONCILED_SUCCESS":
                     row["outcome_progress"]["lost"].append({"rid": rid, "effect": I["effect_index"], "got": oc["got"].get(k)})
-    rec = JR.judge_recovery(R, ev, versions, intents, tick0, dl, systems, window, rep.open_approvals(), reads, fa, ctx.anchor)
+    rec = JR.judge_recovery(R, ev, versions, intents, tick0, dl, systems, window, rep.open_approvals(), reads, fa, ctx.anchor_of(R))
     row["recovery"] = {"rc1": rec["rc1"], "rc2": rec["rc2"]}
     row["recovery_checks"] = [rec["checks"], rec["passes"]]
     for c, dd in rec["classes"].items():

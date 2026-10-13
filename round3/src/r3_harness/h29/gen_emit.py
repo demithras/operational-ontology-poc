@@ -30,6 +30,10 @@ def request(plan, pick, tag=None, surface="direct", rid=None, attacker=False, pr
     plan.add(st)
     cls = plan.note_send("request", pick["operation"], rid, invalid=bool(pick.get("invalid")))
     dec = pick.get("dec")
+    armed = {x["key"] for x in plan.steps if x["op"] == "crash"}
+    if (cls.kind == C.SAFE and cls.strict and dec is not None and dec.kind == "OK" and dec.outcome.effects and not pick.get("invalid") and not attacker
+            and rid not in armed and corr(rid, 0) not in armed and tag not in ("redeliver", "rc2_redeliver")):
+        plan.elig.append(plan.t)
     if predict and cls.kind == C.SAFE and dec is not None and dec.kind == "OK" and dec.outcome.effects and not plan.phi.engine_down(plan.t):
         plan.rep.commit(dec, pick["akey"], rid)
         ints = extoracle.intended(plan.systems, dec, rid)
@@ -138,4 +142,5 @@ def recovery(plan) -> None:
     end = max([w["to_tick"] for w in plan.windows] + [plan.t])
     last = max([q["t"] for q in plan.sends if q["kind"] == "request"] + [plan.t])
     plan.t = max(end, last + faults.WINDOW + 2) + 1          # +1: the redelivery tick (rc.rc2)
+    plan.rc2_end.append(plan.t - 1)
     plan.open_rec = False

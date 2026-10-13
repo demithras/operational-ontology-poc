@@ -29,7 +29,7 @@ def f1_crash(plan, ch, cp: str, var: int = 0) -> None:
         plan.add({"op": "redeliver", "rid": rid, "copies": 1, "concurrent": False})
         plan.note_send("request", pick["operation"], rid)
         E.recovery(plan)
-        E.fill(plan, ch, 2, tag="post")
+        E.fill(plan, ch, 1, tag="post")
     elif cp in ("CP4_adapter_before_apply", "CP5_adapter_after_apply"):
         s = ch.choice(_ext_systems(plan))
         pick = gen_draw.draw(plan, ch, "ok_ext", system=s)
@@ -48,7 +48,7 @@ def f1_crash(plan, ch, cp: str, var: int = 0) -> None:
         plan.add({"op": "redeliver", "rid": rid, "copies": 1, "concurrent": False})
         plan.note_send("request", pick["operation"], rid)
         E.recovery(plan)
-        E.fill(plan, ch, 2, tag="post")
+        E.fill(plan, ch, 1, tag="post")
     elif cp == "CP7_reconcile_after_read":
         s = ch.choice(_ext_systems(plan))
         pick = gen_draw.draw(plan, ch, "ok_ext", system=s)
@@ -64,7 +64,7 @@ def f1_crash(plan, ch, cp: str, var: int = 0) -> None:
         E.resume(plan, kill_t)
         E.dispatch(plan)
         E.recovery(plan)
-        E.fill(plan, ch, 2, tag="post")
+        E.fill(plan, ch, 1, tag="post")
     else:   # CP8: crash during recovery - first crash (CP2), resume, then the first dispatch after resume dies
         pick = gen_draw.draw(plan, ch, "ok_ext") or gen_draw.draw(plan, ch, "ok")
         if pick is None:
@@ -84,7 +84,7 @@ def f1_crash(plan, ch, cp: str, var: int = 0) -> None:
         E.resume(plan, kill2)
         E.dispatch(plan)
         E.recovery(plan)
-        E.fill(plan, ch, 2, tag="post")
+        E.fill(plan, ch, 1, tag="post")
 
 
 def f2_auth(plan, ch, mode: str, var: int, cls: str = "F2", tail: bool = True) -> None:
@@ -101,7 +101,7 @@ def f2_auth(plan, ch, mode: str, var: int, cls: str = "F2", tail: bool = True) -
     plan.fault(cls, "AUTH", mode, dur)
     s0 = plan.t - 1
     inside = [1, 2] if in_lease else [0]
-    for off in (0, 1, 2, 3, 4, 5) if in_lease else (0, 2):
+    for off in (0, 1, 2, 3, 4, 5, 6) if in_lease else (0, 2, 4):     # G5-E30: more past-lease sends, so >= 50% of windows see a refused call
         if s0 + off >= plan.t:
             plan.advance(s0 + off - plan.t)
         e = gen_draw.draw(plan, ch, "ok")
@@ -111,7 +111,7 @@ def f2_auth(plan, ch, mode: str, var: int, cls: str = "F2", tail: bool = True) -
     if plan.t < plan.windows[-1]["to_tick"]:
         plan.heal(plan.windows[-1]["fid"])                 # fault_heal: the driver advances to the end of the window
     if tail:
-        E.fill(plan, ch, 1)
+        plan.advance(1)
 
 
 def f3_ext(plan, ch, byz: bool, var: int) -> None:
@@ -246,6 +246,7 @@ def f6_stale(plan, ch, var: int) -> None:
     pair = gen_draw.stale_pair(plan, ch, k) or pair0
     rd = gen_draw.read_pair(plan, ch, k)
     plan.mark_class("F6", plan.t, f + 3)
+    emitted = 0
     for target in (f, f + 1, f + 2):
         if target > plan.t:
             plan.advance(target - plan.t)
@@ -255,13 +256,16 @@ def f6_stale(plan, ch, var: int) -> None:
         if cand is None:
             continue
         pair = cand
+        emitted += 1
         E.request(plan, {**pair, "dec": None}, tag="stale", predict=False)      # DENIED under the version in force: nothing commits
         if rd is not None:
             E.read(plan, rd, tag="stale")
         E.fill(plan, ch, 1, gap=0)                                                # an unrelated OK request inside the stale window
-    plan.stats["stale_sensitive"] = plan.stats.get("stale_sensitive", 0) + 1
+    if not emitted:                    # G5-E30 (d): the crash request consumed the stale pair and no other pair is stale-sensitive: redraw the sequence
+        return False
+    plan.stats["stale_sensitive"] = plan.stats.get("stale_sensitive", 0) + emitted
     E.close_windows(plan)
-    E.fill(plan, ch, 1)
+    plan.advance(1)
     return True
 
 
@@ -288,7 +292,7 @@ def f7_attacker(plan, ch, var: int) -> None:
     plan.note_send("request", None, None)
     plan.mark_class("F7", 0, plan.t + 1)
     E.close_windows(plan)
-    E.fill(plan, ch, 1)
+    plan.advance(1)
 
 
 def f8_tamper(plan, ch, var: int) -> None:
@@ -310,7 +314,7 @@ def f8_tamper(plan, ch, var: int) -> None:
         plan.note_send("request", None, r)
     E.fill(plan, ch, 3)
     E.recovery(plan)
-    E.fill(plan, ch, 2, tag="post")
+    E.fill(plan, ch, 1, tag="post")
     plan.mark_class("F8", kill_t, plan.t + 1)
 
 
