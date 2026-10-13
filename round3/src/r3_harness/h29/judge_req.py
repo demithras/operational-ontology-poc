@@ -5,6 +5,7 @@ from r3_oracle import continuity as C
 from r3_oracle import ops_model
 from r3_oracle.disclosure import low_view
 from r3_oracle.disclosure_reads import expected_list_objects, expected_read_object
+from r3_oracle.recoverymodel import _loose   # the ONE LOOSE_PROPS normaliser (G5-E27/E32); also used by world_digest
 from r3_shared.recovery import DEPENDENCY_REASONS, RecoveryFormError, validate_reply
 
 REQ_KINDS = ("request", "redeliver")
@@ -111,6 +112,16 @@ def _request(R, row, e, ctx, phi, versions, renew, crashed, rep, state, process_
         _unrelated(row, phi, graph, dom, "request", op, t, rec["progressed"])
 
 
+def served_matches(exp_body, body) -> bool:
+    """G5-E32: a served read body equals the oracle's low-view body, with ops_model.LOOSE_PROPS (Verdict reason / derivation_hash)
+    compared by FORM through the shared recoverymodel._loose; the ref, every other prop and the object set exactly."""
+    def norm(b):
+        if isinstance(b, dict) and isinstance(b.get("ref"), str) and isinstance(b.get("props"), dict):
+            return {**b, "props": _loose(b["ref"], b["props"])}
+        return b
+    return norm(exp_body) == norm(body)
+
+
 def _read(R, row, e, phi, graph, dom, renew, versions, rep, doc_at, ops, cw):
     from .judge import active
     t = e["t"]
@@ -128,7 +139,7 @@ def _read(R, row, e, phi, graph, dom, renew, versions, rep, doc_at, ops, cw):
            "progressed": False, "spurious": None, "fclasses": active(cw, t), "rid": None, "phi": sorted(phi.down(t))}
     row["req"].append(rec)
     if status == "OK":
-        if (exp[0], exp[1]) != ("OK", body):
+        if exp[0] != "OK" or not served_matches(exp[1], body):
             row["classes"].setdefault("disclosure_leak", []).append({"t": t, "principal": e["principal"], "args": a, "got": body, "oracle": list(exp)})
         if cls.kind == C.BLOCKED:
             _mis(row, "OK", {"t": t, "down": cls.down, "why": "read served while AUTH is down past the lease"})
@@ -139,5 +150,5 @@ def _read(R, row, e, phi, graph, dom, renew, versions, rep, doc_at, ops, cw):
     elif status == "UNAVAILABLE" and cls.kind == C.SAFE and isinstance(body, dict) and body.get("reason") == "dependency_unavailable":
         rec["spurious"] = body.get("dependency")
     if cls.kind == C.SAFE and cls.strict and exp[0] == "OK":
-        rec["eligible"], rec["progressed"] = True, status == "OK" and body == exp[1]
+        rec["eligible"], rec["progressed"] = True, status == "OK" and served_matches(exp[1], body)
         _unrelated(row, phi, graph, dom, "read", None, t, rec["progressed"])
