@@ -61,3 +61,11 @@ def test_driver_and_rc_read_heads_without_the_anchor_service(tmp_path):
 
 def test_unreadable_head_row_blocks_the_run():
     assert "anchor_head_unreadable" in judge.BLOCKING
+
+
+def test_events_without_a_head_read_are_not_judged_but_an_attempted_unreadable_read_is_a_harness_row():
+    import inspect
+    from r3_harness.h29 import judge_req
+    src = inspect.getsource(judge_req._request)
+    assert '"anchor_head_at_reply" in e' in src                    # concurrent redelivery copies carry no head fields at all
+    assert V([3], None, None, False)["harness"] == "anchor_head_unreadable"   # a present-but-unreadable head is never skipped

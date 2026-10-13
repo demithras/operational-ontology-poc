@@ -90,7 +90,7 @@ def _request(R, row, e, ctx, phi, versions, renew, crashed, rep, state, process_
             row["classes"].setdefault("false_success", []).append({"rid": rid, "t": t, "why": "OK reply, no commit in world_log"})
         elif stream and (stream, rid) not in ctx.anchor_of(R):
             row["classes"].setdefault("unanchored_ack", []).append({"rid": rid, "t": t, "why": "OK reply without an anchor entry"})
-        elif stream:
+        elif stream and "anchor_head_at_reply" in e:          # concurrent redelivery copies (driver.s_redeliver) take no head reads: idempotent, the first OK was ordered
             bad = _anchor_entry_violation(ctx.anchor_seq_of(R).get((stream, rid)) or [], e.get("anchor_head_before"), e.get("anchor_head_at_reply"), m is not None)
             if bad and bad.get("harness"):
                 row["harness"].append(bad["harness"])
