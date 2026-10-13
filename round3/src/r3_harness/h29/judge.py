@@ -27,11 +27,26 @@ REQ_KINDS = ("request", "redeliver")
 class Ctx:
     """Run-wide judge context: the closed ledger index, the anchor log index, the frozen specs."""
 
-    def __init__(self, led, anchor_entries: set, reason_map: dict | None = None, anchor_seq: dict | None = None):
-        self.led, self.anchor, self.reason_map = led, anchor_entries, reason_map or {}
-        self.anchor_seq = anchor_seq or {}       # (stream, decision_id) -> anchor sequence (G5-E20 transcript ordering)
+    def __init__(self, led, anchor_entries, reason_map: dict | None = None, anchor_seq: dict | None = None, workers: int = 1):
+        """anchor_entries / anchor_seq: {worker i: set of (stream, decision_id)} / {worker i: {(stream, decision_id): [seq]}} (G5-E30 (e): one
+        anchor per worker; a sequence is judged against the anchor of the worker that ran it, worker = j % workers). A plain set / dict is
+        taken as the single anchor of every sequence (unit tests)."""
+        self.led, self.reason_map, self.workers = led, reason_map or {}, max(1, workers)
+        self.anchor, self.anchor_seq = anchor_entries, anchor_seq or {}
         self.graph = specs.graph()
         self.docs = {d: {C_digest: doc for C_digest, doc in ((_digest(x), x) for x in specs.family(d))} for d in specs.DOMAINS}
+
+
+    def _pick(self, store, R, empty):
+        if isinstance(store, dict) and all(isinstance(k, int) for k in store) and store:
+            return store.get((R.get("j") or 0) % self.workers, empty)
+        return store if store is not None else empty
+
+    def anchor_of(self, R: dict) -> set:
+        return self._pick(self.anchor, R, set())
+
+    def anchor_seq_of(self, R: dict) -> dict:
+        return self._pick(self.anchor_seq, R, {})
 
 
 def _digest(doc):
@@ -131,10 +146,12 @@ def _judge(R: dict, ctx: Ctx, row: dict) -> dict:
              for e in ev if e["k"] in REQ_KINDS + ("read", "approve") and e.get("err") != "no_host"]
     renew = C.renew_pair(sends, phi, graph, dom)             # G5-E28 (c): obligation list + .adm admissibility window
     crashed = {e["rid"] for e in ev if e["k"] in REQ_KINDS and e.get("err") == "no_reply"}
+    keys = {e["key"] for e in ev if e["k"] == "crash_armed"}          # G5-E30 (b): the armed step comes from the corpus, never from a reply
+    armed = {e["rid"] for e in ev if e["k"] in REQ_KINDS and e.get("rid") and (e["rid"] in keys or corr(e["rid"], 0) in keys)}
     tamper_t = next((e["t"] for e in ev if e["k"] == "tamper"), None)
     A = lambda t: C.authority_in_force(versions, t)            # noqa: E731
     doc_at = lambda t: C.doc_of(versions, A(t)) or versions[0]["doc"]  # noqa: E731
-    state = {"proc": set(), "committed": set(), "intents": {}, "tick0": {}, "decs": {}}
+    state = {"armed": armed, "proc": set(), "committed": set(), "intents": {}, "tick0": {}, "decs": {}}
     seen_rids = {e["rid"] for e in ev if e["k"] in REQ_KINDS and e.get("rid")}
 
     def mark_cls(cls, detail, t):
@@ -185,5 +202,6 @@ def _judge(R: dict, ctx: Ctx, row: dict) -> dict:
     return row
 
 
+from .gen_emit import corr  # noqa: E402
 from .judge_req import _request, _read  # noqa: E402  (split for size)
 from .judge_fin import _boundary, _finish  # noqa: E402

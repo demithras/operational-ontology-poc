@@ -88,10 +88,10 @@ def _request(R, row, e, ctx, phi, versions, renew, crashed, rep, state, process_
     if status == "OK":
         if not committed:
             row["classes"].setdefault("false_success", []).append({"rid": rid, "t": t, "why": "OK reply, no commit in world_log"})
-        elif stream and (stream, rid) not in ctx.anchor:
+        elif stream and (stream, rid) not in ctx.anchor_of(R):
             row["classes"].setdefault("unanchored_ack", []).append({"rid": rid, "t": t, "why": "OK reply without an anchor entry"})
         elif stream:
-            bad = _anchor_entry_violation(ctx.anchor_seq.get((stream, rid)) or [], e.get("anchor_head_before"), e.get("anchor_head_at_reply"), m is not None)
+            bad = _anchor_entry_violation(ctx.anchor_seq_of(R).get((stream, rid)) or [], e.get("anchor_head_before"), e.get("anchor_head_at_reply"), m is not None)
             if bad:
                 row["classes"].setdefault("unanchored_ack", []).append({"rid": rid, "t": t, **bad})
         if cls.kind == C.BLOCKED or (cls.kind == C.UNRESOLVED and cls.down and not committed):
@@ -104,7 +104,7 @@ def _request(R, row, e, ctx, phi, versions, renew, crashed, rep, state, process_
         if status == "UNAVAILABLE" and isinstance(body, dict) and body.get("reason") == "dependency_unavailable" and not cls.gap:
             rec["spurious"] = body.get("dependency")
     if (cls.kind == C.SAFE and cls.strict and dec.kind == "OK" and dec.outcome is not None and dec.outcome.effects and not was
-            and e["k"] == "request" and rid not in crashed and not e.get("attacker") and e.get("tag") not in ("redeliver", "rc2_redeliver")):
+            and e["k"] == "request" and rid not in state["armed"] and not input_invalid and not e.get("attacker") and e.get("tag") not in ("redeliver", "rc2_redeliver")):
         rec["eligible"], rec["progressed"] = True, status == "OK" and committed
         _unrelated(row, phi, graph, dom, "request", op, t, rec["progressed"])
 

@@ -25,7 +25,8 @@ def _episode(plan, ch, cls: str, i: int, hdr: dict):
         hdr["cp"].append(cp)
         G.f1_crash(plan, ch, cp, v)
     elif cls == "F2":
-        G.f2_auth(plan, ch, ["drop", "reply_lost"][v % 2], v // 2)
+        G.f2_auth(plan, ch, "reply_lost" if (v % 2 and (v // 2) % 2) else "drop", v // 2)     # G5-E30: reply_lost windows log no refusal; keep them <= 25% so the
+        # frozen invalid_if (a) rule (>= 50% of F2:AUTH windows see a refused call) holds with margin
     elif cls == "F3":
         byz = v % 3 == 2
         if byz:
@@ -71,7 +72,8 @@ def _finish(plan, hdr: dict) -> dict | None:
     hdr["steps"] = plan.steps
     hdr["class_windows"] = plan.class_windows
     hdr["planned"] = {"requests": sum(1 for s in plan.steps if s["op"] == "request"), "steps": n, "end_t": plan.t,
-                      "stale_sensitive": plan.stats.get("stale_sensitive", 0), "attacker": plan.stats.get("attacker")}
+                      "stale_sensitive": plan.stats.get("stale_sensitive", 0), "attacker": plan.stats.get("attacker"),
+                      "fault_share": plan.fault_share()}
     hdr["attacker"] = plan.stats.get("attacker")
     return hdr
 
@@ -84,7 +86,8 @@ def build_env(idx: int, seed: int, stats: dict) -> dict | None:
         plan = Plan(domain)
         hdr = {"id": f"env-{idx:06d}", "stratum": "env", "domain": domain, "seed": seed, "idx": idx, "classes": [cls0], "cp": [],
                "boundary": None, "obs_lag": 0, "byz": None}
-        E.fill(plan, ch, 2, tag="warm")
+        if cls0 not in ("F1", "F6", "F8"):
+            E.fill(plan, ch, 1, tag="warm")
         if _episode(plan, ch, cls0, idx, hdr) is False:
             stats["episode_redraw"] = stats.get("episode_redraw", 0) + 1
             continue
@@ -94,10 +97,10 @@ def build_env(idx: int, seed: int, stats: dict) -> dict | None:
             plan.advance(1)
             hdr["classes"].append(c2)
             _episode(plan, ch, c2, idx + ch.randint(1, 7), hdr)
-        E.fill(plan, ch, 1) if len(plan.steps) < MIN_STEPS else None
+        plan.advance(1) if len(plan.steps) < MIN_STEPS else None
         _closing(plan, ch)
         while len(plan.steps) < MIN_STEPS:
-            E.fill(plan, ch, 1)
+            plan.advance(1)
         if len(plan.steps) > MAX_STEPS:
             stats["too_long"] = stats.get("too_long", 0) + 1
             continue

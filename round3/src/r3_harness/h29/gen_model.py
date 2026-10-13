@@ -63,6 +63,7 @@ class Plan:
         self.open_rec = False
         self.phi = C.Phi([], [])
         self.stats = {"redraw": 0}
+        self.elig, self.rc2_end = [], []             # G5-E30 (c): predicted progress-eligible request ticks; recovery end ticks
 
     # ---- steps ---------------------------------------------------------------------------------------------------
     def add(self, st: dict) -> dict:
@@ -111,6 +112,14 @@ class Plan:
         if "AUTH" in C.decision_deps(self.graph, self.domain, kind, op) and self.phi.mode("AUTH", self.t) is None and not invalid:
             self.model.renew(self.t)
         return cls
+
+    def fault_share(self) -> list:
+        """[eligible, eligible inside an active fault window] as the judge defines activity (class windows + kill..RC2), from the PLAN."""
+        ws = [tuple(w) for c in self.class_windows.values() for w in c]
+        end = max(self.rc2_end + [self.t])
+        for k, r in self.kills:
+            ws.append((k, max(r, min((e for e in self.rc2_end if e >= r), default=end))))
+        return [len(self.elig), sum(1 for t in self.elig if any(a <= t < b for a, b in ws))]
 
     def doc(self) -> dict:
         return self.model.doc_at(self.t) or self.fam[0]

@@ -25,6 +25,16 @@ def _dump(path: Path, obj) -> None:
     path.write_text(json.dumps(obj, indent=1, sort_keys=True, default=str) + "\n")
 
 
+def class_details(row: dict) -> dict:
+    """G5-E30: every class hit keeps its rows (request id, tick, reason), not only the count, so attribution can cite cases."""
+    def one(d):
+        d = d if isinstance(d, dict) else {"what": d}
+        t = next((d[k] for k in ("t", "tick", "resume") if d.get(k) is not None), None)
+        what = next((d[k] for k in ("why", "what", "oracle") if d.get(k) is not None), None)
+        return {"rid": d.get("rid") if d.get("rid") is not None else (d.get("rids") or [None])[0], "tick": t, "what": what, "detail": d}
+    return {c: [one(d) for d in dd] for c, dd in sorted(row["classes"].items())}
+
+
 def _seq_line(R: dict, row: dict) -> dict:
     sd = R.get("seq_def") or {}
     return {"id": R["seq"], "stratum": R["stratum"], "seed": sd.get("seed"), "domain": R.get("domain"), "world_digest": row.get("world_digest"),
@@ -32,7 +42,7 @@ def _seq_line(R: dict, row: dict) -> dict:
             "kills": R.get("kills"), "faults": R.get("faults"), "requests": [{k: q.get(k) for k in
                 ("n", "t", "rid", "k", "op", "cls", "down", "strict", "status", "reason", "dep", "oracle", "committed", "eligible", "progressed", "spurious", "phi")}
                 for q in row["req"]], "recovery": row["recovery"], "classes": {c: len(d) for c, d in row["classes"].items()},
-            "harness": row["harness"], "boundary": row["boundary"], "dependency_status": None}
+            "class_details": class_details(row), "harness": row["harness"], "boundary": row["boundary"], "dependency_status": None}
 
 
 def write_sequences(vdir: Path, J: dict) -> str:

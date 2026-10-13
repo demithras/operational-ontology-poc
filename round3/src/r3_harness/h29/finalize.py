@@ -28,16 +28,17 @@ def note_anchor_seq(aseq: dict, e: dict) -> None:
 
 def load_services(svc_root: Path, W: int, closes: dict | None = None) -> dict:
     """Closed ledgers (merged: deployments are world-private), anchor entries, integrity verdicts of the three service kinds."""
-    ledgers, anchor, aseq, integ = [], set(), {}, {"anchor": [], "auth": [], "ext": []}
+    ledgers, anchor, aseq, integ = [], {}, {}, {"anchor": [], "auth": [], "ext": []}
     for i in range(W):
         led = extoracle.load_ledger(Path(svc_root) / f"ext-{i}")
         ledgers.append(led)
         ad = Path(svc_root) / f"anchor-{i}"
+        anchor[i], aseq[i] = set(), {}                                  # G5-E30 (e): indexed per anchor instance
         for line in (ad / LOG_NAME).read_text().splitlines():
             if line.strip():
                 e = json.loads(line)
-                anchor.add((e["stream"], e["decision_id"]))
-                note_anchor_seq(aseq, e)
+                anchor[i].add((e["stream"], e["decision_id"]))
+                note_anchor_seq(aseq[i], e)
         exp = ((closes or {}).get("anchor") or [{}] * W)[i].get("head") if closes else None
         integ["anchor"].append(verify_anchor_log(ad, expected_head=exp) if exp else verify_anchor_log(ad))
         authv = verify_log(Path(svc_root) / f"auth-{i}")
@@ -57,7 +58,7 @@ def judge_all(vdir: Path, svc_root: Path, W: int, pre: dict, closes: dict | None
     from r3_harness.h28.judge import LedgerIndex
     raws = load_raw(vdir)
     sv = load_services(svc_root, W, closes)
-    ctx = judge.Ctx(LedgerIndex(sv["merged"]), sv["anchor"], reason_map, sv["anchor_seq"])
+    ctx = judge.Ctx(LedgerIndex(sv["merged"]), sv["anchor"], reason_map, sv["anchor_seq"], workers=W)
     rows = [judge.judge_seq(R, ctx) for R in raws]
     for r, R in zip(rows, raws):
         r["planned_cps"] = (R.get("seq_def") or {}).get("cp", [])
