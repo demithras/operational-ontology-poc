@@ -8,7 +8,7 @@ from r3_oracle import recoverymodel as RM
 
 from r3_shared.recovery import INPUT_INVALID_REASONS
 
-from . import judge_ext as JE, judge_rec as JR, specs
+from . import judge_ext as JE, judge_rec as JR, judge_wl, specs
 
 
 def _fault_at(phi):
@@ -83,6 +83,8 @@ def _finish(R, row, ctx, ev, phi, versions, rep, state, systems, cw, base, dep, 
                 row["classes"].setdefault("recovery_divergence", []).append({"what": "world_divergence", **d})
             else:
                 row["harness"].append("world_divergence")
+    judge_wl.check_marks(R, ctx, row, ev, dl, intents, oc)           # G5-E33 (a)-(c), after RC2
+    judge_wl.check_wl(R, row)                                         # G5-E33 (d)
     row["world_digest"] = RM.world_digest(rep.snap)[:32]
     row["injection"] = _injection(R, ev, dl, phi)
     row["stale_sensitive"] = sum(1 for q in row["req"] if q.get("stale_sensitive"))

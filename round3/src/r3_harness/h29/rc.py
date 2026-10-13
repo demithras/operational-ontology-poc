@@ -11,7 +11,7 @@ from pathlib import Path
 from r3_oracle import continuity as C
 from r3_shared.world import WorldReader
 
-from . import faults, services
+from . import faults, services, wlog
 from .driver import _res
 
 
@@ -67,6 +67,7 @@ def resume(r) -> None:
     restricted_ext = _ext_between(r, eseq0, eseq1)                 # G5-E25: ExternalWorld requests (all outcomes) by the resumed deployment
     restricted_obs = None if oseq0 is None or oseq1 is None else oseq1 - oseq0     # None = no server-side record of observer reads exists
     marks = _marks(r)
+    wlog.observe_path(r, "rc1")                           # G5-E33 (d)
     r.event("rc1", resume=T, view_a=va, view_b=vb, err_a=ea, err_b=eb, anchor_head_before=head0, anchor_head_after=head1, auth_refused_restricted=restricted_auth, ext_restricted=restricted_ext, obs_reads_restricted=restricted_obs,
             marks=marks, files=names, a_started=px_a is not None)
     r.open_recoveries.append({"resume": T})
