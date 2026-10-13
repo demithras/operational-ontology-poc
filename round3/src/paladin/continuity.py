@@ -145,6 +145,8 @@ class ContinuityMixin:
         c = self._c
         if not self._h29 or c is None or c.prov is None:
             return 0
+        if "anchor_skipped_when_unavailable" in c.mutants and not self._resume:
+            return 0   # MUTANT: the ack already left; the missing entry is appended "later" only by a RESUMED deployment, never in the incarnation that acked
         from r3_shared.anchor import AnchorError  # noqa: PLC0415
         done = 0
         with c.lock:

@@ -188,17 +188,23 @@ def run_anchor(mutants):
         r.nctl.partition(stream, 1, 5, "drop")
         r.tick()
         res = r.call("planner-1", "transfer_inventory", TR, "u1")
-        r.tick(5)
+        r.tick(8)                                                                           # ANCHOR healed; the same incarnation keeps serving
+        r.call("planner-1", "transfer_inventory", {**TR, "quantity": 5}, "u2")
         anchored = r.anchor.client().lookup(stream, "u1") is not None
-        return {"unanchored_ack": int(res.status == "OK" and not anchored), "committed": "u1" in marks(r), "status": res.status}
+        r.deploy(resume=True).dispatch_pending()                                            # a NEW host process recovers
+        later = r.anchor.client().lookup(stream, "u1") is not None
+        return {"unanchored_ack": int(res.status == "OK" and not anchored), "committed": "u1" in marks(r), "status": res.status,
+                "anchored_after_heal": anchored, "anchored_after_resume": later}
     finally:
         r.finish()
 
 
 def test_mutant_anchor_skipped_when_unavailable_killed_by_unanchored_ack():
-    assert run_anchor(()) == {"unanchored_ack": 0, "committed": False, "status": "UNAVAILABLE"}
+    clean = run_anchor(())
+    assert clean["unanchored_ack"] == 0 and clean["committed"] is False and clean["status"] == "UNAVAILABLE"      # nothing acked, nothing committed
     mut = run_anchor(("anchor_skipped_when_unavailable",))
-    assert mut["unanchored_ack"] == 1 and mut["committed"] is True
+    assert mut["status"] == "OK" and mut["committed"] is True and mut["unanchored_ack"] == 1                     # ack with ANCHOR down, entry absent
+    assert mut["anchored_after_heal"] is False and mut["anchored_after_resume"] is True                          # appended only LATER, by the resumed deployment
 
 
 def test_every_h29_mutant_has_a_kill_test_in_this_file():
