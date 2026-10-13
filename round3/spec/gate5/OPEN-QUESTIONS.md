@@ -250,3 +250,22 @@ G5-E29 (a) G5-E28(b)/(d) apply to requests the oracle classifies BLOCKED or UNRE
       probes are not generated. Both variants gate call_tool before the tool binding (audit N15).
       (d) spec/gate5/reason-map.json is the equivalence auditor's map at 4646a3c (paladin 8 mapped, conventional 15 mapped;
       evidence spec/gate5/audit/mapping-table.md, findings.md); HARDENING_LEDGER.jsonl gains the 28 G5 rows (all present).
+
+## Erratum G5-E30 (orch, 2026-10-13, from the read-only diagnosis of dev run exp-h29-dev1, before any official run)
+G5-E30 (a) Input-invalid probes (G5-E28) are never eligible for progress: judge_req's eligibility rule excludes every request whose
+      args fail the strict input predicate of G5-E28(b) (as G5-E28(c) already does for lease windows). In dev1 all 56 non-progressed
+      eligible requests of both variants were unknown_key probes the oracle's lenient decide called OK; both variants answered
+      INVALID correctly.
+      (b) The crash-armed request (the step that arms a crash point) is excluded from eligibility and from the fault-share floor by
+      the CORPUS (the step's armed flag), never by the variant's reply: sample-size floors must be variant-independent.
+      (c) The generator guarantees the during-fault share: eligible requests sent during an active fault >= 55% of eligible
+      requests (the frozen evaluator floor stays 50%; the margin is a generator property, asserted by a generator-only test over
+      seeds 2911/2912/2921-2923 at full size).
+      (d) F6 sequences: a sequence counts as F6-stale-sensitive only when a truly stale-sensitive request is EMITTED; the generator
+      redraws the sequence's stale pair deterministically (same seed stream) when the crash request consumed it, and the counter
+      is incremented only on emission. Generator-only test at full size over the same seeds: 0 F6 sequences without one.
+      (e) Anchor evidence is indexed per anchor instance (worker i): (i, stream, decision_id). Each sequence is judged against the
+      anchor of the worker that ran it. Stream names need only be unique within one anchor (both variants check that); merging
+      anchors of independent workers is a harness defect (dev1: 58 of Paladin's 59 unanchored_ack vanish under a per-anchor index;
+      the 59th is to be explained by the harness fix). Evidence keeps per-class detail rows (request id, tick, reason) for every
+      class hit, not only counts, so SUMMARY attribution can cite cases.
