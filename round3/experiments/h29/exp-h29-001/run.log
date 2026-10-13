@@ -1,0 +1,4 @@
+paladin: run complete (6400 sequences, 7525.9 s, workers 6)
+paladin: finalized classes={'disclosure_leak': 2} harness={} sysstate_ok=True
+conventional: run complete (6400 sequences, 7345.2 s, workers 6)
+conventional: finalized classes={'disclosure_leak': 2} harness={} sysstate_ok=True

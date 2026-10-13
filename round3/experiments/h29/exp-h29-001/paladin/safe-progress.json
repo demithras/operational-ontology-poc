@@ -1,0 +1,106 @@
+{
+ "controls": {
+  "eligible": 8092,
+  "progressed": 8091,
+  "ratio": 0.999876421156698
+ },
+ "during_fault": {
+  "eligible": 20022,
+  "progressed": 20021,
+  "ratio": 0.9999500549395665
+ },
+ "outcome_progress_loss": {
+  "checked": 5410,
+  "lost": 0
+ },
+ "overall": {
+  "eligible": 28344,
+  "progressed": 28343,
+  "ratio": 0.9999647191645498
+ },
+ "per_class": {
+  "F1": {
+   "eligible": 3002,
+   "progressed": 3002,
+   "ratio": 1.0
+  },
+  "F2": {
+   "eligible": 2031,
+   "progressed": 2031,
+   "ratio": 1.0
+  },
+  "F3": {
+   "eligible": 2143,
+   "progressed": 2143,
+   "ratio": 1.0
+  },
+  "F4": {
+   "eligible": 9335,
+   "progressed": 9335,
+   "ratio": 1.0
+  },
+  "F5": {
+   "eligible": 3707,
+   "progressed": 3706,
+   "ratio": 0.9997302400863232
+  },
+  "F6": {
+   "eligible": 931,
+   "progressed": 931,
+   "ratio": 1.0
+  },
+  "F7": {
+   "eligible": 1992,
+   "progressed": 1992,
+   "ratio": 1.0
+  },
+  "F8": {
+   "eligible": 2100,
+   "progressed": 2100,
+   "ratio": 1.0
+  }
+ },
+ "per_node_unrelated": {
+  "ANCHOR": {
+   "eligible": 475,
+   "progressed": 474,
+   "ratio": 0.9978947368421053
+  },
+  "EXT:ERP": {
+   "eligible": 813,
+   "progressed": 813,
+   "ratio": 1.0
+  },
+  "EXT:MES": {
+   "eligible": 812,
+   "progressed": 812,
+   "ratio": 1.0
+  },
+  "EXT:NOTIFY": {
+   "eligible": 1075,
+   "progressed": 1075,
+   "ratio": 1.0
+  },
+  "EXT:REGISTRY": {
+   "eligible": 1207,
+   "progressed": 1207,
+   "ratio": 1.0
+  },
+  "EXT:WMS": {
+   "eligible": 374,
+   "progressed": 374,
+   "ratio": 1.0
+  },
+  "OBS": {
+   "eligible": 2382,
+   "progressed": 2382,
+   "ratio": 1.0
+  }
+ },
+ "post_recovery": {
+  "eligible": 2590,
+  "progressed": 2590,
+  "ratio": 1.0
+ },
+ "spurious_unavailable": {}
+}
