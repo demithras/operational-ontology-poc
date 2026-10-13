@@ -289,3 +289,24 @@ G5-E32 The read judge (P3 / R29-3, judge_req._read) compares a served object wit
       AUTHOR DECISION (2026-10-13): exp-h29-001 is harness-INVALID and does not count as an attempt; its evidence stays
       committed unchanged. It is repeated once as exp-h29-001r on the NEW seed 2924 on a new candidate tag (the seen corpus is
       never reused, G4-E27 precedent). Seeds 2922 and 2923 remain reserved for attempts 2 and 3.
+
+## Erratum G5-E33 (author decision 2026-10-13, Q11 strengthened; before the repeat of the official run)
+G5-E33 Q11 is kept (the oracle learns which requests committed from the shared world store's world_log) and its stated
+      condition "integrity cross-checked against the anchor log" (PROT-H29 1.6) is made complete and binding. The judge checked
+      only OK reply -> anchor entry (judge_req unanchored_ack). Added, for both variants, evaluated at the end of every sequence
+      (after RC2, so G5-E12 completion of unanchored commits has happened):
+      (a) commit mark -> anchor: every world_log commit mark (kind=mark, ref=commit) has an anchor entry on that sequence's own
+          anchor (G5-E30e) whose decision_id equals the mark's request_id (or, for a commit without request_id, the decision the
+          variant anchored for that world_seq); a commit mark with no such entry -> recovery_divergence what="unanchored_commit".
+      (b) anchor -> commit mark: every anchor entry recording an OK governed mutation has a world_log commit mark for the same
+          request; an anchored OK decision with no commit mark -> recovery_divergence what="anchored_without_commit".
+      (c) commit mark <-> ExternalWorld: every ExternalWorld effect row whose claimed deployment is the sequence's deployment
+          belongs to a request with a commit mark (else forbidden_effect, as today); every commit mark whose oracle decision has
+          external effects has, after RC2 dispatch_pending + reconcile, its effects in the ExternalWorld ledger, or a terminal
+          RECONCILED_FAILED / in-doubt state the oracle admits (else recovery_divergence what="committed_effect_missing").
+      (d) world_log integrity: seq strictly increasing without gaps and rows never rewritten between the harness's reads (the
+          harness hashes the world_log prefix it has already read at each RC1 and at sequence end; a changed prefix ->
+          recovery_divergence what="world_log_rewritten").
+      Known-negative fakes/records prove each check (forged commit mark, deleted anchor entry, effect without commit, rewritten
+      prefix) and both real variants stay clean at dev size. The world store remains the only variant-process file the oracle
+      reads; this is stated in the SUMMARY.
