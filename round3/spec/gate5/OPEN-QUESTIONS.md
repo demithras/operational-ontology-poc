@@ -279,3 +279,13 @@ G5-E31 The unanchored_ack ordering check (G5-E20) must not depend on the anchor 
       completed after heal by the same incarnation, was invisible in either variant). The frozen mutant definition stands as written
       ("ANCHOR down -> ack OK and anchor later"): the anchor-later step may happen after heal in the same incarnation, and the judge
       must kill it there.
+
+## Erratum G5-E32 (orch + author decision, 2026-10-13, after official exp-h29-001)
+G5-E32 The read judge (P3 / R29-3, judge_req._read) compares a served object with the oracle's low-view object under the same
+      ops_model.LOOSE_PROPS rule as every world comparison (G5-E27): Verdict reason compared as non-blank, derivation_hash as 64
+      lowercase hex; every other prop and the object set exactly. Applies to get and list reads, both variants. exp-h29-001
+      (seed 2921, candidate r3-g5-cand2) was judged with a raw body equality and gave disclosure_leak=2 for both variants on
+      Verdict reads whose value equals the oracle and whose only differences are those two loose props (ATTRIBUTION.md).
+      AUTHOR DECISION (2026-10-13): exp-h29-001 is harness-INVALID and does not count as an attempt; its evidence stays
+      committed unchanged. It is repeated once as exp-h29-001r on the NEW seed 2924 on a new candidate tag (the seen corpus is
+      never reused, G4-E27 precedent). Seeds 2922 and 2923 remain reserved for attempts 2 and 3.
