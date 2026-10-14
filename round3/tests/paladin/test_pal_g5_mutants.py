@@ -164,7 +164,10 @@ def test_mutant_dependency_failure_as_denial_killed_by_misclassified_dependency_
 def run_outbox(mutants):
     r = G5Rig(mutants=mutants)
     try:
+        for s in r.systems["systems"]:
+            r.ctl.outage(s, DEP, 0, 3)                                                      # inline dispatch (G5-E35 B2) finds the system down: intent stays due
         assert r.call("planner-1", "transfer_inventory", TR, "o1").status == "OK"          # intent durable, not dispatched
+        r.tick(3)
         dep2 = r.deploy(resume=True)
         rc1 = [i["state"] for i in dep2.recovery_view()["intents"]]
         dep2.dispatch_pending()

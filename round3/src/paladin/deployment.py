@@ -174,8 +174,22 @@ class PaladinDeployment(ContinuityMixin):
         leak = (lambda: self._c.leak_detail(op, args)) if "error_detail_leak" in self.mutants else None
         return public(res, rid, leak)
 
+    def _inline(self, res: CallResult, request_id) -> CallResult:
+        """G5-E35 B2: dispatch the external effects of a request that just committed (H29 only; the outbox keeps retries/recovery).
+        Runs after the anchor entry exists (the envelope must be provable); a dependency failure leaves the intent due."""
+        c = self._c
+        if not self._h29 or c is None or c.ext is None or res.status != "OK" or not isinstance(request_id, str) or res.body.get("replayed"):
+            return res
+        if not res.body.get("outcomes"):
+            return res
+        with c.lock:
+            env = self._envelope_of(request_id)
+            if env is not None:
+                c.ext.dispatch_rid(request_id, env)
+        return res
+
     def call_tool(self, token, name, args, on_behalf_of=None, request_id=None) -> CallResult:
-        return self._mutating(lambda: self.guarded(token, name, args, lambda: self._pub(self._call_tool(token, name, args, on_behalf_of, request_id), request_id, name, args), tool=True))
+        return self._mutating(lambda: self.guarded(token, name, args, lambda: self._inline(self._pub(self._call_tool(token, name, args, on_behalf_of, request_id), request_id, name, args), request_id), tool=True))
 
     def _call_tool(self, token, name, args, on_behalf_of, request_id) -> CallResult:
         sub = self._c.subject(token, args)
@@ -185,6 +199,9 @@ class PaladinDeployment(ContinuityMixin):
             return CallResult("UNKNOWN", {"reason": "no such tool"})
         if not isinstance(args, dict):
             return CallResult("INVALID", {"gate": "inputs", "reason": "args must be an object"})
+        rec = self._c.recorded(sub, on_behalf_of, name, args, request_id)   # G5-E35 B1: the recorded decision precedes every gate
+        if rec is not None:
+            return rec
         who = self._c.principal(sub, on_behalf_of, name)
         if isinstance(who, CallResult):
             return self._c.refuse(sub, on_behalf_of, name, args, request_id, who, "call_tool") \
@@ -213,12 +230,15 @@ class PaladinDeployment(ContinuityMixin):
         return box.get("r") or CallResult("INVALID", {"reason": "request was not issued"})
 
     def direct(self, token, operation, args, on_behalf_of=None, request_id=None) -> CallResult:
-        return self._mutating(lambda: self.guarded(token, operation, args, lambda: self._pub(self._direct(token, operation, args, on_behalf_of, request_id), request_id, operation, args)))
+        return self._mutating(lambda: self.guarded(token, operation, args, lambda: self._inline(self._pub(self._direct(token, operation, args, on_behalf_of, request_id), request_id, operation, args), request_id)))
 
     def _direct(self, token, operation, args, on_behalf_of, request_id) -> CallResult:
         sub = self._c.subject(token, args)
         if sub is None:
             return CallResult("DENIED", {"gate": "identity", "reason": "invalid token"})
+        rec = self._c.recorded(sub, on_behalf_of, operation, args, request_id)   # G5-E35 B1
+        if rec is not None:
+            return rec
         return self._c.run(sub, on_behalf_of, operation, args, request_id, "direct")
 
     def read(self, token, operation, args) -> CallResult:
