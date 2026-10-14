@@ -324,3 +324,33 @@ G5-E34 (a) The world/decision replay applies committed requests in COMMIT ORDER 
       the judge against PROT-H29 / P1g / ORACLE-AND-HARNESS-G5 / errata, and a diagnostic re-judge of the exp-h29-001 and exp-h29-001r
       evidence with the fixed judge (never a verdict). The next official run uses the NEW seed 2925; seeds 2922/2923 stay reserved for
       attempts 2 and 3.
+
+## Erratum G5-E35 (author decisions B1/B2 + orchestrator rulings B3-B8, 2026-10-14, from the independent judge audit at d042f9a)
+G5-E35 Source: rule-by-rule audit of the H29 judge (70 rules: 46 conform, 23 deviate, 1 unreached). Binding for both variants.
+      B1 (author) R29-11 behavioural equality is judged as written: at RC2, redelivering every committed request_id must return the
+         original decision (G5-E16: status, and reason for a non-OK status); a different status -> recovery_divergence
+         what="redelivery_decision_changed". Exemption written here: in an F8 tamper sequence the R27-5 outcome applies instead
+         (non-OK with zero effect or exactly untampered behaviour). Both variants re-decided committed requests under a narrowed
+         authority version (001r: 48 requests, 43 F6 sequences, both variants); both receive the same fix (idempotent redelivery
+         returns the recorded decision) before the next candidate. Not a relaxation and not a variant-specific rule.
+      B2 (author) R29-12 outcome clause is judged as written: a committed request with external effects whose outcome plane is
+         SAFE_TO_RUN for its whole window (EXT:<S> and OBS up from commit to E, honest adapter, no crash) counts toward safe
+         progress only if its outcome ends RECONCILED_SUCCESS (else outcome_progress_loss in the numerator). The harness's
+         dispatch_pending schedule is unchanged (equal for both, EQUIVALENCE-G4 F3); dispatching inline is allowed to both
+         (EQUIVALENCE-G4 F3) and Paladin may adopt it before the next candidate. The dispatch-timing difference is reported.
+      B3 (orch) G5-E33(c) applies to sequences that reach RC2 (its text: "after RC2 dispatch_pending + reconcile"); sequences
+         without RC2 are judged on the outcome plane by R29-12 / P1f-6. Byzantine-adapter intents (F3-byz) are judged by the H28
+         catalogue rules, not by (c).
+      B4 (orch) Reads are judged on every status: a non-OK read reply about an object outside the principal's low view must be
+         exactly the reply for an absent object (PROT-H26.md:64 / PROT-H29.md:81 "existence beyond that view = disclosure_leak");
+         anything else -> disclosure_leak.
+      B5 (orch) No exemption beyond the text: an OK reply to a request that is UNRESOLVED on ANCHOR (reply_lost) is admissible
+         only if that decision's anchor entry exists at the reply (G5-E31 ordering); otherwise misclassified_dependency_failure.
+      B6 (orch) approve, delegate and revoke are governed mutations ({AUTH, ANCHOR}, P1g-4): they are classified and judged by
+         R29-7 (misclassification / spurious) and by unanchored_ack exactly like requests.
+      B7 (orch) invalid_if (a) "armed crash point never fired" is computed from the fault plane's record, not a constant; host
+         deaths between calls (CP6) are recorded with their tick when they fire.
+      B8 (orch) invalid_if (d) covers the ExternalWorld service too: close() keys and ledger verification as for anchor and
+         AuthorityService (G4 root-key re-verification).
+      The audit's 15 non-blocking notes are handled by the harness builder or recorded as notes (findings in the scratchpad audit
+      are copied to spec/gate5/audit/judge-audit-findings.md).
