@@ -136,7 +136,7 @@ def test_r29_11_rc2_view_equals_the_prediction_from_the_services_and_redelivery_
     rc1 = px2.recovery_view()
     assert [c["request_id"] for c in rc1["committed"]] == ["q1", "q2", "q3"] and rc1["authority"]["version"] is None
     rig.tick(3, px2)                                                              # t=5: every fault healed (windows are [2,4))
-    assert px2.dispatch_pending().body["submitted"] == 3                          # G5-E12: q3's missing anchor entry is completed first, then its intent dispatches
+    assert px2.dispatch_pending().body["submitted"] == 1                          # G5-E12: q3's missing anchor entry is completed first, then its intent dispatches (q1/q2 went inline at commit, G5-E35 B2)
     rig.tick(12, px2)
     for rid in ("q1", "q2", "q3"):
         assert px2.reconcile(rid, rig.clock.now() + 1).status == "OK"

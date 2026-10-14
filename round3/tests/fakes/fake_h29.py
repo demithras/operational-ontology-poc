@@ -175,7 +175,8 @@ class H29Dep(H28Dep):
         if rep is not None:
             return rep
         self.auth = lease.doc
-        if name not in {t.name for t in self.tools(token)}:
+        done = request_id is not None and any(d.get("request_id") == request_id for _, d in self._commit_rows())
+        if not done and name not in {t.name for t in self.tools(token)}:          # G5-E35 B1: a committed request_id returns its recorded decision
             return CallResult("UNKNOWN", {"reason": "unknown_tool"})
         return self._run(token, name, args, on_behalf_of, request_id, backstop=False)
 
@@ -225,6 +226,8 @@ class H29Dep(H28Dep):
             self._record_at(rid, ext, bool(out.used_approval), self.clock.now())
             self.prepared.pop(rid, None)
             self._w("prepared.json", self.prepared)
+            if not self.mutants:                         # known-negative fakes keep their frozen class sets (G5-E19)
+                self.dispatch_pending()                  # G5-E35 B2: dispatching inline is allowed (EQUIVALENCE-G4 F3): the honest reference never lets a cap expire undispatched
         if "anchor_skipped_when_unavailable" in self.mutants and not self._anchor_up():
             return CallResult("OK", {"op": op})
         return self._anchored(rid, seq, tx.tick, CallResult("OK", {"op": op}))
@@ -283,6 +286,8 @@ class H29Dep(H28Dep):
         lease, rep = self._auth()
         if rep is not None:
             return rep
+        if not self._anchor_up():                              # G5-E35 B6: approve is a governed mutation ({AUTH, ANCHOR}): no ack without its anchor entry
+            return self._dep("ANCHOR")
         self.auth = lease.doc
         res = super().approve(token, operation, args, requester, on_behalf_of)
         if res.status == "OK":      # G5-E11 fingerprint, persisted with the approval counts
@@ -290,6 +295,8 @@ class H29Dep(H28Dep):
             k = oracle_approvals.key(requester, on_behalf_of, operation, args)
             self._fps[k] = hashlib.sha256(canon_json({"subject": requester, "on_behalf_of": on_behalf_of or None, "operation": operation, "inputs": args}).encode()).hexdigest()
             self._w("fps.json", self._fps)
+            tag = hashlib.sha256((self._fps[k] + str(self.clock.now()) + str(len(self._fps))).encode()).hexdigest()[:12]
+            res = self._anchored(f"approve:{tag}", 0, self.clock.now(), res)
         return res
 
     def delegate(self, token, edge, request_id):

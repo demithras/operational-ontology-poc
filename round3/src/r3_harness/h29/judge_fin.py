@@ -50,8 +50,16 @@ def _finish(R, row, ctx, ev, phi, versions, rep, state, systems, cw, base, dep, 
                 if k not in oc["oracle"]:
                     continue
                 row["outcome_progress"]["checked"] += 1
-                if oc["oracle"][k][0] == "RECONCILED_SUCCESS" and oc["got"].get(k) != "RECONCILED_SUCCESS":
-                    row["outcome_progress"]["lost"].append({"rid": rid, "effect": I["effect_index"], "got": oc["got"].get(k)})
+                if oc["got"].get(k) != "RECONCILED_SUCCESS":          # G5-E35 B2 / R29-12: a SAFE-window request counts only if its outcome ENDS RECONCILED_SUCCESS
+                    row["outcome_progress"]["lost"].append({"rid": rid, "effect": I["effect_index"], "got": oc["got"].get(k), "oracle": oc["oracle"][k][0]})
+    lost = {x["rid"] for x in row["outcome_progress"]["lost"]}
+    for q in row["req"]:                      # G5-E35 B2: such a request does not count toward safe progress (overall / per class / per node)
+        if q.get("rid") in lost and q.get("progressed") and q.get("k") == "request":
+            q["progressed"] = False
+            deps = set(C.decision_deps(ctx.graph, R["domain"], "request", q.get("op")))
+            for node in q.get("phi") or []:
+                if node not in deps and node in row["unrelated"]:
+                    row["unrelated"][node][1] -= 1
     rec = JR.judge_recovery(R, ev, versions, intents, tick0, dl, systems, window, rep.open_approvals(), reads, fa, ctx.anchor_of(R))
     row["recovery"] = {"rc1": rec["rc1"], "rc2": rec["rc2"]}
     row["recovery_checks"] = [rec["checks"], rec["passes"]]
@@ -116,8 +124,11 @@ def _injection(R, ev, dl, phi) -> list:
                     "enforced": bool(e["issued"] and enforced), "refused_calls": refused})
     armed = [x for x in ev if x["k"] == "crash_armed"]
     missed = [h for h in R.get("harness", []) if h["row"] == "injection_miss" and "crash point" in str(h.get("why", ""))]
-    for i, x in enumerate(armed):
-        out.append({"crash_point": x["point"], "key": x["key"], "fired": i >= len(missed) or True, "cp_missed_total": len(missed)})
+    for i, x in enumerate(armed):                                  # G5-E35 B7: fired = a host death NOT forced by the harness between this arming and the next
+        nxt = armed[i + 1]["n"] if i + 1 < len(armed) else 10 ** 9
+        deaths = [d for d in ev if d["k"] == "host_dead" and x["n"] < d["n"] < nxt and not d.get("forced")]
+        out.append({"crash_point": x["point"], "key": x["key"], "fired": 1 if deaths else 0, "fired_tick": deaths[0]["kill"] if deaths else None,
+                    "cp_missed_total": len(missed)})
     return out
 
 

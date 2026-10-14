@@ -26,6 +26,38 @@ def note_anchor_seq(aseq: dict, e: dict) -> None:
     aseq[(e["stream"], e["decision_id"])].sort()
 
 
+def verify_ext(ext_dir, led: dict, expected: dict | None = None) -> dict:
+    """G5-E35 B8 (invalid_if d): ExternalWorld close() keys and ledger verification, as for the anchor and AuthorityService (G4 root-key re-verification).
+    The revealed root key is present and well-formed, HEAD.final records exactly the closed ledger's row counts (and the close() output the
+    harness received, when given), and every applied effect row has its applied audit row (one audit row per effect, same chain + correlation)."""
+    d, errors = Path(ext_dir), []
+    kp, hp = d / "KEY.revealed", d / "HEAD.final"
+    key = kp.read_text().strip() if kp.exists() else None
+    if key is None:
+        errors.append("key not revealed")
+    else:
+        try:
+            if len(bytes.fromhex(key)) < 16:
+                errors.append("revealed key too short")
+        except ValueError:
+            errors.append("revealed key is not hex")
+        if expected and expected.get("root_key_hex") not in (None, key):
+            errors.append("revealed key differs from the close() output")
+    if not hp.exists():
+        errors.append("HEAD.final missing")
+    else:
+        head = json.loads(hp.read_text())
+        if head != {"effects": len(led["effects"]), "audit": len(led["audit"])}:
+            errors.append(f"HEAD.final {head} differs from the ledger ({len(led['effects'])} effects, {len(led['audit'])} audit rows)")
+        if expected and expected.get("head") not in (None, head):
+            errors.append("HEAD.final differs from the close() output")
+    applied = sorted((r["cap_chain"], r["correlation"], r["system"], r["target"], r["payload_digest"]) for r in led["audit"] if r["outcome"] == "applied")
+    eff = sorted((r["cap_chain"], r["correlation"], r["system"], r["target"], r["payload_digest"]) for r in led["effects"])
+    if applied != eff:
+        errors.append("applied audit rows do not match the effect rows")
+    return {"ok": not errors, "errors": errors}
+
+
 def load_services(svc_root: Path, W: int, closes: dict | None = None) -> dict:
     """Closed ledgers (merged: deployments are world-private), anchor entries, integrity verdicts of the three service kinds."""
     ledgers, anchor, aseq, integ = [], {}, {}, {"anchor": [], "auth": [], "ext": []}
@@ -43,6 +75,7 @@ def load_services(svc_root: Path, W: int, closes: dict | None = None) -> dict:
         integ["anchor"].append(verify_anchor_log(ad, expected_head=exp) if exp else verify_anchor_log(ad))
         authv = verify_log(Path(svc_root) / f"auth-{i}")
         integ["auth"].append({"ok": authv["ok"], "errors": authv["errors"]})
+        integ["ext"].append(verify_ext(Path(svc_root) / f"ext-{i}", led, ((closes or {}).get("ext") or [None] * W)[i] if closes else None))
     merged = {"effects": [r for l in ledgers for r in l["effects"]], "audit": [r for l in ledgers for r in l["audit"]],
               "sysstate": {}, "issued": [r for l in ledgers for r in l["issued"]],
               "unverified": [r for l in ledgers for r in l.get("unverified", [])]}

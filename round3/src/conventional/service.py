@@ -272,6 +272,7 @@ class Service(AuthorityOps, GovernanceOps, ExternalOps, G5Ops, LowReads, LowProv
                 return CallResult("UNAVAILABLE", {"reason": "world_busy" if self._g5 is not None else "dependency_unavailable"})
             except LedgerUnresolved:
                 return CallResult("UNAVAILABLE", {"reason": "history_unresolved"})
+            self._g5_record_denial(dc, res)
             if self.mutant("error_detail_leak") and res.status in ("DENIED", "INVALID"):
                 res = self._leak_detail(res, operation, args)
             return self._post_commit(dc, self._provenance(dc, res))
@@ -355,6 +356,11 @@ class Service(AuthorityOps, GovernanceOps, ExternalOps, G5Ops, LowReads, LowProv
             raise _Abort("INVALID", {"reason": exc.reason}) from exc
         if self.prov is not None and has_float(inputs):  # PROT-H27 s3: no floats in bound artifacts
             raise _Abort("INVALID", {"reason": "float_in_artifact"})
+        if self._g5 is not None and request_id is not None:  # G5-E35 B1: the recorded decision is the answer, before authorization
+            dc.extra["fp"] = store.fingerprint(sub, obo, operation, inputs)
+            rec = self._g5_recorded(request_id, dc.extra["fp"], dc)
+            if rec is not None:
+                return rec
         if hidden:  # the tool layer found no such tool for this subject: a governed refusal (E-8), decided server-side
             raise _Abort("DENIED", {"reason": "tool_not_available"})
         if enforce and not self._policy.exposed_operations(sub, [operation]):  # coarse gate before the commit

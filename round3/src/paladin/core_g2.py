@@ -181,7 +181,9 @@ class G2Mixin:
         d = self.new_decision(kind, sub, obo, op, clean, rid)
         d["reason"] = "no_valid_path" if res.body.get("reason") == "no_valid_path" else None
         with self._guard():
-            return self.finish(d, res)
+            out = self.finish(d, res)
+            self.record_refusal(d, out, sub, obo, op, clean, rid, False)   # G5-E35 B1 (H29): a redelivery returns this refusal
+            return out
 
     # ---- edge-mode requests (PROT-H24 s3) -----------------------------------------------------
     def candidates(self, sub: str, obo: str) -> list:

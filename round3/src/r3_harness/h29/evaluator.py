@@ -107,7 +107,7 @@ def evaluate_variant(vdir: Path, thresholds: dict, vname: str, is_dev: bool) -> 
         for f in (".cases.tmp", "cases.jsonl"):
             (vdir / f).unlink(missing_ok=True)
     integ = J["services"]["integrity"]
-    for k in ("anchor", "auth"):
+    for k in ("anchor", "auth", "ext"):
         for i, r in enumerate(integ[k]):
             if not r["ok"]:
                 valid = False

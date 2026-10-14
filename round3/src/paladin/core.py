@@ -223,11 +223,49 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
         except (TypeError, ValueError):
             return CallResult("INVALID", {"gate": "inputs", "reason": "args are not JSON values"})
 
+    # G5-E35 B1 (R29-11, G5-E16): authority-class refusals are recorded decisions too (H29 only)
+    RECORDED_GATES = ("authority", "surface", "delegation")
+
+    def recorded(self, sub: str, obo: Any, op: Any, args: Any, rid: Any) -> CallResult | None:
+        """H29: a request id the ledger holds as COMMITTED for the same request is answered with the RECORDED decision (status and
+        body) before any gate is re-evaluated - a narrowed or widened authority version never re-decides it. None = not recorded."""
+        if not self.h29 or not isinstance(rid, str) or not rid or not isinstance(op, str) or op not in self.ops or not isinstance(args, dict):
+            return None
+        with self._guard():
+            led = self.ledger.get(rid)
+            if led is None or led["state"] != "COMMITTED" or (led["sub"], led["op"]) != (sub, op):
+                return None
+            try:
+                clean = json.loads(json.dumps(args))
+            except (TypeError, ValueError):
+                return None
+            if fingerprint(sub, led["obo"], op, clean) != led["fp"]:
+                return None   # a different request under a used id: the ordinary path answers (INVALID already used)
+            bad = self.unacked(rid, led)   # never an OK without its anchor entry (R27-6)
+            if bad is not None:
+                return bad
+            return CallResult(led["status"], {**plain(led["body"] or {}), "replayed": True})
+
+    def record_refusal(self, d: dict, res: CallResult, sub: str, obo: Any, op: str, clean: dict, rid: Any, row: bool) -> None:
+        """H29 (G5-E35 B1): an anchored authority-class refusal is journaled so a redelivery returns it, whatever the version now."""
+        if not self.h29 or not isinstance(rid, str) or res.status != "DENIED" or d.get("status") != "DENIED" or d.get("committed") \
+                or res.body.get("gate") not in self.RECORDED_GATES:
+            return
+        fp = fingerprint(sub, obo, op, clean)
+        if row:
+            self.ledger.finalize(rid, fp, sub, obo, op, "DENIED", plain(res.body))
+        elif self.ledger.get(rid) is None:
+            self.ledger.commit_row(rid, fp, sub, obo, op, "DENIED", plain(res.body))
+
     def run(self, sub: str, obo: Any, op: str, args: Any, rid: Any, via: str, gov=None) -> CallResult:
         if op not in self.ops:
             return CallResult("UNKNOWN", {"reason": "unknown operation"})
         if self.auth_fault is not None:  # E-7: the authority history is unresolved - nothing mutates
             return CallResult("UNAVAILABLE", {"reason": "authority_history_unresolved"})
+        if gov is None:
+            rec = self.recorded(sub, obo, op, args, rid)
+            if rec is not None:
+                return rec
         kind = "direct" if via == "direct" else "call_tool"
         late = getattr(gov, "late_schema", False)  # emergency act: PROT-H25 s3.5 puts the operation's own schema AFTER the procedure
         clean = self.check_shape(op, args, rid) if not late else json.loads(json.dumps(args))
@@ -278,6 +316,8 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
                     return CallResult("UNKNOWN", {"reason": "in_doubt"})
                 if d.get("committed"):  # the world holds the effect: the request id is spent even if the anchor failed
                     self.ledger.finalize(rid, fp, sub, obo_id, op, res.status, plain(res.body))
+                elif self.h29 and res.status == "DENIED" and d.get("status") == "DENIED" and res.body.get("gate") in self.RECORDED_GATES:
+                    self.ledger.finalize(rid, fp, sub, obo_id, op, "DENIED", plain(res.body))   # G5-E35 B1: the refusal is the recorded decision
                 else:
                     self.ledger.abort(rid)
                 if res.status == "OK" and self._deferred:
@@ -311,7 +351,9 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
                     return bad
             elif led["status"] == "OK" and led["body"] == {"recovered": True} and self.prov is not None:
                 return CallResult("UNAVAILABLE", {"reason": "unanchored_after_crash"})  # never an OK without its anchor entry
-            if gov is not None and hasattr(gov, "in_force_now"):  # G3-E24 R5 for `act`: the authority in force now INCLUDES the
+            if self.h29:   # G5-E35 B1: the recorded decision is the answer; the authority in force now is not re-consulted
+                pass
+            elif gov is not None and hasattr(gov, "in_force_now"):  # G3-E24 R5 for `act`: the authority in force now INCLUDES the
                 bad = gov.in_force_now()  # emergency grant (active, unexpired, in scope) - never the actor's base grants alone
                 if bad is not None:
                     return bad

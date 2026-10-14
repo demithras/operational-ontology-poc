@@ -12,12 +12,14 @@ import json
 from r3_shared.anchor import AnchorError
 from r3_shared.authgraph import authority_digest
 from r3_shared.authsvc import AuthorityError, Lease
+from r3_shared.evidence import canonical_bytes
 from r3_shared.faultplane import DependencyUnavailable
 from r3_shared.recovery import FORM
 from r3_shared.variant import CallResult
 
 from . import g5journal
 from .abort import _Abort
+from .histledger import LedgerUnresolved, rid_key
 from .g5deps import BulkheadFull, DepGraph, Guard, unavailable
 from .models_gen import OPERATION_MODELS
 from .pdp import Pdp
@@ -26,6 +28,14 @@ from .validation import RequestInvalid
 from . import authdoc
 
 DURABLE_CACHE_MAC = "durable-cache"
+# authority refusals: decided from the authority document alone, so the recorded refusal stays the answer on redelivery
+AUTH_REFUSALS = frozenset({"no_matching_allow", "no_matching_allow_or_denied", "on_behalf_of_not_delegator", "unknown_principal",
+                           "unknown_delegator", "no_delegation", "denied_by_deny_grant", "no_delegable_grant",
+                           "delegator_not_allowed", "no_valid_path", "tool_not_available"})
+
+
+def denial_key(rid: str) -> str:
+    return "deny/" + rid_key(rid).split("/", 1)[1]
 
 
 class G5State:
@@ -185,6 +195,47 @@ class G5Ops:
             g.dirty = False
         finally:
             h.close()
+
+    def _g5_recorded(self, rid: str, fp: str, dc: DecisionCtx):
+        """G5-E35 B1 (R29-11, G5-E16): a request_id that already has a recorded decision for the SAME request gets that
+        decision back - a committed OK from the idempotency ledger, an authority refusal from the denial record - before any
+        authorization against the version now in force. A record that is missing/altered raises LedgerUnresolved (non-OK, zero
+        effect). Nothing is written: no world row, no anchor entry. A different fingerprint falls through (key reuse)."""
+        h = self._factory("conventional-service")
+        try:
+            with h.transaction(tag="effect"):
+                prior = self._store.idem_get(h, rid)
+                if prior is not None:
+                    if prior[0] != fp:
+                        return None
+                    dc.governed, dc.extra["replayed"] = False, True
+                    self._replay_anchored(h, rid)
+                    return CallResult(prior[1]["status"], {**prior[1]["body"], "replayed": True})
+        finally:
+            h.close()
+        if self.history is None:
+            return None
+        raw = self.history.get(denial_key(rid))
+        if raw is None:
+            return None
+        try:
+            rec = json.loads(raw)
+            if not isinstance(rec, dict) or set(rec) != {"fp", "reason"} or not isinstance(rec["reason"], str):
+                raise ValueError
+        except ValueError as exc:
+            raise LedgerUnresolved("denial record altered") from exc
+        if rec["fp"] != fp:
+            return None
+        dc.governed, dc.extra["replayed"] = False, True
+        return CallResult("DENIED", {"reason": rec["reason"], "replayed": True})
+
+    def _g5_record_denial(self, dc: DecisionCtx, res) -> None:
+        """Remember an authority refusal (a decision the world cannot change) so its redelivery is answered from the record."""
+        fp = dc.extra.get("fp")
+        if self._g5 is None or self.history is None or fp is None or res.status != "DENIED" or dc.extra.get("replayed") \
+                or res.body.get("reason") not in AUTH_REFUSALS or not isinstance(dc.rid, str):
+            return
+        self.history.put(denial_key(dc.rid), canonical_bytes({"fp": fp, "reason": res.body["reason"]}))
 
     def _replay_anchored(self, h, rid: str) -> None:
         """A replay of a committed request_id returns the original decision only once its root is anchored."""

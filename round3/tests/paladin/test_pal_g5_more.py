@@ -123,14 +123,14 @@ def test_cp8_kill_during_recovery_then_a_second_resume_converges(host_rig):
     with pytest.raises(HostDead):
         px.direct(r.token("planner-1"), "transfer_inventory", TR, None, "w1")
     px2 = r.host(resume=True)
-    assert px2.direct(r.token("planner-1"), "expedite_purchase_order", EXP, None, "w2").status == "OK"
+    assert px2.direct(r.token("planner-1"), "expedite_purchase_order", EXP, None, "w2").status == "OK"   # dispatched inline at commit (G5-E35 B2)
     px2.kill()
     px3 = r.host(resume=True)                                                   # resume #2 over the same stores
     px3.arm("CP8_during_recovery", "dispatch_pending")
     with pytest.raises(HostDead):
         px3.dispatch_pending()                                                  # the first dispatch after a resume dies
     px4 = r.host(resume=True)
-    assert px4.dispatch_pending().body["submitted"] == 1 and [x[0] for x in ledger_rows(r)] == ["w2#0"]
+    assert px4.dispatch_pending().body["submitted"] == 0 and [x[0] for x in ledger_rows(r)] == ["w2#0"]
     assert [c["request_id"] for c in px4.recovery_view()["committed"]] == r.commits() == ["w2"]
 
 
@@ -144,11 +144,11 @@ def test_resume_is_restricted_no_anchor_append_no_lease_no_external_write_no_obs
     con = sqlite3.connect(str(r.root / "hist.db"))
     stream = con.execute("SELECT value FROM hist WHERE key='meta/stream'").fetchone()[0].decode()
     con.close()
-    head, leases, fl = r.anchor.client().head(stream), len(r.actl.log()["leases"]), r.ctl.fault_log()
+    head, leases, fl, rows0 = r.anchor.client().head(stream), len(r.actl.log()["leases"]), r.ctl.fault_log(), ledger_rows(r)
     px2 = r.host(resume=True)
     validate_recovery_view(px2.recovery_view())
     assert r.anchor.client().head(stream) == head and len(r.actl.log()["leases"]) == leases and r.ctl.fault_log() == fl
-    assert ledger_rows(r) == []                                                 # nothing written to ExternalWorld by the rebuild
+    assert ledger_rows(r) == rows0 == [("p1#0",)]                               # nothing written to ExternalWorld by the rebuild (p1#0 went inline at commit)
 
 
 def test_approve_is_a_governed_mutation_anchor_down_blocks_it_with_zero_effects():
@@ -185,10 +185,9 @@ def test_cp4_cp5_kill_around_the_adapter_write_never_duplicates_the_effect(host_
     r = host_rig
     r.adapter_factory = "g5_adapters:build_cp"                                  # the frozen harness wrapper's role: crash points around the write
     px = r.host()
-    assert px.direct(r.token("planner-1"), "transfer_inventory", TR, None, "a1").status == "OK"
     px.arm(cp, "a1#0")
     with pytest.raises(HostDead):
-        px.dispatch_pending()
+        px.direct(r.token("planner-1"), "transfer_inventory", TR, None, "a1")   # G5-E35 B2: the write happens inline at commit
     assert [x[0] for x in ledger_rows(r)] == (["a1#0"] if effect_lands_before_kill else [])
     px2 = r.host(resume=True)
     assert [i["state"] for i in px2.recovery_view()["intents"]] in (["PENDING"], ["UNKNOWN"])   # RC1: nothing observed yet

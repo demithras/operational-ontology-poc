@@ -142,8 +142,8 @@ def _judge(R: dict, ctx: Ctx, row: dict) -> dict:
     by_rid = defaultdict(list)
     for m in marks:
         by_rid[m["data"].get("request_id")].append(m)
-    sends = [{"kind": "request" if e["k"] in REQ_KINDS else e["k"], "op": e.get("operation"), "t": e["t"], "invalid_probe": e.get("invalid_probe", False)}
-             for e in ev if e["k"] in REQ_KINDS + ("read", "approve") and e.get("err") != "no_host"]
+    sends = [{"kind": "request" if e["k"] in REQ_KINDS else e["k"], "op": e.get("operation"), "t": e["t"], "invalid_probe": e.get("invalid_probe", e["k"] in ("delegate", "revoke"))}
+             for e in ev if e["k"] in REQ_KINDS + ("read", "approve", "delegate", "revoke") and e.get("err") != "no_host"]
     renew = C.renew_pair(sends, phi, graph, dom)             # G5-E28 (c): obligation list + .adm admissibility window
     crashed = {e["rid"] for e in ev if e["k"] in REQ_KINDS and e.get("err") == "no_reply"}
     keys = {e["key"] for e in ev if e["k"] == "crash_armed"}          # G5-E30 (b): the armed step comes from the corpus, never from a reply
@@ -158,31 +158,61 @@ def _judge(R: dict, ctx: Ctx, row: dict) -> dict:
         _hit(row, "tampered_record_trusted" if (tamper_t is not None and t >= tamper_t and cls in
                                                   ("forbidden_effect", "duplicate_commit", "stale_authority_commit")) else cls, detail)
 
+    first_ev = {}
+    for e in ev:
+        if e["k"] in REQ_KINDS and e.get("rid") is not None and e.get("err") != "no_host":
+            first_ev.setdefault(e["rid"], e)
+
+    def decide_mark(m, e):
+        """G5-E34 (a): one commit mark decided AT ITS COMMIT POSITION against the state built from all earlier-committed marks."""
+        state["proc"].add(m["seq"])
+        t, rid = m["tick"], m["data"].get("request_id")
+        if rid in state["committed"]:
+            mark_cls("duplicate_commit", {"rid": rid, "world_seq": m["seq"]}, t)
+            return
+        dec, akey = rep.decide(doc_at(t), e["principal"], None, e["operation"], e["args"], base + t, None)
+        if dec.kind != "OK":
+            mark_cls("forbidden_effect", {"rid": rid, "world_seq": m["seq"], "oracle": dec.reason}, t)
+        if m["data"].get("authority_version") != A(t):             # R29-1: independent of the oracle decision ("even if the oracle would also allow it")
+            mark_cls("stale_authority_commit", {"rid": rid, "world_seq": m["seq"], "bound": m["data"].get("authority_version"), "in_force": A(t)}, t)
+        if dec.kind == "OK":
+            rep.commit(dec, akey, rid)
+            ints = extoracle.intended(systems, dec, rid)
+            if ints:
+                state["intents"][rid], state["tick0"][rid] = ints, t
+        state["committed"].add(rid)
+
+    def flush(limit, own=None):
+        """Decide, in world_seq order, every pending mark with seq <= limit whose request the transcript knows. Returns the own-rid marks decided."""
+        got = []
+        for m in marks:
+            if m["seq"] > limit:
+                break
+            rid = m["data"].get("request_id")
+            if m["seq"] in state["proc"] or rid not in first_ev:
+                continue
+            decide_mark(m, first_ev[rid])
+            if own is not None and rid == own:
+                got.append(m)
+        return got
+
     def process_marks(e):
-        for m in by_rid.get(e["rid"], []):
-            if m["seq"] in state["proc"]:
-                continue
-            state["proc"].add(m["seq"])
-            t = m["tick"]
-            if e["rid"] in state["committed"]:
-                mark_cls("duplicate_commit", {"rid": e["rid"], "world_seq": m["seq"]}, t)
-                continue
-            dec, akey = rep.decide(doc_at(t), e["principal"], None, e["operation"], e["args"], base + t, None)
-            if dec.kind != "OK":
-                mark_cls("forbidden_effect", {"rid": e["rid"], "world_seq": m["seq"], "oracle": dec.reason}, t)
-            if m["data"].get("authority_version") != A(t):             # R29-1: independent of the oracle decision ("even if the oracle would also allow it")
-                mark_cls("stale_authority_commit", {"rid": e["rid"], "world_seq": m["seq"], "bound": m["data"].get("authority_version"), "in_force": A(t)}, t)
-            if dec.kind == "OK":
-                rep.commit(dec, akey, e["rid"])
-                ints = extoracle.intended(systems, dec, e["rid"])
-                if ints:
-                    state["intents"][e["rid"]], state["tick0"][e["rid"]] = ints, t
-            state["committed"].add(e["rid"])
-            return m
-        return None
+        """Before a request event: decide every earlier-committed mark (tick < t) and the request's own marks up to this tick, in commit order."""
+        t, rid = e["t"], e["rid"]
+        lim = max([m["seq"] for m in marks if m["seq"] not in state["proc"] and m["tick"] < t]
+                  + [m["seq"] for m in marks if m["seq"] not in state["proc"] and m["data"].get("request_id") == rid and m["tick"] <= t], default=-1)
+        got = flush(lim, rid)
+        return got[0] if got else None
+
+    def pre_event(t):
+        flush(max([m["seq"] for m in marks if m["seq"] not in state["proc"] and m["tick"] < t], default=-1))
 
     for e in ev:
         k = e["k"]
+        if k not in REQ_KINDS:
+            pre_event(e["t"])                                   # G5-E34 (a): reads / approvals see the marks committed before them
+        if k in ("approve", "delegate", "revoke"):
+            _mutation(R, row, e, ctx, phi, versions, renew, cw, graph, dom)           # G5-E35 B6
         if k == "approve":
             ok, _ = approvals.validate(ops, doc_at(e["t"]), e["approver"], e["requester"], e["operation"], e["args"])
             res = e.get("res")
@@ -194,6 +224,7 @@ def _judge(R: dict, ctx: Ctx, row: dict) -> dict:
             row["classes"].setdefault("false_success", []).append({"rid": e["rid"], "t": e["t"], "why": f"{k} probe answered OK (malformed / unknown edge)"})
         elif k == "read":
             _read(R, row, e, phi, graph, dom, renew, versions, rep, doc_at, ops, cw)
+    flush(max((m["seq"] for m in marks), default=-1))             # marks left over (tick later than every event of their request): still commit order
     for rid, ms in by_rid.items():                              # commits of requests nobody sent: foreign effects
         for m in ms:
             if m["seq"] not in state["proc"] and rid is not None and rid not in seen_rids:
@@ -203,5 +234,5 @@ def _judge(R: dict, ctx: Ctx, row: dict) -> dict:
 
 
 from .gen_emit import corr  # noqa: E402
-from .judge_req import _request, _read  # noqa: E402  (split for size)
+from .judge_req import _request, _read, _mutation  # noqa: E402  (split for size)
 from .judge_fin import _boundary, _finish  # noqa: E402

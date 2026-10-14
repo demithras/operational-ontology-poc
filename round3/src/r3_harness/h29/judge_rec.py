@@ -108,4 +108,40 @@ def judge_recovery(R: dict, events: list, versions: list, intents: dict, tick0: 
         if miss and anchor is not None:
             hit("unanchored_ack", {"rc": "RC2", "what": "world commit still unanchored at RC2 (G5-E12)", "rids": miss[:5]})
         out["rc2"].append(rec)
+    _redelivery_decisions(R, events, out, hit)
     return out
+
+
+DECISION_PLANE = ("OK", "DENIED", "INVALID")
+
+
+def _redelivery_decisions(R, events, out, hit) -> None:
+    """G5-E35 B1 / R29-11 / G5-E16: redelivering a COMMITTED request_id returns the original decision: the decision-plane status of its first
+    decided reply and, for a non-OK status, the same reason. Judged for every RC2 redelivery (tag rc2_redeliver; any other status, UNAVAILABLE included,
+    is a difference) and for in-sequence redeliveries that were decided (a dependency failure there is judged by R29-7, not here). An F8 tamper
+    sequence is exempt: R27-5 (non-OK with zero effect, or exactly untampered behaviour) applies instead. Counts in the recovery equality ratio."""
+    if any(e["k"] in ("tamper", "canonical_state_lost") for e in events):
+        return
+    committed = {m["data"].get("request_id") for m in ((R.get("world") or {}).get("marks") or [])}
+    orig = {}
+    for e in events:
+        if e["k"] not in ("request", "redeliver") or e.get("rid") not in committed or not e.get("res"):
+            continue
+        rid, st = e["rid"], e["res"]["status"]
+        if rid not in orig:
+            if st in DECISION_PLANE:
+                orig[rid] = (st, (e["res"].get("body") or {}).get("reason") if st != "OK" else None, e["n"])
+            continue
+        if e["k"] != "redeliver" or e["n"] <= orig[rid][2]:
+            continue
+        rc2 = e.get("tag") == "rc2_redeliver"
+        if not rc2 and st not in DECISION_PLANE:
+            continue
+        body = e["res"].get("body") or {}
+        got = (st, body.get("reason") if st != "OK" else None)
+        out["checks"] += 1
+        if got == orig[rid][:2]:
+            out["passes"] += 1
+        else:
+            hit("recovery_divergence", {"rc": "RC2" if rc2 else "REDELIVERY", "what": "redelivery_decision_changed", "rid": rid, "t": e["t"],
+                                        "original": list(orig[rid][:2]), "got": list(got)})

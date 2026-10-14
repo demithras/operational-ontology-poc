@@ -84,6 +84,10 @@ class ExtPlane:
                 n += self._submit(rid, e, env)
         return n
 
+    def dispatch_rid(self, rid: str, env: str) -> int:
+        """G5-E35 B2 (EQUIVALENCE-G4 F3): submit the due intents of ONE just-committed request inline (same caps, same single-dispatch rules)."""
+        return sum(self._submit(rid, e, env) for e in self.box.get(rid) or [] if self.due(e))
+
     def _submit(self, rid: str, e: dict, env: str) -> int:
         if self._gate is not None and self._gate.refuses(e, self.ops_spec):        # MUTANT policy_gate_in_adapter
             self.box.update(rid, e["index"], attempts=MAX_ATTEMPTS)

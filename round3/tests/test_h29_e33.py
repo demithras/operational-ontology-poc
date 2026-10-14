@@ -99,7 +99,17 @@ def test_an_effect_row_without_a_commit_mark_is_forbidden():
     assert any(d.get("rid") == rid and "without a commit mark" in d.get("why", "") for d in row["classes"]["forbidden_effect"])
 
 
-def test_a_committed_intent_never_dispatched_is_committed_effect_missing():
+def test_a_committed_intent_never_dispatched_is_committed_effect_missing(monkeypatch):
+    """G5-E34 (b): with the row cut the oracle itself computes RECONCILED_FAILED, which E33(c) exempts. This negative therefore forces the oracle
+    state to PENDING (a committed intent, healed system, no row, no attempt): the check must still fire."""
+    from r3_harness.h29 import judge_ext
+    real = judge_ext.eval_outcomes
+
+    def pending(*a, **k):
+        oc = real(*a, **k)
+        oc["oracle"] = {key: ("PENDING",) + tuple(v[1:]) for key, v in oc["oracle"].items()}
+        return oc
+    monkeypatch.setattr(judge_ext, "eval_outcomes", pending)
     J = honest()
     R = committed_raw(J, need_effect=True)
     assert any(e["k"] == "rc2" for e in R["events"]), "the picked sequence has no RC2"

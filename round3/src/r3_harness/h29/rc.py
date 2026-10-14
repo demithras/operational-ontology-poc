@@ -19,7 +19,7 @@ def do_tamper(r, st) -> None:
     if r.host is not None and r.host.alive:
         if not (r.kills and r.kills[-1].get("resume") is None):
             r.harness_row("tamper_host_alive")      # TamperView is applied while the host is DEAD (F8): kill it first, hard
-            r._died()
+            r._died(forced=True)
         r.host.kill()                                # a host already recorded as killed may still be exiting: reap it
     rec = services.tamper(st["what"], r.hist_path, r.world_path, r.layout)
     r.event("tamper", **rec)
@@ -37,7 +37,7 @@ def resume(r) -> None:
         recorded = bool(r.kills) and r.kills[-1].get("resume") is None
         if not recorded:
             r.harness_row("injection_miss", why="armed crash point never fired", detail="resume with a live host: SIGKILL")
-            r._died()
+            r._died(forced=True)
         r.host.kill()
     if not r.kills or r.kills[-1].get("resume") is not None:
         r.kills.append({"kill": r.t, "resume": None})
@@ -66,10 +66,10 @@ def resume(r) -> None:
     restricted_auth = _auth_refused_between(r, aseq0, aseq1)       # G5-E25: the window ends at the harness's first call other than recovery_view()
     restricted_ext = _ext_between(r, eseq0, eseq1)                 # G5-E25: ExternalWorld requests (all outcomes) by the resumed deployment
     restricted_obs = None if oseq0 is None or oseq1 is None else oseq1 - oseq0     # None = no server-side record of observer reads exists
-    marks = _marks(r)
+    marks = _marks(r)     # `files` below omits SQLite sidecars (-wal/-shm/-journal): whether they exist depends on checkpoint timing, so recording them made the evidence load-dependent
     wlog.observe_path(r, "rc1")                           # G5-E33 (d)
     r.event("rc1", resume=T, view_a=va, view_b=vb, err_a=ea, err_b=eb, anchor_head_before=head0, anchor_head_after=head1, auth_refused_restricted=restricted_auth, ext_restricted=restricted_ext, obs_reads_restricted=restricted_obs,
-            marks=marks, files=names, a_started=px_a is not None)
+            marks=marks, files=[n for n in names if not n.endswith(("-wal", "-shm", "-journal"))], a_started=px_a is not None)
     r.open_recoveries.append({"resume": T})
     r.stream = stream
     r.tick_to(r.t + 1)                     # one tick after RC1 (ORACLE-AND-HARNESS-G5 s2): nothing is sent at the restricted tick
