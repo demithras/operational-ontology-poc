@@ -86,18 +86,23 @@ def _request(R, row, e, ctx, phi, versions, renew, crashed, rep, state, process_
     if bad and cls.kind != C.SAFE:
         _mis(row, status, {"rid": rid, "t": t, "why": bad})
     stream = R.get("stream")
+    anchored_at_reply = False                       # G5-E35 B5: the decision's anchor entry exists at the reply (G5-E31 ordering)
     if status == "OK":
         if not committed:
             row["classes"].setdefault("false_success", []).append({"rid": rid, "t": t, "why": "OK reply, no commit in world_log"})
         elif stream and (stream, rid) not in ctx.anchor_of(R):
             row["classes"].setdefault("unanchored_ack", []).append({"rid": rid, "t": t, "why": "OK reply without an anchor entry"})
+        elif stream and "anchor_head_at_reply" not in e:
+            anchored_at_reply = True
         elif stream and "anchor_head_at_reply" in e:          # concurrent redelivery copies (driver.s_redeliver) take no head reads: idempotent, the first OK was ordered
             bad = _anchor_entry_violation(ctx.anchor_seq_of(R).get((stream, rid)) or [], e.get("anchor_head_before"), e.get("anchor_head_at_reply"), m is not None)
             if bad and bad.get("harness"):
                 row["harness"].append(bad["harness"])
             elif bad:
                 row["classes"].setdefault("unanchored_ack", []).append({"rid": rid, "t": t, **bad})
-        if cls.kind == C.BLOCKED or (cls.kind == C.UNRESOLVED and cls.down and not committed):
+            else:
+                anchored_at_reply = True
+        if cls.kind == C.BLOCKED or (cls.kind == C.UNRESOLVED and cls.down and not (committed and anchored_at_reply)):
             _mis(row, "OK", {"rid": rid, "t": t, "down": cls.down, "why": "OK while a decision dependency is down"})
     elif status is not None and cls.kind in (C.BLOCKED, C.UNRESOLVED) and cls.down:
         ok, why = C.blocked_reply_ok(cls, status, body, input_invalid, ctx.reason_map)
@@ -149,6 +154,55 @@ def _read(R, row, e, phi, graph, dom, renew, versions, rep, doc_at, ops, cw):
             _mis(row, status, {"t": t, "down": cls.down, "why": why})
     elif status == "UNAVAILABLE" and cls.kind == C.SAFE and isinstance(body, dict) and body.get("reason") == "dependency_unavailable":
         rec["spurious"] = body.get("dependency")
+    if (status not in (None, "OK") and cls.kind == C.SAFE and e["operation"] == "get" and exp[0] != "OK" and not rec["spurious"]):
+        got = (status, body.get("reason") if isinstance(body, dict) else None)       # G5-E35 B4: a hidden object is answered exactly as an absent one
+        if got != (exp[0], exp[1].get("reason")):
+            row["classes"].setdefault("disclosure_leak", []).append({"t": t, "principal": e["principal"], "args": a, "got": [status, body], "oracle": list(exp),
+                                                                     "why": "non-OK reply about an object outside the low view differs from the absent-object reply"})
     if cls.kind == C.SAFE and cls.strict and exp[0] == "OK":
         rec["eligible"], rec["progressed"] = True, status == "OK" and served_matches(exp[1], body)
         _unrelated(row, phi, graph, dom, "read", None, t, rec["progressed"])
+
+
+def _mutation(R, row, e, ctx, phi, versions, renew, cw, graph, dom):
+    """G5-E35 B6: approve / delegate / revoke are governed mutations ({AUTH, ANCHOR}, P1g-4): R29-7 (misclassification / spurious) and unanchored_ack
+    judge them like requests. No oracle decision is predicted (their effect on the world is replayed elsewhere); the anchor check needs no decision_id:
+    an OK reply must have a new anchor entry of this stream in (head before the call, head at the reply]."""
+    from .judge import active
+    t, k = e["t"], e["k"]
+    if e.get("err") == "no_host":
+        return
+    res, err = e.get("res"), e.get("err")
+    status, body = (res["status"], res["body"]) if res else (None, {})
+    cls = C.classify({"kind": k, "op": e.get("operation"), "t": t, "rid": None}, phi, graph, dom, renew, versions)
+    rec = {"n": e["n"], "t": t, "rid": e.get("rid"), "k": k, "op": e.get("operation") or k, "cls": cls.kind, "down": cls.down, "strict": cls.strict,
+           "status": status or err, "reason": body.get("reason") if isinstance(body, dict) else None, "dep": body.get("dependency") if isinstance(body, dict) else None,
+           "oracle": None, "committed": False, "eligible": False, "progressed": False, "spurious": None, "fclasses": active(cw, t), "phi": sorted(phi.down(t)),
+           "probe": False, "input_invalid": k in ("delegate", "revoke"), "lease_gap": cls.gap}
+    row["req"].append(rec)
+    bad = _form_bad(status, body)
+    if bad and cls.kind != C.SAFE:
+        _mis(row, status, {"rid": e.get("rid"), "t": t, "why": bad, "kind": k})
+    stream = R.get("stream")
+    if status == "OK":
+        anchored = True
+        if stream and "anchor_head_at_reply" in e:
+            before, after = e.get("anchor_head_before"), e.get("anchor_head_at_reply")
+            if not isinstance(after, int) or after < 0:
+                row["harness"].append("anchor_head_unreadable")
+            else:
+                b = before if isinstance(before, int) and before >= 0 else 0
+                seqs = [x for (s, _), xs in ctx.anchor_seq_of(R).items() if s == stream for x in xs]
+                anchored = any(b < x <= after for x in seqs)
+                if not anchored:
+                    row["classes"].setdefault("unanchored_ack", []).append({"rid": e.get("rid"), "t": t, "kind": k, "why": "OK reply without a new anchor entry",
+                                                                            "head_before": b, "head_at_reply": after})
+        if cls.kind == C.BLOCKED or (cls.kind == C.UNRESOLVED and cls.down and not anchored):
+            _mis(row, "OK", {"rid": e.get("rid"), "t": t, "down": cls.down, "kind": k, "why": "OK while a decision dependency is down"})
+    elif status is not None and cls.kind in (C.BLOCKED, C.UNRESOLVED) and cls.down:
+        rmap = {**(ctx.reason_map or {}), "unknown_edge": "schema_invalid"} if rec["input_invalid"] else ctx.reason_map     # hidden == absent edge (PROT-H26 s3.1)
+        ok, why = C.blocked_reply_ok(cls, status, body, rec["input_invalid"], rmap)
+        if not ok:
+            _mis(row, status, {"rid": e.get("rid"), "t": t, "down": cls.down, "why": why, "kind": k})
+    elif status == "UNAVAILABLE" and cls.kind == C.SAFE and isinstance(body, dict) and body.get("reason") == "dependency_unavailable" and not cls.gap:
+        rec["spurious"] = body.get("dependency")

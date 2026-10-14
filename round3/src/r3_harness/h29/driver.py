@@ -98,10 +98,15 @@ class Run:
         except Exception as exc:  # noqa: BLE001 - a variant exception is data
             return None, f"{type(exc).__name__}: {exc}"
 
-    def _died(self) -> None:
+    def _died(self, forced: bool = False) -> None:
+        """Record a host death at the CURRENT tick. forced = the harness itself ended a live host (resume / tamper with a live host): that is never
+        a crash point firing (G5-E35 B7)."""
         if not self.kills or self.kills[-1].get("resume") is not None:
             self.kills.append({"kill": self.t, "resume": None})
-            self.event("host_dead", kill=self.t)
+            self.event("host_dead", kill=self.t, forced=forced)
+
+    def kills_pending(self) -> bool:
+        return bool(self.kills) and self.kills[-1].get("resume") is None
 
     # ---- setup -------------------------------------------------------------------------------------------------
     def setup(self) -> bool:
@@ -186,6 +191,8 @@ class Run:
             a = self.base + self.t
             self.clock.advance(1)
             self.svc.advance_all(a)
+            if self.host is not None and not self.host.alive and not self.kills_pending():
+                self._died()                                      # G5-E35 B7: a death between calls (CP6_idle) is recorded at the tick it is first seen
             if self.host is not None and self.host.alive:
                 try:
                     self.host.advance(a)
@@ -274,17 +281,25 @@ class Run:
                           anchor_head_at_reply=head, anchor_head_before=before)
 
     def s_approve(self, st):
+        before = self.anchor_head_before()
         r, err = self.call("approve", self.token(st["approver"]), st["operation"], dict(st["args"]), st["requester"], st["obo"])
+        head = self.anchor_head_after_ok(r)
         self.event("approve", approver=st["approver"], requester=st["requester"], operation=st["operation"], args=st["args"],
-                   res=_res(r) if r is not None else None, err=err)
+                   res=_res(r) if r is not None else None, err=err, anchor_head_at_reply=head, anchor_head_before=before)
 
     def s_delegate(self, st):
+        before = self.anchor_head_before()
         r, err = self.call("delegate", self.token(st["principal"]), st["edge"], st["rid"])
-        self.event("delegate", rid=st["rid"], principal=st["principal"], res=_res(r) if r is not None else None, err=err)
+        head = self.anchor_head_after_ok(r)
+        self.event("delegate", rid=st["rid"], principal=st["principal"], res=_res(r) if r is not None else None, err=err,
+                   anchor_head_at_reply=head, anchor_head_before=before)
 
     def s_revoke(self, st):
+        before = self.anchor_head_before()
         r, err = self.call("revoke", self.token(st["principal"]), st["edge_id"], st["rid"])
-        self.event("revoke", rid=st["rid"], principal=st["principal"], res=_res(r) if r is not None else None, err=err)
+        head = self.anchor_head_after_ok(r)
+        self.event("revoke", rid=st["rid"], principal=st["principal"], res=_res(r) if r is not None else None, err=err,
+                   anchor_head_at_reply=head, anchor_head_before=before)
 
     def s_read(self, st):
         r, err = self.call("read", self.token(st["principal"]), st["operation"], dict(st["args"]))

@@ -142,8 +142,8 @@ def _judge(R: dict, ctx: Ctx, row: dict) -> dict:
     by_rid = defaultdict(list)
     for m in marks:
         by_rid[m["data"].get("request_id")].append(m)
-    sends = [{"kind": "request" if e["k"] in REQ_KINDS else e["k"], "op": e.get("operation"), "t": e["t"], "invalid_probe": e.get("invalid_probe", False)}
-             for e in ev if e["k"] in REQ_KINDS + ("read", "approve") and e.get("err") != "no_host"]
+    sends = [{"kind": "request" if e["k"] in REQ_KINDS else e["k"], "op": e.get("operation"), "t": e["t"], "invalid_probe": e.get("invalid_probe", e["k"] in ("delegate", "revoke"))}
+             for e in ev if e["k"] in REQ_KINDS + ("read", "approve", "delegate", "revoke") and e.get("err") != "no_host"]
     renew = C.renew_pair(sends, phi, graph, dom)             # G5-E28 (c): obligation list + .adm admissibility window
     crashed = {e["rid"] for e in ev if e["k"] in REQ_KINDS and e.get("err") == "no_reply"}
     keys = {e["key"] for e in ev if e["k"] == "crash_armed"}          # G5-E30 (b): the armed step comes from the corpus, never from a reply
@@ -211,6 +211,8 @@ def _judge(R: dict, ctx: Ctx, row: dict) -> dict:
         k = e["k"]
         if k not in REQ_KINDS:
             pre_event(e["t"])                                   # G5-E34 (a): reads / approvals see the marks committed before them
+        if k in ("approve", "delegate", "revoke"):
+            _mutation(R, row, e, ctx, phi, versions, renew, cw, graph, dom)           # G5-E35 B6
         if k == "approve":
             ok, _ = approvals.validate(ops, doc_at(e["t"]), e["approver"], e["requester"], e["operation"], e["args"])
             res = e.get("res")
@@ -232,5 +234,5 @@ def _judge(R: dict, ctx: Ctx, row: dict) -> dict:
 
 
 from .gen_emit import corr  # noqa: E402
-from .judge_req import _request, _read  # noqa: E402  (split for size)
+from .judge_req import _request, _read, _mutation  # noqa: E402  (split for size)
 from .judge_fin import _boundary, _finish  # noqa: E402

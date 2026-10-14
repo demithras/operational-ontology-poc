@@ -87,6 +87,8 @@ def check_marks(R, ctx, row, ev, dl, intents, oc, window_ok=True):
                                            "why": "ExternalWorld effect row of this deployment without a commit mark"})
     if not any(e["k"] == "rc2" for e in ev) or any(e["k"] in ("tamper", "canonical_state_lost") for e in ev):
         return                                                    # after RC2 only; a history tamper / store loss is judged by the boundary + F8 rules
+    if (R.get("seq_def") or {}).get("byz"):
+        return                                                    # G5-E35 B3: Byzantine-adapter intents are judged by the H28 catalogue rules, not by (c)
     att = {}
     for r in dl["audit"] + dl.get("unverified", []):
         for c in _correlations(r):
