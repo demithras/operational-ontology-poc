@@ -310,3 +310,17 @@ G5-E33 Q11 is kept (the oracle learns which requests committed from the shared w
       Known-negative fakes/records prove each check (forged commit mark, deleted anchor entry, effect without commit, rewritten
       prefix) and both real variants stay clean at dev size. The world store remains the only variant-process file the oracle
       reads; this is stated in the SUMMARY.
+
+## Erratum G5-E34 (author decision 2026-10-14, after official exp-h29-001r)
+G5-E34 (a) The world/decision replay applies committed requests in COMMIT ORDER (world_seq of their commit marks), as
+      ORACLE-AND-HARNESS-G5 s1 predict_world states; the transcript order of request events never orders replay (a crashed request
+      committed later on redelivery is replayed at its commit position). forbidden_effect / stale_authority_commit / duplicate_commit are
+      decided at that position.
+      (b) G5-E33(c) is implemented as written: a committed intent with no effect row is NOT committed_effect_missing when the oracle's
+      state for it is a terminal RECONCILED_FAILED or an in-doubt state the oracle admits; attempts are indexed by the correlation in
+      every form the shared ExternalWorld records it (row correlation, claim.correlation, claim.caveats per P1g-3 / G5-E4).
+      AUTHOR DECISION (2026-10-14): exp-h29-001r (seed 2924, r3-g5-cand4) is harness-INVALID and does not count as an attempt; its
+      evidence stays committed unchanged (ATTRIBUTION.md, DIAGNOSIS.md). Before a new candidate: an independent rule-by-rule audit of
+      the judge against PROT-H29 / P1g / ORACLE-AND-HARNESS-G5 / errata, and a diagnostic re-judge of the exp-h29-001 and exp-h29-001r
+      evidence with the fixed judge (never a verdict). The next official run uses the NEW seed 2925; seeds 2922/2923 stay reserved for
+      attempts 2 and 3.

@@ -1,0 +1,4 @@
+paladin: run complete (6400 sequences, 7647.6 s, workers 6)
+paladin: finalized classes={'forbidden_effect': 1, 'recovery_divergence': 1} harness={} sysstate_ok=True
+conventional: run complete (6400 sequences, 7481.3 s, workers 6)
+conventional: finalized classes={'forbidden_effect': 1, 'recovery_divergence': 9} harness={} sysstate_ok=True
