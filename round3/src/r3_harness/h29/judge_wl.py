@@ -21,6 +21,21 @@ from r3_shared.extadapter import parse_correlation
 REQ_KINDS = ("request", "redeliver")
 
 
+EXEMPT_STATES = ("RECONCILED_FAILED", "UNKNOWN")
+
+
+def _correlations(r) -> set:
+    """Every form the shared ExternalWorld records a correlation (G5-E34 b): the row's own `correlation` (attributed rows), the unverified claim's
+    `correlation` and its `caveats` pairs [name, value] (extworld_core._claim; `unavailable` refusals attribute nothing, G5-E4 / P1g-3)."""
+    out = {r.get("correlation")}
+    cl = r.get("claim") or {}
+    out.add(cl.get("correlation"))
+    for cav in cl.get("caveats") or []:
+        if isinstance(cav, (list, tuple)) and len(cav) == 2 and cav[0] == "correlation":
+            out.add(cav[1])
+    return {c for c in out if isinstance(c, str) and c}
+
+
 def _hit(row, cls, detail):
     row["classes"].setdefault(cls, []).append(detail)
 
@@ -74,8 +89,8 @@ def check_marks(R, ctx, row, ev, dl, intents, oc, window_ok=True):
         return                                                    # after RC2 only; a history tamper / store loss is judged by the boundary + F8 rules
     att = {}
     for r in dl["audit"] + dl.get("unverified", []):
-        c = r.get("correlation") or (r.get("claim") or {}).get("correlation")
-        att.setdefault(c, set()).add(r["seq"])
+        for c in _correlations(r):
+            att.setdefault(c, set()).add(r["seq"])
     for rid in sorted(intents):
         if rid not in marked:
             continue
@@ -83,5 +98,7 @@ def check_marks(R, ctx, row, ev, dl, intents, oc, window_ok=True):
             if any(extoracle.key5(r) == extoracle.key5(I) for r in dl["effects"]) or att.get(I["correlation"]):
                 continue
             st = oc["oracle"].get((rid, I["effect_index"]), ("PENDING",))[0]
+            if st in EXEMPT_STATES:                               # G5-E34 (b): terminal RECONCILED_FAILED / admitted in-doubt state (E33(c) as written)
+                continue
             _hit(row, "recovery_divergence", {"rc": "END", "what": "committed_effect_missing", "rid": rid, "effect": I["effect_index"],
                                               "system": I["system"], "oracle_state": st, "why": "committed intent never dispatched (no row, no attempt)"})

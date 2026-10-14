@@ -1,0 +1,1442 @@
+{
+ "anchor": {
+  "log": [],
+  "stream": "paladin-project-fcf989d85bdd8cf4",
+  "windows": []
+ },
+ "auth": {
+  "faults": [
+   {
+    "deployment": "exp-h29-001r:paladin:env-000192",
+    "from_tick": 2,
+    "kind": "outage",
+    "mode": "drop",
+    "to_tick": 3
+   },
+   {
+    "deployment": "exp-h29-001r:paladin:env-000192~rc1b",
+    "from_tick": 2,
+    "kind": "outage",
+    "mode": "drop",
+    "to_tick": 3
+   }
+  ],
+  "leases": [
+   {
+    "deployment": "exp-h29-001r:paladin:env-000192",
+    "digest": "0534eaeeec74c29c846afc30ed5f5b85c1adbf78f6416751ebd49c4c20f2944d",
+    "granted_tick": 1,
+    "lease_until": 5
+   },
+   {
+    "deployment": "exp-h29-001r:paladin:env-000192",
+    "digest": "0534eaeeec74c29c846afc30ed5f5b85c1adbf78f6416751ebd49c4c20f2944d",
+    "granted_tick": 4,
+    "lease_until": 8
+   },
+   {
+    "deployment": "exp-h29-001r:paladin:env-000192",
+    "digest": "0534eaeeec74c29c846afc30ed5f5b85c1adbf78f6416751ebd49c4c20f2944d",
+    "granted_tick": 5,
+    "lease_until": 9
+   },
+   {
+    "deployment": "exp-h29-001r:paladin:env-000192",
+    "digest": "0534eaeeec74c29c846afc30ed5f5b85c1adbf78f6416751ebd49c4c20f2944d",
+    "granted_tick": 5,
+    "lease_until": 9
+   },
+   {
+    "deployment": "exp-h29-001r:paladin:env-000192",
+    "digest": "0534eaeeec74c29c846afc30ed5f5b85c1adbf78f6416751ebd49c4c20f2944d",
+    "granted_tick": 15,
+    "lease_until": 19
+   },
+   {
+    "deployment": "exp-h29-001r:paladin:env-000192",
+    "digest": "0534eaeeec74c29c846afc30ed5f5b85c1adbf78f6416751ebd49c4c20f2944d",
+    "granted_tick": 16,
+    "lease_until": 20
+   },
+   {
+    "deployment": "exp-h29-001r:paladin:env-000192",
+    "digest": "0534eaeeec74c29c846afc30ed5f5b85c1adbf78f6416751ebd49c4c20f2944d",
+    "granted_tick": 16,
+    "lease_until": 20
+   },
+   {
+    "deployment": "exp-h29-001r:paladin:env-000192",
+    "digest": "0534eaeeec74c29c846afc30ed5f5b85c1adbf78f6416751ebd49c4c20f2944d",
+    "granted_tick": 16,
+    "lease_until": 20
+   },
+   {
+    "deployment": "exp-h29-001r:paladin:env-000192",
+    "digest": "0534eaeeec74c29c846afc30ed5f5b85c1adbf78f6416751ebd49c4c20f2944d",
+    "granted_tick": 17,
+    "lease_until": 21
+   }
+  ],
+  "refused": [],
+  "versions": [
+   {
+    "digest": "0534eaeeec74c29c846afc30ed5f5b85c1adbf78f6416751ebd49c4c20f2944d",
+    "effective_tick": 0,
+    "requested_tick": 0,
+    "seq": 1
+   }
+  ]
+ },
+ "base": 77800,
+ "dep": "exp-h29-001r:paladin:env-000192",
+ "deploy_error": null,
+ "domain": "project",
+ "end_tick": 32,
+ "events": [
+  {
+   "digest": "0534eaeeec74c29c846afc30ed5f5b85c1adbf78f6416751ebd49c4c20f2944d",
+   "effective": 0,
+   "k": "publish",
+   "n": 0,
+   "t": 0,
+   "version": 0
+  },
+  {
+   "k": "crash_armed",
+   "key": "c001",
+   "n": 1,
+   "point": "CP1_before_commit",
+   "t": 0
+  },
+  {
+   "k": "host_dead",
+   "kill": 1,
+   "n": 2,
+   "t": 1
+  },
+  {
+   "anchor_head_at_reply": null,
+   "anchor_head_before": 0,
+   "args": {
+    "freeze_hash": "abc123",
+    "hypothesis": "H-A"
+   },
+   "attacker": false,
+   "copy": 0,
+   "err": "no_reply",
+   "i": 0,
+   "inc": 0,
+   "invalid_probe": false,
+   "k": "request",
+   "n": 3,
+   "operation": "preregister_hypothesis",
+   "principal": "researcher-1",
+   "probe_shape": null,
+   "res": null,
+   "rid": "c001",
+   "surface": "direct",
+   "t": 1,
+   "tag": null
+  },
+  {
+   "a_started": true,
+   "anchor_head_after": 0,
+   "anchor_head_before": 0,
+   "auth_refused_restricted": 0,
+   "err_a": null,
+   "err_b": null,
+   "ext_restricted": 0,
+   "files": [
+    "hist.db",
+    "hist.db-shm",
+    "hist.db-wal",
+    "world.db",
+    "world.db-shm",
+    "world.db-wal"
+   ],
+   "k": "rc1",
+   "marks": [],
+   "n": 4,
+   "obs_reads_restricted": 0,
+   "resume": 2,
+   "t": 2,
+   "view_a": {
+    "approvals_open": [],
+    "authority": {
+     "lease_until": null,
+     "version": null
+    },
+    "committed": [],
+    "form": "r3-recovery-1",
+    "intents": []
+   },
+   "view_b": {
+    "approvals_open": [],
+    "authority": {
+     "lease_until": null,
+     "version": null
+    },
+    "committed": [],
+    "form": "r3-recovery-1",
+    "intents": []
+   }
+  },
+  {
+   "anchor_head_at_reply": 1,
+   "anchor_head_before": 0,
+   "args": {
+    "threshold": "T-A",
+    "value": {
+     "max": 5
+    }
+   },
+   "attacker": false,
+   "copy": 0,
+   "err": null,
+   "i": 1,
+   "inc": 1,
+   "invalid_probe": false,
+   "k": "request",
+   "n": 5,
+   "operation": "edit_threshold",
+   "principal": "admin-1",
+   "probe_shape": null,
+   "res": {
+    "body": {
+     "effects": [
+      "x:r002/e0"
+     ],
+     "execution": "x:r002",
+     "state": "RECONCILED_SUCCESS"
+    },
+    "status": "OK"
+   },
+   "rid": "r002",
+   "surface": "direct",
+   "t": 4,
+   "tag": null
+  },
+  {
+   "anchor_head_at_reply": 2,
+   "anchor_head_before": 1,
+   "args": {
+    "hypothesis": "H-D",
+    "reviewer": "rev-b"
+   },
+   "attacker": false,
+   "copy": 0,
+   "err": null,
+   "i": 2,
+   "inc": 1,
+   "invalid_probe": false,
+   "k": "request",
+   "n": 6,
+   "operation": "notify_reviewer",
+   "principal": "researcher-1",
+   "probe_shape": null,
+   "res": {
+    "body": {
+     "effects": [
+      "x:r003/e0"
+     ],
+     "execution": "x:r003",
+     "outcomes": [
+      {
+       "confidence": "low",
+       "effect_index": 0,
+       "evidence": [],
+       "request_id": "r003",
+       "state": "PENDING",
+       "system": "NOTIFY"
+      }
+     ],
+     "state": "OUTCOME_UNKNOWN"
+    },
+    "status": "OK"
+   },
+   "rid": "r003",
+   "surface": "call_tool",
+   "t": 5,
+   "tag": null
+  },
+  {
+   "anchor_head_at_reply": 3,
+   "anchor_head_before": 2,
+   "args": {
+    "freeze_hash": "abc123",
+    "hypothesis": "H-A"
+   },
+   "attacker": false,
+   "concurrent": false,
+   "copy": 1,
+   "err": null,
+   "i": 0,
+   "inc": 1,
+   "invalid_probe": false,
+   "k": "redeliver",
+   "n": 7,
+   "operation": "preregister_hypothesis",
+   "principal": "researcher-1",
+   "probe_shape": null,
+   "res": {
+    "body": {
+     "effects": [
+      "x:c001/e0"
+     ],
+     "execution": "x:c001",
+     "state": "RECONCILED_SUCCESS"
+    },
+    "status": "OK"
+   },
+   "rid": "c001",
+   "surface": "direct",
+   "t": 5,
+   "tag": "redeliver"
+  },
+  {
+   "err": null,
+   "k": "dispatch",
+   "n": 8,
+   "rc2": true,
+   "res": {
+    "body": {
+     "submitted": 1
+    },
+    "status": "OK"
+   },
+   "t": 5
+  },
+  {
+   "err": null,
+   "fault": null,
+   "k": "reconcile",
+   "n": 9,
+   "rc2": true,
+   "res": {
+    "body": {
+     "outcomes": [
+      {
+       "confidence": "low",
+       "effect_index": 0,
+       "evidence": [
+        0
+       ],
+       "request_id": "r003",
+       "state": "RECONCILED_SUCCESS",
+       "system": "NOTIFY"
+      }
+     ]
+    },
+    "status": "OK"
+   },
+   "rid": "r003",
+   "t": 15,
+   "watermark": 15
+  },
+  {
+   "anchor_head_at_reply": 3,
+   "anchor_head_before": 3,
+   "args": {
+    "freeze_hash": "abc123",
+    "hypothesis": "H-A"
+   },
+   "attacker": false,
+   "copy": 0,
+   "err": null,
+   "i": 0,
+   "inc": 1,
+   "invalid_probe": false,
+   "k": "redeliver",
+   "n": 10,
+   "operation": "preregister_hypothesis",
+   "principal": "researcher-1",
+   "probe_shape": null,
+   "rc2": true,
+   "res": {
+    "body": {
+     "effects": [
+      "x:c001/e0"
+     ],
+     "execution": "x:c001",
+     "replayed": true,
+     "state": "RECONCILED_SUCCESS"
+    },
+    "status": "OK"
+   },
+   "rid": "c001",
+   "surface": "direct",
+   "t": 16,
+   "tag": "rc2_redeliver"
+  },
+  {
+   "anchor_head_at_reply": 3,
+   "anchor_head_before": 3,
+   "args": {
+    "threshold": "T-A",
+    "value": {
+     "max": 5
+    }
+   },
+   "attacker": false,
+   "copy": 0,
+   "err": null,
+   "i": 1,
+   "inc": 1,
+   "invalid_probe": false,
+   "k": "redeliver",
+   "n": 11,
+   "operation": "edit_threshold",
+   "principal": "admin-1",
+   "probe_shape": null,
+   "rc2": true,
+   "res": {
+    "body": {
+     "effects": [
+      "x:r002/e0"
+     ],
+     "execution": "x:r002",
+     "replayed": true,
+     "state": "RECONCILED_SUCCESS"
+    },
+    "status": "OK"
+   },
+   "rid": "r002",
+   "surface": "direct",
+   "t": 16,
+   "tag": "rc2_redeliver"
+  },
+  {
+   "anchor_head_at_reply": 3,
+   "anchor_head_before": 3,
+   "args": {
+    "hypothesis": "H-D",
+    "reviewer": "rev-b"
+   },
+   "attacker": false,
+   "copy": 0,
+   "err": null,
+   "i": 2,
+   "inc": 1,
+   "invalid_probe": false,
+   "k": "redeliver",
+   "n": 12,
+   "operation": "notify_reviewer",
+   "principal": "researcher-1",
+   "probe_shape": null,
+   "rc2": true,
+   "res": {
+    "body": {
+     "effects": [
+      "x:r003/e0"
+     ],
+     "execution": "x:r003",
+     "outcomes": [
+      {
+       "confidence": "low",
+       "effect_index": 0,
+       "evidence": [],
+       "request_id": "r003",
+       "state": "PENDING",
+       "system": "NOTIFY"
+      }
+     ],
+     "replayed": true,
+     "state": "OUTCOME_UNKNOWN"
+    },
+    "status": "OK"
+   },
+   "rid": "r003",
+   "surface": "call_tool",
+   "t": 16,
+   "tag": "rc2_redeliver"
+  },
+  {
+   "err": null,
+   "k": "rc2",
+   "marks": [
+    {
+     "data": {
+      "authority_version": "0534eaeeec74c29c846afc30ed5f5b85c1adbf78f6416751ebd49c4c20f2944d",
+      "kind": "direct",
+      "request_id": "r002"
+     },
+     "seq": 95,
+     "tick": 4
+    },
+    {
+     "data": {
+      "authority_version": "0534eaeeec74c29c846afc30ed5f5b85c1adbf78f6416751ebd49c4c20f2944d",
+      "kind": "call_tool",
+      "request_id": "r003"
+     },
+     "seq": 96,
+     "tick": 5
+    },
+    {
+     "data": {
+      "authority_version": "0534eaeeec74c29c846afc30ed5f5b85c1adbf78f6416751ebd49c4c20f2944d",
+      "kind": "direct",
+      "request_id": "c001"
+     },
+     "seq": 98,
+     "tick": 5
+    }
+   ],
+   "marks_after": 3,
+   "marks_before": 3,
+   "n": 13,
+   "probe": {
+    "body_ok": true,
+    "status": "OK"
+   },
+   "probe_err": null,
+   "redelivered": [
+    "c001",
+    "r002",
+    "r003"
+   ],
+   "t": 16,
+   "t_probe": 15,
+   "t_redeliver": 16,
+   "view": {
+    "approvals_open": [],
+    "authority": {
+     "lease_until": 77819,
+     "version": "0534eaeeec74c29c846afc30ed5f5b85c1adbf78f6416751ebd49c4c20f2944d"
+    },
+    "committed": [
+     {
+      "authority_version": "0534eaeeec74c29c846afc30ed5f5b85c1adbf78f6416751ebd49c4c20f2944d",
+      "request_id": "r002",
+      "world_seq": 95
+     },
+     {
+      "authority_version": "0534eaeeec74c29c846afc30ed5f5b85c1adbf78f6416751ebd49c4c20f2944d",
+      "request_id": "r003",
+      "world_seq": 96
+     },
+     {
+      "authority_version": "0534eaeeec74c29c846afc30ed5f5b85c1adbf78f6416751ebd49c4c20f2944d",
+      "request_id": "c001",
+      "world_seq": 98
+     }
+    ],
+    "form": "r3-recovery-1",
+    "intents": [
+     {
+      "chain_ids": 1,
+      "confidence": "low",
+      "effect_index": 0,
+      "request_id": "r003",
+      "state": "RECONCILED_SUCCESS",
+      "system": "NOTIFY"
+     }
+    ]
+   }
+  },
+  {
+   "anchor_head_at_reply": 4,
+   "anchor_head_before": 3,
+   "args": {
+    "hypothesis": "H-A",
+    "reviewer": "rev-c"
+   },
+   "attacker": false,
+   "copy": 0,
+   "err": null,
+   "i": 4,
+   "inc": 1,
+   "invalid_probe": false,
+   "k": "request",
+   "n": 14,
+   "operation": "notify_reviewer",
+   "principal": "admin-1",
+   "probe_shape": null,
+   "res": {
+    "body": {
+     "effects": [
+      "x:r004/e0"
+     ],
+     "execution": "x:r004",
+     "outcomes": [
+      {
+       "confidence": "low",
+       "effect_index": 0,
+       "evidence": [],
+       "request_id": "r004",
+       "state": "PENDING",
+       "system": "NOTIFY"
+      }
+     ],
+     "state": "OUTCOME_UNKNOWN"
+    },
+    "status": "OK"
+   },
+   "rid": "r004",
+   "surface": "call_tool",
+   "t": 17,
+   "tag": "post"
+  },
+  {
+   "err": null,
+   "k": "dispatch",
+   "n": 15,
+   "res": {
+    "body": {
+     "submitted": 1
+    },
+    "status": "OK"
+   },
+   "t": 18
+  },
+  {
+   "err": null,
+   "k": "dispatch",
+   "n": 16,
+   "res": {
+    "body": {
+     "submitted": 0
+    },
+    "status": "OK"
+   },
+   "t": 27
+  },
+  {
+   "err": null,
+   "fault": null,
+   "k": "reconcile",
+   "n": 17,
+   "res": {
+    "body": {
+     "outcomes": [
+      {
+       "confidence": "low",
+       "effect_index": 0,
+       "evidence": [
+        0
+       ],
+       "request_id": "r003",
+       "state": "RECONCILED_SUCCESS",
+       "system": "NOTIFY"
+      }
+     ]
+    },
+    "status": "OK"
+   },
+   "rid": "r003",
+   "t": 27,
+   "watermark": 27
+  },
+  {
+   "err": null,
+   "fault": null,
+   "k": "reconcile",
+   "n": 18,
+   "res": {
+    "body": {
+     "outcomes": [
+      {
+       "confidence": "low",
+       "effect_index": 0,
+       "evidence": [
+        0
+       ],
+       "request_id": "r004",
+       "state": "RECONCILED_SUCCESS",
+       "system": "NOTIFY"
+      }
+     ]
+    },
+    "status": "OK"
+   },
+   "rid": "r004",
+   "t": 27,
+   "watermark": 27
+  }
+ ],
+ "ext": [
+  {
+   "deployment": "exp-h29-001r:paladin:env-000192",
+   "from_tick": 2,
+   "mode": "drop",
+   "op": "outage",
+   "system": "REGISTRY",
+   "tick": 2,
+   "to_tick": 3
+  },
+  {
+   "deployment": "exp-h29-001r:paladin:env-000192",
+   "from_tick": 2,
+   "mode": "drop",
+   "op": "outage",
+   "system": "NOTIFY",
+   "tick": 2,
+   "to_tick": 3
+  },
+  {
+   "deployment": "exp-h29-001r:paladin:env-000192",
+   "from_tick": 2,
+   "mode": "drop",
+   "op": "outage",
+   "system": "GEN-NULL",
+   "tick": 2,
+   "to_tick": 3
+  },
+  {
+   "deployment": "exp-h29-001r:paladin:env-000192~rc1b",
+   "from_tick": 2,
+   "mode": "drop",
+   "op": "outage",
+   "system": "REGISTRY",
+   "tick": 2,
+   "to_tick": 3
+  },
+  {
+   "deployment": "exp-h29-001r:paladin:env-000192~rc1b",
+   "from_tick": 2,
+   "mode": "drop",
+   "op": "outage",
+   "system": "NOTIFY",
+   "tick": 2,
+   "to_tick": 3
+  },
+  {
+   "deployment": "exp-h29-001r:paladin:env-000192~rc1b",
+   "from_tick": 2,
+   "mode": "drop",
+   "op": "outage",
+   "system": "GEN-NULL",
+   "tick": 2,
+   "to_tick": 3
+  }
+ ],
+ "faults": {},
+ "harness": [],
+ "incarnations": [
+  {
+   "n": 0,
+   "resume": false,
+   "t": 0
+  },
+  {
+   "n": 1,
+   "resume": true,
+   "t": 2
+  }
+ ],
+ "j": 192,
+ "kills": [
+  {
+   "kill": 1,
+   "resume": 2
+  }
+ ],
+ "obs_windows": [],
+ "seq": "env-000192",
+ "seq_def": {
+  "attacker": null,
+  "boundary": null,
+  "byz": null,
+  "class_windows": {},
+  "classes": [
+   "F1"
+  ],
+  "cp": [
+   "CP1_before_commit"
+  ],
+  "domain": "project",
+  "id": "env-000192",
+  "idx": 192,
+  "obs_lag": 0,
+  "planned": {
+   "attacker": null,
+   "end_t": 32,
+   "fault_share": [
+    3,
+    2
+   ],
+   "requests": 4,
+   "stale_sensitive": 0,
+   "steps": 24
+  },
+  "seed": 2924,
+  "steps": [
+   {
+    "key": "c001",
+    "op": "crash",
+    "point": "CP1_before_commit"
+   },
+   {
+    "n": 1,
+    "op": "advance"
+   },
+   {
+    "args": {
+     "freeze_hash": "abc123",
+     "hypothesis": "H-A"
+    },
+    "i": 0,
+    "obo": null,
+    "op": "request",
+    "operation": "preregister_hypothesis",
+    "principal": "researcher-1",
+    "rid": "c001",
+    "surface": "direct"
+   },
+   {
+    "n": 1,
+    "op": "advance"
+   },
+   {
+    "op": "resume"
+   },
+   {
+    "n": 1,
+    "op": "advance"
+   },
+   {
+    "args": {
+     "threshold": "T-A",
+     "value": {
+      "max": 5
+     }
+    },
+    "i": 1,
+    "obo": null,
+    "op": "request",
+    "operation": "edit_threshold",
+    "principal": "admin-1",
+    "rid": "r002",
+    "surface": "direct"
+   },
+   {
+    "n": 1,
+    "op": "advance"
+   },
+   {
+    "args": {
+     "hypothesis": "H-D",
+     "reviewer": "rev-b"
+    },
+    "i": 2,
+    "obo": null,
+    "op": "request",
+    "operation": "notify_reviewer",
+    "principal": "researcher-1",
+    "rid": "r003",
+    "surface": "call_tool"
+   },
+   {
+    "concurrent": false,
+    "copies": 1,
+    "op": "redeliver",
+    "rid": "c001"
+   },
+   {
+    "op": "recovery_schedule"
+   },
+   {
+    "n": 1,
+    "op": "advance"
+   },
+   {
+    "args": {
+     "hypothesis": "H-A",
+     "reviewer": "rev-c"
+    },
+    "i": 4,
+    "obo": null,
+    "op": "request",
+    "operation": "notify_reviewer",
+    "principal": "admin-1",
+    "rid": "r004",
+    "surface": "call_tool",
+    "tag": "post"
+   },
+   {
+    "n": 1,
+    "op": "advance"
+   },
+   {
+    "op": "dispatch"
+   },
+   {
+    "n": 9,
+    "op": "advance"
+   },
+   {
+    "op": "dispatch"
+   },
+   {
+    "op": "reconcile",
+    "rid": "r003",
+    "watermark": 27
+   },
+   {
+    "op": "reconcile",
+    "rid": "r004",
+    "watermark": 27
+   },
+   {
+    "n": 1,
+    "op": "advance"
+   },
+   {
+    "n": 1,
+    "op": "advance"
+   },
+   {
+    "n": 1,
+    "op": "advance"
+   },
+   {
+    "n": 1,
+    "op": "advance"
+   },
+   {
+    "n": 1,
+    "op": "advance"
+   }
+  ],
+  "stratum": "env"
+ },
+ "stratum": "env",
+ "stream": "paladin-project-fcf989d85bdd8cf4",
+ "unsupported": 0,
+ "variant": "paladin",
+ "wl": [
+  {
+   "gap": null,
+   "n": 93,
+   "prefix_changed": null,
+   "t": 2,
+   "where": "rc1"
+  },
+  {
+   "gap": null,
+   "n": 99,
+   "prefix_changed": false,
+   "prev_n": 93,
+   "t": 32,
+   "where": "end"
+  }
+ ],
+ "world": {
+  "links": [
+   [
+    "CAPTURED_AT",
+    "Evidence:EV-C-BAD",
+    "Commit:c0ffee0001"
+   ],
+   [
+    "CAPTURED_AT",
+    "Evidence:EV-C1",
+    "Commit:c0ffee0001"
+   ],
+   [
+    "CAPTURED_AT",
+    "Evidence:EV-C2",
+    "Commit:c0ffee0001"
+   ],
+   [
+    "CAPTURED_AT",
+    "Evidence:EV-D1",
+    "Commit:c0ffee0001"
+   ],
+   [
+    "DETECTED_BY",
+    "Failure:f-1",
+    "Test:t-1"
+   ],
+   [
+    "EVALUATES",
+    "Verdict:verdict-H-D-1",
+    "Hypothesis:H-D"
+   ],
+   [
+    "EXISTS_FOR",
+    "Component:cmp-live",
+    "Hypothesis:H-B"
+   ],
+   [
+    "FALSIFIED_BY",
+    "Hypothesis:H-A",
+    "Falsifier:X-A"
+   ],
+   [
+    "FALSIFIED_BY",
+    "Hypothesis:H-B",
+    "Falsifier:X-B"
+   ],
+   [
+    "FALSIFIED_BY",
+    "Hypothesis:H-C",
+    "Falsifier:X-C"
+   ],
+   [
+    "FALSIFIED_BY",
+    "Hypothesis:H-D",
+    "Falsifier:X-D"
+   ],
+   [
+    "FALSIFIED_BY",
+    "Hypothesis:H-F",
+    "Falsifier:X-F"
+   ],
+   [
+    "GOVERNED_BY",
+    "Metric:M-A",
+    "Threshold:T-A"
+   ],
+   [
+    "GOVERNED_BY",
+    "Metric:M-B",
+    "Threshold:T-B"
+   ],
+   [
+    "GOVERNED_BY",
+    "Metric:M-C",
+    "Threshold:T-C"
+   ],
+   [
+    "GOVERNED_BY",
+    "Metric:M-D",
+    "Threshold:T-D"
+   ],
+   [
+    "GOVERNED_BY",
+    "Metric:M-F",
+    "Threshold:T-F"
+   ],
+   [
+    "HAS_RIVAL",
+    "Hypothesis:H-A",
+    "Rival:R-A"
+   ],
+   [
+    "HAS_RIVAL",
+    "Hypothesis:H-B",
+    "Rival:R-B"
+   ],
+   [
+    "HAS_RIVAL",
+    "Hypothesis:H-C",
+    "Rival:R-C"
+   ],
+   [
+    "HAS_RIVAL",
+    "Hypothesis:H-D",
+    "Rival:R-D"
+   ],
+   [
+    "HAS_RIVAL",
+    "Hypothesis:H-F",
+    "Rival:R-F"
+   ],
+   [
+    "MEASURES",
+    "Experiment:E-A@v1",
+    "Metric:M-A"
+   ],
+   [
+    "MEASURES",
+    "Experiment:E-B@v1",
+    "Metric:M-B"
+   ],
+   [
+    "MEASURES",
+    "Experiment:E-C@v1",
+    "Metric:M-C"
+   ],
+   [
+    "MEASURES",
+    "Experiment:E-D@v1",
+    "Metric:M-D"
+   ],
+   [
+    "MEASURES",
+    "Experiment:E-F@v1",
+    "Metric:M-F"
+   ],
+   [
+    "PREDICTS",
+    "Hypothesis:H-A",
+    "Prediction:P-A"
+   ],
+   [
+    "PREDICTS",
+    "Hypothesis:H-B",
+    "Prediction:P-B"
+   ],
+   [
+    "PREDICTS",
+    "Hypothesis:H-C",
+    "Prediction:P-C"
+   ],
+   [
+    "PREDICTS",
+    "Hypothesis:H-D",
+    "Prediction:P-D"
+   ],
+   [
+    "PREDICTS",
+    "Hypothesis:H-F",
+    "Prediction:P-F"
+   ],
+   [
+    "PRODUCES",
+    "Experiment:E-C@v1",
+    "Evidence:EV-C1"
+   ],
+   [
+    "PRODUCES",
+    "Experiment:E-D@v1",
+    "Evidence:EV-D1"
+   ],
+   [
+    "SUPPORTS_OR_REFUTES",
+    "Evidence:EV-C1",
+    "Hypothesis:H-C"
+   ],
+   [
+    "SUPPORTS_OR_REFUTES",
+    "Evidence:EV-D1",
+    "Hypothesis:H-D"
+   ],
+   [
+    "TESTED_BY",
+    "Hypothesis:H-A",
+    "Experiment:E-A@v1"
+   ],
+   [
+    "TESTED_BY",
+    "Hypothesis:H-B",
+    "Experiment:E-B@v1"
+   ],
+   [
+    "TESTED_BY",
+    "Hypothesis:H-C",
+    "Experiment:E-C@v1"
+   ],
+   [
+    "TESTED_BY",
+    "Hypothesis:H-D",
+    "Experiment:E-D@v1"
+   ],
+   [
+    "TESTED_BY",
+    "Hypothesis:H-F",
+    "Experiment:E-F@v1"
+   ],
+   [
+    "VALIDATES",
+    "Test:t-1",
+    "Component:cmp-live"
+   ]
+  ],
+  "marks": [
+   {
+    "data": {
+     "authority_version": "0534eaeeec74c29c846afc30ed5f5b85c1adbf78f6416751ebd49c4c20f2944d",
+     "kind": "direct",
+     "request_id": "r002"
+    },
+    "seq": 95,
+    "tick": 4,
+    "writer": "paladin-service"
+   },
+   {
+    "data": {
+     "authority_version": "0534eaeeec74c29c846afc30ed5f5b85c1adbf78f6416751ebd49c4c20f2944d",
+     "kind": "call_tool",
+     "request_id": "r003"
+    },
+    "seq": 96,
+    "tick": 5,
+    "writer": "paladin-service"
+   },
+   {
+    "data": {
+     "authority_version": "0534eaeeec74c29c846afc30ed5f5b85c1adbf78f6416751ebd49c4c20f2944d",
+     "kind": "direct",
+     "request_id": "c001"
+    },
+    "seq": 98,
+    "tick": 5,
+    "writer": "paladin-service"
+   },
+   {
+    "data": {
+     "authority_version": "0534eaeeec74c29c846afc30ed5f5b85c1adbf78f6416751ebd49c4c20f2944d",
+     "kind": "call_tool",
+     "request_id": "r004"
+    },
+    "seq": 99,
+    "tick": 17,
+    "writer": "paladin-service"
+   }
+  ],
+  "objects": {
+   "Commit:c0ffee0000": {
+    "committed_at": 50,
+    "message": "seed base",
+    "sha": "c0ffee0000"
+   },
+   "Commit:c0ffee0001": {
+    "committed_at": 100,
+    "message": "seed head",
+    "sha": "c0ffee0001"
+   },
+   "Component:cmp-live": {
+    "id": "cmp-live",
+    "orphan_flagged": false,
+    "path": "src/live"
+   },
+   "Component:cmp-orphan": {
+    "id": "cmp-orphan",
+    "orphan_flagged": false,
+    "path": "src/orphan"
+   },
+   "ContractVersion:CV-1": {
+    "git_commit": "c0ffee0001",
+    "id": "CV-1",
+    "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+   },
+   "ContractVersion:CV-UNBOUND": {
+    "git_commit": "",
+    "id": "CV-UNBOUND",
+    "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+   },
+   "Decision:DEC-1": {
+    "decided_at": 90,
+    "id": "DEC-1",
+    "rationale": "keep the threshold"
+   },
+   "Decision:DEC-BLANK": {
+    "decided_at": 91,
+    "id": "DEC-BLANK",
+    "rationale": "  "
+   },
+   "Evidence:EV-C-BAD": {
+    "environment": "seed-env",
+    "experiment_version": "9",
+    "git_commit": "c0ffee0001",
+    "id": "EV-C-BAD",
+    "payload_hash": "EV-C-BAD-hash"
+   },
+   "Evidence:EV-C1": {
+    "environment": "seed-env",
+    "experiment_version": "1",
+    "git_commit": "c0ffee0001",
+    "id": "EV-C1",
+    "payload_hash": "EV-C1-hash"
+   },
+   "Evidence:EV-C2": {
+    "environment": "seed-env",
+    "experiment_version": "1",
+    "git_commit": "c0ffee0001",
+    "id": "EV-C2",
+    "payload_hash": "EV-C2-hash"
+   },
+   "Evidence:EV-D1": {
+    "environment": "seed-env",
+    "experiment_version": "1",
+    "git_commit": "c0ffee0001",
+    "id": "EV-D1",
+    "payload_hash": "EV-D1-hash"
+   },
+   "Experiment:E-A@v1": {
+    "evaluator_ref": "neutral:evidence-present-v1",
+    "evidence_schema_ref": "schemas/evidence.json",
+    "id": "E-A@v1",
+    "version": "1"
+   },
+   "Experiment:E-B@v1": {
+    "evaluator_ref": "neutral:evidence-present-v1",
+    "evidence_schema_ref": "schemas/evidence.json",
+    "id": "E-B@v1",
+    "version": "1"
+   },
+   "Experiment:E-C@v1": {
+    "evaluator_ref": "neutral:evidence-present-v1",
+    "evidence_schema_ref": "schemas/evidence.json",
+    "id": "E-C@v1",
+    "version": "1"
+   },
+   "Experiment:E-D@v1": {
+    "evaluator_ref": "neutral:evidence-present-v1",
+    "evidence_schema_ref": "schemas/evidence.json",
+    "id": "E-D@v1",
+    "version": "1"
+   },
+   "Experiment:E-F@v1": {
+    "evaluator_ref": "neutral:evidence-present-v1",
+    "evidence_schema_ref": "schemas/evidence.json",
+    "id": "E-F@v1",
+    "version": "1"
+   },
+   "Failure:f-1": {
+    "description": "seed failure",
+    "id": "f-1"
+   },
+   "Falsifier:X-A": {
+    "id": "X-A",
+    "statement": "falsifier for A"
+   },
+   "Falsifier:X-B": {
+    "id": "X-B",
+    "statement": "falsifier for B"
+   },
+   "Falsifier:X-C": {
+    "id": "X-C",
+    "statement": "falsifier for C"
+   },
+   "Falsifier:X-D": {
+    "id": "X-D",
+    "statement": "falsifier for D"
+   },
+   "Falsifier:X-F": {
+    "id": "X-F",
+    "statement": "falsifier for F"
+   },
+   "Hypothesis:H-A": {
+    "claim": "draft claim A",
+    "freeze_hash": "abc123",
+    "id": "H-A",
+    "phase": "PREREGISTERED"
+   },
+   "Hypothesis:H-B": {
+    "claim": "prereg claim B",
+    "freeze_hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "id": "H-B",
+    "phase": "PREREGISTERED"
+   },
+   "Hypothesis:H-C": {
+    "claim": "running claim C",
+    "freeze_hash": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "id": "H-C",
+    "phase": "RUNNING"
+   },
+   "Hypothesis:H-D": {
+    "claim": "evaluated claim D",
+    "freeze_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "id": "H-D",
+    "phase": "EVALUATED"
+   },
+   "Hypothesis:H-E": {
+    "claim": "successor claim E",
+    "id": "H-E",
+    "phase": "DRAFT"
+   },
+   "Hypothesis:H-F": {
+    "claim": "running claim F (no evidence yet)",
+    "freeze_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "id": "H-F",
+    "phase": "RUNNING"
+   },
+   "Metric:M-A": {
+    "id": "M-A",
+    "name": "metric A"
+   },
+   "Metric:M-B": {
+    "id": "M-B",
+    "name": "metric B"
+   },
+   "Metric:M-C": {
+    "id": "M-C",
+    "name": "metric C"
+   },
+   "Metric:M-D": {
+    "id": "M-D",
+    "name": "metric D"
+   },
+   "Metric:M-F": {
+    "id": "M-F",
+    "name": "metric F"
+   },
+   "Prediction:P-A": {
+    "id": "P-A",
+    "statement": "prediction for A"
+   },
+   "Prediction:P-B": {
+    "id": "P-B",
+    "statement": "prediction for B"
+   },
+   "Prediction:P-C": {
+    "id": "P-C",
+    "statement": "prediction for C"
+   },
+   "Prediction:P-D": {
+    "id": "P-D",
+    "statement": "prediction for D"
+   },
+   "Prediction:P-F": {
+    "id": "P-F",
+    "statement": "prediction for F"
+   },
+   "Rival:R-A": {
+    "id": "R-A",
+    "statement": "rival for A"
+   },
+   "Rival:R-B": {
+    "id": "R-B",
+    "statement": "rival for B"
+   },
+   "Rival:R-C": {
+    "id": "R-C",
+    "statement": "rival for C"
+   },
+   "Rival:R-D": {
+    "id": "R-D",
+    "statement": "rival for D"
+   },
+   "Rival:R-F": {
+    "id": "R-F",
+    "statement": "rival for F"
+   },
+   "Test:t-1": {
+    "id": "t-1",
+    "last_result": "passed",
+    "name": "live test"
+   },
+   "Threshold:T-A": {
+    "id": "T-A",
+    "value": {
+     "max": 5
+    }
+   },
+   "Threshold:T-B": {
+    "id": "T-B",
+    "value": {
+     "min": 10
+    }
+   },
+   "Threshold:T-C": {
+    "id": "T-C",
+    "value": {
+     "min": 10
+    }
+   },
+   "Threshold:T-D": {
+    "id": "T-D",
+    "value": {
+     "min": 10
+    }
+   },
+   "Threshold:T-F": {
+    "id": "T-F",
+    "value": {
+     "min": 10
+    }
+   },
+   "Verdict:verdict-H-D-1": {
+    "derivation_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "git_commit": "c0ffee0001",
+    "id": "verdict-H-D-1",
+    "reason": "seed",
+    "value": "SUPPORTED"
+   }
+  },
+  "rows": 99
+ }
+}
