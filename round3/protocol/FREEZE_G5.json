@@ -1,6 +1,6 @@
 {
   "recorded_at": "2026-10-12",
-  "note": "Gate 5 frozen design (tag r3-g5-freeze), recorded before any Gate 5 implementation. Evaluators compare against these hashes. Manifest files created by P1g (envelope-ops.json, dependency graph, reason map, fault catalogue) are added in the commit that creates them. 2026-10-13: full ORACLE-AND-HARNESS-G5 s9 manifest recorded (evalchecks.manifest_paths) at round3 after harness fix4 merge; reason-map.json frozen per G5-E29(d).",
+  "note": "Gate 5 frozen design (tag r3-g5-freeze), recorded before any Gate 5 implementation. Evaluators compare against these hashes. Manifest files created by P1g (envelope-ops.json, dependency graph, reason map, fault catalogue) are added in the commit that creates them. 2026-10-13: full ORACLE-AND-HARNESS-G5 s9 manifest recorded (evalchecks.manifest_paths) at round3 after harness fix4 merge; reason-map.json frozen per G5-E29(d). 2026-10-15: re-recorded after G5-E34/E35 judge fixes (author decisions): src/r3_harness/h29/evaluator.py.",
   "files": {
     "spec/protections/PROT-H29.md": "1bda71bb5b23cbab1a39ccbb8a1c6415aff6e81c1ebc55c74623fa84fa44221b",
     "spec/gate5/PROTOCOL-P1g.md": "c26d360b2baf2e5014336d947b01a9384680034dc9ffbea674709e6b20010b9e",
@@ -29,7 +29,7 @@
     "src/r3_oracle/authority_v2.py": "e03da4515a6d2a012afadb094bad6ffaec447c9ea760b1b853987b7ad9ac9bb2",
     "src/r3_oracle/view.py": "600f8a898086e5f7ff6780377063546fc5654e1e35474e069768dc6474735edf",
     "src/r3_oracle/lowproj.py": "40a84107a8dfc2bcb4ee996221856fec68a256eb459066fb809bbbc03d002968",
-    "src/r3_harness/h29/evaluator.py": "f8b40f80f3f7a973f66af10936807369d03956837cc23e3738a1a34ce59fd8ac",
+    "src/r3_harness/h29/evaluator.py": "a5ba2e3a91ef065a178507440b6f7b4fd947d70c1773a848d48c5a9d8eec838a",
     "spec/gate5/authority-versions/manufacturing/v1.json": "0446777a74aeab7f1b4d6aecf313e8b8658d27fe86b528e74946e51887d81f0a",
     "spec/gate5/authority-versions/manufacturing/v2.json": "3c1661220f2ca06a706cebe688496a3ba16db3d7bde909a1ab24d4d1f271427a",
     "spec/gate5/authority-versions/manufacturing/v3.json": "d0ce4cb3f15f5c23c2443b673d12308034c8ff91a1bb3ed33a3f61284db741bb",
