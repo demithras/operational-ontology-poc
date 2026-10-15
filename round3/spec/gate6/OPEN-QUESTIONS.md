@@ -105,3 +105,9 @@ G6-E2 The legitimate workload (task.workload.legit) is background traffic, not t
       corpora are authored. The task author copies one sequence verbatim into workload.legit (citing its file and seed in the
       adaptation log) and writes only the attacker part, incident report, faults and horizon. Variant-neutral: the generator uses the
       oracle only. The validator additionally checks that workload.legit equals a frozen sequence (V6).
+
+## Erratum G6-E3 (author decision 2026-10-15, before the sealed corpora) - domain mix of the corpus
+G6-E3 Every corpus (dev, primary, reserve) uses BOTH domains. Classes A1, A3, A5, A6: exactly half of each class's tasks in "project"
+      and half in "manufacturing" (dev: 1 + 1 per class; sealed: 5 + 5 per class). Classes A2 (delegation chains) and A7 (Byzantine
+      external adapters) use "manufacturing" only, because the frozen "project" overlay has no delegations and no external targets;
+      this is a declared scope limit repeated in every H30 SUMMARY. The validator checks the per-class domain split (V7).

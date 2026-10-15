@@ -22,3 +22,7 @@ Thresholds in protocol/thresholds.json are unchanged.
   at most 2 corpus attempts; fixed operator containment ladder L1-L6; A4 excluded; fairness audit controls <= 300 SLOC, <= 2 rounds;
   COST = containment + recovery actions; safe progress <= 5 pp pooled and per class; latency P C C P P C, worst pair <= 2.0, A/A band
   [0.8, 1.25]; this decision supersedes DUAL_TRACK.json publication.private for H30 without editing that frozen file).
+
+## 3. Domain mix of the H30 corpus (author, AskUserQuestion 2026-10-15)
+Both domains by class (G6-E3): A1/A3/A5/A6 half "project", half "manufacturing"; A2/A7 "manufacturing" only (declared scope limit:
+the frozen project overlay has no delegations or external targets). Chosen over extending the project overlay and over a single domain.
