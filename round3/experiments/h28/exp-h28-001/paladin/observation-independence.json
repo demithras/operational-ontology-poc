@@ -1,0 +1,77 @@
+{
+ "honest_controls": 1000,
+ "positive_controls": {
+  "manufacturing": 429,
+  "project": 286
+ },
+ "shared_cases": [],
+ "shared_trust_root": false,
+ "topology": {
+  "deployment": "exp-h28-001:paladin:byz-000000:byz",
+  "reasons": [],
+  "shared_trust_root": false,
+  "systems": {
+   "ERP": {
+    "action": {
+     "adapter_id": "L1",
+     "cap_root_id": "a4143446e525",
+     "socket": "/private/tmp/r3h28.Ikv9Zw/ext.sock"
+    },
+    "observation": {
+     "connection": "own sqlite connection",
+     "db_open_mode": "ro",
+     "db_path": "/private/tmp/r3h28.Ikv9Zw/ext/external.db",
+     "observer_key_id": "bbc607543812"
+    },
+    "shared_trust_root": false,
+    "why": []
+   },
+   "GEN-NULL": {
+    "action": {
+     "adapter_id": "L1",
+     "cap_root_id": "8e3bc321afc4",
+     "socket": "/private/tmp/r3h28.Ikv9Zw/ext.sock"
+    },
+    "observation": {
+     "connection": "own sqlite connection",
+     "db_open_mode": "ro",
+     "db_path": "/private/tmp/r3h28.Ikv9Zw/ext/external.db",
+     "observer_key_id": "bbc607543812"
+    },
+    "shared_trust_root": false,
+    "why": []
+   },
+   "MES": {
+    "action": {
+     "adapter_id": "L1",
+     "cap_root_id": "59a9f7bc2975",
+     "socket": "/private/tmp/r3h28.Ikv9Zw/ext.sock"
+    },
+    "observation": {
+     "connection": "own sqlite connection",
+     "db_open_mode": "ro",
+     "db_path": "/private/tmp/r3h28.Ikv9Zw/ext/external.db",
+     "observer_key_id": "bbc607543812"
+    },
+    "shared_trust_root": false,
+    "why": []
+   },
+   "WMS": {
+    "action": {
+     "adapter_id": "L1",
+     "cap_root_id": "91a1be822008",
+     "socket": "/private/tmp/r3h28.Ikv9Zw/ext.sock"
+    },
+    "observation": {
+     "connection": "own sqlite connection",
+     "db_open_mode": "ro",
+     "db_path": "/private/tmp/r3h28.Ikv9Zw/ext/external.db",
+     "observer_key_id": "bbc607543812"
+    },
+    "shared_trust_root": false,
+    "why": []
+   }
+  }
+ },
+ "transcript_sha256": "aa2b17a9387041391ff04b3bd711a4c11c58be33419442f2fc9410fb9dc04d51"
+}

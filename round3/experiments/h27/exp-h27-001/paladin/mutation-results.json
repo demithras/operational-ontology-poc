@@ -1,0 +1,356 @@
+{
+ "cases_per_mutant": 90,
+ "digest_omission": {
+  "bases": 6,
+  "cases_run": 90,
+  "divergent_clean_decisions": 56,
+  "first_killing_case": {
+   "applied": [
+    "T5",
+    "T6",
+    "T7",
+    "T8"
+   ],
+   "case": "mc23",
+   "class": "rebinding_accepted",
+   "classes": [
+    "T5",
+    "T6",
+    "T7",
+    "T8"
+   ],
+   "flags": [
+    "forge",
+    "rebind:policy",
+    "reorder"
+   ],
+   "primitives": [
+    {
+     "key": "side/00000004",
+     "op": "write",
+     "size": 77
+    },
+    {
+     "key": "side/00000006",
+     "op": "write",
+     "size": 77
+    },
+    {
+     "key": "env/00000004",
+     "op": "write",
+     "size": 818
+    },
+    {
+     "key": "env/00000005",
+     "op": "write",
+     "size": 745
+    },
+    {
+     "key": "env/00000006",
+     "op": "write",
+     "size": 836
+    },
+    {
+     "key": "env/00000007",
+     "op": "write",
+     "size": 840
+    },
+    {
+     "key": "env/00000008",
+     "op": "write",
+     "size": 685
+    },
+    {
+     "key": "env/00000009",
+     "op": "write",
+     "size": 822
+    },
+    {
+     "existed": true,
+     "key": "env/00000007",
+     "op": "delete"
+    },
+    {
+     "existed": true,
+     "key": "env/00000008",
+     "op": "delete"
+    },
+    {
+     "existed": true,
+     "key": "env/00000009",
+     "op": "delete"
+    },
+    {
+     "key": "env/00000004",
+     "op": "write",
+     "size": 836
+    },
+    {
+     "key": "env/00000005",
+     "op": "write",
+     "size": 745
+    },
+    {
+     "key": "env/00000006",
+     "op": "write",
+     "size": 818
+    },
+    {
+     "key": "rcpt/00000004",
+     "op": "write",
+     "size": 315
+    },
+    {
+     "key": "rcpt/00000005",
+     "op": "write",
+     "size": 315
+    },
+    {
+     "key": "rcpt/00000006",
+     "op": "write",
+     "size": 315
+    }
+   ]
+  },
+  "killed": true,
+  "killing_classes": {
+   "rebinding_accepted": 5
+  }
+ },
+ "evidence_rebinding": {
+  "bases": 6,
+  "cases_run": 90,
+  "divergent_clean_decisions": 0,
+  "first_killing_case": {
+   "applied": [
+    "T4"
+   ],
+   "case": "mc40",
+   "class": "rebinding_accepted",
+   "classes": [
+    "T4"
+   ],
+   "flags": [
+    "substitute:evidence"
+   ],
+   "primitives": [
+    {
+     "key": "art/06a27cb108a8c8239b2e4f32851457afa3cb336b2c8a1a3c3c24e20809cbd584",
+     "op": "write",
+     "size": 114
+    },
+    {
+     "key": "ref/PurchaseOrder:PO-991",
+     "op": "write",
+     "size": 114
+    }
+   ]
+  },
+  "killed": true,
+  "killing_classes": {
+   "rebinding_accepted": 3
+  }
+ },
+ "fallback_to_current": {
+  "bases": 6,
+  "cases_run": 90,
+  "divergent_clean_decisions": 0,
+  "first_killing_case": {
+   "applied": [
+    "T2"
+   ],
+   "case": "mc1",
+   "class": "rebinding_accepted",
+   "classes": [
+    "T2"
+   ],
+   "flags": [
+    "delete:authority"
+   ],
+   "primitives": [
+    {
+     "existed": true,
+     "key": "art/98a350c3feef872d8fd709ff05fd49883275d0acc136dfd1a7f739e8453f74d6",
+     "op": "delete"
+    },
+    {
+     "existed": true,
+     "key": "auth/98a350c3feef872d8fd709ff05fd49883275d0acc136dfd1a7f739e8453f74d6",
+     "op": "delete"
+    }
+   ]
+  },
+  "killed": true,
+  "killing_classes": {
+   "fallback_to_current": 6,
+   "rebinding_accepted": 2
+  }
+ },
+ "receipt_self_trust": {
+  "bases": 6,
+  "cases_run": 90,
+  "divergent_clean_decisions": 0,
+  "first_killing_case": {
+   "applied": [
+    "T1",
+    "T4",
+    "T8"
+   ],
+   "case": "mc7",
+   "class": "rebinding_accepted",
+   "classes": [
+    "T1",
+    "T4",
+    "T8"
+   ],
+   "flags": [
+    "forge",
+    "mutate:envelope",
+    "rebind:authority",
+    "substitute:authority"
+   ],
+   "primitives": [
+    {
+     "key": "env/00000005",
+     "op": "write",
+     "size": 902
+    },
+    {
+     "key": "art/60a879c702ea436f1bb1bee43f20d6b47d83afc4455b8ce1fbb4c58a27da8ba5",
+     "op": "write",
+     "size": 6428
+    },
+    {
+     "key": "auth/60a879c702ea436f1bb1bee43f20d6b47d83afc4455b8ce1fbb4c58a27da8ba5",
+     "op": "write",
+     "size": 6428
+    },
+    {
+     "key": "env/00000001",
+     "op": "write",
+     "size": 760
+    },
+    {
+     "key": "env/00000002",
+     "op": "write",
+     "size": 845
+    },
+    {
+     "key": "env/00000003",
+     "op": "write",
+     "size": 909
+    },
+    {
+     "key": "env/00000004",
+     "op": "write",
+     "size": 847
+    },
+    {
+     "key": "env/00000005",
+     "op": "write",
+     "size": 902
+    },
+    {
+     "key": "led/meta/used:h27-0001",
+     "op": "write",
+     "size": 143
+    },
+    {
+     "key": "led/meta/used:h27-0005",
+     "op": "write",
+     "size": 144
+    },
+    {
+     "key": "env/00000002",
+     "op": "write",
+     "size": 845
+    },
+    {
+     "key": "env/00000003",
+     "op": "write",
+     "size": 909
+    },
+    {
+     "key": "env/00000004",
+     "op": "write",
+     "size": 847
+    },
+    {
+     "key": "env/00000005",
+     "op": "write",
+     "size": 902
+    },
+    {
+     "key": "env/00000006",
+     "op": "write",
+     "size": 750
+    },
+    {
+     "key": "env/00000007",
+     "op": "write",
+     "size": 750
+    },
+    {
+     "key": "env/00000008",
+     "op": "write",
+     "size": 771
+    },
+    {
+     "key": "env/00000009",
+     "op": "write",
+     "size": 748
+    },
+    {
+     "key": "rcpt/00000001",
+     "op": "write",
+     "size": 315
+    },
+    {
+     "key": "rcpt/00000002",
+     "op": "write",
+     "size": 315
+    },
+    {
+     "key": "rcpt/00000003",
+     "op": "write",
+     "size": 315
+    },
+    {
+     "key": "rcpt/00000004",
+     "op": "write",
+     "size": 315
+    },
+    {
+     "key": "rcpt/00000005",
+     "op": "write",
+     "size": 315
+    },
+    {
+     "key": "rcpt/00000006",
+     "op": "write",
+     "size": 315
+    },
+    {
+     "key": "rcpt/00000007",
+     "op": "write",
+     "size": 315
+    },
+    {
+     "key": "rcpt/00000008",
+     "op": "write",
+     "size": 315
+    },
+    {
+     "key": "rcpt/00000009",
+     "op": "write",
+     "size": 315
+    }
+   ]
+  },
+  "killed": true,
+  "killing_classes": {
+   "rebinding_accepted": 8,
+   "tamper_accepted": 4
+  }
+ }
+}

@@ -1,0 +1,183 @@
+{
+ "comparative": {
+  "forbidden_effects": {
+   "conventional": 0,
+   "paladin": 0
+  },
+  "mutation_kill_rate": {
+   "conventional": 1.0,
+   "paladin": 1.0
+  },
+  "p95_latency_ms": {
+   "conventional": 0.6961670005694032,
+   "paladin": 10.292083024978638
+  },
+  "safe_progress_ratio": {
+   "conventional": 1.0,
+   "paladin": 1.0
+  },
+  "security_specific_components": {
+   "conventional": [
+    "src/conventional/effects.py",
+    "src/conventional/interp.py",
+    "src/conventional/policy.py",
+    "src/conventional/service.py",
+    "src/conventional/store.py",
+    "src/conventional/tools.py",
+    "src/conventional/validation.py",
+    "src/conventional/variant.py",
+    "src/conventional/worldview.py",
+    "tests/conventional/test_a8_concurrency.py",
+    "tests/conventional/test_a8_crash.py",
+    "tests/conventional/test_functional.py"
+   ],
+   "paladin": [
+    "src/paladin/__init__.py",
+    "src/paladin/core.py",
+    "src/paladin/deployment.py",
+    "src/paladin/domains/manufacturing/logic/data.py",
+    "src/paladin/domains/manufacturing/logic/facts.py",
+    "src/paladin/domains/manufacturing/logic/policies.py",
+    "src/paladin/domains/project/logic/derive.py",
+    "src/paladin/domains/project/logic/facts.py",
+    "src/paladin/domains/project/logic/freeze.py",
+    "src/paladin/domains/project/logic/payloads.py",
+    "src/paladin/engine/authority.py",
+    "src/paladin/engine/engine.py",
+    "src/paladin/engine/gatepass.py",
+    "src/paladin/engine/gates.py",
+    "src/paladin/engine/pipeline.py",
+    "src/paladin/ir/validate.py",
+    "src/paladin/opsrules.py",
+    "src/paladin/toolchain/runtime.py",
+    "src/paladin/worldbridge.py",
+    "tests/paladin/test_p2a_functional.py"
+   ]
+  },
+  "security_specific_loc": {
+   "conventional": {
+    "excluding_vendored_unchanged": 3443,
+    "total": 3443
+   },
+   "paladin": {
+    "excluding_vendored_unchanged": 4715,
+    "total": 7573
+   }
+  }
+ },
+ "conventional_verdict": "INCONCLUSIVE",
+ "evaluator_sha256": "e88b5bf126b9538fbceaededb7a2701091603ee1414d1d959635c22415ea4c56",
+ "experiment_id": "exp-h25-001",
+ "hypothesis": "H25",
+ "minimum_overrides": {},
+ "paladin_verdict": "REJECTED",
+ "thresholds_sha256": "b4aacac3e724d40438449d739775479b117306415d7047e468b191035490e320",
+ "variants": {
+  "conventional": {
+   "metrics": {
+    "class_counts": {
+     "ok": 152213,
+     "race_refusal_ok": 284
+    },
+    "distinct_models": 3,
+    "domain_branches": 0,
+    "emergency_violations": 0,
+    "evidence_sha256": {
+     "authority-topology-corpus.json": "8a24cdc32e9f574dd53889d17c0e7edb890d8155edde066123874b81eee7b1ff",
+     "cases-h25.jsonl.gz": "3f9f60591a87e86fad5672257899f1b04bc8239a7f042f982f3387c19e581e2a",
+     "domain-branch-audit.json": "7464b19662fdf7ac254e70906eacc4d23c3c26f8aa3a5e85023d4a6d9d72ed63",
+     "mutation-results.json": "b8b6ad908b1220f35988d11408729ce6f13a5597238261b5adfc252a7c6f0826",
+     "oracle-boundary-audit.json": "8e2068d9a8e81ccfd3291ad1a1d1d8afbf3c584e7e6b77e87e0eab2c8fc34572",
+     "oracle-differential.json": "f64403288029efdb5733844f11e405b95daf5893bb99a128759af27a84bba6d2",
+     "safe-progress.json": "7462d9740206719aaf373c7a2b554c9fa1a42eaa3f95a5ac18285990bae6e6b3"
+    },
+    "fabricated_judgments": 0,
+    "forbidden_effects": 0,
+    "loc": {
+     "excluding_vendored_unchanged": 3443,
+     "total": 3443
+    },
+    "mutation_kill_rate": 1.0,
+    "p50_latency_ms": 0.4848749376833439,
+    "p95_latency_ms": 0.6961670005694032,
+    "payload_sha256": "0d143a38ed70e173fe5b0c99d4b9d43788f25c40080f5ac5e1f55e677a1e9a51",
+    "procedural_equality": 1.0,
+    "safe_progress_ratio": 1.0,
+    "unique_cases": 10338,
+    "violations": {
+     "domain_branch": 0,
+     "emergency_violation": 0,
+     "fabricated_judgment": 0,
+     "illegitimate_effect": 0,
+     "invalid_doc_accepted": 0,
+     "linearizability_violation": 0,
+     "procedural_mismatch": 0,
+     "progress_loss": 0,
+     "unattributed_write": 0,
+     "unlogged_write": 0,
+     "writer_violation": 0
+    }
+   },
+   "minimum_overrides": {},
+   "reasons": [
+    "model hierarchical: uncovered outcome rules [] refusal classes ['already_judged']"
+   ],
+   "variant": "conventional",
+   "verdict": "INCONCLUSIVE"
+  },
+  "paladin": {
+   "metrics": {
+    "class_counts": {
+     "ok": 152228,
+     "procedural_mismatch": 15,
+     "race_refusal_ok": 254
+    },
+    "distinct_models": 3,
+    "domain_branches": 0,
+    "emergency_violations": 0,
+    "evidence_sha256": {
+     "authority-topology-corpus.json": "075920372c06f7fffc29a49014359b189e33fc958cc9c36f937901881cfaf6ea",
+     "cases-h25.jsonl.gz": "d628aed7ae96b57d0ccb05cbd7bf300924c97de203a2b1b815f984a3053564ec",
+     "domain-branch-audit.json": "7f7cf831b0636d8e525f68d05b6a0920daf5418a7fcde2e247cace4f33b9e6f1",
+     "mutation-results.json": "d9f61edf0b0729bcf600aa882ae7ab434e33109cc906370a71b655e47ffd5e89",
+     "oracle-boundary-audit.json": "01c83a453a4d1d1e4599598722e20b9303db766ff1051880b4dfd736690d00e4",
+     "oracle-differential.json": "956693476a6a3e97761b9d46dd17e29f2e5ffc7162b28dcdfb24d6bf0722dcdd",
+     "safe-progress.json": "fbf3b88b294c63d563b88ca60514081e73bbba9b40a4d33f02e12c865ef3a68c"
+    },
+    "fabricated_judgments": 0,
+    "forbidden_effects": 0,
+    "loc": {
+     "excluding_vendored_unchanged": 4715,
+     "total": 7573
+    },
+    "mutation_kill_rate": 1.0,
+    "p50_latency_ms": 6.378374993801117,
+    "p95_latency_ms": 10.292083024978638,
+    "payload_sha256": "dfae1268c8f6906240f7499761bc1daa19751154484633aea30e03598b801e39",
+    "procedural_equality": 0.9999016374092605,
+    "safe_progress_ratio": 1.0,
+    "unique_cases": 10338,
+    "violations": {
+     "domain_branch": 0,
+     "emergency_violation": 0,
+     "fabricated_judgment": 0,
+     "illegitimate_effect": 0,
+     "invalid_doc_accepted": 0,
+     "linearizability_violation": 0,
+     "procedural_mismatch": 15,
+     "progress_loss": 0,
+     "unattributed_write": 0,
+     "unlogged_write": 0,
+     "writer_violation": 0
+    }
+   },
+   "minimum_overrides": {},
+   "reasons": [
+    "model hierarchical: uncovered outcome rules [] refusal classes ['already_judged']",
+    "reject: procedural_mismatch=15"
+   ],
+   "variant": "paladin",
+   "verdict": "REJECTED"
+  }
+ }
+}

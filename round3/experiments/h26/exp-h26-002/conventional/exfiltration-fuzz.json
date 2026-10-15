@@ -1,0 +1,24 @@
+{
+ "calls": 20000,
+ "existence_leak": [],
+ "form_violation": 0,
+ "per_method": {
+  "authority_used_as": 1680,
+  "constitutional": 1629,
+  "junk": 1649,
+  "list_links": 1670,
+  "list_objects": 1648,
+  "mutate": 1644,
+  "poll": 1648,
+  "prov_decision": 1720,
+  "prov_object": 1630,
+  "query": 1700,
+  "read_object": 1651,
+  "revoke": 1731
+ },
+ "twin_checks": 11862,
+ "unsupported": 0,
+ "value_exfiltration": [],
+ "variant_error": 0,
+ "worlds": 200
+}

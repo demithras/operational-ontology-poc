@@ -1,0 +1,50 @@
+{
+ "actions": 156073,
+ "cases_file": "cases-h25.jsonl.gz",
+ "cases_sha256": "04d3afa38200704e5444c61e57c862c4065498e6d13c95f86db41a25087e6366",
+ "class_counts": {
+  "ok": 155812,
+  "procedural_mismatch": 2,
+  "race_refusal_ok": 259
+ },
+ "first_offending_rows": [
+  {
+   "action": null,
+   "actor": "researcher-2",
+   "case": "case-2520-466",
+   "classes": [
+    "procedural_mismatch"
+   ],
+   "domain": "project",
+   "kind": "request",
+   "model": "collegial",
+   "n": 20,
+   "oracle": {
+    "expected": [
+     "INVALID:None"
+    ]
+   },
+   "reason": "policy",
+   "status": "DENIED"
+  },
+  {
+   "action": "execute",
+   "actor": "planner-1",
+   "case": "case-2520-2509",
+   "classes": [
+    "procedural_mismatch"
+   ],
+   "domain": "manufacturing",
+   "kind": "constitutional",
+   "model": "collegial",
+   "n": 40,
+   "oracle": {
+    "expected": [
+     "DENIED:no_authority"
+    ]
+   },
+   "reason": "not_final",
+   "status": "DENIED"
+  }
+ ]
+}

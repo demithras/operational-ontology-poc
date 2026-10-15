@@ -1,0 +1,75 @@
+{
+  "id": "H25",
+  "title": "Constitutional authority topology is executable without domain-specific privilege code",
+  "claim": "A generic Paladin authority model can represent and execute legitimacy, scope, precedence, delegation, review/appeal, quorum and bounded emergency authority across different domains without domain-specific Engine branches, while leaving discretionary content judgment to explicit external or human oracles.",
+  "null_hypothesis": "Constitutional authority is too contextual to be a generic executable subsystem; real cases require hidden domain code or the Engine silently substitutes procedural authority for substantive judgment.",
+  "rivals": [
+    "A conventional policy engine with domain-specific policy modules is clearer and equally general.",
+    "Only simple RBAC/ReBAC cases are computable; quorum, precedence, review and emergency authority require bespoke orchestration.",
+    "The model appears general only because unresolved discretionary decisions are precomputed in fixtures and credited to the Engine."
+  ],
+  "mechanism": "The Engine computes authority validity and procedural legitimacy from generic typed relations; discretionary merit/content decisions enter as signed or attributable oracle facts and are never fabricated by generic authority logic.",
+  "scope": "Frozen constitutional scenarios covering hierarchical, delegated, quorum, review/appeal, precedence and emergency authority in at least three structurally distinct governance models.",
+  "predictions": [
+    "The same authority primitives and evaluator execute all registered governance models with zero domain-name branches.",
+    "Procedural validity decisions exactly match an independent constitutional oracle.",
+    "Whenever the outcome requires discretionary content judgment, the Engine requires an explicit oracle/human fact and cannot infer that fact from authority alone.",
+    "Emergency authority is time/scope bounded and returns to ordinary authority without residual privilege."
+  ],
+  "falsifiers": [
+    "A registered governance model requires a new domain-specific Engine branch or hidden privilege handler.",
+    "The Engine grants procedural legitimacy differently from the independent oracle.",
+    "The Engine manufactures a discretionary merit judgment that was not supplied by an authorized oracle/human input.",
+    "Emergency authority persists or expands outside its declared scope/expiry."
+  ],
+  "experiment": {
+    "summary": "Cross-governance differential experiment over generated constitutional authority graphs and explicit discretionary-oracle boundaries.",
+    "steps": [
+      "Freeze the minimal authority-topology vocabulary and three governance-model fixtures before implementation changes.",
+      "Build an independent pure evaluator for legitimacy, precedence, quorum, appeal and emergency scope.",
+      "Generate at least 10,000 authority cases including conflicts, cycles and missing discretionary facts.",
+      "Audit Engine/compiler import closure for domain-identity privilege branches.",
+      "Require explicit unresolved/oracle-needed outcomes where procedural rules cannot determine substantive merit.",
+      "Inject precedence, quorum, emergency-expiry and fabricated-judgment mutants."
+    ],
+    "minimum_runs": 10000
+  },
+  "oracle": "Pure constitutional procedure evaluator plus explicit opaque merit-judgment inputs; the oracle never imports domain or Engine code.",
+  "baseline": "Conventional policy engine with equivalent governance facts and domain policy modules; compared for complexity and correctness, with H30 deciding value.",
+  "required_evidence": [
+    "authority-topology-corpus.json",
+    "oracle-differential.json",
+    "domain-branch-audit.json",
+    "oracle-boundary-audit.json",
+    "mutation-results.json"
+  ],
+  "evaluator": {
+    "support_if": [
+      "100% procedural-authority equality with the independent oracle.",
+      "0 domain-specific privilege branches in the generic Engine.",
+      "0 fabricated discretionary judgments.",
+      "0 emergency-authority scope/expiry violations.",
+      "100% target mutations detected."
+    ],
+    "reject_if": [
+      "Any registered authority model requires domain-specific Engine privilege semantics, disagrees with the oracle, or fabricates substantive judgment."
+    ],
+    "inconclusive_if": [
+      "Fewer than three structurally distinct governance models are exercised or the corpus lacks conflict/quorum/review/emergency cases."
+    ],
+    "invalid_if": [
+      "Discretionary answers are embedded in the candidate and oracle from the same implementation source or governance fixtures are changed after reveal."
+    ]
+  },
+  "python_hypothesis_role": {
+    "level": "PRIMARY",
+    "strategy": "Generate constitutional graphs, quorum sets, precedence conflicts, review chains, emergency windows and absent/present oracle judgments.",
+    "mutation_proof": "Invert precedence, weaken quorum, remove emergency expiry and auto-fill a missing merit judgment; all must be detected."
+  },
+  "upstream_dependencies": [
+    "H24"
+  ],
+  "stop_conditions": [
+    "If content/merit authority repeatedly leaks into generic Engine semantics, keep the procedural authority boundary and reject the stronger constitutional-computation claim."
+  ]
+}

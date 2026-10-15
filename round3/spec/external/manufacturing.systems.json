@@ -1,0 +1,15 @@
+{
+  "version": "r3-external-1",
+  "domain": "manufacturing",
+  "window": 8,
+  "systems": {
+    "WMS": {"observability": "full", "operations": {"transfer": {"idempotency": "at_most_once",
+      "target_rule": "transfer:<part>@<source>-><destination>", "semantics": "wms_transfer"}}},
+    "ERP": {"observability": "full", "operations": {"expedite": {"idempotency": "at_most_once",
+      "target_rule": "po:<po_id>", "semantics": "erp_expedite"}}},
+    "MES": {"observability": "effects_only", "operations": {"reschedule": {"idempotency": "idempotent_set",
+      "target_rule": "wo:<work_order_id>", "semantics": "mes_set_planned_start"}}},
+    "GEN-NULL": {"observability": "none", "generated": true, "operations": {"record": {"idempotency": "at_most_once",
+      "target_rule": "gen:<key>", "semantics": "gen_record"}}}
+  }
+}

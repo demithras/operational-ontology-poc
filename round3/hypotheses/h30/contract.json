@@ -1,0 +1,90 @@
+{
+  "id": "H30",
+  "title": "Paladin security premium creates measurable operational value over a strong conventional baseline",
+  "claim": "Across blind realistic adversarial workloads, the Paladin EOO control plane produces a materially better operational-security trade-off than an equally competent conventional typed/event architecture: lower blast radius and/or faster containment/recovery in multiple independent attack classes, with no safety regression and with the recurring/latency premium bounded by preregistered limits.",
+  "null_hypothesis": "Once the conventional baseline receives equivalent zero-trust authorization, typed schemas, generated tools, provenance integrity, reconciliation, retries and security engineering, Paladin provides no material security advantage; it is mostly additional machinery and cost.",
+  "rivals": [
+    "Any apparent advantage comes from an intentionally weaker baseline or unequal hardening effort.",
+    "The advantage exists only in synthetic attack fixtures that do not resemble real operational changes/incidents.",
+    "Paladin wins security metrics only by denying more legitimate work or imposing an unacceptable latency/maintenance premium.",
+    "The useful mechanisms are generic capability, provenance and workflow techniques that can be extracted without an ontology-specific control plane."
+  ],
+  "mechanism": "A single executable semantic contract jointly derives least-capability surfaces, authority topology, effect governance, disclosure boundaries, provenance bindings, external reconciliation and recovery semantics, reducing the number of inconsistent security decisions and limiting compromise propagation.",
+  "scope": "At least five frozen attack classes from A1-A10, at least 40 blind adversarial tasks/scenarios mined or adapted from real operational/security change patterns, both Paladin and baseline frozen before task reveal.",
+  "predictions": [
+    "Paladin shows material blast-radius or containment/recovery advantage in at least two independent attack classes after baseline hardening.",
+    "The advantage persists when both variants use equivalent cryptography, policy engines, code generation, isolation and operational competence.",
+    "Paladin creates no more forbidden effects than baseline in any preregistered attack class.",
+    "Legitimate safe-progress is not materially worse than baseline solely to obtain the security result.",
+    "Steady-state latency and recurring security-specific machinery remain within the frozen premium limits."
+  ],
+  "falsifiers": [
+    "All preregistered security outcomes are at parity or favor the baseline after equivalent hardening.",
+    "Any apparent advantage disappears when the baseline receives an obvious equivalent control.",
+    "Paladin has a safety regression in any attack class.",
+    "Security gains require violating the frozen latency, recurring-complexity or safe-progress premium limits.",
+    "Advantages occur only on synthetic cases outside the declared realistic workload tier."
+  ],
+  "experiment": {
+    "summary": "Blind A/B adversarial comparison using the same attack intents, ground-truth oracles and operational workload against frozen Paladin and strong conventional variants.",
+    "steps": [
+      "Freeze both variants, fairness rules, threat classes and measurement scripts before revealing blind tasks.",
+      "Build the baseline with equivalent best-practice controls; shared low-level libraries are allowed and preferred when they remove implementation-quality confounds.",
+      "Reveal at least 40 blind tasks across at least five attack classes, including realistic multi-step incidents and recovery.",
+      "Measure forbidden effects, affected resources/effects (blast radius), containment steps/time, recovery correctness/operator actions, safe progress, p95 latency and recurring security-specific LOC/components.",
+      "Run identical correctness/security ground-truth oracles against both variants.",
+      "Report a Pareto trade-off frontier and per-class ratios; do not collapse security and cost into a single weighted winner score."
+    ],
+    "minimum_runs": 40
+  },
+  "oracle": "Per-task independent effect/authority/disclosure/provenance/recovery oracle plus external ground-truth effect stores and frozen cost/latency measurement scripts.",
+  "baseline": "Strong conventional typed relational/event architecture with equivalent zero-trust identity/authorization, policy engine, typed schemas/codegen, least-privilege service credentials, append-only/content-addressed provenance, reconciliation, idempotency, retries, observability and recovery engineering.",
+  "required_evidence": [
+    "blind-task-manifest.json",
+    "per-class-security-results.json",
+    "blast-radius.json",
+    "containment-recovery.json",
+    "safe-progress-comparison.json",
+    "latency-premium.json",
+    "recurring-security-cost.json",
+    "fairness-audit.json",
+    "tradeoff-frontier.md"
+  ],
+  "evaluator": {
+    "support_if": [
+      "At least 5 preregistered attack classes and 40 blind realistic tasks complete.",
+      "Paladin has 0 more forbidden effects than baseline in every attack class.",
+      "At least 2 independent attack classes show median blast radius <=0.50 of baseline OR median containment/recovery operational cost <=0.67 of baseline, with zero-denominator cases handled as absolute parity/strict advantage rather than fabricated ratios.",
+      "Paladin safe-progress is no more than 5 percentage points below baseline on dependency-eligible work.",
+      "Steady-state p95 latency ratio is <=2.0 and recurring security-specific machinery ratio is <=2.5 of baseline.",
+      "The material advantage survives the fairness audit after obvious equivalent baseline controls are added."
+    ],
+    "reject_if": [
+      "After fair hardening, all preregistered attack classes are security-parity or favor baseline while Paladin retains higher recurring cost, or Paladin suffers any material safety regression.",
+      "Any claimed advantage requires exceeding the frozen premium limits or disappears outside synthetic-only cases."
+    ],
+    "inconclusive_if": [
+      "Fewer than 5 attack classes or 40 blind tasks complete, uncertainty spans both material-advantage and parity regions, or the baseline cannot be brought to the frozen fairness standard."
+    ],
+    "invalid_if": [
+      "Task corpus, severity accounting, baseline capabilities, premium limits or attack-class inclusion is changed after reveal to favor either variant without a new experiment version."
+    ]
+  },
+  "python_hypothesis_role": {
+    "level": "LIMITED",
+    "strategy": "Use generated variants to broaden each frozen adversarial task class and find minimal counterexamples, but the final value verdict must depend on blind realistic tasks and external ground truth rather than synthetic property tests alone.",
+    "mutation_proof": "Bias cost accounting, omit a baseline control, or count candidate denial as containment without safe-progress accounting; fairness/meta-tests must detect each manipulation."
+  },
+  "upstream_dependencies": [
+    "H23",
+    "H24",
+    "H25",
+    "H26",
+    "H27",
+    "H28",
+    "H29"
+  ],
+  "stop_conditions": [
+    "If H23-H29 work but H30 rejects, retain any independently useful mechanisms but abandon the claim that a Paladin EOO control plane is justified as a superior security architecture in the tested regime."
+  ]
+}

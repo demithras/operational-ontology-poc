@@ -1,0 +1,61 @@
+{
+ "case_class_counts": {},
+ "class_counts": {
+  "explicit_reason_mismatch": 7187,
+  "ok": 364049,
+  "race_refusal_ok": 518
+ },
+ "depth_hist": {
+  "1": 32505,
+  "2": 21792,
+  "3": 13167,
+  "4": 6787,
+  "5": 3749,
+  "6": 1944,
+  "7": 933,
+  "8": 384
+ },
+ "domains": [
+  "manufacturing",
+  "project"
+ ],
+ "latency_ms": {
+  "n": 151900,
+  "p50": 1.5527079813182354,
+  "p95": 49.1312500089407
+ },
+ "max_depth": 8,
+ "op_coverage": {
+  "manufacturing:expedite_purchase_order": 19337,
+  "manufacturing:reschedule_work_order": 19357,
+  "manufacturing:transfer_inventory": 38139,
+  "project:attach_evidence": 8125,
+  "project:create_hypothesis": 8149,
+  "project:edit_threshold": 7854,
+  "project:evaluate_hypothesis": 7419,
+  "project:flag_orphan_component": 7937,
+  "project:new_experiment_version": 8169,
+  "project:preregister_hypothesis": 7441,
+  "project:record_decision": 7550,
+  "project:start_run": 7378,
+  "project:supersede_hypothesis": 7831
+ },
+ "progress": {
+  "committed": 151900,
+  "must": 151900,
+  "ratio": 1.0
+ },
+ "seed": 2401,
+ "sequences": 10000,
+ "sequences_file": "authority-sequences.jsonl.gz",
+ "sequences_sha256": "a5885de823a9876be1f411a7152e235fd044a9c746151de8c5074ba3006885e8",
+ "sequences_with_depth_ge4": 4679,
+ "step_kinds": {
+  "authority_used": 18422,
+  "delegate": 139464,
+  "request": 154686,
+  "revoke": 51125,
+  "set_authority": 8057
+ },
+ "unique_sequences": 11575
+}

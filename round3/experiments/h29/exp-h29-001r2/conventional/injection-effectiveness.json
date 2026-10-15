@@ -1,0 +1,111 @@
+{
+ "by_key": {
+  "F2:AUTH": {
+   "enforced": 774,
+   "issued": 774,
+   "refused_ge1": 580,
+   "scheduled": 774
+  },
+  "F3:EXT": {
+   "enforced": 490,
+   "issued": 490,
+   "refused_ge1": 490,
+   "scheduled": 490
+  },
+  "F5:ANCHOR": {
+   "enforced": 463,
+   "issued": 463,
+   "refused_ge1": 463,
+   "scheduled": 463
+  },
+  "F5:EXT": {
+   "enforced": 449,
+   "issued": 449,
+   "refused_ge1": 402,
+   "scheduled": 449
+  },
+  "F5:OBS": {
+   "enforced": 665,
+   "issued": 665,
+   "refused_ge1": 401,
+   "scheduled": 665
+  },
+  "F6:AUTH": {
+   "enforced": 466,
+   "issued": 466,
+   "refused_ge1": 466,
+   "scheduled": 466
+  },
+  "F7:AUTH": {
+   "enforced": 427,
+   "issued": 427,
+   "refused_ge1": 427,
+   "scheduled": 427
+  },
+  "crash:CP1_before_commit": {
+   "enforced": 88,
+   "issued": 0,
+   "refused_ge1": 0,
+   "scheduled": 88
+  },
+  "crash:CP2_after_commit": {
+   "enforced": 175,
+   "issued": 0,
+   "refused_ge1": 0,
+   "scheduled": 175
+  },
+  "crash:CP3_after_anchor_append": {
+   "enforced": 88,
+   "issued": 0,
+   "refused_ge1": 0,
+   "scheduled": 88
+  },
+  "crash:CP4_adapter_before_apply": {
+   "enforced": 88,
+   "issued": 0,
+   "refused_ge1": 0,
+   "scheduled": 88
+  },
+  "crash:CP5_adapter_after_apply": {
+   "enforced": 87,
+   "issued": 0,
+   "refused_ge1": 0,
+   "scheduled": 87
+  },
+  "crash:CP6_idle": {
+   "enforced": 1018,
+   "issued": 0,
+   "refused_ge1": 0,
+   "scheduled": 1020
+  },
+  "crash:CP7_reconcile_after_read": {
+   "enforced": 87,
+   "issued": 0,
+   "refused_ge1": 0,
+   "scheduled": 87
+  },
+  "crash:CP8_during_recovery": {
+   "enforced": 87,
+   "issued": 0,
+   "refused_ge1": 0,
+   "scheduled": 87
+  }
+ },
+ "hit_rates": {
+  "F2:AUTH": 1.0,
+  "F3:EXT": 1.0,
+  "F5:ANCHOR": 1.0,
+  "F5:EXT": 1.0,
+  "F5:OBS": 1.0,
+  "F6:AUTH": 1.0,
+  "F7:AUTH": 1.0,
+  "crash:CP1_before_commit": 1.0,
+  "crash:CP2_after_commit": 1.0,
+  "crash:CP3_after_anchor_append": 1.0,
+  "crash:CP4_adapter_before_apply": 1.0,
+  "crash:CP5_adapter_after_apply": 1.0,
+  "crash:CP6_idle": 0.9980392156862745,
+  "crash:CP7_reconcile_after_read": 1.0,
+  "crash:CP8_during_recovery": 1.0
+ }
+}

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Round 3 evidence envelope",
+  "type": "object",
+  "required": [
+    "experiment_id", "hypothesis_id", "git_commit", "protocol_freeze_hash",
+    "environment", "seed", "attack_class", "oracle_version", "raw_observations"
+  ],
+  "properties": {
+    "experiment_id": {"type": "string", "minLength": 1},
+    "hypothesis_id": {"type": "string", "pattern": "^H(2[3-9]|30)$"},
+    "git_commit": {"type": "string", "minLength": 7},
+    "protocol_freeze_hash": {"type": "string", "minLength": 16},
+    "environment": {"type": "object"},
+    "seed": {"type": ["integer", "string"]},
+    "attack_class": {"type": "string", "minLength": 1},
+    "oracle_version": {"type": "string", "minLength": 1},
+    "baseline_version": {"type": ["string", "null"]},
+    "candidate_version": {"type": "string", "minLength": 1},
+    "raw_observations": {"type": ["object", "array"]},
+    "verdict": {"enum": ["SUPPORTED", "REJECTED", "INCONCLUSIVE", "INVALID"]}
+  },
+  "additionalProperties": true
+}

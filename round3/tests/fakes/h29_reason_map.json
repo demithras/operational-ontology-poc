@@ -1,0 +1,3 @@
+{"form": "r3-reason-map-1",
+ "variants": {"fixture-a": {"unknown_op": "unknown_operation", "bad_input": "schema_invalid", "no_such_tool": "unknown_tool", "args": "bad_args"},
+              "fixture-b": {"unknown operation": "unknown_operation"}}}

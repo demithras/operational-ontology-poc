@@ -1,0 +1,198 @@
+{
+ "comparative": {
+  "forbidden_effects": {
+   "conventional": 0,
+   "paladin": 0
+  },
+  "mutation_kill_rate": {
+   "conventional": 1.0,
+   "paladin": 1.0
+  },
+  "p95_latency_ms": {
+   "conventional": 7.827583001926541,
+   "paladin": 49.1312500089407
+  },
+  "safe_progress_ratio": {
+   "conventional": 1.0,
+   "paladin": 1.0
+  },
+  "security_specific_components": {
+   "conventional": [
+    "src/conventional/effects.py",
+    "src/conventional/interp.py",
+    "src/conventional/policy.py",
+    "src/conventional/service.py",
+    "src/conventional/store.py",
+    "src/conventional/tools.py",
+    "src/conventional/validation.py",
+    "src/conventional/variant.py",
+    "src/conventional/worldview.py",
+    "tests/conventional/test_a8_concurrency.py",
+    "tests/conventional/test_a8_crash.py",
+    "tests/conventional/test_functional.py"
+   ],
+   "paladin": [
+    "src/paladin/core.py",
+    "src/paladin/deployment.py",
+    "src/paladin/domains/manufacturing/logic/facts.py",
+    "src/paladin/domains/project/logic/derive.py",
+    "src/paladin/domains/project/logic/freeze.py",
+    "src/paladin/domains/project/logic/payloads.py",
+    "src/paladin/engine/authority.py",
+    "src/paladin/engine/engine.py",
+    "src/paladin/engine/gatepass.py",
+    "src/paladin/engine/gates.py",
+    "src/paladin/engine/pipeline.py",
+    "src/paladin/ir/validate.py",
+    "src/paladin/toolchain/runtime.py",
+    "src/paladin/worldbridge.py",
+    "tests/paladin/test_p2a_functional.py"
+   ]
+  },
+  "security_specific_loc": {
+   "conventional": {
+    "excluding_vendored_unchanged": 2299,
+    "total": 2299
+   },
+   "paladin": {
+    "excluding_vendored_unchanged": 2759,
+    "total": 6186
+   }
+  }
+ },
+ "conventional_verdict": "SUPPORTED",
+ "evaluator_sha256": "f750a158dd20871d4fcc1afe6109a764a94d2556e2b40b54e4e0151801778018",
+ "experiment_id": "exp-h24-001",
+ "hypothesis": "H24",
+ "minimum_overrides": {},
+ "paladin_verdict": "SUPPORTED",
+ "thresholds_sha256": "ab53e51c8a07f222fe31251ea395970da1f7d33a425e0e8f2d44de89cbf8c40d",
+ "variants": {
+  "conventional": {
+   "metrics": {
+    "class_counts": {
+     "explicit_reason_mismatch": 19509,
+     "ok": 351873,
+     "race_refusal_ok": 342
+    },
+    "cycle_grants": 0,
+    "evidence_sha256": {
+     "authority-sequences.jsonl.gz": "88521b2b2be7fb82cf7ce4a80937033fa7499ee39dda252dd2e88fd3b455b661",
+     "authority-state-machine.json": "c7aee683bac7b1ade6f730ed0acb3f832abeee36ee3acea88244b6a6c572c172",
+     "delegation-attenuation.json": "8d77d74d6c52d870d468b75fa0bd21977499afaa7c69b53715a9a01dde2b3f32",
+     "mutation-results.json": "288c73dba80470ff7251d9f6a1fe793162384c69adf9b7a9f555edfbd53d1d39",
+     "revocation-races.json": "6c9e9084b178fe67238ec703fd7b8123ff7f375f8fa95324f97e7d5f9090b05d",
+     "safe-progress.json": "c4793669aa6df6e13b5482e0f9ae2bcf47071db10e2a4737c461d8aa8d622e4e"
+    },
+    "linearizability_violations": 0,
+    "loc": {
+     "excluding_vendored_unchanged": 2299,
+     "total": 2299
+    },
+    "max_depth": 8,
+    "mutation_kill_rate": 1.0,
+    "other_violations": {
+     "authority_ack_without_commit": 0,
+     "historical_mismatch": 0,
+     "progress_loss": 0
+    },
+    "p50_latency_ms": 1.2849170016124845,
+    "p95_latency_ms": 7.827583001926541,
+    "payload_sha256": "155d8dac1da91117fe76974a0d3c768a3f23197283c4a200b0241aa73d26727b",
+    "race_equality": 1.0,
+    "races": {
+     "by_type": {
+      "AP": 175,
+      "CR": 175,
+      "DP": 175,
+      "EX": 175,
+      "RA": 175,
+      "RV": 175,
+      "SA": 175,
+      "SEQ": 175,
+      "UN": 175
+     },
+     "cases": 1575,
+     "executed": 1400,
+     "matched": 1400,
+     "overlap_fraction": 0.9328571428571428,
+     "overlapping": 1306,
+     "rv_effect_first": 83,
+     "rv_overlapping": 173,
+     "rv_revoke_first": 0
+    },
+    "safe_progress_ratio": 1.0,
+    "scope_amplifications": 0,
+    "stale_or_forbidden_effects": 0,
+    "unique_sequences": 11575
+   },
+   "minimum_overrides": {},
+   "reasons": [],
+   "variant": "conventional",
+   "verdict": "SUPPORTED"
+  },
+  "paladin": {
+   "metrics": {
+    "class_counts": {
+     "explicit_reason_mismatch": 7187,
+     "ok": 364049,
+     "race_refusal_ok": 518
+    },
+    "cycle_grants": 0,
+    "evidence_sha256": {
+     "authority-sequences.jsonl.gz": "a5885de823a9876be1f411a7152e235fd044a9c746151de8c5074ba3006885e8",
+     "authority-state-machine.json": "1506a7e3390f7ae177c340f454f64cdbf1390cefac5f22a34f5856cd80a9e536",
+     "delegation-attenuation.json": "0ce466f57e1835f94acaa0df3b80fad0b3be49cb76948ee69ad34756455bb38e",
+     "mutation-results.json": "2226ced1e7eb2cc562e7df650c481ed5310c72970338b0f2ea51babcf14cc29d",
+     "revocation-races.json": "32f42447fd7a37b523b83305984379521319b3f5ca59da56faac352dd7d95d86",
+     "safe-progress.json": "9f4e1d55614a51191263b7118ea9e6091eebf7cf9c4696a1f04c26a2ae7dcedd"
+    },
+    "linearizability_violations": 0,
+    "loc": {
+     "excluding_vendored_unchanged": 2759,
+     "total": 6186
+    },
+    "max_depth": 8,
+    "mutation_kill_rate": 1.0,
+    "other_violations": {
+     "authority_ack_without_commit": 0,
+     "historical_mismatch": 0,
+     "progress_loss": 0
+    },
+    "p50_latency_ms": 1.5527079813182354,
+    "p95_latency_ms": 49.1312500089407,
+    "payload_sha256": "47001d4897ebc7152f50a64d08a53398f1228b3c92156db68834be210ed35cdf",
+    "race_equality": 1.0,
+    "races": {
+     "by_type": {
+      "AP": 175,
+      "CR": 175,
+      "DP": 175,
+      "EX": 175,
+      "RA": 175,
+      "RV": 175,
+      "SA": 175,
+      "SEQ": 175,
+      "UN": 175
+     },
+     "cases": 1575,
+     "executed": 1400,
+     "matched": 1400,
+     "overlap_fraction": 0.9385714285714286,
+     "overlapping": 1314,
+     "rv_effect_first": 82,
+     "rv_overlapping": 174,
+     "rv_revoke_first": 0
+    },
+    "safe_progress_ratio": 1.0,
+    "scope_amplifications": 0,
+    "stale_or_forbidden_effects": 0,
+    "unique_sequences": 11575
+   },
+   "minimum_overrides": {},
+   "reasons": [],
+   "variant": "paladin",
+   "verdict": "SUPPORTED"
+  }
+ }
+}

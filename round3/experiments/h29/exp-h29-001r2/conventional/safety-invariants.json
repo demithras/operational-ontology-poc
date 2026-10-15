@@ -1,0 +1,92 @@
+{
+ "boundary": {
+  "B1": {
+   "n": 50,
+   "violations": 0
+  },
+  "B2": {
+   "n": 50,
+   "violations": 0
+  },
+  "B3": {
+   "n": 50,
+   "violations": 0
+  },
+  "B4": {
+   "n": 50,
+   "violations": 0
+  }
+ },
+ "classes": {
+  "boundary_not_explicit": {
+   "count": 0,
+   "sequences": []
+  },
+  "disclosure_leak": {
+   "count": 0,
+   "sequences": []
+  },
+  "duplicate_commit": {
+   "count": 0,
+   "sequences": []
+  },
+  "duplicate_effect": {
+   "count": 0,
+   "sequences": []
+  },
+  "effect_outside_scope": {
+   "count": 0,
+   "sequences": []
+  },
+  "false_reconciled_success": {
+   "count": 0,
+   "sequences": []
+  },
+  "false_success": {
+   "count": 0,
+   "sequences": []
+  },
+  "forbidden_effect": {
+   "count": 0,
+   "sequences": []
+  },
+  "misclassified_dependency_failure": {
+   "count": 0,
+   "sequences": []
+  },
+  "recovery_divergence": {
+   "count": 0,
+   "sequences": []
+  },
+  "recovery_nondeterministic": {
+   "count": 0,
+   "sequences": []
+  },
+  "stale_authority_after_restart": {
+   "count": 0,
+   "sequences": []
+  },
+  "stale_authority_commit": {
+   "count": 0,
+   "sequences": []
+  },
+  "tampered_record_trusted": {
+   "count": 0,
+   "sequences": []
+  },
+  "unanchored_ack": {
+   "count": 0,
+   "sequences": []
+  }
+ },
+ "p_totals": {
+  "misclassified": 0,
+  "recovery": 0,
+  "safety_violations": 0
+ },
+ "sequences": {
+  "bnd": 200,
+  "ctrl": 600,
+  "env": 5600
+ }
+}

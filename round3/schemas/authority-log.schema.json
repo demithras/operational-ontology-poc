@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "r3-authority-log-1",
+  "title": "AuthorityService log() (P1g-2): versions + leases + faults + refused",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["versions", "leases", "faults", "refused"],
+  "properties": {
+    "versions": {"type": "array", "items": {"type": "object", "additionalProperties": false,
+      "required": ["seq", "digest", "doc", "requested_tick", "effective_tick"],
+      "properties": {"seq": {"type": "integer", "minimum": 1}, "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                     "doc": {"type": "object"}, "requested_tick": {"type": "integer", "minimum": 0},
+                     "effective_tick": {"type": "integer", "minimum": 0}}}},
+    "leases": {"type": "array", "items": {"type": "object", "additionalProperties": false,
+      "required": ["seq", "deployment", "digest", "granted_tick", "lease_until", "mac"],
+      "properties": {"seq": {"type": "integer", "minimum": 1}, "deployment": {"type": "string", "minLength": 1},
+                     "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "granted_tick": {"type": "integer", "minimum": 0},
+                     "lease_until": {"type": "integer", "minimum": 1}, "mac": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}}},
+    "faults": {"type": "array", "items": {"type": "object", "additionalProperties": false,
+      "required": ["seq", "deployment", "kind", "from_tick", "to_tick", "mode"],
+      "properties": {"seq": {"type": "integer", "minimum": 1}, "deployment": {"type": "string", "minLength": 1},
+                     "kind": {"enum": ["outage", "partition"]}, "from_tick": {"type": "integer", "minimum": 0},
+                     "to_tick": {"type": "integer", "minimum": 1}, "mode": {"enum": ["drop", "reply_lost"]}}}},
+    "refused": {"type": "array", "items": {"type": "object", "additionalProperties": false,
+      "required": ["seq", "tick", "deployment", "op", "reason"],
+      "properties": {"seq": {"type": "integer", "minimum": 1}, "tick": {"type": "integer", "minimum": 0},
+                     "deployment": {"type": "string", "minLength": 1}, "op": {"const": "fetch"}, "reason": {"type": "string", "minLength": 1}}}}
+  }
+}

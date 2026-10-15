@@ -1,0 +1,629 @@
+# Round 3 build notes
+
+Running notes for the dual-track build (paladin vs conventional). Each phase appends a section.
+
+## P1 - variant-neutral foundation (tag r3-p1-foundation)
+
+### Module map (`round3/src/r3_shared/`)
+| Module | Purpose |
+|---|---|
+| `clock.py` | `LogicalClock` (integer ticks, `advance(n)`); no wall clock anywhere in decision paths |
+| `identity.py` | `IdentityProvider(secret).issue(sub, aud, ttl, clock)`, `TokenVerifier.verify/claims` (HMAC-SHA256, claims sub/iat/exp/aud/jti, raises `TokenError`) |
+| `world.py` | Ground truth: `WorldStore(path)` -> `handle(writer)` (`WorldHandle`: create/update/delete/link/unlink/external_write + reads, `transaction()`), `reader()` (`WorldReader`, SQLite `mode=ro`, `snapshot()`), `diff(before, after)` |
+| `opsspec.py` | Load/validate `spec/ops/<domain>.json`; `World` + `evaluate()` for the simple predicate subset |
+| `authspec.py` | Load/validate `spec/authority/<domain>.json`; `allowed_operations()` static upper bound (deny overrides, delegation = delegable grant AND delegator allowed) |
+| `variant.py` | `Variant`, `Deployment` protocols, `ToolDescriptor`, `CallResult` (status OK/DENIED/INVALID/UNAVAILABLE/UNKNOWN) |
+| `registry.py` | `VARIANTS` (lazy `load_variant`; missing implementation -> `NotImplementedError("... not implemented yet")`) |
+| `evidence.py` | Envelope builder/validator/writer (schema `schemas/evidence-envelope.schema.json`, freeze hash from `protocol/FREEZE.json`, `payload_sha256`) |
+| `verdict.py` | `Verdict`, `evaluate_common` (copy of round2 `hdd/verdict.py`, strict: only literal `True` counts), `evaluate_from_mapping`, `DualVerdict` |
+
+Generated, committed: `spec/ops/{manufacturing,project}.json`, `spec/authority/{manufacturing,project}.json`
+(generator `scripts/build_ops_spec.py` + `scripts/specgen/*`; `--check` regenerates and diffs). Schemas: `schemas/ops-spec.schema.json`, `schemas/authority-spec.schema.json`.
+Tests: `tests/` (`fakes/fake_variant.py` is test-only and never registered).
+
+### Design decisions
+- World canonical keys are `"Type:key"` strings in `canonical_links`; effect records from `diff` are `create/update/delete/link/unlink/external`.
+- Writers: variants write through `handle("paladin-service" | "conventional-service")`, adapters through `handle("WMS" | "ERP" | "MES")` (see `service_accounts[].world_writers` in the authority fixture). The oracle can reject effects from any other writer.
+- Ops spec describes WHAT: typed inputs, declarative `preconditions`, `business_rules` (deny / require_approval / classify), `effects` (canonical writes or external adapter calls), `gated_inputs` (= `immutable_after_authorization`: once a request is authorized, changing any of these needs a fresh decision), approval requirements, expected outcome. Complex helper reads (e.g. `protecting_work_orders`) are defined in prose under `helpers`; the AST evaluator raises `Unevaluable` for them.
+- Time: 1 tick = 1 second. Round 2's `EvidenceSnapshot.snapshotObservedAt` (ISO datetime) is an integer tick in the neutral seed (freshness window 5 ticks).
+- Project domain: Round 2 effects were Git changes; the neutral spec treats them as canonical world writes. Round 2's evaluator (registered code reading git blobs) is replaced by an explicit neutral evaluator `neutral:evidence-present-v1`; `compute_freeze_hash` is a neutral canonical-JSON hash (not byte-identical to Round 2). The project seed is synthetic (51 objects), not read from git.
+- Excluded as control-plane (not neutral workload): manufacturing `Decision/ActionExecution/Outcome/AuthorizationCheck/...` types, function `decision_content_hash` (listed under `unsupported`; H27 territory). Both variants exclude them.
+- **FINDING carried from Round 2**: the frozen manufacturing IR names rules for the wrong capability, so `expedite_purchase_order` and `reschedule_work_order` cannot pass authority there (`round2/tests/domains/test_manufacturing_logic.py`). The neutral authority fixture adds `origin: neutral-fix` grants (planner may expedite/reschedule; supervisor approves them), mirroring that test's patched IR. The Paladin builder must patch its IR identically; orchestrator may instead move these two operations to `unsupported` for both variants.
+- Grants carry `origin` (`round2` | `neutral-fix` | `neutral-extension`) so every deviation from Round 2 is auditable. Agents: manufacturing `agent-1` (delegated by planner-1, all warehouses), `agent-hostile-1` (WH-B/WH-C only), `agent-orphan` (delegator holds nothing); project `agent-evidence-1` (hostile; start_run, attach_evidence), `agent-draft-1`. Admin = `admin-1` with `*`.
+- Project delegation: every Round 2 grant is `delegation_allowed=false`; `delegations` is empty so any `on_behalf_of` call must be denied.
+- Read policy is not specified yet (any authenticated principal may read); H26 refines it.
+
+### What P2 / P3 need
+- P2 (variants): consume `ops_spec`/`auth_spec` dicts passed to `Variant.deploy`; write only through the supplied `WorldHandle` factory; implement `tools/call_tool/direct/read`, return `CallResult`; Paladin must build IR/pack from the neutral spec only where it chooses to, but may not edit the spec. Seed the world from `ops_spec["seed"]` (helper for seeding is intentionally left to the harness).
+- P3 (oracles/harness): read specs via `load_ops_spec/load_auth_spec`; measure effects with `WorldReader.snapshot()` + `diff`; never trust `CallResult`; use `evaluate_common`/`DualVerdict` and `evidence.write_envelope`.
+- Not provided in P1 (by design): world seeding helper, oracle logic, token issuing policy for principals (harness issues tokens with `IdentityProvider`; audience convention left to the harness/variants, fake uses "fake").
+
+## P3 - H23 harness (tag r3-p3-h23-harness)
+
+Variant-neutral: oracle, effect meter, adversarial state machine/corpus, mutation proof, evaluator. Built and tested only
+against fakes (`tests/fakes/h23_fakes.py`: correct / allow-all / direct-open / deny-all; never registered).
+
+### Module map
+| Path | Purpose |
+|---|---|
+| `r3_oracle/authority.py` | `decide(subject, on_behalf_of, op, resources, auth_spec)` = frozen effective-authority rule (PROT-H23); `could_ever_allow` (surface upper bound), `revoke`, `approver_ok` |
+| `r3_oracle/expr.py`, `view.py` | independent evaluator of the ops-spec predicate AST (all node kinds of both domains), read-only snapshot view |
+| `r3_oracle/helpers.py`, `helpers_project.py` | every prose helper/read of both domains, one function each, implemented from the spec text |
+| `r3_oracle/ops_model.py` | `evaluate(...) -> Outcome(kind, effects)`: COMMIT / DENIED_AUTHORITY / DENIED_RULE / INVALID / NEEDS_APPROVAL / UNKNOWN_OP + exact expected effect records; `match_records` |
+| `r3_oracle/effect_meter.py` | per-call WorldReader diff; AST test forbids reading CallResult |
+| `r3_shared/mutants.py` | the four H23 switches (`is_on/enabled/CONSULTED`); created here because P1 did not provide it (merge note: P2 builders consult `mutants.is_on(name)`) |
+| `r3_harness/h23/` | `env` (deployment + measured call), `rules` (10 attack rules), `corpus` (seeded driver, coverage sequences), `machine` (hypothesis RuleBasedStateMachine), `classify`, `surface`, `mutation`, `analyze`, `runner`, `evaluator` |
+| `scripts/run_h23.py`, `evaluate_h23.py`, `verify_h23.sh` | run / evaluate / re-hash + re-evaluate + diff |
+
+### How to run
+```
+cd round3 && .venv/bin/python scripts/run_h23.py --exp-id exp-h23-001 --variants paladin,conventional --seed 1 --sequences 10000
+.venv/bin/python scripts/evaluate_h23.py exp-h23-001 && scripts/verify_h23.sh exp-h23-001
+# dev with fakes (only with --test-variants): --variants fake-correct,fake-allow-all --sequences 200
+```
+Output: `experiments/h23/<ID>/<variant>/{adversarial-sequences.jsonl, effect-oracle-diff.json, identity-confusion-results.json,
+direct-engine-backstop.json, mutation-results.json, surface-audit.json, envelope.json}` and `<ID>/verdict.json`.
+The evaluator recomputes everything from the raw jsonl; summaries are only cross-checked (mismatch -> INVALID).
+
+### Semantics fixed by the harness (document for the orchestrator)
+- Per sequence: fresh world store + fresh Deployment, one attacker agent identity, 3-8 rule steps; plus deterministic
+  `coverage` sequences (every principal x every operation x both surfaces). Unique = distinct sha256 of (domain, attacker,
+  concrete steps); the driver keeps generating until `--sequences` unique ones exist (cap 3x).
+- Token audience is detected: `deployment.audience` / `variant.audience` if present, else the first candidate
+  (`variant.name`, domain, r3, paladin, conventional, ...) for which `tools(admin token)` is non-empty.
+- Authority changes use `deployment.set_authority(auth_spec)` if present; on TypeError/NotImplementedError or absence the
+  harness redeploys a new Deployment over the SAME world with the reduced authority (loses variant-side idempotency memory;
+  the replay-after-revocation expectation, "decided against the authority in force now", holds either way).
+- Effects: only what the diff shows. Expected = oracle effect records (exact multiset). Unexpected record, wrong external
+  writer (not in `service_accounts[].world_writers`) or a partial commit -> `forbidden_effect`. `identity_expansion` = forbidden
+  effect on a call tagged identity/obo/token. `backstop_failure` = `direct` committed something the oracle denies, or a
+  call_tool-denial probe (same call re-sent on `direct`, fresh request_id) did not end as zero-effect AND status != OK.
+  `legit_progress_miss` = clean call the oracle allows whose effects are absent. NEEDS_APPROVAL expects ZERO effects
+  (no approval channel exists in the Variant protocol, so approved commits are not exercised).
+- Business-rule actor (`actor_holds`) = the delegator when `on_behalf_of` is given, else the subject. Agents acting as themselves
+  hold only `agent_grant`, so a protected-route transfer by an agent without obo is DENIED_RULE.
+- Frozen rule vs fixture note: `agent-orphan` (delegator holds nothing) is ALLOWED when acting as itself, because the frozen rule
+  evaluates the subject's own grants (agent_grant on all warehouses). `authspec.allowed_operations` (P1) is stricter; the oracle
+  follows PROT-H23.
+- Loosely compared props (prose fixes inputs, not text): `Verdict.reason`, `Verdict.derivation_hash` (non-blank / 64-hex).
+- TOCTOU attack: `FlipDict` returns benign values on the first read of each key, hostile values afterwards; judged against the
+  BENIGN request (R4). Correct variants copy args once at entry.
+- Mutation proof: sub-corpus of `--mutation-sequences` (150) per mutant, targeted rule mix, switch OFF vs ON with the same seed;
+  killed iff expected classes increase AND the switch was consulted; first counterexample shrunk by step deletion.
+- Reads: `Variant.read` is not attacked (H26 territory). `recommend_transfer_for_work_order` / `resolve_canonical_id`
+  reads are not needed by any operation and are not implemented in the oracle.
+
+### Runtime estimate (fakes; real variants add their own per-call cost)
+~21 s per 1,000 unique sequences incl. mutation proof (150 x 4 x 2) and surface audit; ~28 s per 3,000 sequences without the
+mutation proof (~9 ms/sequence, ~1 ms/call, ~9 calls/sequence incl. backstop probes). 10,000 sequences ~ 2-3 min per variant on fakes.
+### P3 rework (harness on protocol P1b)
+- Mutants: only `registry.load_variant(name, mutants=[m])` (fakes: `FakeVariant(mode, [m])`). `run_variant(factory, ...)` takes
+  `factory(mutants) -> Variant`; baseline = `factory(())`. No module-global switch; the `consulted` field is gone: a mutant whose
+  site is never consulted gains nothing and is SURVIVED (tested with a variant that accepts but ignores mutants).
+- Authority changes: only `Deployment.set_authority`; the redeploy fallback is deleted (a variant whose `set_authority`
+  raises fails the run). Each attack sequence logs `authority_version: {initial, final, changes:[{before, after}]}`.
+- Audience: `type(variant).audience` (class attribute); missing -> `RuntimeError` naming the variant. No auto-detection.
+- Delegate semantics in `r3_oracle/authority.py` (PROT-H23): delegates are evaluated with their delegator on every request;
+  obo != delegated_by or obo with `delegated_by: null` -> DENY; `actor_for_rules` = delegator; `could_ever_allow` for a delegate
+  also needs a delegation entry and a delegator that could be allowed (agent-orphan no longer exposes transfer_inventory).
+- Approvals: `r3_oracle/approvals.py` (valid iff token verifies, op has an `approval` block, approver != requester and outside its
+  chain, approver holds `approval.approver_operation` on the resources; key = requester+obo+op+canonical args; single use, consumed
+  in `Env.call` when the oracle commits with `used_approval`). `ops_model.evaluate(..., approved=)`; no approval ->
+  NEEDS_APPROVAL (`approval_required`), zero effects. Approvals change nothing in the canonical world (any diff = forbidden effect).
+  Rules in `h23/approval_rules.py`: appr_ok (approve+commit positive control, then reuse), appr_missing, appr_self, appr_chain
+  (chain member legitimately granted the approval op via set_authority, still refused), appr_unauth, appr_forged, appr_swap
+  (approve A, commit B), appr_by_attacker (hostile agent as approver with its own token). Honest counterparties (approvers, the
+  honest requester of appr_by_attacker) use harness-issued tokens. Only manufacturing has approval operations
+  (transfer_inventory, expedite_purchase_order, reschedule_work_order); in project the rules degrade to a legit step.
+- Evidence: `approval-results.json` per variant (counts per approval rule); recorded and hashed in the envelope, NOT required by the evaluator.
+- Runtime on fakes (fake-correct, seed 2, incl. mutation proof of 150x4x2 and surface audit): 1,000 unique sequences = 22.1 s (8,586 calls); 200 sequences = 14 s.
+
+
+## P2b Conventional (tag r3-p2b-conventional, branch r3-conv)
+
+Builder worked only from neutral inputs (ops/authority specs, PROT-H23, FAIRNESS, DUAL_TRACK, `r3_shared`); no round2 or paladin source read.
+
+### Module map (`round3/src/conventional/`)
+| Module | Purpose |
+|---|---|
+| `codegen.py` -> `models_gen.py` | typed frozen request model per operation, generated from `spec/ops/*.json`; `python -m conventional.codegen [--check]` |
+| `validation.py` | strict schema checks (unknown fields rejected, bool is not int, JSON deep copy, single read of caller keys) |
+| `policy.py` | policy decision point (ABAC/ReBAC over the authority spec; deny overrides; on-behalf-of; approver independence; static exposure) |
+| `worldview.py`, `interp.py`, `helpers_mfg.py`, `helpers_proj.py` | commit-time interpretation of preconditions/business rules; prose helpers implemented from the spec text |
+| `effects.py`, `store.py` | declarative effects applied through `WorldHandle("conventional-service")`; idempotency/approval tables in the world file |
+| `service.py`, `tools.py`, `variant.py` | service API (one transaction per request), tool surface, `ConventionalVariant` (audience `conventional`) |
+| `mutants.py` | the four H23 switches (names as in PROT-H23; `r3_shared.mutants` does not exist in P1, so they live here) |
+
+Tests: `tests/conventional/` (functional per operation, R1-R8 negatives with zero-effect diffs, mutants, codegen/policy, stateful sequences with known-negative mutant kills). Protection mapping: `spec/protections/H23-conventional.md`.
+
+### Findings / notes for the orchestrator
+- `r3_shared.world.WorldHandle` has no auxiliary-table API; `store.py` uses `handle._con` for `conv_idempotency` / `conv_approvals` in the same SQLite file (atomic with effects; invisible to `WorldReader.snapshot`). Suggest a public hook in P1 if Paladin needs the same.
+- Spec ambiguity: `exists` over a resource input means the object exists in the world (otherwise `expedite-closed-po` / `reschedule-closed-wo` never fire for absent targets); `exists(new_experiment_id)` tests Experiment existence (helper yields an id).
+- `agent-orphan` is allowed without `on_behalf_of` under the frozen rule (see H23-conventional.md); `authspec.allowed_operations` disagrees for delegated principals.
+- A `tests/test_variant_protocol.py` P1 test asserted both variants raise NotImplementedError; relaxed to "built or not-implemented" so it holds on both branches.
+- Business rules defend in depth: on `PX-17 WH-B->WH-A` the protected-route rule masks a missing authorization check, so mutant tests use an unprotected route (WH-B->WH-C).
+## P2a - Paladin variant v0 with H23 protections (tag r3-p2a-paladin)
+
+### Module map (`round3/src/paladin/`)
+| Module | Purpose |
+|---|---|
+| `engine/`, `toolchain/`, `ir/`, `domains/{_support,_hdd,manufacturing,project}` | VENDORED Round 2 code at pin 8f9ff26 (`VENDORED.json`: original/vendored/current sha256 + patch ids; `scripts/paladin_vendor_manifest.py` refreshes it; `tests/paladin/test_p2a_vendored.py` enforces it) |
+| `authcompile.py` | neutral `spec/authority/<d>.json` -> Engine `authority_rules`, per-action `authority_refs`, static `Principal`s, delegation table (no domain branches) |
+| `worldbridge.py` | Engine State rebuilt from the world per request; `WorldExternalAdapter` (WMS/ERP/MES -> `external_write`), `WorldGitAdapter` (project `git_change` -> canonical writes) |
+| `boot.py` | builds one Engine per domain (IR + compiled authority + logic bindings + adapters); `neutral:evidence-present-v1` evaluator |
+| `core.py` | identity -> delegation -> shape -> ledger/pending -> Engine pipeline in one world transaction -> `CallResult` mapping; mutant switches live here |
+| `surface.py`, `deployment.py` | generated Toolchain surface (`tools`, `call_tool`), `direct`, `read`, `approve`, `set_authority`, `authority_version` |
+| `variant.py`, `mutants.py` | `PaladinVariant` (registry: `paladin.variant:PaladinVariant`), H23 switches |
+
+### Conventions the harness must know
+- Token audience is `"paladin"` (`paladin.core.AUDIENCE`, also `deployment.audience`). Tokens are issued by the harness with `IdentityProvider.issue(sub, "paladin", ttl, clock)`.
+- Deploy on an ALREADY SEEDED world (seeding is the harness's job); the Engine rebuilds its State from the world on every request. The service writer name is `paladin-service`; adapters write as `WMS`/`ERP`/`MES`.
+- `tools()` lists operation names (= ops-spec names) of mutating operations only; reads go through `read(token, name, args)` (ops-spec `reads` that are IR functions, plus generic `get {type,key}` / `list {type}`); prose-only helpers are UNKNOWN reads.
+- Statuses: DENIED = identity/delegation/authority/approval gate; INVALID = args shape, unknown/identity-like args, missing/reused request id, precondition/policy/constraint refusals; UNAVAILABLE = adapter failure (rolled back); UNKNOWN = unknown operation or a tool absent from the caller's surface. A request that needs approval returns OK with `body.state == "PENDING_APPROVAL"` and ZERO effects; `approve(token, request_id)` (extra, not in the Variant protocol) commits it for a second principal. Replays of a committed request id return OK with `body.replayed == True` and no new effect.
+- Mutants: see "P2a rework" (constructor-only, `r3_shared.mutants.validate`).
+- `set_authority(auth_spec) -> new version` rebuilds the Engine (its in-memory journal and pending approvals are dropped; the committed-request ledger is kept). `crash()/restart()` raise NotImplementedError (H29).
+
+### Design decisions / ambiguities (flag for the orchestrator)
+- PROT-H23 says that without `on_behalf_of` the subject is evaluated "as itself". Paladin follows that literally: the static `delegated_by` of an agent in the auth fixture is NOT applied unless `on_behalf_of` is given (so `agent-orphan` may call `transfer_inventory` as itself via its own `agent_grant`; the shared `authspec.allowed_operations` applies the chain and would say no). Tests use an as-itself bound. If the oracle disagrees, only `Core.principal` changes.
+- Business-rule/policy refusals (stale evidence, quarantine, safety stock, protected route, lifecycle) are INVALID, not DENIED (R7: DENIED = authority).
+- Delegated requests: `actor_holds` (transfer-protected-route) is true if the subject or any delegator holds the relation (patch D5).
+- The spec's `write:*`/`update:*` deny grants are not compiled into Engine rules (they never match an `action:*` capability); they hold structurally (see H23-paladin.md).
+- Manufacturing external effects are single atomic adapter writes through each system's own handle (SQLite cannot write from a second connection inside the service transaction); project canonical writes share ONE world transaction, rolled back on any failure.
+- ERP/MES observations are synthesised by the adapter from the authorized inputs (ERP reports expectedAt-1; MES reports the requested plannedStart), the same fake-system role Round 2's `ErpFake/MesFake` played; the WORLD effect record is the effect payload.
+- Modified a P1 test: `tests/test_variant_protocol.py::test_registry_lazy_and_never_contains_fake` asserted that both variants raise "not implemented yet"; it now accepts a built variant (Variant instance with matching name). The conventional builder will need the identical relaxation.
+
+### Tests (`round3/tests/paladin/`)
+`test_p2a_functional.py` (every operation of both domains, reads, approval), `test_h23_r1_r4.py`, `test_h23_r5_r8.py` (zero-effect negatives measured by world-snapshot diff), `test_h23_mutants.py` (each switch changes behaviour), `test_h23_property.py` / `test_h23_property_project.py` (Hypothesis, independent authority oracle; effect-visible mutants killed, tool_overexposure killed by the surface audit), `test_p2a_vendored.py`.
+## P1b - Variant protocol amendment (tag r3-p1b-protocol)
+Single shared definition both variants adapt to (the P2 builders had invented incompatible versions).
+- `r3_shared/mutants.py`: `KNOWN` (H23: identity_substitution, mutable_gated_input, backstop_bypass, tool_overexposure; later gates append), `ALL`, `validate(names) -> frozenset` (ValueError on unknown). Mutants are activated ONLY via `Variant.__init__(mutants=())`; `registry.load_variant(name, mutants=())` passes them through. No global state.
+- Deployment additions: `approve(token, operation, args, requester, on_behalf_of=None) -> CallResult`, `set_authority(auth_spec)`, `authority_version()` (sha256 of canonical JSON, sorted keys, compact separators). Every non-OK CallResult body carries a string `reason`.
+- Approval flow: the approver's token subject pre-approves the EXACT request (requester, on_behalf_of, operation, canonicalised args). The requester's later call_tool/direct of that exact request may commit; any input difference needs a new approval; one approval authorises at most one commit. Approver must differ from the requester, lie outside the requester's delegation chain and hold the approval operation. A request needing approval without one -> DENIED `{"reason": "approval_required"}`, zero effects.
+- Delegate semantics (PROT-H23.md): a principal with `delegated_by: P` is evaluated under the on-behalf-of rule with delegator P on EVERY request; on_behalf_of != P is DENIED; `delegated_by: null` with on_behalf_of is DENIED. `authspec.allowed_operations` already agreed (delegated_by is intrinsic); tests added: agent-orphan -> none, agent-1 -> transfer_inventory. agent-hostile-1's WH-B/WH-C restriction is per-resource, outside the static bound.
+- `tests/test_variant_protocol.py`: each registered variant is importable and protocol-conformant, or load_variant raises NotImplementedError.
+
+### P2b rework (adopt P1b)
+- Deleted `conventional/mutants.py`; `ConventionalVariant(mutants=())` validates via `r3_shared.mutants.validate`; the frozen set lives on the Service instance (no global switch); `ConventionalVariant.deployment_class` exposed; `load_variant("conventional", mutants=[...])` works.
+- Deployment: `set_authority` returns None, `authority_version()` = sha256 of canonical JSON of the spec in force (`policy.digest`), `approve` matches the protocol (single-use, exact-request, `approval_required` otherwise).
+- Delegate semantics: `PolicyEngine.decide` evaluates any principal with `delegated_by` as its delegator's delegate; business rules use `effective_principal` (the delegator). `exposed_operations` now equals `authspec.allowed_operations` for delegates. Regression tests: agent-orphan x3 transfers -> DENIED, 0 effects; agent-1 WH-A->WH-B OK; agent-hostile-1 WH-B->WH-A DENIED.
+- Tests: `test_mutants.py` renamed `test_conv_mutants.py` (basename collision). `request_id=None` still accepted (documented). Still uses `handle._con` for the idempotency/approval tables (no public auxiliary-table API in P1b).
+### P2a rework (adopt shared protocol P1b)
+- `PaladinVariant(mutants=())` validated by `r3_shared.mutants.validate`; `paladin/mutants.py`, `with_mutants` and the `PALADIN_MUTANTS` env path are deleted. `PaladinVariant.audience == "paladin"`, `PaladinVariant.deployment_class`; `load_variant("paladin", mutants=[...])` works.
+- Delegates are always evaluated as their `delegated_by` principal (agent-orphan transfers now DENIED, world diff empty); `approve(token, operation, args, requester, on_behalf_of=None)` is the P1b pre-approval (single use, exact request; Engine approval gate consumes it inside the commit transaction); `approval_required` is DENIED. `authority_version()` is a sha256 hex string and `set_authority` returns None.
+- Every non-OK body has a non-empty string `reason`; policy refusals are DENIED, precondition/schema INVALID. Tests: `tests/paladin/test_p2a_rework.py` plus updated r1-r4/r5-r8/functional/mutant tests.
+
+### P5c Conventional (rulings R-1, R-2, R-4)
+- R-1: `helpers_proj.head_commit` orders `committed_at` numerically (seed: c0ffee0001 = 100 beats c0ffee0000 = 50); a non-integer time raises HelperError (INVALID), never a string guess. No other time-field comparison exists in conventional (`ge/gt/le/lt/newest/sub/add` already require ints; no op input has type logical_time, so codegen output is unchanged).
+- R-2: `Service._txn` checks every supplied optional resource input against the commit-time WorldView before preconditions; missing -> INVALID `target_not_found`, zero effects. Note: the oracle evaluates deny business rules before this check, conventional runs preconditions/this check first (only differs when a deny rule and a bad optional ref coincide).
+- R-4: `r3_shared.authspec.validate_strict(spec, ops_spec)` runs in `Service.__init__` (deploy) and `Service.set_authority` before any state changes; invalid -> ValueError, authority version unchanged.
+- Tests: `tests/conventional/test_p5c_rulings.py` (8 of 10 fail with the src changes stashed, all pass with them).
+## P5b Paladin - rulings R-3/R-4 (tag r3-p5b-paladin)
+- R-3: creates persist exactly the ops-spec fields (worldbridge.py + boot.py); R-4: `validate_strict` on deploy and every `set_authority` (core.py).
+- R-1/R-2 pinned by tests (tests/paladin/test_p5b_rulings.py). Zero vendored-code changes.
+- Dev3 "new_experiment_version 0/6, evaluate_hypothesis 0/3": Paladin returned OK on all 6 and 3 calls and wrote the effects; the "misses" were
+  scoring mismatches (extra `id` prop = R-3, and oracle head_commit = R-1). Fresh-world reproduction on all experiment/contract-version pairs commits. No R8 fix needed.
+
+## P1c - protocol for A8 crash, restart and concurrency
+- Added PROT-H23-A8 (spec/protections), `Variant.deploy(..., state_dir)`, `Deployment.arm_crash`, thread-safety note, two H23 mutants.
+- `WorldHandle` now opens sqlite with `check_same_thread=False` so threaded callers are possible; serialising authorize->commit is the variant's job (mutant `unsynchronized_commit` removes it).
+- Fakes: `FakeDeployment` (durable ledger in state_dir) and `FakeVolatileLedger` (broken). h23 test fakes accept `state_dir` but do not implement crash yet.
+- Expected red until later phases: variants lack `arm_crash`; r3_harness mutation map (`h23/mutation.py`) has no entries for the new mutants; paladin/conventional mutant-name tests pin the old four.
+
+## P7c - H23 harness A8: crash, restart, concurrency (tag r3-p7c-harness)
+
+Binding spec: spec/protections/PROT-H23-A8.md. Everything below is variant-neutral and tested on fakes only.
+
+- Crash rules (`r3_harness/h23/crash_rules.py`, sequential driver, weight 1 each): `crash_before`, `crash_after`, `crash_idle`.
+  The armed request is always one the oracle predicts will commit. Calls: armed -> UNAVAILABLE probe -> restart ->
+  replay same id -> new id (`crash_idle`: commit, crash(), probe, restart, replay, continue). Each call is judged by
+  the oracle against the world diff. New classes: `crash_duplicate_effect` (any effect on a replay of a committed
+  id), `crash_state_mismatch` (crashed call's diff differs from the oracle's prediction for that crash point, or a
+  call on a crashed deployment is not UNAVAILABLE/zero-effect), `crash_unsupported` (variant raised on
+  arm_crash/crash: coverage gap -> INCONCLUSIVE). Both A8 safety classes also count as `forbidden_effect`.
+- Status use (the ONLY CallResult use besides labelling a refusal): "did the armed crash trigger" (a crash leaves no
+  world trace) and the protocol-mandated UNAVAILABLE after crash. An armed crash that does not trigger is cleared with
+  crash()+restart() and the call is judged as an ordinary one.
+- Crash scenarios are generated only when no pre-approval is outstanding (the protocol does not say whether
+  approvals survive a crash). The correct fake loses approvals on restart; this is an open protocol question.
+- Concurrency driver (`concurrency.py`, separate, threads, `Barrier` start): types `same` (k=2,4,8, same request_id),
+  `contend` (order-dependent requests, falls back to approval races where the domain has no state contention),
+  `approval` (2 identical requests, 1 approval), `free` (non-conflicting). Judge = `r3_oracle/serial.py`: tries every
+  serial order of the request set (<=24), then of every subset. Full match = ok. Subset match = refused requests:
+  any refused request that was told OK -> `concurrency_unserializable`; otherwise `concurrent_progress_loss`.
+  No match -> `concurrency_unserializable`. Seed world is variant-independent so request pools are cached per domain.
+  Note: manufacturing ops only write external effects, so state contention exists only in the project domain;
+  manufacturing contention is duplicate-external-effect (`same`) and approval single-use races.
+- Evidence per variant: `crash-results.json`, `concurrency-results.json` (hash-covered by the envelope).
+  Evaluator recomputes both from raw rows: missing/empty files, a scenario type or same-k not exercised, fewer than
+  300 executed concurrency scenarios (`MIN_CONCURRENCY`; lowered only by `--min-concurrency`/parameter in tests),
+  unexercised crash label, or crash_unsupported -> INCONCLUSIVE. Mismatched hash of either file -> INVALID.
+  Reported `forbidden_effects` = sequential forbidden + A8-only safety classes + concurrency_unserializable;
+  `concurrent_progress_loss` is reported in metrics and the comparative block, never a safety count.
+- Mutants: `ledger_after_commit_volatile` (EXPECT crash_duplicate_effect, rules crash_*+legit) and
+  `unsynchronized_commit` (EXPECT concurrency_unserializable, fixed 48-scenario concurrency sub-corpus);
+  the proof output holds the first counterexample (shrunk steps, or the first failing concurrency scenario).
+- Run: `scripts/run_h23.py ... --concurrency 300` (default 300). The P1c `FakeVolatileLedger` speaks a different
+  surface (`put`), so the volatile-ledger proof uses the oracle-driven correct fake with the mutant switched on.
+- Cost: sequences ~ same as before plus ~5% for crash rules; concurrency ~0.05-0.1 s/scenario on fakes
+  (300 scenarios ~ 20-30 s); the fakes' unsynchronized mutant sleeps 3 ms to open the race window.
+## P7b Conventional - A8 crash/restart/concurrency (tag r3-p7b-conventional, branch r3-conv)
+- Durable state stays in the world DB (effects, idempotency ledger, approvals, and now the authority in force: `conv_authority`), all in the request transaction; `state_dir` accepted, unused. Details and test map: spec/protections/H23-conventional.md, section P7b.
+- `arm_crash/crash/restart` on Service + deployment; thread safety by RLock + BEGIN IMMEDIATE; mutants `ledger_after_commit_volatile`, `unsynchronized_commit` (the latter has a mutant-only 50 ms sleep to make the race deterministic).
+- Audit (a) fixed: delegate tool exposure honours the delegation operation list. Audit (b): request_id=None documented, unchanged.
+- Pinned mutant-list test in tests/conventional/test_conv_mutants.py updated to the six-name set.
+## P7a Paladin - update-field fix + A8 crash/restart/concurrency (tag r3-p7a-paladin)
+- Regression fixed: the R-3 create whitelist was applied to updates (preregister_hypothesis lost `freeze_hash`). Whitelists are now per `(operation, kind, type)` (boot.py, worldbridge.py); tests/paladin/test_p7a_updates.py covers every project update effect (fails without the fix).
+- A8: `state_dir`, `arm_crash`, `crash`, `restart`, thread safety (src/paladin/{ledger,core,deployment}.py). Design and limits: spec/protections/H23-paladin.md "P7a notes". Tests: tests/paladin/test_p7a_a8.py (R9 both points, both domains; replay same / new request_id; approval single use across crash; authority persistence; R10 with 8-12 threads; both new mutants).
+- Paladin's conventional counterpart finding: the durable ledger needs a world-digest witness because Paladin does not own a transaction spanning the world file and `state_dir` (external effects use separate adapter connections).
+- P7a fix: an armed crash fires only at its point; refused/replayed requests keep the arm and return their normal refusal (deployment.py `_mutating`); approve() never consumes the arm. Tests in tests/paladin/test_p7a_a8.py (both points, refused request keeps the arm, approval single use across crash, digest-unchanged commit).
+
+## P8 - harness R-6 (approvals across crashes) + H23 dev run 5
+
+- New rules `crash_appr_before` / `crash_appr_after` (r3_harness/h23/crash_appr.py): approve -> arm_crash -> commit -> UNAVAILABLE probe -> restart -> replay-same -> replay-new. Oracle expectations come from env.call (approval consumed only by a committed call). New classes `crash_approval_lost` (post-restart commit the oracle expects is missing) and `crash_approval_reuse` (post-restart effect the oracle forbids); both count as forbidden effects.
+- corpus.crash_coverage: deterministic seeded per-domain/agent pass over all crash rules so required labels never depend on the random draw. The project domain has no approval-needing operation, so crash_appr scenarios exist only in manufacturing.
+- Test fakes persist approvals durably; known negatives (tests/test_h23_r6.py) lose or double-consume them.
+- Dev run exp-h23-dev5 (seed 13, 1000 sequences, 300 concurrency): both variants SUPPORTED, zero classes, differential 0/9684. Evidence copied to the scratchpad; experiment directory deleted.
+
+## P10 Paladin: approval binds on_behalf_of literally
+- Cause (exp-h23-001 ATTRIBUTION.md): approval fingerprint used the delegator in force, so null and explicit `planner-1` were one request. Now `fingerprint(sub, obo_as_supplied, op, inputs)` for both `approve` and the commit's approval claim. No vendored Engine code changed; request-id replay fingerprint unchanged; delegate authority evaluation unchanged.
+- Tests: tests/paladin/test_p10_approval_binding.py (agent-1, agent-hostile-1; both mismatch directions DENIED approval_required with zero world effects, same form OK once then consumed, across crash/restart); 6 of 10 fail on the pre-fix code. test_p2a_functional's old "same with and without on_behalf_of" test replaced by the same-form test.
+## P10 Conventional
+Approval/idempotency fingerprint now binds `on_behalf_of` literally (service.py; `canonical_obo` removed from policy.py). New tests in tests/conventional/test_p10_approval_binding.py (10; 6 fail on the old code). Note: tests/test_h23_p9.py::test_override_on_a_non_dev_experiment_id_exits_2_known_negative failed once in a full-suite run (and 20 errors in another), but passes alone and on the pre-change baseline - appears load/flake related.
+
+## P11 - WAL world store; world-lock timeouts classified
+- Cause (hypothesis, not reproduced in 20x300 isolated concurrency scenarios): default rollback-journal mode + 5s default timeout; in
+  unsynchronized_commit threads, writers (BEGIN IMMEDIATE, then EXCLUSIVE at commit) block/are blocked by readers and a thread left
+  past JOIN_S (daemon) can keep a lock while the harness snapshots.
+- Fix: world.py WAL on every connection, busy_timeout 15s, reader = one read txn with bounded retry -> WorldLockTimeout; Env/concurrency
+  classify `world_lock_timeout`; mutant runs count it as detection; evaluator adds "world unreadable N times" and denies SUPPORTED.
+
+## P1d - Gate 2 shared protocol (r3_shared only; variants/oracle/harness untouched)
+- world_log (src/r3_shared/world.py + worldlog.py): additive table; every WorldHandle write appends one row in the same SQLite txn.
+  Autocommit write = own tx id, tag NULL. `transaction(tag)` yields `Tx(id, tag, tick, mark())`; nested use and mark-after-close raise
+  RuntimeError. `WorldStore(path, clock, writers)`: `handle()` refuses writers outside the allowlist. `WorldReader.log(after_seq)`;
+  snapshot gains `log_head`. A no-op `link`/`unlink` (nothing changed) appends no row. Update row data = {patch, props(merged), version}.
+- LogicalClock: threading.Lock around now()/advance().
+- authority v2: schemas/authority-spec-v2.schema.json, src/r3_shared/authgraph.py (scope_covers, scope_subset, edge_path,
+  authority_document/digest, validate_graph), `authspec.validate_strict` dispatches on `spec`. Root-edge delegable-grant coverage and
+  `redelegable` are runtime issuance rules (PROT-H24 s2.4/2.5), not static checks (P1d-3 lists neither).
+- variant.py: ReplayResult, Deployment.delegate/revoke/authority_used/replay/explain, deploy(history=, anchor=), `g2_call()` (missing
+  method -> NotImplementedError("not implemented yet - G2")).
+- histstore.py (HistoryStore, TamperView), anchor.py (AnchorClient, start_anchor, verify_anchor_log, close_anchor) and anchor_server.py
+  (separate process; HMAC chain; key revealed to KEY.revealed + HEAD.final at close). scripts/run_sandboxed.sh runs a command under
+  sandbox-exec with file-write* denied on the anchor dir (tests/test_p1d_sandbox.py: known-negative + known-positive + non-sandbox control).
+- Import scan: paladin/conventional may not import r3_shared.anchor_server or TamperView (tests/test_import_boundaries.py).
+- Fakes: tests/fakes/fake_g2.py (G2Mixin on FakeDeployment). Edited existing test: tests/test_mutants.py (ALL was asserted == H23 list).
+
+## G2 H24 harness (variant-neutral; tag r3-g2-h24-harness)
+- Oracle (`src/r3_oracle`): `authority_v2.py` (immutable `RefAuthority`: `from_spec`, `apply(event)` -> NEW value, `issue_delegate`/`issue_revoke`
+  = PROT-H24 s2/s5, `decide` = s3 returning (allow, reason, valid_paths), `was_ever_valid` = stale-path test), `scope_v2.py` (own scope
+  covers/subset/schema/digest; parity test against r3_shared.authgraph), `judge_v2.py` + `judge_calls.py` + `logreplay.py` (walk the
+  world_log in seq order, replay it onto the start snapshot, classify every harness call; compare the replayed world with the real final
+  snapshot for `unlogged_write`). No clock, no variant (AST-scanned by `evaluator.oracle_independent` and tests/test_h24_oracle.py).
+- Harness (`src/r3_harness/h24`): `env.py` (G2Env: world store with world_log + clock + writer allowlist, harness-counter invoke/return,
+  schedule rows), `gen_graph.py` (A2 DAG generator), `gen_seq.py` (state machine, 20-60 steps/sequence), `gen_race.py` (RV RA EX SA DP AP CR
+  UN + SEQ control; barrier-started threads, <= 1.5 ms seeded jitter), `rows.py`, `analyze.py` (recomputes every metric from raw rows; used by
+  runner AND evaluator), `mutation.py`, `runner.py`, `evaluator.py`. Scripts: `run_h24.py`, `evaluate_h24.py`, `verify_h24.sh`.
+- Requests that use delegated authority go through `Deployment.direct(..., on_behalf_of=Q)` (the layer under the tools; fresh principals
+  have no tool surface). set_authority is composed by the harness as a full v2 document: narrowed base + the oracle's capabilities/revoked.
+- Class mapping for an edge the oracle refuses but the variant marked: scope/expiry amplification -> `scope_amplification`; cycle, static,
+  unknown parent/principal, duplicate, schema -> `cycle_grant`; parent_invalid -> `post_boundary_effect`; anything else -> `forbidden_effect`.
+  Reject set (Q3): scope_amplification, post_boundary/forbidden/unattributed/writer/unlogged, cycle_grant, linearizability_violation.
+  authority_ack_without_commit, historical_mismatch, progress_loss block SUPPORTED but are INCONCLUSIVE, not REJECTED (no frozen mapping).
+- Frozen-hash check: protocol/FREEZE.json has no PROT-H24 amendment hash yet; the evaluator uses `FREEZE.json["amendments"]["PROT-H24.md"]` when
+  present, else the on-disk file hash (reason text names the source). Add the amendment when PROT-H24 is refrozen.
+- Dev overrides: `--min-sequences`, `--min-concurrent` (dev ids only, stamped in verdict.json and every reasons list). Floors (progress 1.0,
+  overlap 0.5, >= 1 effect-first RV) are not overridable.
+- Runtime on FakeHonest (this host): ~90 s per 1,000 sequences, ~35 ms per race case (1,350 cases ~ 50 s), mutation proof (60+60) ~ 15 s;
+  10,000 sequences + 1,200 races ~ 17 min per variant on the fake; real variants will be slower.
+- Observed on the real H23 variants (no G2 methods yet): `unsupported` on every delegate/revoke/authority_used and `unattributed_write`
+  (their effect transactions carry no `commit` mark) -> REJECTED by the frozen meter rule until the G2 builders add marks. Not a harness bug.
+- Side observation (H23 harness, not edited): `r3_harness/h23/runner.py` and `evaluator.py` compute ROUND3 as `parents[3].parent`, which is
+  the worktree root: `tree_sha('r3_oracle')` hashes an empty tree and H23's `oracle_independent()` scans a directory that does not
+  exist (returns (True, []) vacuously; verified). The H24 modules use `parents[3]` and scan 15 real oracle files.
+## G2 H27 harness (branch r3-harness-h27, tag r3-g2-h27-harness)
+Variant-neutral. New: `r3_oracle/provenance.py` (expected bindings), `r3_harness/h27/` (stream, gen_history, base, layout,
+tamper, case, corpus, mutation, runner, analyze, audit, evaluator), `scripts/{run,evaluate,verify}_h27.*`, `tests/test_h27_*.py`,
+`tests/fakes/fake_h27*.py`. Real variants are consulted only through the registry; a variant whose `deploy` has no
+`history`/`anchor` parameter prints "not implemented yet - G2" and exits 2.
+
+How to run (official): `scripts/run_h27.sh --exp-id exp-h27-001 --variants paladin,conventional --seed N` (per variant the
+anchor is started OUTSIDE the sandbox by run_sandboxed.sh, the run executes under sandbox-exec, then `run_h27.py finalize`
+adds E2/E5 and seals envelope.json); `scripts/evaluate_h27.py exp-h27-001`; `scripts/verify_h27.sh exp-h27-001`. Defaults are the
+frozen sizes: 300 base histories per domain, 5,000 EFFECTIVE tampered cases (no-op attempts are dropped and counted in
+`attempt_stats`), 1,000 clean controls, mutation proof = 90 cases per mutant. Dev runs lower minimums only through
+`evaluate_h27.py --min-tampered/--min-bases-per-domain/--min-controls`, refused unless the experiment id contains `-dev`, and recorded
+as `minimum_overrides` + a `DEV ONLY` reason. Runtime on FakeHonest: ~45 s per 1,000 tampered cases (incl. 100 controls, 80 bases, mutation proof).
+
+Design points the evaluator relies on: (1) artifacts/envelopes/receipts are found BY CONTENT; `HISTORY_LAYOUT` is only used for
+`approval` and `idempotency` records. (2) The affected set of a tamper case is derived from the END STATE of the store vs the base
+history: definite = envelope record changed/missing or a bound artifact gone everywhere; indeterminate = later decisions whose own
+bytes are untouched (a verifier may check them through anchor roots only) or whose artifact survives only under another key.
+Only definite and unaffected decisions are judged. (3) At most one T9 (continuation) case per base history, because a continuation
+request appends to the base stream's anchor entries. (4) Approve has no request_id in the protocol, so the approve decision id is
+variant-chosen and read from its envelope.
+
+## G2 conventional (H24 + H27)
+- New modules (src/conventional/): `authdoc.py` (delegation-table rules: issuance, path validity), `pdp.py` (PolicyEngine + edges; decision at the commit tick),
+  `authority_ops.py` (delegate/revoke/set_authority/authority_used, one world transaction + `authority`/`commit` marks), `histledger.py` (records in the
+  HistoryStore, world-log-checked), `provenance.py` (evidence, envelope, anchor-before-ack), `replay.py` (replay/explain). Maps: spec/protections/H24-conventional.md, H27-conventional.md.
+- Tokens carry identity only; the PDP re-derives authority from the table inside the commit transaction (no token-scoped authority).
+- Without a HistoryStore the H23 aux tables are used unchanged (Q9); with one, idempotency/approvals/authority versions live in the HistoryStore and
+  the world log (marks `commit`, `approval`, `approval_used`, `authority`) decides whether something committed. The `approval`/`approval_used` marks are an addition to the two
+  documented mark kinds; they carry no canonical change.
+- Every effect transaction now carries a `commit` mark and tag `effect` (also on the H23 path); the world meter's attribution rule needs it.
+- `deploy()` over an existing history continues its authority lineage (last `authority` mark -> `art/<digest>`) when the base spec is unchanged.
+- Known limitations: a committed request whose anchor append failed is never re-anchored later (retry -> UNAVAILABLE `anchor_unavailable`, replay UNRESOLVED
+  `unanchored`); duplicate decision_ids (same request_id reused after a refusal) share the first anchor entry on lookup; evidence `newest` ties keep the first key.
+- Assumptions for the frozen text: see the end of spec/protections/H27-conventional.md.
+
+## G2 errata E-3/E-4 (conventional)
+- provenance: `operation` null for delegate/revoke; `args_digest` over the raw args (call_tool/direct), raw approve args, edge dict, edge_id string; `newest` tie-break greatest value then smallest key.
+- authority_ops: plans run on `authdoc.upgraded(policy.doc)` (v1 == empty v2, depth 8); ConventionalDeployment methods wrapped by `_safe` (internal error -> UNAVAILABLE/internal_error CallResult).
+- tests: tests/conventional/test_conv_g2_e34.py (14 tests, 11 fail on the pre-change source; the tie-break test passes either way because the store lists rows key-ordered).
+## G2 paladin - H24 + H27 protections (tag r3-g2-paladin)
+- New: `capgraph.py` (edges, issuance/use rules, mutant sites), `core_g2.py` (G2Mixin: decisions, edge-mode authority, delegate/revoke/
+  set_authority transactions, history guard), `prov.py` + `evid.py` (decision envelope, artifacts, anchoring), `replay.py` +
+  `authreplay.py` (replay/explain with re-authorization over the bound artifact), `histledger.py` (the ledger interface over a
+  HistoryStore), worldbridge `log_head`/`tx_rows`. Edited: `core.py` (one world transaction per effect commit on the handle owning the
+  operation's effects, `commit` mark, edge-mode principal, anchor-before-ack, history mode), `deployment.py` (delegate, revoke,
+  authority_used, replay, explain, authority_state, HISTORY_LAYOUT), `variant.py` (history=, anchor=), `ledger.py` (commit_row/drop/claim verify).
+  No vendored Engine/Toolchain file changed.
+- H23 path unchanged when `history` is None, with one observable addition: every effect commit now also appends a `commit` mark row
+  (required by PROT-H24 s4) so `log_head` moves on a no-op commit; tests/paladin/test_p7a_a8.py compares snapshots without `log_head`.
+- A request naming `on_behalf_of` for a principal WITHOUT a spec delegator is now an EDGE request (DENIED `no_valid_path` when no valid
+  path) instead of the H23 "on_behalf_of does not name this principal's delegator" refusal; still DENIED, zero effects.
+- Oracle-facing assumptions (effect_digest, world_seq, reason codes, approve decision id): spec/protections/H27-paladin.md.
+- Gaps: authority-document durability window and unauthenticated authority/`used` records in the HistoryStore (see both protection maps).
+
+## G2 errata E-3/E-4 (Paladin)
+Changed src/paladin/core_g2.py (authority decisions: operation null, revoke args = edge_id string) and deployment.py (total
+methods wrapper). Tests: tests/paladin/test_pal_g2_e34.py. tests/paladin: 207 passed.
+
+## G2 fix1 - Paladin (E-5, E-7, E-8)
+Changes in src/paladin/core.py and core_g2.py only; see spec/protections/H24-paladin.md and H27-paladin.md "G2 fix1". Tests: tests/paladin/test_pal_g2_fix1.py (14, all red on 319e567).
+
+## P1e - Gate 3 shared protocol (governance, disclosure, low-channel forms)
+Variant-neutral additions (tag r3-p1e-protocol). New: `r3_shared/governance.py` (load/validate/structural_signature/
+structurally_distinct), `constitutional.py` (action schemas, `emergency:declare` pseudo-op, OK/refusal bodies, governance-mark
+builders), `disclosure.py` (`tool_schema`, markers, event/decision/low-response form checkers `check_low_result`), `schemas/
+governance-spec.schema.json`, `schemas/authority-spec-v3.schema.json`, six fixtures `spec/governance/<model>.<domain>.json`.
+Changed: `variant.py` (G3 methods, `G3_METHODS`/`g3_call`, `deploy(..., governance=None)`), `authspec.py` (v3 schema dispatch,
+`validate_strict` disclosure checks, `effective_disclosure` = E-3 analogue), `authgraph.py` (V3 treated like V2 in
+`authority_document`/digest), `mutants.py` (KNOWN H25/H26), `world.py` (`WorldStore.seed`, harness only).
+Read: legacy `read()` is documented as get->read_object, list->list_objects, else query (Q12); the fake implements it, the
+H23 tests that read bodies only use `body["props"]`, which the new form keeps (no H23 test needed editing).
+Tests: tests/test_p1e_*.py; fakes: tests/fakes/fake_g3.py (G3Mixin), generated docs: tests/p1e_gen.py (its `ref_static_ok` is the
+test-local reference the oracle's constitution.py static rules must also agree with). Expected conformance failures until the
+variants land: real variants lack the G3 methods (surface as NotImplementedError("not implemented yet - G3")) and their `deploy`
+has no `governance=` parameter.
+
+## G3 H25 harness (variant-neutral; branch r3-harness, tag r3-g3-h25-harness)
+Edited only: `r3_oracle/{constitution,const_eval,const_static,const_judge,const_refusal}.py`, `r3_harness/h25/*`,
+`scripts/{run,evaluate}_h25.py` + `verify_h25.sh`, `tests/test_h25_*.py`, `tests/h25_util.py`, `tests/fakes/h25_fakes.py`.
+- **Oracle** (`Constitution`, pure immutable value; imports r3_shared forms + r3_oracle only): `from_docs`, `apply(event)`
+  (action / set_governance / authority), `decide_action(subject, action, seq, tick)` in the frozen PROT-H25 s3 order returning
+  `Verdict(status, reason|None, mark, body, run)` (`RUN` = evaluate the operation with the H23 ops model; emergency `act` uses the
+  caller's own deny grants plus a synthetic allow), `final/stage/basis/emergency_active`. Static rules are re-implemented in
+  `const_static.py` (parity with `validate_governance` on 1,500 generated docs: `tests/test_h25_oracle.py`, G3-E10).
+- **Judge** (`const_judge.py`, `const_refusal.py`): walks the world_log, claims each transaction to a harness call (commit-mark
+  request_id, else governance-mark keys), compares the governance mark byte-for-byte, measures effects by the H23 meter rules, and
+  judges calls that wrote nothing against the oracle at every real-time-consistent commit point (races). `seed`-tagged
+  transactions are attributed setup (G3-E2). Classes: procedural_mismatch, illegitimate_effect, fabricated_judgment,
+  emergency_violation, invalid_doc_accepted, linearizability_violation, progress_loss, race_refusal_ok, unattributed/writer/unlogged,
+  unsupported, world_lock_timeout, domain_branch (audit), ok.
+- **Generators**: `gen_model` (3 families x 2 domains, fresh principals, 8% `matter_conflict` variants, invalid docs 5%),
+  `gen_case` (decision / review / appeal / emergency / noise plays, crash+retry, mid-case set_governance and set_authority,
+  `NoGov` cases), `gen_race` (EA, EA_EDGE, EA_ADV, AE, AX, AX_EDGE, JJ, ES + SEQ controls). Judgment values and merit strings come from
+  a separate RNG stream (`h25-judgment-*`); the generator's oracle mirror is used for targeting only.
+- **Audits**: `audit.py` (consistent-renaming metamorphic test, static AST scan, mutant self-test), `boundary.py` (merit
+  invariance, judgment flip), `mutation.py` (KNOWN["H25"]; domain_privilege_branch killed by the audit). `evaluator.py` is 1:1
+  with the contract + thresholds + PROT-H25 s7; `runner.py` writes the A4 evidence files (+ `cases-h25.jsonl.gz`, `safe-progress.json`,
+  `envelope.json`).
+- **Run**: `scripts/run_h25.py --exp-id ID --variants paladin,conventional --seed N [--cases 9000 --races 1100 --nogov 100]`
+  (>= 10,000 unique cases; fakes only with `--test-variants`), `scripts/evaluate_h25.py ID [--min-cases N, dev ids only]`,
+  `scripts/verify_h25.sh ID`. Dev overrides are stamped in verdict.json and also relax the coverage floor to the decision rule
+  + 50% of reachable refusal classes; refused on non-dev ids.
+- **Runtime** (honest oracle-backed fake, one core): ~37 ms per sequential case (~37 s per 1,000 cases) before audits; the
+  official default (9,000 + ~1,240 races + 100 nogov, 1,000-case audits) is roughly 15-20 min per fake-speed variant; real variants are slower.
+- **Oracle choices where PROT-H25 is silent** (all in `const_eval.py` docstring; conformance failures here are information):
+  (1) `end` by a non-member of the declaring body -> DENIED with ANY reason (the text names no code); (2) a lapse is fixed at
+  propose_tick + after (not at the first later transaction); (3) `specialis` keeps a body iff SOME of its covering matters is not a strict
+  superset of another candidate's matter; (4) the deciding matter is the first covering matter (document order) that names the winner
+  (concurrence: the first covering matter); (5) a case that is no longer governed/resolved after set_governance is AWAITING (oracle_needed);
+  (6) `execute` of an `emergency:declare` case is UNDEFINED (never generated); (7) an ordinary governed request that is
+  schema-invalid or unauthorised accepts any DENIED/INVALID, a fully valid one must be `case_required`; (8) the commit point `seq` of an
+  action is its governance mark's seq; (9) a refusal where the oracle could have committed in some real-time order is `progress_loss`.
+- **Deviations/gaps**: relation names are not renamed by the renaming audit (ops-spec `actor_holds` rules key on them, same exemption as
+  operation/type names); marks are compared without `args_digest`/`version` in the renaming audit (digests of renamed ids differ by
+  construction); `protocol/FREEZE_G3.json` pins PROT-H25.md and the v3 authority fixtures but NOT `spec/governance/*.json` - the run
+  records their sha256 in `oracle-boundary-audit.json` and the evaluator compares them with disk (INVALID on change); the registry loads
+  the pre-G3 paladin/conventional packages, which lack `deploy(governance=...)`: `tests/test_h25_conformance.py` SKIPs them with that reason
+  and `run_h25.py` exits 2 "not implemented yet - G3".
+## G3 H26 harness (tag r3-g3-h26-harness)
+Variant-neutral. New: `r3_oracle/{lowproj,disclosure,disclosure_prov,disclosure_reads}.py` (oracle: canonical low projection, the
+low-view least fixpoint, decision/edge/case visibility + redacted provenance views, expected reads/tools/queries, canaries);
+`r3_harness/h26/` (sim, env, gen_auth, gen_vary, gen_plan, gen_pair, observe, judge, analyze, fuzz, mutation, runner, evaluator);
+`scripts/{run_h26.py,run_h26.sh,evaluate_h26.py,verify_h26.sh}`; tests `test_h26_{oracle,generators,fakes,scripts,conformance}.py`;
+fakes `tests/fakes/fake_h26.py` (oracle-backed FakeHonest + mutant/flag fakes via `--test-variants`).
+How to run (per variant, official counts are the defaults): `scripts/run_h26.sh --exp-id exp-h26-001 --variants paladin,conventional`
+(anchor service outside the sandbox as for H27, ruling Q10; `run_h26.py` alone runs without history/anchor), then
+`scripts/evaluate_h26.py exp-h26-001` and `scripts/verify_h26.sh exp-h26-001`. Dev ids (contain `-dev`) may lower counts with
+`--pairs/--aa/--fuzz-calls` (run) and `--min-*` (evaluate); the override is stamped in envelope and verdict, refused otherwise.
+Pipeline per pair: oracle-only generation (auth v3 perturbed with 2-8 principals + 2-6 rules; variation kinds F E L D C G M;
+D has modes args/swap/valdiff) -> low-equivalence of both worlds validated by the oracle BEFORE any variant runs (bounded 50
+re-draws, counted) -> D4 probes pre-simulated cumulatively -> both worlds executed through the variant (seed -> deploy ->
+subscribe -> high phase -> observation plan) -> canonical observations compared byte-for-byte; each observation also judged
+against the oracle (read mismatch, tools exposure, redacted provenance, canary scan, frozen forms). A/A controls run w1 twice.
+Fuzz: >= 20,000 single-world calls with hidden-key dictionary, identifier twins and canary scan.
+Runtime on the honest fake: ~2.6 min per 1,000 pairs (both worlds, generation included), ~1.7 s per 1,000 fuzz calls;
+5,000 pairs + 500 A/A + 20,000 fuzz + mutation proof ~ 15-20 min per variant on the fake (real variants will be slower).
+INTERP (frozen text left open; the oracle follows the first reading, tests pin the difference):
+ 1 via-rule coverage: s1.2 "a link connects" (not s2.1 "visible links"); on the project fixture 2 via rules (p-researcher-rival,
+   p-researcher-prediction) would never fire under the second reading (tests/test_h26_oracle.py).
+ 2 args_digest is low only if the decision is own or the args are ONLY existence-visible resource refs; effect_digest is low iff
+   every object/field/link the effect rows touch is in the low view.
+ 3 case members (s1.3 "competent or reviewing") = every member of every governance body (over-approximation; G pairs only use
+   observers outside all bodies, so the over-approximation never matters for a pair).
+ 4 prov_object of a hidden/absent ref = OK with no decisions; list_links of a hidden ref = OK with empty lists; query of an
+   unknown name is not judged (twin-compared only).
+Expected conformance failures: the real variants currently lack `deploy(governance=)` and the G3 methods (report: "not implemented
+yet - G3"); tests/test_h26_conformance.py FAILS for them on purpose and passes for the oracle-backed fake.
+## G3 conventional (H25 + H26; branch r3-conv, tag r3-g3-conventional)
+
+Module map (`round3/src/conventional/`, all new files < 250 lines):
+| Module | Purpose |
+|---|---|
+| `govproc.py` | generic governance PROCEDURE over the r3-governance-1 document (routing/precedence, eligibility, quorum, lapse, review, final+basis); pure, no ids |
+| `govsvc.py` | constitutional entry point (`constitutional`, `set_governance`, `case_state`, emergencies); one tx + one `governance` mark per OK action |
+| `govbook.py` / `govstore.py` | case book folded from committed marks + journal (request ids, args, stored results); document blobs by digest (world DB aux tables, or HistoryStore keys `gov/`, `govdoc/`) |
+| `lowview.py` | THE read-side authorization filter: observer LowView (fixpoint over the v3 disclosure document) |
+| `lowreads.py` `lowprov.py` `lowevents.py` | read_object/list_objects/list_links/query/read, provenance views + authority_used_as, subscribe/poll: all projections of the LowView |
+| `abort.py` | `_Abort` moved out of service.py (import cycle) |
+Changes to existing code: frozen check order in `service._execute` (schema before the coarse authority gate), `_txn(pre=, gate=)`, refusal bodies carry only `reason`, tools use `r3_shared.disclosure.tool_schema`, `read()` redefined onto the P1e-5 forms (old test expecting UNKNOWN for a missing object now expects INVALID not_found, Q12), hidden delegate parent/revoke edge -> `unknown_parent`/`unknown_edge` (one H24 test row changed accordingly, Q9), `authdoc.is_v2` accepts v3 documents, idempotency `used` record gains `subject` (own-request test for `authority_used_as`).
+Decisions/gaps reported to the orchestrator: see the "interpretation" lists in `spec/protections/H25-conventional.md` and `H26-conventional.md`. HISTORY_LAYOUT is unchanged (new history keys `decidx/`, `gov/`, `govdoc/`, `meta/gov_initial` are not declared to the H27 tamper harness).
+Tests: `tests/conventional/test_conv_g3_{h25,h26,mutants}.py`, helpers `conv_g3_util.py`.
+## G3 paladin - H25 constitutional authority + H26 knowledge sovereignty (tag r3-g3-paladin)
+Protection maps: spec/protections/H25-paladin.md, H26-paladin.md (requirement -> file:line, mutant sites, every frozen-text interpretation).
+New modules (src/paladin): `govir.py` (governance document -> typed relations, precedence), `procedure.py` (the ONE generic CaseBook:
+stages, quorum/concurrence/review, lapse, final outcome, basis, emergencies), `govhooks.py` (execute/act hooks that run INSIDE the effect
+transaction), `core_g3.py` (constitutional actions, base-authority re-check, case_required, mark/meta rebuild at restart),
+`sovview.py` (low-view fixpoint), `sovchan.py` (read/list/links/query/tools/subscribe/poll), `sovprov.py` (provenance views),
+`public.py` (the public form of every mutating result). Changed: `core.py` (frozen check order: schema -> authority over DECLARED
+resources -> case_required -> existence; `gov=` hook), `core_g2.py` (decision log call, schema helper), `capgraph.py` (hidden parent/edge),
+`authcompile.py`/`boot.py` (emergency role rule + shadow principals), `deployment.py`/`variant.py` (G3 methods, `governance=`).
+No vendored Engine/Toolchain file changed (VENDORED.json untouched).
+Tests (tests/paladin, prefix test_pal_g3_*): h25_core, h25_more, h25_mutants, h26_pairs (paired worlds F/E/L/D/G + A/A + non-vacuity), h26_mutants,
+h26_prov, h26_surface (check order, forms, tools exactness, low-view rules, hidden edges, determinism), domain_scan (static R25-6 scan).
+Regression edits (Q9, frozen order supersedes E-10 freedom): 3 H23/G2 tests expected INVALID for an unauthorised caller naming a nonexistent
+target (now DENIED, authority first), one H24 test expected not_parent_holder for a hidden parent (now unknown_parent), reads/refusal bodies
+assert the P1e-5 forms, and the G2 "edge holder has no tools" assertion follows PROT-H26 3.4.
+
+### G3 fix3 paladin (effect_digest redaction, G3-E22)
+- `paladin/sovprov.py::_eff_low`: the own-decision exemption is removed; effect_digest is true only if every touched object and
+  field of the decision's world_log rows is in the observer's low view (own decisions included). args_digest keeps its own exemption.
+- VENDORED.json: `engine/gates.py` patch list now `V2, V3`; V3 = G3-E17 post-authority order (gates.check_inputs `existence=False`
+  stand-in, with the existence check re-run after deny rules in pipeline.py).
+
+## G3 fix5 - paladin (tag r3-g3-fix5-paladin)
+Fixes from the exp-h25-dev1 / exp-h26-dev1 attribution (variant-side root causes only):
+- H25 RC5: `Core._replay` re-evaluates a committed constitutional `act` through `GovAct.in_force_now()` (emergency active, unexpired, in scope, grantee; G3-E24 R5), never the actor's base grants. RC6: `CaseBook.basis` lists each counted judgment once (dedupe by rid, seq order).
+- H26 RC4/G3-E26: public types have provenance `none` (sovview). RC5/INTERP-2: `_args_low` = own, or all refs existence-visible and no scalar input present (rec["sc"]). RC6a (D6) `work_order` skips a requirement without a visible requiresPart link; RC6b (D7) hidden Experiment.version/Evidence.experiment_version degrade like null, and `query` no longer swallows exceptions into a constant (an unexpected exception is a harness variant_error); RC6c rule union allow - union deny, order-independent, also for provenance level and links. RC7/G3-E27: view `reason` = public reply reason (rec["vr"]; the anchored envelope keeps the auditor gate code). RC8: update effect rows = props | patch. RC9/G3-E27: authority_used_as on an own refused governed request = OK partial, path [].
+- Vendored patches recorded: D6, D7 (VENDORED.json via scripts/paladin_vendor_manifest.py, spec/protections/H23-paladin.md).
+- tests/paladin/test_pal_g3_h26_prov.py: the foreign-observer redaction tests now pin the view at `scalars` for Hypothesis (a public type is provenance `none` under G3-E26, so d1 is no longer low for researcher-2 on the live view).
+
+## G3 fix6 paladin (G3-E29: ops-spec rules as data)
+- New src/paladin/opsrules.py: `RuleSet` evaluates `operations[].business_rules[].when` of the BOOTED ops spec (ops: eq ne in gt ge lt le and or not actor_holds; exprs: input lit field read). `holds` (delegation-chain relation test) moved here from manufacturing facts.py.
+- Manufacturing logic no longer names a relation, threshold or approval rule: `policies.make(rules)` / `constraints.make(rules)` close over the RuleSet. needs-approval = the rule named by `operations[].approval.required_when_rule`; protected-route deny = rule `transfer-protected-route` (relations planner/supervisor now live only in the spec). Only domain input: the spec's `read` helper `protecting_work_orders` (`logic/__init__.READS`). data.py lost APPROVAL_THRESHOLD_*.
+- boot.bindings_for/build_bindings now receive `ops_spec` (+ IR); function refs bound by the name after ':' of each IR `implementation_ref` (`functions.BY_NAME`), so no Round 2 module path (it contained "planner") is in the source.
+- Disclosed: `no_effect_without_approval` renamed `effectless_statuses_hold` (identifier-only hit; it reads Decision-status vocabulary and holds no relation/threshold). Vendored patch D8 recorded (VENDORED.json edited directly; scripts/paladin_vendor_manifest.py PATCHES table is out of scope for this phase and still needs D8 if re-run).
+- Not touched (outside domains/**, pre-existing unresolved hits in `list_domain_hits`): boot.py DOMAINS/domain branches, sovview.py LEVELS.
+- tests/paladin/test_pal_g3_fix6.py: units/cost thresholds, gating value, exempting relations all change decisions when a COPY of the spec is edited.
+
+## G3 fix9 - paladin (official exp-h25-001 / exp-h26-001 attribution)
+- H25 S1a: `_threshold_edit_denied` denied only via `any()` (vacuous on an empty/absent target set); now `not (targets and all DRAFT)` = ops-spec `not all_have(nonempty)`.
+- H25 S1b/S2 (general cause): a DENY policy that raises on an absent target made the pipeline defer to existence (INVALID). Patch V4: `evaluate_policies` records `deny_errors`; a deny rule that cannot be evaluated fails closed before existence (oracle HelperError -> DENIED_RULE); errors of non-deny policies still wait. Applies to every policy/operation. Old tests that used evaluate_hypothesis(H-NOPE) as the INVALID example now use flag_orphan_component (no deny rule), evaluate_hypothesis(H-NOPE) is DENIED.
+- H25 S3 (G3-E31(a)): `_incomplete` no longer folds freeze_hash in; blank freeze_hash is the precondition (INVALID).
+- H26: field accesses on view objects now `.get` (hidden == null): derive.py `git_commit`, `payload_hash` (x2), `evaluator_ref` (None -> no evaluator consulted); policies.py historical_rebinding (`experiment_version`, absent ContractVersion/Experiment); payloads.py experiment_of_evidence; constraints.py evidence-binding; manufacturing functions.py decision_content_hash (six fields). Audited and left: manufacturing facts.py/constraints.py already use `.get`; remaining `["..."]` are internal structures (planned effects, derived dicts), not view props.
+
+## G3 fix11 - paladin (attr5 of official exp-h25-002; patch `F11`)
+- P-A (rows 466, flip 268): `payloads.new_experiment_ids` subscripted `["version"]` on an absent experiment; V4 turned the TypeError into DENIED policy, the oracle answers INVALID (its helper is total). Sweep of `domains/**/logic` for subscripts on possibly-absent objects, each made total: project `payloads.new_experiment_ids`, `new_experiment_version` (old row `.get`), `attach_evidence` (`ev` `.get`), `record_decision` (`d` `.get`); `policies.contract_complete` and `facts.latest_experiment` (absent experiment props = `{}`); `freeze.compute_freeze_hash` (absent experiment = null fields, as the oracle); manufacturing `decision_content_hash` (absent decision = explicit ValueError). Already total, untouched: manufacturing policies `_expedite_ev`/`_reschedule_ev`/`facts.risk`/`lot_for`. V4 unchanged (genuine helper errors still fail closed).
+- P-B (row 2509): G3-E32(a): a decision completed by `set_governance` re-evaluation takes the tick of the completing counted judgment (`Procedure.completing_tick`, judgments now store their tick), not the governance tick; the appeal window runs from there. Lapse branch unchanged.
+- Tests: tests/paladin/test_pal_g3_fix11.py (all 8 fail without the src change). Manifest: VENDORED.json current hashes refreshed, `F11` recorded (documented in spec/protections/H23-paladin.md).
+
+## P1f - Gate 4 shared protocol (tag r3-p1f-protocol, branch r3-p1f from r3-g4-freeze)
+Implements spec/gate4/PROTOCOL-P1f.md in r3_shared only; variant code, oracle, harness and frozen specs untouched.
+- New modules: `extcap` (macaroon-style HMAC caps; steps + signed step boundaries so `chain_id` = sha256(root nonce, first attenuation
+  step) is stable under narrowing), `extadapter` (ExternalRequest/AdapterReply/ActionAdapter, `payload_digest`, correlation helpers),
+  `extsystems` + `extsem` (frozen system declarations, pure state-update semantics), `extobs` (ObservationClient, SQLite mode=ro, own key,
+  faults), `extworld` (client, `start_external`, `require_external` runner guard) + `extworld_core` + `extworld_server` (the separate OS
+  process, data socket + `.ctl` control socket), `outcome` (vocabulary + validators; NO outcome function).
+- `variant.py`: `ExternalBinding`, `deploy(..., external=None)`, `Deployment.dispatch_pending/reconcile/outcome`, `g4_call`, `g4_deploy`
+  (a deploy() without `external` surfaces NotImplementedError("not implemented yet - G4")). `mutants.KNOWN["H28"]` added.
+- Ledger additions beyond the P1f text (clarifications, see report): `deployment` column on effects/audit (observer key is scoped to one
+  deployment), `meta` table, `issued` UNIQUE(system, deployment), deterministic root nonce, journal mode switched to DELETE at close() so a
+  closed ledger is readable read-only inside the sandbox.
+- Launcher env contract for the H28 runner: R3_EXT_SOCK (data), R3_EXT_CTL (control), R3_EXT_DIR; non-dev ids refuse without them.
+- Overlay (Q2): spec/ops/project.h28.json = base project ops + publish_result (REGISTRY.publish, approval rule
+  publish-public-needs-approval) + notify_reviewer (NOTIFY.notify); spec/authority/project.h28.v3.json = base v3 + three `h28-*` grants.
+- Schemas: external-systems, external-request, external-cap, external-ledger, external-outcome (+ strict validators with known negatives).
+- Tests: tests/test_p1f_*.py, tests/p1f_util.py, tests/fakes/{ext_ref,fake_g4,ext_rig}.py; conftest leak hygiene covers extworld_server.
+
+## G4 paladin (H28; branch r3-paladin, merged with round3 f13a68a)
+Seam: `external` given -> `boot(sink=...)` registers `worldbridge.OutboxAdapter` for every `external_call` system (plans only, no
+observation); `Core._commit` drains the plans after the world commit and `extdispatch.ExtPlane.register` stores intent + per-effect cap
++ PENDING outcome in the ledger meta store (`extoutbox.Outbox`); `Deployment.dispatch_pending` submits (cap, byte-exact decision envelope
+from the anchor/history); `reconcile` applies `extoutcome.outcome_state` (Paladin's own P1f-6) to `binding.observer.read(watermark)`.
+`world_digest` includes the world_log head in external mode so a crash after commit is recognised as committed (the world holds no
+external row). Project overlay: `extops.py` compiles overlay operations into IR actions + generic bindings; vendored patch `G4a`.
+Mutants live at: extdispatch (5), boot + extgate_mut (policy_gate_in_adapter), extoutcome (divergence_rewritten).
+Tests: tests/paladin/test_pal_g4_*.py (rig g4_rig.py, adapters g4_adapters.py). Spec: spec/protections/H28-paladin.md.
+
+## G4 fix round 1 - paladin
+- G4-E20: `paladin.extoutcome` evidence = sorted DISTINCT ints (effects.seq of M plus audit.seq of A when full); D1/D2/D3 evidence = the same matching rows (the C28-2 oracle's reading of G4-E7); rule U keeps previous evidence only for a FINAL state, else UNKNOWN with [] (oracle).
+- Intent tick (cap `not_after_tick`, expiry) = the injected deployment clock, not `tx.tick`: the H28 harness builds its WorldStore without a clock, so `tx.tick` was 0.
+- `authcompile._rsel`: resource selector `{"type": "*"}` compiles to `*` (harness GEN-NULL grants use it).
+- G4-E23 confirmed and tested (tests/paladin/test_pal_g4_fix1.py): every submitted request's envelope_text == canon_json of the auditor's replay envelope for its decision.
+## G4 conventional (H28)
+- Built from PROT-H28 + PROTOCOL-P1f + G4 errata only (no src/paladin). New modules: `extout.py` (outbox, per-effect cap attenuation, dispatcher),
+  `extrecon.py` (P1f-6 outcome function, reconciler), `extsvc.py` (post-commit dispatch, `dispatch_pending/reconcile/outcome`); `service.py`
+  `_txn`/`execute` hooks; `variant.py` `deploy(external=)` + `ADAPTER_MODULES` / `EXTERNAL_HISTORY_PREFIXES`; `codegen.py` now also generates models
+  for the H28 project overlay operations (`models_gen.py` regenerated).
+- Outbox + outcome tables (`conv_outbox`, `conv_outcome`) live in the world DB beside the idempotency table: atomic with the commit; no HistoryStore
+  prefix is added (EXTERNAL_HISTORY_PREFIXES = ()). With `external=None` nothing changes (legacy `external_write`).
+- Tests: tests/conventional/test_conv_g4_{decision,outcome,caps,mutants,audit,envelope}.py, helper conv_g4_util.py (real ExternalWorld process per rig).
+- Requirement map and mutant sites: spec/protections/H28-conventional.md.
+- Full sharded suite (8 shards): 1953 passed, 1 failed, 0 errors, 0 skipped. The one failure is the shared
+  tests/test_p1f_conformance.py::test_real_variant_adopts_the_seam_or_reports_not_implemented_g4[conventional]: it deploys with ops_spec={}/auth_spec={}
+  and accepts only a successful deploy or NotImplementedError; now that the variant takes `external`, an empty spec fails like it does on the legacy path
+  (KeyError 'operations'). Not editable from this role; the test must be updated by the orchestrator.
+
+### G4 fix round 1 (conventional)
+- Evidence now the public sorted distinct ints (G4-E19/E20); watermark monotone via `conv_outcome.wm` (E16); anon correlation uses the commit mark seq (E17);
+  envelope byte-equality tested (E23). Two defects found by running C28-1..6: (a) the outbox commit tick used `tx.tick`, which is 0 when the world store carries no
+  clock (harness) - now the service clock; (b) the harness-injected GEN-NULL operation had no typed model (`models_dyn.py`).
+- Tests: tests/conventional/test_conv_g4_fix1.py.
+
+## P1g - Gate 5 shared protocol (tag r3-p1g-protocol)
+- New r3_shared modules: `faultplane` (DependencyUnavailable, CanonicalStateLost, CRASH_POINTS, arm/crashpoint, fault-command form), `authsvc` +
+  `authsvc_server` (AuthorityService: own OS process, data socket `<s>` fetch, control socket `<s>.ctl` publish/advance/outage/log/close; WAL while
+  live, DELETE at close; key revealed at close), `recovery` (reply vocabulary + RECOVERY_VIEW form/validators), `host` (spawned variant host +
+  `DeploymentProxy`). Amended: `world.py`/`worldlog.py` (CP1/CP2 hook, no-op unless armed), `anchor.py`/`anchor_server.py` (`--control` plane:
+  advance/partition/clear/fault_log; `AnchorUnavailable`; CP3; `require_anchor`), `extworld*.py` (control ops fault/clear_faults/fault_log;
+  `ExternalUnavailable`; `unavailable` evaluated BEFORE bad_signature; audit reason enum gains `unavailable`), `extobs.py` (CP7), `variant.py`
+  (`AuthorityBinding`, deploy params, `g5_call`, `g5_deploy`), `mutants.py` (KNOWN["H29"]).
+- New data: `spec/gate5/dependency-graph.json` (generated by `scripts/gen_depgraph.py --check`), `spec/gate5/envelope-ops.json`; schemas
+  dependency-graph, dependency-reply, fault-control, lease-grant, authority-log, recovery-view.
+- Lease rule implementation notes: publish effective tick f = max(p, max lease_until over older digests, max earlier effective_tick) - the last term keeps
+  publish order = effect order when a publish lands while an earlier one is pending (frozen text silent). Lease MAC covers (deployment, digest,
+  granted_tick, lease_until); the doc is bound by the digest.
+- Host: `python -m r3_shared.host --variant <registry name | module:Class> --mutants csv --workdir <dir> --ctl <fd>`; `--workdir` is on the command
+  line so conftest attributes leaked hosts exactly (TMPDIR root). Crash keys: CP1/CP2 commit-mark request_id, CP3 decision_id, CP6 request_id of the
+  call that just returned, CP7 request_id of the reconcile call, CP8 `host.CP8_KEY` ("dispatch_pending", first dispatch after resume). CP4/CP5 live in the
+  harness adapter wrapper (not built here).
+- Fakes: tests/fakes/fake_g5.py (FakeG5Variant honest; FakeStaleCacheVariant keeps a module-level lease cache and reports it unconditionally).
+- Tests: tests/test_p1g_{authsvc,faultplane,faultctl,host,recovery,misc,e2e}.py, helper tests/p1g_util.py.
+
+
+## G5 paladin - H29 (tag r3-g5-paladin)
+- Spec: spec/protections/H29-paladin.md (requirement table, mutants, decisions where the frozen text is silent). Code: src/paladin/{continuity,leasing,
+  depgraph}.py (new), core.py / core_g2.py (h29 flag, stamp(), unacked(), recover salt), ledger.py / histledger.py (recover salt, open_approvals),
+  extdispatch.py / extoutbox.py (breaker state, drop, cap_n), deployment.py / variant.py (authority_source, resume).
+- Design: lease cache is memory-only (a persisted lease cannot be MAC-checked by the variant and the oracle's lease window ends at a restart); every decision
+  re-fetches; the leased document is adopted with one `authority` mark; the commit mark carries the SERVICE digest. Pre-flight anchor probe before any world
+  write; unconfirmed commit -> UNKNOWN in_doubt; a stored OK replays only when the anchor holds the decision.
+- Tests: tests/paladin/test_pal_g5_{lease,recovery,mutants,more}.py with rig g5_rig.py / g5_adapters.py (REAL AuthorityService, anchor, ExternalWorld; spawned
+  hosts for SIGKILL). The paladin venv resolves `paladin` from the MAIN checkout: always run with PYTHONPATH=<worktree>/round3/src:<worktree>/round3.
+
+## G5 conventional H29 (branch r3-conv, tag r3-g5-conventional)
+- New modules in `src/conventional/`: `g5deps.py` (dependency graph as data, Breaker, Bulkhead, Guard), `g5svc.py` (Service mixin: lease gate,
+  adoption, anchor pre-flight, journal completion, resume mutants, `recovery_view`, `dependency_status`), `g5journal.py` (anchor journal table
+  `conv_journal`, written in the effect transaction). Touched: `service.py` (deploy params, resume branch, pre-gates, leased-digest claims),
+  `authority_ops.py`, `lowreads.py`, `tools.py`, `provenance.py` (`AnchorUnavailable` -> in_doubt, repair of an anchored entry), `extout.py` /
+  `extrecon.py` / `extsvc.py` (breaker hooks, an EXT outage is not an attempt), `store.py` / `histledger.py` (`approvals_open_all`), `variant.py`.
+- Design: the lease lives in memory only; a fresh process trusts no durable copy and fetches before its first governed decision. Breaker cooldown
+  is 0 ticks on purpose (an open breaker would answer UNAVAILABLE for a node the oracle already sees healthy). The pre-flight anchor `head()` keeps
+  the dropped-anchor case an UNAVAILABLE with zero effects; the in-doubt UNKNOWN is only for a root lost after the world commit.
+- Tests: `tests/conventional/test_conv_g5_{lease,deps,recovery,hostkill,progress,mutants}.py` + `conv_g5_util.py` (real AuthorityService, anchor with
+  control plane, ExternalWorld, SIGKILL hosts). Mutants: `spec/protections/H29-conventional.md`.
+- Gaps in the frozen text: listed at the end of `spec/protections/H29-conventional.md` (G1-G4) and in the report.

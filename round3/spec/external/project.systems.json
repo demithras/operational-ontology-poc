@@ -1,0 +1,13 @@
+{
+  "version": "r3-external-1",
+  "domain": "project",
+  "window": 8,
+  "systems": {
+    "REGISTRY": {"observability": "full", "operations": {"publish": {"idempotency": "at_most_once",
+      "target_rule": "registry:<result_id>", "semantics": "registry_publish"}}},
+    "NOTIFY": {"observability": "effects_only", "operations": {"notify": {"idempotency": "idempotent_set",
+      "target_rule": "notify:<reviewer>", "semantics": "notify_set"}}},
+    "GEN-NULL": {"observability": "none", "generated": true, "operations": {"record": {"idempotency": "at_most_once",
+      "target_rule": "gen:<key>", "semantics": "gen_record"}}}
+  }
+}

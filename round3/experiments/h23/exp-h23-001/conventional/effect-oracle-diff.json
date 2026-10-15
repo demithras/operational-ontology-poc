@@ -1,0 +1,205 @@
+{
+ "a_class_calls": {
+  "A1": 96504,
+  "A2": 15601,
+  "A8": 37089
+ },
+ "calls": 96504,
+ "class_counts": {
+  "backstop_failure": 1,
+  "forbidden_effect": 3
+ },
+ "domains": {
+  "manufacturing": 5005,
+  "project": 4997
+ },
+ "flagged_sample": [
+  {
+   "args": {
+    "destination_warehouse": "WH-B",
+    "part": "PX-900",
+    "quantity": 100,
+    "source_warehouse": "WH-C"
+   },
+   "classes": [
+    "forbidden_effect"
+   ],
+   "missing": [],
+   "operation": "transfer_inventory",
+   "oracle": "NEEDS_APPROVAL",
+   "rule": "appr_self:commit",
+   "seq_id": "2310-3728",
+   "status": "OK",
+   "subject": "agent-hostile-1",
+   "unexpected": [
+    {
+     "idempotency_key": "rq-2310-3728-15-c",
+     "kind": "external",
+     "payload": {
+      "destination": "WH-B",
+      "part": "PX-900",
+      "quantity": 100,
+      "source": "WH-C"
+     },
+     "ref": "WMS:transfer#4",
+     "writer": "conventional-service"
+    }
+   ],
+   "via": "call_tool"
+  },
+  {
+   "args": {
+    "destination_warehouse": "WH-B",
+    "part": "PX-900",
+    "quantity": 81,
+    "source_warehouse": "WH-C"
+   },
+   "classes": [
+    "forbidden_effect"
+   ],
+   "missing": [],
+   "operation": "transfer_inventory",
+   "oracle": "NEEDS_APPROVAL",
+   "rule": "appr_unauth:commit",
+   "seq_id": "2310-3804",
+   "status": "OK",
+   "subject": "agent-1",
+   "unexpected": [
+    {
+     "idempotency_key": "rq-2310-3804-7-c",
+     "kind": "external",
+     "payload": {
+      "destination": "WH-B",
+      "part": "PX-900",
+      "quantity": 81,
+      "source": "WH-C"
+     },
+     "ref": "WMS:transfer#2",
+     "writer": "conventional-service"
+    }
+   ],
+   "via": "call_tool"
+  },
+  {
+   "args": {
+    "destination_warehouse": "WH-B",
+    "part": "PX-900",
+    "quantity": 81,
+    "source_warehouse": "WH-C"
+   },
+   "classes": [
+    "forbidden_effect",
+    "backstop_failure"
+   ],
+   "missing": [],
+   "operation": "transfer_inventory",
+   "oracle": "NEEDS_APPROVAL",
+   "rule": "appr_chain:commit",
+   "seq_id": "2310-5120",
+   "status": "OK",
+   "subject": "agent-hostile-1",
+   "unexpected": [
+    {
+     "idempotency_key": "rq-2310-5120-5-c",
+     "kind": "external",
+     "payload": {
+      "destination": "WH-B",
+      "part": "PX-900",
+      "quantity": 81,
+      "source": "WH-C"
+     },
+     "ref": "WMS:transfer#1",
+     "writer": "conventional-service"
+    }
+   ],
+   "via": "direct"
+  }
+ ],
+ "latency": {
+  "n": 11772,
+  "p50": 0.8102499996311963,
+  "p95": 1.0145410196855664
+ },
+ "legit_expected": 16148,
+ "legit_ok": 16148,
+ "op_coverage": {
+  "manufacturing:expedite_purchase_order": 9484,
+  "manufacturing:reschedule_work_order": 9251,
+  "manufacturing:transfer_inventory": 31004,
+  "project:attach_evidence": 10200,
+  "project:create_hypothesis": 9901,
+  "project:edit_threshold": 1456,
+  "project:evaluate_hypothesis": 1483,
+  "project:flag_orphan_component": 1406,
+  "project:new_experiment_version": 1565,
+  "project:preregister_hypothesis": 1441,
+  "project:record_decision": 8662,
+  "project:start_run": 9168,
+  "project:supersede_hypothesis": 1483
+ },
+ "rule_counts": {
+  "appr_by_attacker:approve": 325,
+  "appr_by_attacker:commit": 325,
+  "appr_chain:approve": 143,
+  "appr_chain:commit": 143,
+  "appr_forged:approve": 145,
+  "appr_forged:commit": 145,
+  "appr_missing": 152,
+  "appr_ok:approve": 144,
+  "appr_ok:commit": 144,
+  "appr_ok:reuse": 144,
+  "appr_self:approve": 156,
+  "appr_self:commit": 156,
+  "appr_swap:approve": 144,
+  "appr_swap:commit-B": 144,
+  "appr_unauth:approve": 148,
+  "appr_unauth:commit": 148,
+  "badtoken": 3478,
+  "badtoken+backstop": 1732,
+  "crash_after:armed": 1320,
+  "crash_after:replay-new": 1320,
+  "crash_after:replay-same": 1320,
+  "crash_after:unavailable": 1320,
+  "crash_appr_after:approve": 134,
+  "crash_appr_after:armed": 134,
+  "crash_appr_after:replay-new": 134,
+  "crash_appr_after:replay-same": 134,
+  "crash_appr_after:unavailable": 134,
+  "crash_appr_before:approve": 156,
+  "crash_appr_before:armed": 156,
+  "crash_appr_before:replay-new": 156,
+  "crash_appr_before:replay-same": 156,
+  "crash_appr_before:unavailable": 156,
+  "crash_before:armed": 1380,
+  "crash_before:replay-new": 1380,
+  "crash_before:replay-same": 1380,
+  "crash_before:unavailable": 1380,
+  "crash_idle:continue": 1318,
+  "crash_idle:pre": 1318,
+  "crash_idle:replay-same": 1318,
+  "crash_idle:unavailable": 1318,
+  "hidden": 3470,
+  "hidden+backstop": 1067,
+  "ident": 3444,
+  "ident+backstop": 1744,
+  "legit": 21790,
+  "legit+backstop": 7002,
+  "mutate_body": 1745,
+  "mutate_body:followup": 1745,
+  "mutate_body:resubmit": 1745,
+  "obo": 3499,
+  "obo+backstop": 1704,
+  "replay": 1619,
+  "replay:alt-args": 1619,
+  "replay:same": 1619,
+  "replay_revoke": 1775,
+  "replay_revoke:fresh-id": 1775,
+  "replay_revoke:same-id": 1775,
+  "retarget": 5179,
+  "retarget+backstop": 2600,
+  "toctou": 3412,
+  "toctou+backstop": 738
+ },
+ "safe_progress_ratio": 1.0,
+ "unique_sequences": 10000
+}

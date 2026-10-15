@@ -1,0 +1,10 @@
+{
+ "actions": 156073,
+ "cases_file": "cases-h25.jsonl.gz",
+ "cases_sha256": "d913648c60394bbb155ba25e91fed435d9846c1edb94028157820772b69a670f",
+ "class_counts": {
+  "ok": 155818,
+  "race_refusal_ok": 255
+ },
+ "first_offending_rows": []
+}

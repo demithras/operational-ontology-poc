@@ -1,0 +1,332 @@
+{
+ "appeal_cases": 2664,
+ "cases": 10338,
+ "cases_file": "cases-h25.jsonl.gz",
+ "cases_sha256": "d913648c60394bbb155ba25e91fed435d9846c1edb94028157820772b69a670f",
+ "emergency_cases": 2217,
+ "emergency_late_act_cases": 1267,
+ "generator_redraws": 1033,
+ "models": {
+  "collegial": {
+   "cases": 3446,
+   "domains": [
+    "manufacturing",
+    "project"
+   ],
+   "reachable": {
+    "reasons": [
+     "already_appealed",
+     "already_judged",
+     "case_denied",
+     "case_required",
+     "duplicate_case",
+     "emergency_expired",
+     "emergency_inactive",
+     "emergency_too_long",
+     "matter_conflict",
+     "no_authority",
+     "no_governance",
+     "not_decided",
+     "not_eligible",
+     "not_final",
+     "not_governed",
+     "not_grantee",
+     "not_party",
+     "not_requester",
+     "oracle_needed",
+     "out_of_emergency_scope",
+     "precedence_unresolved",
+     "schema",
+     "scope_amplification",
+     "stage_closed",
+     "token",
+     "unknown_case",
+     "window_closed"
+    ],
+    "rules": [
+     "decision",
+     "emergency",
+     "review"
+    ]
+   },
+   "reasons": [
+    "None",
+    "already_appealed",
+    "already_judged",
+    "case_denied",
+    "case_required",
+    "duplicate_case",
+    "emergency_expired",
+    "emergency_inactive",
+    "emergency_too_long",
+    "matter_conflict",
+    "no_authority",
+    "no_governance",
+    "not_decided",
+    "not_eligible",
+    "not_final",
+    "not_governed",
+    "not_grantee",
+    "not_party",
+    "not_requester",
+    "oracle_needed",
+    "out_of_emergency_scope",
+    "precedence_unresolved",
+    "schema",
+    "scope_amplification",
+    "stage_closed",
+    "token",
+    "unknown_case",
+    "window_closed"
+   ],
+   "rules": [
+    "decision",
+    "emergency",
+    "review"
+   ],
+   "signature": {
+    "concurrence": false,
+    "decision_rules": [
+     "quorum"
+    ],
+    "emergency": true,
+    "hierarchy": "none",
+    "jurisdiction_overlap": true,
+    "lapse": false,
+    "max_body_size": 3,
+    "precedence": [
+     "rank"
+    ],
+    "review": true
+   }
+  },
+  "hierarchical": {
+   "cases": 3447,
+   "domains": [
+    "manufacturing",
+    "project"
+   ],
+   "reachable": {
+    "reasons": [
+     "already_appealed",
+     "already_judged",
+     "case_denied",
+     "case_required",
+     "duplicate_case",
+     "emergency_expired",
+     "emergency_inactive",
+     "emergency_too_long",
+     "matter_conflict",
+     "no_authority",
+     "no_governance",
+     "not_decided",
+     "not_eligible",
+     "not_final",
+     "not_governed",
+     "not_grantee",
+     "not_party",
+     "not_requester",
+     "not_reviewable",
+     "oracle_needed",
+     "out_of_emergency_scope",
+     "precedence_unresolved",
+     "schema",
+     "scope_amplification",
+     "stage_closed",
+     "token",
+     "unknown_case",
+     "window_closed"
+    ],
+    "rules": [
+     "decision",
+     "emergency",
+     "lapse",
+     "review"
+    ]
+   },
+   "reasons": [
+    "None",
+    "already_appealed",
+    "already_judged",
+    "case_denied",
+    "case_required",
+    "duplicate_case",
+    "emergency_expired",
+    "emergency_inactive",
+    "emergency_too_long",
+    "matter_conflict",
+    "no_authority",
+    "no_governance",
+    "not_decided",
+    "not_eligible",
+    "not_final",
+    "not_governed",
+    "not_grantee",
+    "not_party",
+    "not_requester",
+    "not_reviewable",
+    "oracle_needed",
+    "out_of_emergency_scope",
+    "precedence_unresolved",
+    "schema",
+    "scope_amplification",
+    "stage_closed",
+    "token",
+    "unknown_case",
+    "window_closed"
+   ],
+   "rules": [
+    "decision",
+    "emergency",
+    "lapse",
+    "review"
+   ],
+   "signature": {
+    "concurrence": false,
+    "decision_rules": [
+     "single"
+    ],
+    "emergency": true,
+    "hierarchy": "chain",
+    "jurisdiction_overlap": true,
+    "lapse": true,
+    "max_body_size": 1,
+    "precedence": [
+     "specialis",
+     "superior"
+    ],
+    "review": true
+   }
+  },
+  "polycentric": {
+   "cases": 3445,
+   "domains": [
+    "manufacturing",
+    "project"
+   ],
+   "reachable": {
+    "reasons": [
+     "already_appealed",
+     "already_judged",
+     "case_denied",
+     "case_required",
+     "duplicate_case",
+     "emergency_expired",
+     "emergency_inactive",
+     "emergency_too_long",
+     "matter_conflict",
+     "no_authority",
+     "no_governance",
+     "not_decided",
+     "not_eligible",
+     "not_final",
+     "not_governed",
+     "not_grantee",
+     "not_party",
+     "not_requester",
+     "oracle_needed",
+     "out_of_emergency_scope",
+     "precedence_unresolved",
+     "schema",
+     "scope_amplification",
+     "stage_closed",
+     "token",
+     "unknown_case",
+     "window_closed"
+    ],
+    "rules": [
+     "decision",
+     "emergency",
+     "lapse",
+     "review"
+    ]
+   },
+   "reasons": [
+    "None",
+    "already_appealed",
+    "already_judged",
+    "case_denied",
+    "case_required",
+    "duplicate_case",
+    "emergency_expired",
+    "emergency_inactive",
+    "emergency_too_long",
+    "matter_conflict",
+    "no_authority",
+    "no_governance",
+    "not_decided",
+    "not_eligible",
+    "not_final",
+    "not_governed",
+    "not_grantee",
+    "not_party",
+    "not_requester",
+    "oracle_needed",
+    "out_of_emergency_scope",
+    "precedence_unresolved",
+    "schema",
+    "scope_amplification",
+    "stage_closed",
+    "token",
+    "unknown_case",
+    "window_closed"
+   ],
+   "rules": [
+    "decision",
+    "emergency",
+    "lapse",
+    "review"
+   ],
+   "signature": {
+    "concurrence": true,
+    "decision_rules": [
+     "quorum",
+     "single"
+    ],
+    "emergency": true,
+    "hierarchy": "dag",
+    "jurisdiction_overlap": true,
+    "lapse": true,
+    "max_body_size": 3,
+    "precedence": [
+     "specialis",
+     "rank"
+    ],
+    "review": true
+   }
+  }
+ },
+ "nogov_cases": 100,
+ "oracle_needed_cases": 7293,
+ "per_model_domain": {
+  "collegial": {
+   "manufacturing": 1724,
+   "project": 1722
+  },
+  "hierarchical": {
+   "manufacturing": 1724,
+   "project": 1723
+  },
+  "polycentric": {
+   "manufacturing": 1723,
+   "project": 1722
+  }
+ },
+ "precedence_conflict_cases": 6431,
+ "precedence_unresolved_cases": 665,
+ "race_cases": 1101,
+ "race_overlapping": 787,
+ "race_types": {
+  "AE": 138,
+  "AX": 138,
+  "AX_EDGE": 137,
+  "EA": 138,
+  "EA_ADV": 138,
+  "EA_EDGE": 138,
+  "ES": 137,
+  "JJ": 137,
+  "SEQ": 137
+ },
+ "seed": 2520,
+ "unique_cases": 10338
+}

@@ -1,0 +1,10 @@
+STEP start 16:32:18 head=7b9d7bc tag=r3-g4-cand1
+STEP run exit=0
+STEP eval exit=0
+{"paladin_verdict": "INVALID", "conventional_verdict": "INVALID"}
+conventional: INVALID ['adapter catalogue is not frozen in FREEZE_G4 (non-dev id)']
+paladin: INVALID ['adapter catalogue is not frozen in FREEZE_G4 (non-dev id)']
+STEP verify exit=0
+evidence hashes ok
+verdict reproduces
+DONE 16:56:59

@@ -1,0 +1,162 @@
+{
+  "bodies": [
+    {
+      "id": "board-a",
+      "members": [
+        "viewer-1",
+        "admin-1",
+        "agent-draft-1"
+      ],
+      "rank": 2,
+      "rule": {
+        "k": 2,
+        "kind": "quorum",
+        "recuse": [
+          "requester"
+        ]
+      }
+    },
+    {
+      "id": "board-b",
+      "members": [
+        "researcher-1",
+        "researcher-2",
+        "viewer-1"
+      ],
+      "rank": 1,
+      "rule": {
+        "k": 2,
+        "kind": "quorum",
+        "recuse": []
+      }
+    },
+    {
+      "id": "panel",
+      "members": [
+        "admin-1",
+        "agent-evidence-1",
+        "agent-draft-1"
+      ],
+      "rank": 0,
+      "rule": {
+        "k": 2,
+        "kind": "quorum",
+        "recuse": []
+      }
+    }
+  ],
+  "domain": "project",
+  "emergency": {
+    "ceiling": {
+      "operations": [
+        "evaluate_hypothesis",
+        "edit_threshold"
+      ],
+      "resources": [
+        {
+          "keys": null,
+          "type": "Hypothesis"
+        },
+        {
+          "keys": null,
+          "type": "Threshold"
+        }
+      ]
+    },
+    "grantees_from": "board-b",
+    "matter": "m-emerg",
+    "max_duration": 10
+  },
+  "matters": [
+    {
+      "competent": [
+        "board-a"
+      ],
+      "concurrence": false,
+      "id": "m-a",
+      "on_absent": "await",
+      "review": {
+        "by": "panel",
+        "window": 3
+      },
+      "scope": {
+        "operations": [
+          "evaluate_hypothesis"
+        ],
+        "resources": [
+          {
+            "keys": null,
+            "type": "Hypothesis"
+          }
+        ]
+      }
+    },
+    {
+      "competent": [
+        "board-b"
+      ],
+      "concurrence": false,
+      "id": "m-b",
+      "on_absent": "await",
+      "review": {
+        "by": "panel",
+        "window": 3
+      },
+      "scope": {
+        "operations": [
+          "evaluate_hypothesis"
+        ],
+        "resources": [
+          {
+            "keys": null,
+            "type": "Hypothesis"
+          }
+        ]
+      }
+    },
+    {
+      "competent": [
+        "board-b"
+      ],
+      "concurrence": false,
+      "id": "m-po",
+      "on_absent": "await",
+      "review": {
+        "by": "panel",
+        "window": 4
+      },
+      "scope": {
+        "operations": [
+          "edit_threshold"
+        ],
+        "resources": [
+          {
+            "keys": null,
+            "type": "Threshold"
+          }
+        ]
+      }
+    },
+    {
+      "competent": [
+        "board-a"
+      ],
+      "concurrence": false,
+      "id": "m-emerg",
+      "on_absent": "await",
+      "review": null,
+      "scope": {
+        "operations": [
+          "emergency:declare"
+        ],
+        "resources": []
+      }
+    }
+  ],
+  "model": "collegial",
+  "precedence": [
+    "rank"
+  ],
+  "spec": "r3-governance-1",
+  "superior": []
+}

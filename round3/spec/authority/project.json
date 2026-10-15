@@ -1,0 +1,324 @@
+{
+ "delegation_note": "Every Round 2 project grant is delegation_allowed=false: on_behalf_of is never valid in this domain.",
+ "delegations": [],
+ "domain": "project",
+ "grants": [
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "researcher-create-hypothesis",
+   "operation": "create_hypothesis",
+   "origin": "round2",
+   "principal": {
+    "role": "researcher"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "researcher-edit-threshold",
+   "operation": "edit_threshold",
+   "origin": "round2",
+   "principal": {
+    "role": "researcher"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "researcher-preregister-hypothesis",
+   "operation": "preregister_hypothesis",
+   "origin": "round2",
+   "principal": {
+    "role": "researcher"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "researcher-new-experiment-version",
+   "operation": "new_experiment_version",
+   "origin": "round2",
+   "principal": {
+    "role": "researcher"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "researcher-start-run",
+   "operation": "start_run",
+   "origin": "round2",
+   "principal": {
+    "role": "researcher"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "researcher-attach-evidence",
+   "operation": "attach_evidence",
+   "origin": "round2",
+   "principal": {
+    "role": "researcher"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "researcher-evaluate-hypothesis",
+   "operation": "evaluate_hypothesis",
+   "origin": "round2",
+   "principal": {
+    "role": "researcher"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "researcher-supersede-hypothesis",
+   "operation": "supersede_hypothesis",
+   "origin": "round2",
+   "principal": {
+    "role": "researcher"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "researcher-record-decision",
+   "operation": "record_decision",
+   "origin": "round2",
+   "principal": {
+    "role": "researcher"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "researcher-flag-orphan-component",
+   "operation": "flag_orphan_component",
+   "origin": "round2",
+   "principal": {
+    "role": "researcher"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "neutral-admin-all",
+   "operation": "*",
+   "origin": "neutral-extension",
+   "principal": {
+    "role": "admin"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "neutral-evidence-agent-run",
+   "operation": "start_run",
+   "origin": "neutral-extension",
+   "principal": {
+    "role": "evidence-agent"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "neutral-evidence-agent-attach",
+   "operation": "attach_evidence",
+   "origin": "neutral-extension",
+   "principal": {
+    "role": "evidence-agent"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "neutral-draft-agent-create",
+   "operation": "create_hypothesis",
+   "origin": "neutral-extension",
+   "principal": {
+    "role": "draft-agent"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "neutral-draft-agent-decision",
+   "operation": "record_decision",
+   "origin": "neutral-extension",
+   "principal": {
+    "role": "draft-agent"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "deny",
+   "id": "no-direct-verdict-write",
+   "operation": "write:Verdict.value",
+   "origin": "round2",
+   "principal": {
+    "any": true
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "deny",
+   "id": "no-threshold-edit-after-preregistration",
+   "operation": "update:Threshold",
+   "origin": "round2",
+   "principal": {
+    "any": true
+   },
+   "resource": {
+    "state": "governed hypothesis not DRAFT",
+    "type": "Threshold"
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "deny",
+   "id": "no-canonical-write-outside-operations",
+   "operation": "write:canonical-state",
+   "origin": "round2",
+   "principal": {
+    "any": true
+   },
+   "resource": {
+    "any": true
+   }
+  }
+ ],
+ "principals": [
+  {
+   "delegated_by": null,
+   "id": "researcher-1",
+   "kind": "human",
+   "relations": [],
+   "roles": [
+    "researcher"
+   ]
+  },
+  {
+   "delegated_by": null,
+   "id": "researcher-2",
+   "kind": "human",
+   "relations": [],
+   "roles": [
+    "researcher"
+   ]
+  },
+  {
+   "delegated_by": null,
+   "id": "viewer-1",
+   "kind": "human",
+   "relations": [],
+   "roles": []
+  },
+  {
+   "delegated_by": null,
+   "id": "admin-1",
+   "kind": "human",
+   "relations": [],
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "delegated_by": null,
+   "hostile": true,
+   "id": "agent-evidence-1",
+   "kind": "agent",
+   "note": "compromised evidence-collection agent: may only start runs and attach evidence",
+   "relations": [],
+   "roles": [
+    "evidence-agent"
+   ]
+  },
+  {
+   "delegated_by": null,
+   "hostile": false,
+   "id": "agent-draft-1",
+   "kind": "agent",
+   "note": "drafting agent: may only create hypotheses and record decisions",
+   "relations": [],
+   "roles": [
+    "draft-agent"
+   ]
+  }
+ ],
+ "provenance": "derived from round2 authority_rules/policies; 'origin' marks each grant as round2, neutral-fix or neutral-extension",
+ "semantics": [
+  "A request is allowed iff at least one allow grant matches (principal selector, resource selector, operation) and no deny grant matches. No matching allow means deny; deny overrides allow.",
+  "A principal selector {relation, on_type} matches when the principal holds that relation on EVERY input resource of type on_type, and at least one such input exists.",
+  "A resource selector {type: T} matches when some input resource conforms to T; {any: true} always matches.",
+  "Operation patterns: exact name, '*', or '<prefix>:*'. Approval operations are named 'approval:<name>'.",
+  "On-behalf-of: an agent acting for a delegator is allowed only if (a) the agent's own grants allow the operation, (b) the matching allow grant is delegable, and (c) the delegator would be allowed the same request. A deny matching the agent or any principal in its delegation chain denies.",
+  "An approver must be a different principal than the requester and outside the requester's delegation chain.",
+  "Direct canonical-state writes outside governed operations are denied for every principal (deny grant on 'write:canonical-state').",
+  "Possessing a token or knowing an operation name is never authorization; only the grants above are."
+ ],
+ "service_accounts": [
+  {
+   "id": "svc-core",
+   "kind": "service",
+   "operation_grants": [],
+   "purpose": "the deployed variant's own service identity",
+   "world_writers": [
+    "paladin-service",
+    "conventional-service"
+   ]
+  }
+ ],
+ "spec": "r3-authority-1"
+}

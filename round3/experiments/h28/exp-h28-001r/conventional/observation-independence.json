@@ -1,0 +1,77 @@
+{
+ "honest_controls": 1000,
+ "positive_controls": {
+  "manufacturing": 429,
+  "project": 286
+ },
+ "shared_cases": [],
+ "shared_trust_root": false,
+ "topology": {
+  "deployment": "exp-h28-001r:conventional:byz-000000:byz",
+  "reasons": [],
+  "shared_trust_root": false,
+  "systems": {
+   "ERP": {
+    "action": {
+     "adapter_id": "L1",
+     "cap_root_id": "8b59b84ea152",
+     "socket": "/private/tmp/r3h28.pbH7Wv/ext.sock"
+    },
+    "observation": {
+     "connection": "own sqlite connection",
+     "db_open_mode": "ro",
+     "db_path": "/private/tmp/r3h28.pbH7Wv/ext/external.db",
+     "observer_key_id": "3ab8d0d420b7"
+    },
+    "shared_trust_root": false,
+    "why": []
+   },
+   "GEN-NULL": {
+    "action": {
+     "adapter_id": "L1",
+     "cap_root_id": "0a38dbbd5312",
+     "socket": "/private/tmp/r3h28.pbH7Wv/ext.sock"
+    },
+    "observation": {
+     "connection": "own sqlite connection",
+     "db_open_mode": "ro",
+     "db_path": "/private/tmp/r3h28.pbH7Wv/ext/external.db",
+     "observer_key_id": "3ab8d0d420b7"
+    },
+    "shared_trust_root": false,
+    "why": []
+   },
+   "MES": {
+    "action": {
+     "adapter_id": "L1",
+     "cap_root_id": "73657d5780b3",
+     "socket": "/private/tmp/r3h28.pbH7Wv/ext.sock"
+    },
+    "observation": {
+     "connection": "own sqlite connection",
+     "db_open_mode": "ro",
+     "db_path": "/private/tmp/r3h28.pbH7Wv/ext/external.db",
+     "observer_key_id": "3ab8d0d420b7"
+    },
+    "shared_trust_root": false,
+    "why": []
+   },
+   "WMS": {
+    "action": {
+     "adapter_id": "L1",
+     "cap_root_id": "74dc583d4c92",
+     "socket": "/private/tmp/r3h28.pbH7Wv/ext.sock"
+    },
+    "observation": {
+     "connection": "own sqlite connection",
+     "db_open_mode": "ro",
+     "db_path": "/private/tmp/r3h28.pbH7Wv/ext/external.db",
+     "observer_key_id": "3ab8d0d420b7"
+    },
+    "shared_trust_root": false,
+    "why": []
+   }
+  }
+ },
+ "transcript_sha256": "d53e500cd4c8fec8f8f547cc3131bc0a31e2cc96b394be323320c220313369c4"
+}

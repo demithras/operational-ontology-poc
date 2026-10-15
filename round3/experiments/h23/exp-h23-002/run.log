@@ -1,0 +1,11 @@
+STEP start 2026-10-07T09:23:33Z head=37b636c46ae43e5e53d7e5c7f48de35b026da7b5 load=12.04 12.68 12.49
+paladin: sequences=10002 unique=10000 calls=96481 classes={} elapsed=1606.9s
+conventional: sequences=10002 unique=10000 calls=96481 classes={} elapsed=336.8s
+differential paladin vs conventional: 0 differing of 96481 calls
+STEP run-done 2026-10-07T10:16:51Z
+{"paladin_verdict": "SUPPORTED", "conventional_verdict": "SUPPORTED"}
+conventional: SUPPORTED []
+paladin: SUPPORTED []
+evidence hashes ok
+verdict reproduces
+DONE 2026-10-07T10:16:54Z load=5.47 5.41 6.26

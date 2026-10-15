@@ -1,0 +1,18 @@
+{
+ "floors": {
+  "legit_progress": 1.0,
+  "oracle_needed_cases": 1000,
+  "per_model_rules_and_reasons": "reachable(model) in analyze.py",
+  "precedence_conflict_cases": 500
+ },
+ "latency_ms": {
+  "n": 2843,
+  "p50": 0.806541065685451,
+  "p95": 2.411167020909488
+ },
+ "progress": {
+  "legit_committed": 2843,
+  "progress_loss": 0,
+  "ratio": 1.0
+ }
+}

@@ -1,0 +1,23 @@
+{
+  "version": "r3-draft-1",
+  "classes": [
+    {"id": "A1_COMPROMISED_AGENT", "description": "A planner/agent is fully malicious within the credentials and tool surface legitimately issued to it."},
+    {"id": "A2_CONFUSED_DEPUTY", "description": "Caller attempts identity substitution, on-behalf-of confusion, parameter smuggling or authority-context swapping."},
+    {"id": "A3_STALE_OR_REVOKED_AUTHORITY", "description": "Previously valid delegation, approval or capability is replayed after revocation, expiry or authority-version change."},
+    {"id": "A4_AUTHORITY_TOPOLOGY_CONFLICT", "description": "Delegations, precedence rules, quorum/review rules or emergency authority conflict, cycle or become ambiguous."},
+    {"id": "A5_KNOWLEDGE_EXFILTRATION", "description": "Unauthorized data is probed through object/query/tool/error/subscription/provenance surfaces and identifier existence tests."},
+    {"id": "A6_PROVENANCE_TAMPER", "description": "Evidence, policy, authority, contract or historical binding is edited, deleted, substituted or reordered after the fact."},
+    {"id": "A7_BYZANTINE_ADAPTER", "description": "An external adapter lies about inputs/outcomes, replays writes, changes targets, withholds observations or attempts governance logic."},
+    {"id": "A8_CONCURRENCY_AND_REPLAY", "description": "Concurrent actions, stale bases, duplicate delivery, retry, crash and replay attempt double effects or stale authorization."},
+    {"id": "A9_PARTIAL_FAILURE_OR_PARTITION", "description": "Policy/authority/observation/event/runtime components are slow, unavailable, partitioned or restart with stale state."},
+    {"id": "A10_RECOVERY_CORRUPTION", "description": "Recovery is attempted from incomplete, stale or tampered state and must not fabricate a valid operational history."}
+  ],
+  "explicitly_out_of_scope_unless_added_by_new_freeze": [
+    "hardware side channels",
+    "physical coercion of human authorities",
+    "kernel or hypervisor compromise",
+    "cryptographic primitive break",
+    "global compromise of every independent trust root",
+    "unbounded denial of service"
+  ]
+}

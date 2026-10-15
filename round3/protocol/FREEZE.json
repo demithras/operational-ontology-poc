@@ -1,0 +1,79 @@
+{
+  "frozen_at": "2026-10-06T13:51:23.286994+00:00",
+  "protocol_sha256": "67fdc80ad37f24c6c585c928d78fd60801e13fcb735c48183f1229522eb49294",
+  "files": [
+    {
+      "path": "protocol/thresholds.json",
+      "sha256": "42f6940298a5afa0830eb4638ed8f67e44f77fe609f5f615ab8fb07ed655ab27"
+    },
+    {
+      "path": "protocol/UPSTREAM_EVIDENCE.json",
+      "sha256": "c65daabb4f8ba998d7920c7275aef8da2db20310781a585689c70a982b14cc37"
+    },
+    {
+      "path": "baselines/FAIRNESS.md",
+      "sha256": "653a61a34498bf4434b25ccdc9d88766f3b78bf7949754353103b8d39623f690"
+    },
+    {
+      "path": "docs/08_evidence_and_fairness.md",
+      "sha256": "d0230540dd810076a3ad9f733b31a3b3e458ed39e30be86d4f64e1b4ff80e70f"
+    },
+    {
+      "path": "docs/13_measurement_model.md",
+      "sha256": "2e300100753723ce8751b3b5d1c3dbb61260d29f03ca3df1983ee4f3c69d1dab"
+    },
+    {
+      "path": "threat_model/security_invariants.json",
+      "sha256": "227caa08dfcbbcc9ad9546141a0be6765d8bb8a7680e520aa789afb4d89bd9c2"
+    },
+    {
+      "path": "threat_model/attack_classes.json",
+      "sha256": "4a12835e71d35eec48315a01b9231bab69bb278081dc0d7439f912d1f4aa87ec"
+    },
+    {
+      "path": "threat_model/survivability_envelope.json",
+      "sha256": "b97048a68e26c69f56d4ee10a9e966f698c62cf760846a5bc403ff30f283658d"
+    },
+    {
+      "path": "protocol/DUAL_TRACK.json",
+      "sha256": "ad1a588ff30c3b1567a7c1510911548679e154d0ddd9acd5ecba030cf3505dc5"
+    },
+    {
+      "path": "protocol/AUTHOR_DECISIONS_2026-10-06.md",
+      "sha256": "129eab2f25151dcfc3e4349297437d50209bae214251da0c80b7e88181bfd5b4"
+    },
+    {
+      "path": "hypotheses/h23/contract.json",
+      "sha256": "484fb4e46ffecb019b0c29eafe91fb91145f906cff00aaed989f266110758639"
+    },
+    {
+      "path": "hypotheses/h24/contract.json",
+      "sha256": "461b670e9e3d0eb10d4cc4b779e34acab42d0d4ef3e49f5d603a7d8fef3cbda1"
+    },
+    {
+      "path": "hypotheses/h25/contract.json",
+      "sha256": "9f4548104d2effbd8baee2daa09d9a5a9176a76e75c891a9ed53df185216cd80"
+    },
+    {
+      "path": "hypotheses/h26/contract.json",
+      "sha256": "7f252041934ccd97337e58659d28e3831670c47eaecd35d27d52f0d3b9dbfae7"
+    },
+    {
+      "path": "hypotheses/h27/contract.json",
+      "sha256": "8ee3db36472c0a924c4712bc5901e32e5c9d5c26de7dc4bd8efea42b253e0bd0"
+    },
+    {
+      "path": "hypotheses/h28/contract.json",
+      "sha256": "b3e3a6da982fc18cc1955ebfd7c0618ede698289ad6300398e1d240b9b80b5ae"
+    },
+    {
+      "path": "hypotheses/h29/contract.json",
+      "sha256": "fc7fd3110ae25ecb25e029288265473a2de460543d251dac04e3df35cd33346c"
+    },
+    {
+      "path": "hypotheses/h30/contract.json",
+      "sha256": "4cd783d08f3f3d5367da559e4c28010e3ea6bebdf6ae242e039fbc35c3dbb415"
+    }
+  ],
+  "warning": "Any material post-reveal change requires a new experiment version and refreeze."
+}

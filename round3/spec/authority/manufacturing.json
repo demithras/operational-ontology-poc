@@ -1,0 +1,501 @@
+{
+ "delegations": [
+  {
+   "agent": "agent-1",
+   "on_behalf_of": "planner-1",
+   "operations": [
+    "transfer_inventory"
+   ]
+  },
+  {
+   "agent": "agent-hostile-1",
+   "on_behalf_of": "planner-1",
+   "operations": [
+    "transfer_inventory"
+   ]
+  },
+  {
+   "agent": "agent-orphan",
+   "on_behalf_of": "nobody-1",
+   "operations": [
+    "transfer_inventory"
+   ]
+  }
+ ],
+ "domain": "manufacturing",
+ "grants": [
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "transfer-inventory-planner",
+   "operation": "transfer_inventory",
+   "origin": "round2",
+   "principal": {
+    "on_type": "Warehouse",
+    "relation": "planner"
+   },
+   "resource": {
+    "type": "Warehouse"
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "transfer-inventory-junior-planner",
+   "operation": "transfer_inventory",
+   "origin": "round2",
+   "principal": {
+    "on_type": "Warehouse",
+    "relation": "junior_planner"
+   },
+   "resource": {
+    "type": "Warehouse"
+   }
+  },
+  {
+   "delegable": true,
+   "effect": "allow",
+   "id": "transfer-inventory-agent-grant",
+   "operation": "transfer_inventory",
+   "origin": "round2",
+   "principal": {
+    "on_type": "Warehouse",
+    "relation": "agent_grant"
+   },
+   "resource": {
+    "type": "Warehouse"
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "approve-large-transfer-senior-approver",
+   "operation": "approval:large_transfer",
+   "origin": "round2",
+   "principal": {
+    "on_type": "Warehouse",
+    "relation": "senior_approver"
+   },
+   "resource": {
+    "type": "Warehouse"
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "approve-large-transfer-supervisor",
+   "note": "Round 2 rule; no operation requests this approval name (kept for faithful derivation)",
+   "operation": "approval:large_transfer_v1",
+   "origin": "round2",
+   "principal": {
+    "on_type": "Warehouse",
+    "relation": "supervisor"
+   },
+   "resource": {
+    "type": "Warehouse"
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "mitigate-high-priority-planner",
+   "note": "realised as the protected-route business rule of transfer_inventory, not as a separate operation",
+   "operation": "mitigate_high_priority",
+   "origin": "round2",
+   "principal": {
+    "on_type": "Warehouse",
+    "relation": "planner"
+   },
+   "resource": {
+    "type": "Warehouse"
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "mitigate-high-priority-supervisor",
+   "operation": "mitigate_high_priority",
+   "origin": "round2",
+   "principal": {
+    "on_type": "Warehouse",
+    "relation": "supervisor"
+   },
+   "resource": {
+    "type": "Warehouse"
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "neutral-planner-expedite",
+   "note": "Round 2 IR names rules for the wrong capability so expedite is unauthorizable there (FINDING in round2 tests); the neutral workload grants planners",
+   "operation": "expedite_purchase_order",
+   "origin": "neutral-fix",
+   "principal": {
+    "role": "planner"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "neutral-planner-reschedule",
+   "operation": "reschedule_work_order",
+   "origin": "neutral-fix",
+   "principal": {
+    "role": "planner"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "neutral-supervisor-approve-expedite",
+   "operation": "approval:expedite",
+   "origin": "neutral-fix",
+   "principal": {
+    "role": "supervisor"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "neutral-supervisor-approve-reschedule",
+   "operation": "approval:reschedule",
+   "origin": "neutral-fix",
+   "principal": {
+    "role": "supervisor"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "allow",
+   "id": "neutral-admin-all",
+   "note": "the upper bound agents are compared against",
+   "operation": "*",
+   "origin": "neutral-extension",
+   "principal": {
+    "role": "admin"
+   },
+   "resource": {
+    "any": true
+   }
+  },
+  {
+   "delegable": false,
+   "effect": "deny",
+   "id": "no-canonical-write-outside-operations",
+   "operation": "write:canonical-state",
+   "origin": "neutral-extension",
+   "principal": {
+    "any": true
+   },
+   "resource": {
+    "any": true
+   }
+  }
+ ],
+ "principals": [
+  {
+   "delegated_by": null,
+   "id": "planner-1",
+   "kind": "human",
+   "relations": [
+    {
+     "key": "WH-A",
+     "relation": "planner",
+     "type": "Warehouse"
+    },
+    {
+     "key": "WH-B",
+     "relation": "planner",
+     "type": "Warehouse"
+    },
+    {
+     "key": "WH-C",
+     "relation": "planner",
+     "type": "Warehouse"
+    }
+   ],
+   "roles": [
+    "planner"
+   ]
+  },
+  {
+   "delegated_by": null,
+   "id": "junior-1",
+   "kind": "human",
+   "relations": [
+    {
+     "key": "WH-A",
+     "relation": "junior_planner",
+     "type": "Warehouse"
+    },
+    {
+     "key": "WH-B",
+     "relation": "junior_planner",
+     "type": "Warehouse"
+    },
+    {
+     "key": "WH-C",
+     "relation": "junior_planner",
+     "type": "Warehouse"
+    }
+   ],
+   "roles": [
+    "junior_planner"
+   ]
+  },
+  {
+   "delegated_by": null,
+   "id": "supervisor-1",
+   "kind": "human",
+   "relations": [
+    {
+     "key": "WH-A",
+     "relation": "supervisor",
+     "type": "Warehouse"
+    },
+    {
+     "key": "WH-B",
+     "relation": "supervisor",
+     "type": "Warehouse"
+    },
+    {
+     "key": "WH-C",
+     "relation": "supervisor",
+     "type": "Warehouse"
+    }
+   ],
+   "roles": [
+    "supervisor"
+   ]
+  },
+  {
+   "delegated_by": null,
+   "id": "senior-1",
+   "kind": "human",
+   "relations": [
+    {
+     "key": "WH-A",
+     "relation": "senior_approver",
+     "type": "Warehouse"
+    },
+    {
+     "key": "WH-B",
+     "relation": "senior_approver",
+     "type": "Warehouse"
+    },
+    {
+     "key": "WH-C",
+     "relation": "senior_approver",
+     "type": "Warehouse"
+    }
+   ],
+   "roles": [
+    "senior_approver"
+   ]
+  },
+  {
+   "delegated_by": null,
+   "id": "nobody-1",
+   "kind": "human",
+   "relations": [],
+   "roles": [
+    "none"
+   ]
+  },
+  {
+   "delegated_by": null,
+   "id": "admin-1",
+   "kind": "human",
+   "relations": [
+    {
+     "key": "WH-A",
+     "relation": "planner",
+     "type": "Warehouse"
+    },
+    {
+     "key": "WH-B",
+     "relation": "planner",
+     "type": "Warehouse"
+    },
+    {
+     "key": "WH-C",
+     "relation": "planner",
+     "type": "Warehouse"
+    },
+    {
+     "key": "WH-A",
+     "relation": "supervisor",
+     "type": "Warehouse"
+    },
+    {
+     "key": "WH-B",
+     "relation": "supervisor",
+     "type": "Warehouse"
+    },
+    {
+     "key": "WH-C",
+     "relation": "supervisor",
+     "type": "Warehouse"
+    },
+    {
+     "key": "WH-A",
+     "relation": "senior_approver",
+     "type": "Warehouse"
+    },
+    {
+     "key": "WH-B",
+     "relation": "senior_approver",
+     "type": "Warehouse"
+    },
+    {
+     "key": "WH-C",
+     "relation": "senior_approver",
+     "type": "Warehouse"
+    }
+   ],
+   "roles": [
+    "admin"
+   ]
+  },
+  {
+   "delegated_by": "planner-1",
+   "hostile": false,
+   "id": "agent-1",
+   "kind": "agent",
+   "note": "delegated planner agent: transfer_inventory on all warehouses",
+   "relations": [
+    {
+     "key": "WH-A",
+     "relation": "agent_grant",
+     "type": "Warehouse"
+    },
+    {
+     "key": "WH-B",
+     "relation": "agent_grant",
+     "type": "Warehouse"
+    },
+    {
+     "key": "WH-C",
+     "relation": "agent_grant",
+     "type": "Warehouse"
+    }
+   ],
+   "roles": [
+    "agent"
+   ]
+  },
+  {
+   "delegated_by": "planner-1",
+   "hostile": true,
+   "id": "agent-hostile-1",
+   "kind": "agent",
+   "note": "compromised agent with a legitimately narrower grant: transfers only between WH-B and WH-C",
+   "relations": [
+    {
+     "key": "WH-B",
+     "relation": "agent_grant",
+     "type": "Warehouse"
+    },
+    {
+     "key": "WH-C",
+     "relation": "agent_grant",
+     "type": "Warehouse"
+    }
+   ],
+   "roles": [
+    "agent"
+   ]
+  },
+  {
+   "delegated_by": "nobody-1",
+   "hostile": false,
+   "id": "agent-orphan",
+   "kind": "agent",
+   "note": "delegator holds nothing: effectively no authority",
+   "relations": [
+    {
+     "key": "WH-A",
+     "relation": "agent_grant",
+     "type": "Warehouse"
+    },
+    {
+     "key": "WH-B",
+     "relation": "agent_grant",
+     "type": "Warehouse"
+    },
+    {
+     "key": "WH-C",
+     "relation": "agent_grant",
+     "type": "Warehouse"
+    }
+   ],
+   "roles": [
+    "agent"
+   ]
+  }
+ ],
+ "provenance": "derived from round2 authority_rules/policies; 'origin' marks each grant as round2, neutral-fix or neutral-extension",
+ "semantics": [
+  "A request is allowed iff at least one allow grant matches (principal selector, resource selector, operation) and no deny grant matches. No matching allow means deny; deny overrides allow.",
+  "A principal selector {relation, on_type} matches when the principal holds that relation on EVERY input resource of type on_type, and at least one such input exists.",
+  "A resource selector {type: T} matches when some input resource conforms to T; {any: true} always matches.",
+  "Operation patterns: exact name, '*', or '<prefix>:*'. Approval operations are named 'approval:<name>'.",
+  "On-behalf-of: an agent acting for a delegator is allowed only if (a) the agent's own grants allow the operation, (b) the matching allow grant is delegable, and (c) the delegator would be allowed the same request. A deny matching the agent or any principal in its delegation chain denies.",
+  "An approver must be a different principal than the requester and outside the requester's delegation chain.",
+  "Direct canonical-state writes outside governed operations are denied for every principal (deny grant on 'write:canonical-state').",
+  "Possessing a token or knowing an operation name is never authorization; only the grants above are."
+ ],
+ "service_accounts": [
+  {
+   "id": "svc-core",
+   "kind": "service",
+   "operation_grants": [],
+   "purpose": "the deployed variant's own service identity",
+   "world_writers": [
+    "paladin-service",
+    "conventional-service"
+   ]
+  },
+  {
+   "id": "svc-wms",
+   "kind": "service",
+   "operation_grants": [],
+   "purpose": "external system adapter WMS",
+   "world_writers": [
+    "WMS"
+   ]
+  },
+  {
+   "id": "svc-erp",
+   "kind": "service",
+   "operation_grants": [],
+   "purpose": "external system adapter ERP",
+   "world_writers": [
+    "ERP"
+   ]
+  },
+  {
+   "id": "svc-mes",
+   "kind": "service",
+   "operation_grants": [],
+   "purpose": "external system adapter MES",
+   "world_writers": [
+    "MES"
+   ]
+  }
+ ],
+ "spec": "r3-authority-1"
+}

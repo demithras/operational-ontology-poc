@@ -1,0 +1,50 @@
+{
+ "judgment_flip": {
+  "first": {
+   "candidate": true,
+   "case": "2520-268",
+   "changed": true,
+   "classes": [
+    "procedural_mismatch"
+   ]
+  },
+  "mismatch": 1,
+  "oracle_outcome_changed": 1000,
+  "probed": 2123,
+  "progress_loss": 0,
+  "variant_followed_oracle": 999
+ },
+ "merit_invariance": {
+  "cases": 1000,
+  "fabricated": 0,
+  "first": null,
+  "judge_actions": 5960
+ },
+ "oracle_needed": {
+  "expected_cases": 7293,
+  "observed_execute_rows": 15972
+ },
+ "provenance": {
+  "fixtures_sha256": {
+   "spec/governance/collegial.manufacturing.json": "9185c344e0ba463731f96a52bc90d4d5c049e7055b83f29c95b72daa96192665",
+   "spec/governance/collegial.project.json": "7fc2e38f3362493921f7ac6861a7bc7299825c5a34dadcf719b8cd94e87b8d9c",
+   "spec/governance/hierarchical.manufacturing.json": "6ff92d4c387828ab90690dc587d843cc472acf3965f54f91a9ef7b5e7e95d78c",
+   "spec/governance/hierarchical.project.json": "05f49b805a85aa9ba9bb42a041e915bf6bc71aae562c06c59ad4dce8d3b2f7d0",
+   "spec/governance/polycentric.manufacturing.json": "12a73ccace473ce85ad82afe1ab2eac9f2cb3e09c5378d2332788b90ce35912c",
+   "spec/governance/polycentric.project.json": "6932d717bb02459bb4afada5bdadbc404e5591d8d6406c7b6f50524b063852bd"
+  },
+  "judgment_rng_stream": "h25-judgment-<seed>-<i> (random.Random, seeded separately from h25-case/h25-model streams)",
+  "model_rng_streams": [
+   "h25-model-*",
+   "h25-case-*"
+  ],
+  "oracle_imports": [
+   "r3_shared",
+   "r3_shared.disclosure",
+   "r3_shared.evidence",
+   "r3_shared.world"
+  ],
+  "prot_h25_sha256": "65eb21b360da84a9d229cf2c500c473be6a1ad86aa6d1b8d56b9313e452e1a29",
+  "streams_distinct": true
+ }
+}

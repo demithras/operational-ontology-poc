@@ -1,0 +1,1275 @@
+{
+ "$defs": {
+  "step_adapter": {
+   "additionalProperties": false,
+   "properties": {
+    "group": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "op": {
+     "const": "adapter"
+    },
+    "prims": {
+     "items": {
+      "enum": [
+       "H0",
+       "L1",
+       "L2",
+       "L3",
+       "T1",
+       "T2",
+       "T3",
+       "R1",
+       "R2",
+       "O1",
+       "O2",
+       "G1",
+       "G2",
+       "G3"
+      ]
+     },
+     "maxItems": 3,
+     "minItems": 1,
+     "type": "array"
+    },
+    "system": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "t": {
+     "minimum": 0,
+     "type": "integer"
+    },
+    "target": {
+     "minLength": 1,
+     "type": "string"
+    }
+   },
+   "required": [
+    "op",
+    "t",
+    "system",
+    "prims",
+    "target"
+   ],
+   "type": "object"
+  },
+  "step_advance": {
+   "additionalProperties": false,
+   "properties": {
+    "group": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "n": {
+     "type": "integer"
+    },
+    "op": {
+     "const": "advance"
+    },
+    "t": {
+     "minimum": 0,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "op",
+    "t",
+    "n"
+   ],
+   "type": "object"
+  },
+  "step_approve": {
+   "additionalProperties": false,
+   "properties": {
+    "approver": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "args": {
+     "type": "object"
+    },
+    "group": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "obo": {
+     "type": [
+      "string",
+      "null"
+     ]
+    },
+    "op": {
+     "const": "approve"
+    },
+    "operation": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "requester": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "t": {
+     "minimum": 0,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "op",
+    "t",
+    "approver",
+    "requester",
+    "operation",
+    "args"
+   ],
+   "type": "object"
+  },
+  "step_crash": {
+   "additionalProperties": false,
+   "properties": {
+    "group": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "op": {
+     "const": "crash"
+    },
+    "point": {
+     "enum": [
+      "CP1_before_commit",
+      "CP2_after_commit",
+      "CP3_after_anchor_append",
+      "CP4_adapter_before_apply",
+      "CP5_adapter_after_apply",
+      "CP6_idle",
+      "CP7_reconcile_after_read",
+      "CP8_during_recovery"
+     ]
+    },
+    "t": {
+     "minimum": 0,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "op",
+    "t",
+    "point"
+   ],
+   "type": "object"
+  },
+  "step_delegate": {
+   "additionalProperties": false,
+   "properties": {
+    "edge": {
+     "type": "object"
+    },
+    "group": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "op": {
+     "const": "delegate"
+    },
+    "principal": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "rid": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "t": {
+     "minimum": 0,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "op",
+    "t",
+    "principal",
+    "edge",
+    "rid"
+   ],
+   "type": "object"
+  },
+  "step_dispatch": {
+   "additionalProperties": false,
+   "properties": {
+    "group": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "op": {
+     "const": "dispatch"
+    },
+    "t": {
+     "minimum": 0,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "op",
+    "t"
+   ],
+   "type": "object"
+  },
+  "step_fault_heal": {
+   "additionalProperties": false,
+   "properties": {
+    "fid": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "group": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "op": {
+     "const": "fault_heal"
+    },
+    "t": {
+     "minimum": 0,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "op",
+    "t",
+    "fid"
+   ],
+   "type": "object"
+  },
+  "step_fault_start": {
+   "additionalProperties": false,
+   "properties": {
+    "fault": {
+     "type": "object"
+    },
+    "fid": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "group": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "op": {
+     "const": "fault_start"
+    },
+    "t": {
+     "minimum": 0,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "op",
+    "t",
+    "fid",
+    "fault"
+   ],
+   "type": "object"
+  },
+  "step_list": {
+   "additionalProperties": false,
+   "properties": {
+    "group": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "op": {
+     "const": "list"
+    },
+    "principal": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "t": {
+     "minimum": 0,
+     "type": "integer"
+    },
+    "type": {
+     "minLength": 1,
+     "type": "string"
+    }
+   },
+   "required": [
+    "op",
+    "t",
+    "principal",
+    "type"
+   ],
+   "type": "object"
+  },
+  "step_poll": {
+   "additionalProperties": false,
+   "properties": {
+    "group": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "op": {
+     "const": "poll"
+    },
+    "principal": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "sub": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "t": {
+     "minimum": 0,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "op",
+    "t",
+    "principal",
+    "sub"
+   ],
+   "type": "object"
+  },
+  "step_prov": {
+   "additionalProperties": false,
+   "properties": {
+    "group": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "kind": {
+     "enum": [
+      "decision",
+      "object"
+     ]
+    },
+    "op": {
+     "const": "prov"
+    },
+    "principal": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "ref": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "t": {
+     "minimum": 0,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "op",
+    "t",
+    "principal",
+    "kind",
+    "ref"
+   ],
+   "type": "object"
+  },
+  "step_publish_authority": {
+   "additionalProperties": false,
+   "properties": {
+    "drop_grants": {
+     "items": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "minItems": 1,
+     "type": "array"
+    },
+    "group": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "op": {
+     "const": "publish_authority"
+    },
+    "t": {
+     "minimum": 0,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "op",
+    "t",
+    "drop_grants"
+   ],
+   "type": "object"
+  },
+  "step_query": {
+   "additionalProperties": false,
+   "properties": {
+    "args": {
+     "type": "object"
+    },
+    "group": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "name": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "op": {
+     "const": "query"
+    },
+    "principal": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "t": {
+     "minimum": 0,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "op",
+    "t",
+    "principal",
+    "name",
+    "args"
+   ],
+   "type": "object"
+  },
+  "step_read": {
+   "additionalProperties": false,
+   "properties": {
+    "group": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "op": {
+     "const": "read"
+    },
+    "principal": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "ref": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "t": {
+     "minimum": 0,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "op",
+    "t",
+    "principal",
+    "ref"
+   ],
+   "type": "object"
+  },
+  "step_reconcile": {
+   "additionalProperties": false,
+   "properties": {
+    "group": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "lag": {
+     "type": "integer"
+    },
+    "op": {
+     "const": "reconcile"
+    },
+    "rid": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "t": {
+     "minimum": 0,
+     "type": "integer"
+    },
+    "watermark": {
+     "type": "integer"
+    }
+   },
+   "required": [
+    "op",
+    "t",
+    "rid",
+    "watermark"
+   ],
+   "type": "object"
+  },
+  "step_redeliver": {
+   "additionalProperties": false,
+   "properties": {
+    "concurrent": {
+     "type": "boolean"
+    },
+    "copies": {
+     "type": "integer"
+    },
+    "group": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "op": {
+     "const": "redeliver"
+    },
+    "rid": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "t": {
+     "minimum": 0,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "op",
+    "t",
+    "rid",
+    "copies",
+    "concurrent"
+   ],
+   "type": "object"
+  },
+  "step_request": {
+   "additionalProperties": false,
+   "properties": {
+    "args": {
+     "type": "object"
+    },
+    "group": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "obo": {
+     "type": [
+      "string",
+      "null"
+     ]
+    },
+    "op": {
+     "const": "request"
+    },
+    "operation": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "principal": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "rid": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "surface": {
+     "enum": [
+      "call_tool",
+      "direct"
+     ]
+    },
+    "t": {
+     "minimum": 0,
+     "type": "integer"
+    },
+    "tag": {
+     "minLength": 1,
+     "type": "string"
+    }
+   },
+   "required": [
+    "op",
+    "t",
+    "principal",
+    "operation",
+    "args",
+    "rid",
+    "surface"
+   ],
+   "type": "object"
+  },
+  "step_resume": {
+   "additionalProperties": false,
+   "properties": {
+    "group": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "op": {
+     "const": "resume"
+    },
+    "t": {
+     "minimum": 0,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "op",
+    "t"
+   ],
+   "type": "object"
+  },
+  "step_revoke": {
+   "additionalProperties": false,
+   "properties": {
+    "edge_id": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "group": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "op": {
+     "const": "revoke"
+    },
+    "principal": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "rid": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "t": {
+     "minimum": 0,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "op",
+    "t",
+    "principal",
+    "edge_id",
+    "rid"
+   ],
+   "type": "object"
+  },
+  "step_subscribe": {
+   "additionalProperties": false,
+   "properties": {
+    "group": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "op": {
+     "const": "subscribe"
+    },
+    "principal": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "sub": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "t": {
+     "minimum": 0,
+     "type": "integer"
+    },
+    "type": {
+     "minLength": 1,
+     "type": "string"
+    }
+   },
+   "required": [
+    "op",
+    "t",
+    "principal",
+    "sub",
+    "type"
+   ],
+   "type": "object"
+  },
+  "step_tamper": {
+   "additionalProperties": false,
+   "properties": {
+    "group": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "op": {
+     "const": "tamper"
+    },
+    "t": {
+     "minimum": 0,
+     "type": "integer"
+    },
+    "target": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "what": {
+     "enum": [
+      "forge_approval",
+      "delete_idempotency",
+      "rewrite_meta"
+     ]
+    }
+   },
+   "required": [
+    "op",
+    "t",
+    "what"
+   ],
+   "type": "object"
+  }
+ },
+ "$id": "r3-h30-task-1",
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "additionalProperties": false,
+ "properties": {
+  "adaptation": {
+   "additionalProperties": false,
+   "properties": {
+    "changed": {
+     "items": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "dropped": {
+     "items": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "kept": {
+     "items": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "kept",
+    "changed",
+    "dropped"
+   ],
+   "type": "object"
+  },
+  "attacker": {
+   "additionalProperties": false,
+   "properties": {
+    "capabilities": {
+     "items": {
+      "enum": [
+       "h23.direct",
+       "h23.call_tool",
+       "h24.delegate",
+       "h24.revoke",
+       "h26.read",
+       "h26.list",
+       "h26.query",
+       "h26.subscribe",
+       "h26.poll",
+       "h26.prov",
+       "h27.tamper",
+       "h28.adapter",
+       "a8.redeliver",
+       "h23.approve"
+      ]
+     },
+     "type": "array",
+     "uniqueItems": true
+    },
+    "continuation": {
+     "items": {
+      "oneOf": [
+       {
+        "$ref": "#/$defs/step_request"
+       },
+       {
+        "$ref": "#/$defs/step_approve"
+       },
+       {
+        "$ref": "#/$defs/step_delegate"
+       },
+       {
+        "$ref": "#/$defs/step_revoke"
+       },
+       {
+        "$ref": "#/$defs/step_read"
+       },
+       {
+        "$ref": "#/$defs/step_list"
+       },
+       {
+        "$ref": "#/$defs/step_query"
+       },
+       {
+        "$ref": "#/$defs/step_subscribe"
+       },
+       {
+        "$ref": "#/$defs/step_poll"
+       },
+       {
+        "$ref": "#/$defs/step_prov"
+       },
+       {
+        "$ref": "#/$defs/step_redeliver"
+       },
+       {
+        "$ref": "#/$defs/step_publish_authority"
+       },
+       {
+        "$ref": "#/$defs/step_tamper"
+       },
+       {
+        "$ref": "#/$defs/step_adapter"
+       },
+       {
+        "$ref": "#/$defs/step_fault_start"
+       },
+       {
+        "$ref": "#/$defs/step_fault_heal"
+       },
+       {
+        "$ref": "#/$defs/step_crash"
+       },
+       {
+        "$ref": "#/$defs/step_resume"
+       },
+       {
+        "$ref": "#/$defs/step_advance"
+       },
+       {
+        "$ref": "#/$defs/step_dispatch"
+       },
+       {
+        "$ref": "#/$defs/step_reconcile"
+       }
+      ]
+     },
+     "minItems": 1,
+     "type": "array"
+    },
+    "steps": {
+     "items": {
+      "oneOf": [
+       {
+        "$ref": "#/$defs/step_request"
+       },
+       {
+        "$ref": "#/$defs/step_approve"
+       },
+       {
+        "$ref": "#/$defs/step_delegate"
+       },
+       {
+        "$ref": "#/$defs/step_revoke"
+       },
+       {
+        "$ref": "#/$defs/step_read"
+       },
+       {
+        "$ref": "#/$defs/step_list"
+       },
+       {
+        "$ref": "#/$defs/step_query"
+       },
+       {
+        "$ref": "#/$defs/step_subscribe"
+       },
+       {
+        "$ref": "#/$defs/step_poll"
+       },
+       {
+        "$ref": "#/$defs/step_prov"
+       },
+       {
+        "$ref": "#/$defs/step_redeliver"
+       },
+       {
+        "$ref": "#/$defs/step_publish_authority"
+       },
+       {
+        "$ref": "#/$defs/step_tamper"
+       },
+       {
+        "$ref": "#/$defs/step_adapter"
+       },
+       {
+        "$ref": "#/$defs/step_fault_start"
+       },
+       {
+        "$ref": "#/$defs/step_fault_heal"
+       },
+       {
+        "$ref": "#/$defs/step_crash"
+       },
+       {
+        "$ref": "#/$defs/step_resume"
+       },
+       {
+        "$ref": "#/$defs/step_advance"
+       },
+       {
+        "$ref": "#/$defs/step_dispatch"
+       },
+       {
+        "$ref": "#/$defs/step_reconcile"
+       }
+      ]
+     },
+     "minItems": 1,
+     "type": "array"
+    }
+   },
+   "required": [
+    "capabilities",
+    "steps",
+    "continuation"
+   ],
+   "type": "object"
+  },
+  "corpus": {
+   "enum": [
+    "primary",
+    "reserve",
+    "dev"
+   ]
+  },
+  "domain": {
+   "enum": [
+    "manufacturing",
+    "project"
+   ]
+  },
+  "expected_forbidden": {
+   "items": {
+    "minLength": 1,
+    "type": "string"
+   },
+   "type": "array"
+  },
+  "faults": {
+   "items": {
+    "additionalProperties": false,
+    "properties": {
+     "deployment": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "from_tick": {
+      "minimum": 0,
+      "type": "integer"
+     },
+     "mode": {
+      "enum": [
+       "drop",
+       "reply_lost"
+      ]
+     },
+     "op": {
+      "enum": [
+       "outage",
+       "partition"
+      ]
+     },
+     "target": {
+      "description": "system name (ExternalWorld) or stream (AnchorServer); absent for AuthorityService",
+      "minLength": 1,
+      "type": "string"
+     },
+     "to_tick": {
+      "minimum": 1,
+      "type": "integer"
+     }
+    },
+    "required": [
+     "op",
+     "deployment",
+     "from_tick",
+     "to_tick",
+     "mode"
+    ],
+    "type": "object"
+   },
+   "type": "array"
+  },
+  "horizon": {
+   "additionalProperties": false,
+   "properties": {
+    "t_end": {
+     "minimum": 3,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "t_end"
+   ],
+   "type": "object"
+  },
+  "incident_report": {
+   "additionalProperties": false,
+   "properties": {
+    "K": {
+     "additionalProperties": false,
+     "properties": {
+      "id": {
+       "minLength": 1,
+       "type": "string"
+      },
+      "kind": {
+       "enum": [
+        "principal",
+        "adapter",
+        "evidence_store",
+        "authority_version"
+       ]
+      }
+     },
+     "required": [
+      "kind",
+      "id"
+     ],
+     "type": "object"
+    },
+    "indicators": {
+     "items": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "t_c": {
+     "minimum": 1,
+     "type": "integer"
+    },
+    "t_d": {
+     "minimum": 2,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "K",
+    "t_c",
+    "t_d",
+    "indicators"
+   ],
+   "type": "object"
+  },
+  "overlay": {
+   "pattern": "^[0-9a-f]{64}$",
+   "type": "string"
+  },
+  "primary_class": {
+   "enum": [
+    "A1_COMPROMISED_AGENT",
+    "A2_CONFUSED_DEPUTY",
+    "A3_STALE_OR_REVOKED_AUTHORITY",
+    "A4_AUTHORITY_TOPOLOGY_CONFLICT",
+    "A5_KNOWLEDGE_EXFILTRATION",
+    "A6_PROVENANCE_TAMPER",
+    "A7_BYZANTINE_ADAPTER",
+    "A8_CONCURRENCY_AND_REPLAY",
+    "A9_PARTIAL_FAILURE_OR_PARTITION",
+    "A10_RECOVERY_CORRUPTION"
+   ]
+  },
+  "secondary": {
+   "items": {
+    "enum": [
+     "A1_COMPROMISED_AGENT",
+     "A2_CONFUSED_DEPUTY",
+     "A3_STALE_OR_REVOKED_AUTHORITY",
+     "A4_AUTHORITY_TOPOLOGY_CONFLICT",
+     "A5_KNOWLEDGE_EXFILTRATION",
+     "A6_PROVENANCE_TAMPER",
+     "A7_BYZANTINE_ADAPTER",
+     "A8_CONCURRENCY_AND_REPLAY",
+     "A9_PARTIAL_FAILURE_OR_PARTITION",
+     "A10_RECOVERY_CORRUPTION"
+    ]
+   },
+   "type": "array",
+   "uniqueItems": true
+  },
+  "slack": {
+   "additionalProperties": false,
+   "properties": {
+    "tick_jitter": {
+     "minimum": 0,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "tick_jitter"
+   ],
+   "type": "object"
+  },
+  "source": {
+   "additionalProperties": false,
+   "properties": {
+    "excerpt": {
+     "maxLength": 600,
+     "minLength": 1,
+     "type": "string"
+    },
+    "excerpt_sha256": {
+     "pattern": "^[0-9a-f]{64}$",
+     "type": "string"
+    },
+    "id": {
+     "type": [
+      "string",
+      "null"
+     ]
+    },
+    "kind": {
+     "enum": [
+      "cve",
+      "advisory",
+      "incident_report",
+      "owasp_case",
+      "case_study"
+     ]
+    },
+    "published": {
+     "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+     "type": "string"
+    },
+    "retrieved": {
+     "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+     "type": "string"
+    },
+    "title": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "url": {
+     "type": [
+      "string",
+      "null"
+     ]
+    }
+   },
+   "required": [
+    "kind",
+    "id",
+    "url",
+    "title",
+    "published",
+    "retrieved",
+    "excerpt_sha256",
+    "excerpt"
+   ],
+   "type": "object"
+  },
+  "task_id": {
+   "pattern": "^h30-A(10|[1-9])-[a-z]?\\d{2}$",
+   "type": "string"
+  },
+  "workload": {
+   "additionalProperties": false,
+   "properties": {
+    "legit": {
+     "items": {
+      "oneOf": [
+       {
+        "$ref": "#/$defs/step_request"
+       },
+       {
+        "$ref": "#/$defs/step_approve"
+       },
+       {
+        "$ref": "#/$defs/step_delegate"
+       },
+       {
+        "$ref": "#/$defs/step_revoke"
+       },
+       {
+        "$ref": "#/$defs/step_read"
+       },
+       {
+        "$ref": "#/$defs/step_list"
+       },
+       {
+        "$ref": "#/$defs/step_query"
+       },
+       {
+        "$ref": "#/$defs/step_subscribe"
+       },
+       {
+        "$ref": "#/$defs/step_poll"
+       },
+       {
+        "$ref": "#/$defs/step_prov"
+       },
+       {
+        "$ref": "#/$defs/step_redeliver"
+       },
+       {
+        "$ref": "#/$defs/step_publish_authority"
+       },
+       {
+        "$ref": "#/$defs/step_tamper"
+       },
+       {
+        "$ref": "#/$defs/step_adapter"
+       },
+       {
+        "$ref": "#/$defs/step_fault_start"
+       },
+       {
+        "$ref": "#/$defs/step_fault_heal"
+       },
+       {
+        "$ref": "#/$defs/step_crash"
+       },
+       {
+        "$ref": "#/$defs/step_resume"
+       },
+       {
+        "$ref": "#/$defs/step_advance"
+       },
+       {
+        "$ref": "#/$defs/step_dispatch"
+       },
+       {
+        "$ref": "#/$defs/step_reconcile"
+       }
+      ]
+     },
+     "minItems": 1,
+     "type": "array"
+    },
+    "mix_seed_slot": {
+     "const": "r"
+    }
+   },
+   "required": [
+    "legit",
+    "mix_seed_slot"
+   ],
+   "type": "object"
+  }
+ },
+ "required": [
+  "task_id",
+  "corpus",
+  "primary_class",
+  "secondary",
+  "domain",
+  "overlay",
+  "source",
+  "adaptation",
+  "incident_report",
+  "attacker",
+  "workload",
+  "faults",
+  "expected_forbidden",
+  "slack",
+  "horizon"
+ ],
+ "title": "H30 blind task (TASK-CORPUS-SPEC s2): one JSON object per task; canonical JSON, sorted keys",
+ "type": "object"
+}

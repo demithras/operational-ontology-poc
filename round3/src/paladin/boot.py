@@ -1,0 +1,107 @@
+"""Build one Paladin Engine for a domain from (IR package, neutral specs, world). No domain branches here: the domain
+is data (IR file, logic bindings module, adapter kind) in `DOMAINS`."""
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Callable
+
+from paladin.authcompile import compile_ir, principals, shadow_principals
+from paladin.engine import Engine, LogicBindings
+from paladin import extops
+from paladin.engine.effects import AdapterRegistry
+from paladin.worldbridge import OutboxAdapter, WorldExternalAdapter, WorldGitAdapter
+
+HERE = Path(__file__).resolve().parent
+DOMAINS = {"manufacturing": {"ir": "domains/manufacturing/ir.json"}, "project": {"ir": "domains/project/ir.v3.json"}}
+
+NEUTRAL_EVALUATOR = "neutral:evidence-present-v1"
+
+
+def neutral_evaluator(experiment: dict, evidence: list, hypothesis: dict) -> dict:
+    """Spec config.evaluators['neutral:evidence-present-v1']: protocol_valid = freeze_hash non-blank;
+    required_evidence_complete = sample_sufficient = support_hit = (evidence_count >= 1); reject_hit = false."""
+    n = hypothesis.get("_evidence_count", 0)
+    return {"protocol_valid": bool(str(hypothesis.get("freeze_hash") or "").strip()), "required_evidence_complete": n >= 1,
+            "sample_sufficient": n >= 1, "reject_hit": False, "support_hit": n >= 1}
+
+
+def load_ir(domain: str) -> dict:
+    return json.loads((HERE / DOMAINS[domain]["ir"]).read_text())
+
+
+def bindings_for(domain: str, ir: dict, ops_spec: dict) -> LogicBindings:
+    if domain == "manufacturing":
+        from paladin.domains.manufacturing.logic import build_bindings
+        b = build_bindings(ops_spec, ir)
+    else:
+        from paladin.domains.project.logic import build_bindings
+        b = build_bindings(ir, {NEUTRAL_EVALUATOR: neutral_evaluator})
+    for kind, table in extops.bindings_for_missing(ir, ops_spec).items():   # ops the domain IR does not describe (H28 overlay)
+        for key, fn in table.items():
+            b.bind(kind, key, fn)
+    return b
+
+
+class _ThreadHandle:
+    """Resolves the writer's handle on every call (the factory is per thread under the unsynchronized_commit mutant), so a
+    write inside a world transaction reuses the transaction's own connection instead of queueing behind it (15 s busy wait)."""
+
+    def __init__(self, factory: Callable, name: str):
+        self._factory, self._name = factory, name
+
+    def __getattr__(self, attr: str):
+        return getattr(self._factory(self._name), attr)
+
+
+@dataclass
+class Booted:
+    engine: Engine
+    ir: dict
+    principals: dict
+    shadow: dict | None = None
+
+
+def boot(domain: str, ops_spec: dict, auth_spec: dict, handle_factory: Callable, service_handle: Any,
+         clock: Callable[[], int], pre_apply: Callable[[], None] = lambda: None, sink: list | None = None,
+         mutants=frozenset()) -> Booted:
+    """`sink` (Gate 4): given -> external effects are only PLANNED into it (OutboxAdapter); None -> legacy in-transaction path."""
+    base = load_ir(domain)
+    ir = compile_ir(extops.extend_ir(base, ops_spec), auth_spec, ops_spec)
+    holder: dict = {}
+    specs: dict = {}
+    for op in ops_spec["operations"]:
+        for e in op["effects"]:
+            if e["kind"] == "external":
+                specs.setdefault(e["adapter"], {})[op["name"]] = e
+    inputs_of = lambda xid: holder["engine"]._executions[xid]["inputs"]  # noqa: E731 - read-only adapter helper
+    if sink is not None:
+        adapters = {("external_call", s): OutboxAdapter(s, per_action, inputs_of, sink, pre_apply) for s, per_action in specs.items()}
+    else:
+        adapters = {("external_call", s): WorldExternalAdapter(s, handle_factory, per_action, inputs_of, pre_apply)
+                    for s, per_action in specs.items()}
+    if domain != "manufacturing":
+        fields: dict = {}  # (action, kind, type) -> exactly the props the ops spec lists for that effect (R-3 creates; updates likewise)
+        for op in ops_spec["operations"]:
+            for e in op["effects"]:
+                if e["kind"] in ("create", "update"):
+                    fields.setdefault((op["name"], e["kind"], e["type"]), set()).update(e["props"])
+        git_handle = service_handle
+        if "unsynchronized_commit" in mutants:   # MUTANT: handles are per thread; the adapter must write through the committing thread's
+            git_handle = _ThreadHandle(handle_factory, "paladin-service")   # own handle, else its BEGIN IMMEDIATE waits on that thread's tx
+        git = WorldGitAdapter(git_handle, fields, pre_apply)
+        adapters[("git_change", "*")] = git
+    bind_spec = ops_spec
+    if "policy_gate_in_adapter" in mutants:     # MUTANT: the gating rules leave the decision plane (see extgate_mut)
+        import importlib
+        bind_spec = importlib.import_module("paladin.extgate_mut").strip(ops_spec)
+    engine = Engine(ir, bindings_for(domain, base, bind_spec), adapters, clock=clock)
+    holder["engine"] = engine
+    if domain == "project":
+        git.attach(engine.model)
+    pr = principals(auth_spec)
+    sh = shadow_principals(pr)
+    for p in list(pr.values()) + list(sh.values()):
+        engine.register_principal(p)
+    return Booted(engine, ir, pr, sh)

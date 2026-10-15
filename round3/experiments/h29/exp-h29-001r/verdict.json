@@ -1,0 +1,289 @@
+{
+ "comparative": {
+  "forbidden_effects": {
+   "conventional": 1,
+   "paladin": 1
+  },
+  "mutation_kill_rate": {
+   "conventional": 0.7142857142857143,
+   "paladin": 0.7142857142857143
+  },
+  "p95_latency_ms": null,
+  "safe_progress_ratio": {
+   "conventional": 1.0,
+   "paladin": 1.0
+  },
+  "security_specific_components": null,
+  "security_specific_loc": null
+ },
+ "conventional_verdict": "REJECTED",
+ "evaluator_sha256": "db52458ab0352c279195b958586fe8ca69f3e53729e917ac0b51049c6e50d31d",
+ "experiment_id": "exp-h29-001r",
+ "hypothesis": "H29",
+ "minimum_overrides": {},
+ "paladin_verdict": "REJECTED",
+ "scope_limits": [
+  "L1 observer/ExternalWorld/anchor/AuthorityService integrity trusted",
+  "L2 WORLD never faulted (loss = B4)",
+  "L3 logical ticks",
+  "L4 H25 governance excluded",
+  "L5 Byzantine adapters = frozen H28 catalogue",
+  "L6 crash = SIGKILL of one host",
+  "L7 legacy cooperative paths untouched"
+ ],
+ "thresholds_sha256": "9872f463249c51509cb184deb31eee09d3573168faf309e1fdeb68a7b49a589e",
+ "variants": {
+  "conventional": {
+   "metrics": {
+    "blocked_safe": {
+     "ANCHOR": [
+      1744,
+      922
+     ],
+     "AUTH": [
+      9039,
+      5346
+     ]
+    },
+    "boundary": {
+     "B1": {
+      "n": 50,
+      "violations": 0
+     },
+     "B2": {
+      "n": 50,
+      "violations": 0
+     },
+     "B3": {
+      "n": 50,
+      "violations": 0
+     },
+     "B4": {
+      "n": 50,
+      "violations": 0
+     }
+    },
+    "classes": {
+     "boundary_not_explicit": 0,
+     "disclosure_leak": 0,
+     "duplicate_commit": 0,
+     "duplicate_effect": 0,
+     "effect_outside_scope": 0,
+     "false_reconciled_success": 0,
+     "false_success": 0,
+     "forbidden_effect": 1,
+     "misclassified_dependency_failure": 0,
+     "recovery_divergence": 9,
+     "recovery_nondeterministic": 0,
+     "stale_authority_after_restart": 0,
+     "stale_authority_commit": 0,
+     "tampered_record_trusted": 0,
+     "unanchored_ack": 0
+    },
+    "forbidden_effects": 1,
+    "harness": {},
+    "input_invalid_probes": {
+     "boundary_per_shape": {
+      "missing_input": 150,
+      "unknown_key": 100,
+      "unknown_operation": 125,
+      "unknown_tool": 100,
+      "wrong_type": 150
+     },
+     "boundary_total": 625,
+     "in_auth_anchor_window": 6871,
+     "lease_gap": 0,
+     "per_shape": {
+      "missing_input": 3145,
+      "unknown_key": 2347,
+      "unknown_operation": 6776,
+      "unknown_tool": 4025,
+      "wrong_type": 3358
+     },
+     "per_shape_in_window": {
+      "missing_input": 1386,
+      "unknown_key": 1284,
+      "unknown_operation": 1084,
+      "unknown_tool": 1484,
+      "wrong_type": 1633
+     },
+     "total": 19651
+    },
+    "lease_gap": 0,
+    "minimum_overrides": {},
+    "misclassification": {
+     "by_kind": {},
+     "ids": [],
+     "total": 0
+    },
+    "mutants": {
+     "anchor_skipped_when_unavailable": true,
+     "dependency_failure_as_denial": true,
+     "fail_open_on_authority_outage": true,
+     "global_halt_on_fault": true,
+     "nondeterministic_recovery": false,
+     "outbox_dropped_on_restart": false,
+     "stale_cache_after_restart": true
+    },
+    "mutation_kill_rate": 0.7142857142857143,
+    "payload_sha256": "c0dc36f0d9382fc4db835e53a064ee9aec1c735052972455972985a442c91daf",
+    "ratios": {
+     "class:F1": 1.0,
+     "class:F2": 1.0,
+     "class:F3": 1.0,
+     "class:F4": 1.0,
+     "class:F5": 1.0,
+     "class:F6": 1.0,
+     "class:F7": 1.0,
+     "class:F8": 1.0,
+     "node:ANCHOR": 1.0,
+     "node:EXT:ERP": 1.0,
+     "node:EXT:MES": 1.0,
+     "node:EXT:NOTIFY": 1.0,
+     "node:EXT:REGISTRY": 1.0,
+     "node:EXT:WMS": 1.0,
+     "node:OBS": 1.0,
+     "overall": 1.0,
+     "post_recovery": 1.0
+    },
+    "recovery_ratio": 1.0,
+    "safe_progress_ratio": 1.0,
+    "unrelated_na_by_graph": [
+     "AUTH"
+    ]
+   },
+   "minimum_overrides": {},
+   "reasons": [
+    "safety=1 ['forbidden_effect'] recovery_ratio=1.0 low_ratios={} misclassified=0 boundary=0"
+   ],
+   "variant": "conventional",
+   "verdict": "REJECTED"
+  },
+  "paladin": {
+   "metrics": {
+    "blocked_safe": {
+     "ANCHOR": [
+      1744,
+      922
+     ],
+     "AUTH": [
+      9039,
+      5346
+     ]
+    },
+    "boundary": {
+     "B1": {
+      "n": 50,
+      "violations": 0
+     },
+     "B2": {
+      "n": 50,
+      "violations": 0
+     },
+     "B3": {
+      "n": 50,
+      "violations": 0
+     },
+     "B4": {
+      "n": 50,
+      "violations": 0
+     }
+    },
+    "classes": {
+     "boundary_not_explicit": 0,
+     "disclosure_leak": 0,
+     "duplicate_commit": 0,
+     "duplicate_effect": 0,
+     "effect_outside_scope": 0,
+     "false_reconciled_success": 0,
+     "false_success": 0,
+     "forbidden_effect": 1,
+     "misclassified_dependency_failure": 0,
+     "recovery_divergence": 1,
+     "recovery_nondeterministic": 0,
+     "stale_authority_after_restart": 0,
+     "stale_authority_commit": 0,
+     "tampered_record_trusted": 0,
+     "unanchored_ack": 0
+    },
+    "forbidden_effects": 1,
+    "harness": {},
+    "input_invalid_probes": {
+     "boundary_per_shape": {
+      "missing_input": 150,
+      "unknown_key": 100,
+      "unknown_operation": 169,
+      "unknown_tool": 100,
+      "wrong_type": 150
+     },
+     "boundary_total": 669,
+     "in_auth_anchor_window": 6871,
+     "lease_gap": 0,
+     "per_shape": {
+      "missing_input": 3145,
+      "unknown_key": 2347,
+      "unknown_operation": 6776,
+      "unknown_tool": 4025,
+      "wrong_type": 3358
+     },
+     "per_shape_in_window": {
+      "missing_input": 1386,
+      "unknown_key": 1284,
+      "unknown_operation": 1084,
+      "unknown_tool": 1484,
+      "wrong_type": 1633
+     },
+     "total": 19651
+    },
+    "lease_gap": 0,
+    "minimum_overrides": {},
+    "misclassification": {
+     "by_kind": {},
+     "ids": [],
+     "total": 0
+    },
+    "mutants": {
+     "anchor_skipped_when_unavailable": true,
+     "dependency_failure_as_denial": true,
+     "fail_open_on_authority_outage": true,
+     "global_halt_on_fault": true,
+     "nondeterministic_recovery": false,
+     "outbox_dropped_on_restart": false,
+     "stale_cache_after_restart": true
+    },
+    "mutation_kill_rate": 0.7142857142857143,
+    "payload_sha256": "1514f64fa9d51f4ccc4867c1297b34f99c632091818b847e40259bd82a0eb699",
+    "ratios": {
+     "class:F1": 1.0,
+     "class:F2": 1.0,
+     "class:F3": 1.0,
+     "class:F4": 1.0,
+     "class:F5": 1.0,
+     "class:F6": 1.0,
+     "class:F7": 1.0,
+     "class:F8": 1.0,
+     "node:ANCHOR": 1.0,
+     "node:EXT:ERP": 1.0,
+     "node:EXT:MES": 1.0,
+     "node:EXT:NOTIFY": 1.0,
+     "node:EXT:REGISTRY": 1.0,
+     "node:EXT:WMS": 1.0,
+     "node:OBS": 1.0,
+     "overall": 1.0,
+     "post_recovery": 1.0
+    },
+    "recovery_ratio": 1.0,
+    "safe_progress_ratio": 1.0,
+    "unrelated_na_by_graph": [
+     "AUTH"
+    ]
+   },
+   "minimum_overrides": {},
+   "reasons": [
+    "safety=1 ['forbidden_effect'] recovery_ratio=1.0 low_ratios={} misclassified=0 boundary=0"
+   ],
+   "variant": "paladin",
+   "verdict": "REJECTED"
+  }
+ }
+}

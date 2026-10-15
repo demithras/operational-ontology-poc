@@ -1,0 +1,103 @@
+{
+ "cross_domain": {
+  "by_domain": {
+   "manufacturing": 501,
+   "project": 499
+  },
+  "domains": [
+   "manufacturing",
+   "project"
+  ]
+ },
+ "domain_branch": 0,
+ "renaming": {
+  "by_domain": {
+   "manufacturing": 501,
+   "project": 499
+  },
+  "cases": 1000,
+  "domain_branch": 0,
+  "first": null
+ },
+ "self_test": {
+  "mutant_build_flagged": true,
+  "oracle_reference": {
+   "cases": 40,
+   "domain_branch": 0,
+   "note": "oracle-backed reference deployment"
+  }
+ },
+ "static_scan": {
+  "active_mutants": [],
+  "domain_logic_modules": [],
+  "files": 29,
+  "hit_count": 0,
+  "hits": [],
+  "resolved": [
+   {
+    "file": "src/conventional/lowview.py",
+    "kind": "compare",
+    "line": 97,
+    "literal": "none",
+    "reason": "G3-E29(b): compares a disclosure rule's provenance field with the P1e level 'none', not a role.",
+    "scope": "ViewBuilder._reveal",
+    "text": "if rv[\"provenance\"] != \"none\":"
+   },
+   {
+    "file": "src/conventional/lowview.py",
+    "kind": "dict-dispatch",
+    "line": 11,
+    "literal": "none",
+    "reason": "G3-E29(b): 'none' is the P1e provenance level, a key of the protocol PROV_RANK table, not a role.",
+    "scope": "<module>",
+    "text": "PROV_RANK = {\"none\": 0, \"own\": 1, \"scalars\": 2, \"actors\": 3}"
+   },
+   {
+    "file": "src/conventional/policy.py",
+    "kind": "compare",
+    "line": 146,
+    "literal": "agent",
+    "reason": "G3-E29(b): 'agent' is the P1 delegation record key x['agent'], not a role name.",
+    "scope": "PolicyEngine.exposed_operations",
+    "text": "any(x[\"agent\"] == subject and x[\"on_behalf_of\"] == delegator and op in x[\"operations\"]"
+   },
+   {
+    "file": "src/conventional/policy.py",
+    "kind": "compare",
+    "line": 102,
+    "literal": "agent",
+    "reason": "G3-E29(b): 'agent' is the P1 delegation record key x['agent'], not a role name.",
+    "scope": "PolicyEngine.decide",
+    "text": "if not any(x[\"agent\"] == subject and x[\"on_behalf_of\"] == on_behalf_of and op in x[\"operations\"]"
+   },
+   {
+    "file": "src/conventional/service.py",
+    "kind": "compare",
+    "line": 222,
+    "literal": "project",
+    "reason": "G3-E24(1)(i): selects the project id-generator read config ID_READS={'new_experiment_id': 'Experiment'}; reads no authority.",
+    "scope": "Service._ctx",
+    "text": "ID_READS if self.domain == \"project\" else {})"
+   },
+   {
+    "file": "src/conventional/service.py",
+    "kind": "dict-dispatch",
+    "line": 75,
+    "literal": "manufacturing",
+    "reason": "G3-E24(1)(i): selects the domain's ops-spec helper implementation module (helpers_mfg / helpers_proj: reads only, no authority vocabulary).",
+    "scope": "Service.__init__",
+    "text": "self._helpers = {\"manufacturing\": MFG, \"project\": PROJ}[domain]"
+   },
+   {
+    "file": "src/conventional/service.py",
+    "kind": "dict-dispatch",
+    "line": 75,
+    "literal": "project",
+    "reason": "G3-E24(1)(i): selects the domain's ops-spec helper implementation module (helpers_mfg / helpers_proj: reads only, no authority vocabulary).",
+    "scope": "Service.__init__",
+    "text": "self._helpers = {\"manufacturing\": MFG, \"project\": PROJ}[domain]"
+   }
+  ],
+  "resolved_count": 7
+ }
+}

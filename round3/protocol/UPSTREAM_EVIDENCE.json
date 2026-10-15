@@ -1,0 +1,24 @@
+{
+  "repository": "demithras/operational-ontology-poc",
+  "main_commit": "8f9ff26edfb1dba4528d3c31fe8126bc063b9a11",
+  "observed_at": "2026-10-06",
+  "round2_results_path": "round2/RESULTS.md",
+  "round2_status": {
+    "H15": "SUPPORTED_v2",
+    "H16": "SUPPORTED",
+    "H17": "SUPPORTED_engine_v1.2",
+    "H18": "REJECTED",
+    "H18w": "SUPPORTED_post_hoc_weaker_claim",
+    "H19": "SUPPORTED",
+    "H20": "SUPPORTED_engine_v1.2",
+    "H21": "SUPPORTED_engine_v1.2",
+    "H22": "REJECTED",
+    "H22w": "REJECTED_post_hoc_weaker_claim"
+  },
+  "round3_inheritance": [
+    "Executable machinery, generic Engine, hard Function/Action boundary, Git authority and generated capability-aware Toolchain are treated as prior supported capabilities within their Round 2 scope.",
+    "Round 3 does not reopen the rejected claim that ontology-specific machinery repays its cost merely through semantic-variety reuse.",
+    "H30 asks a new value question: whether Paladin security/sovereignty/resilience yields a material operational-security advantage over a strong conventional baseline."
+  ],
+  "warning": "This file pins the upstream state used to design the pack. Freeze a new Round 3 protocol if upstream assumptions materially change before execution."
+}

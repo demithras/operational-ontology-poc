@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "r3-external-outcome-1",
+  "title": "Outcome record per external effect (R28-4, P1f-6): exactly these six keys",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["request_id", "effect_index", "system", "state", "confidence", "evidence"],
+  "properties": {
+    "request_id": {"type": "string", "minLength": 1},
+    "effect_index": {"type": "integer", "minimum": 0},
+    "system": {"type": "string", "minLength": 1},
+    "state": {"enum": ["PENDING", "RECONCILED_SUCCESS", "RECONCILED_FAILED", "DIVERGED", "UNKNOWN"]},
+    "confidence": {"enum": ["full", "low"]},
+    "evidence": {"type": "array", "items": {"type": "integer", "minimum": 1}}
+  }
+}

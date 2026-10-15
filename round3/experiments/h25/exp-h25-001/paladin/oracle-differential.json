@@ -1,0 +1,297 @@
+{
+ "actions": 152497,
+ "cases_file": "cases-h25.jsonl.gz",
+ "cases_sha256": "d628aed7ae96b57d0ccb05cbd7bf300924c97de203a2b1b815f984a3053564ec",
+ "class_counts": {
+  "ok": 152228,
+  "procedural_mismatch": 15,
+  "race_refusal_ok": 254
+ },
+ "first_offending_rows": [
+  {
+   "action": "act",
+   "actor": "u31718-0",
+   "case": "case-2510-615",
+   "classes": [
+    "procedural_mismatch"
+   ],
+   "domain": "project",
+   "kind": "constitutional",
+   "model": "hierarchical",
+   "n": 7,
+   "oracle": {
+    "expected": [
+     "DENIED:None"
+    ]
+   },
+   "reason": "not_found",
+   "status": "INVALID"
+  },
+  {
+   "action": "execute",
+   "actor": "admin-1",
+   "case": "case-2510-2151",
+   "classes": [
+    "procedural_mismatch"
+   ],
+   "domain": "project",
+   "kind": "constitutional",
+   "model": "hierarchical",
+   "n": 12,
+   "oracle": {
+    "expected": [
+     "DENIED:None"
+    ]
+   },
+   "reason": "not_found",
+   "status": "INVALID"
+  },
+  {
+   "action": "execute",
+   "actor": "admin-1",
+   "case": "case-2510-2151",
+   "classes": [
+    "procedural_mismatch"
+   ],
+   "domain": "project",
+   "kind": "constitutional",
+   "model": "hierarchical",
+   "n": 13,
+   "oracle": {
+    "expected": [
+     "DENIED:None"
+    ]
+   },
+   "reason": "not_found",
+   "status": "INVALID"
+  },
+  {
+   "action": "execute",
+   "actor": "admin-1",
+   "case": "case-2510-2151",
+   "classes": [
+    "procedural_mismatch"
+   ],
+   "domain": "project",
+   "kind": "constitutional",
+   "model": "hierarchical",
+   "n": 14,
+   "oracle": {
+    "expected": [
+     "DENIED:None"
+    ]
+   },
+   "reason": "not_found",
+   "status": "INVALID"
+  },
+  {
+   "action": null,
+   "actor": "u87516-6",
+   "case": "case-2510-2195",
+   "classes": [
+    "procedural_mismatch"
+   ],
+   "domain": "project",
+   "kind": "request",
+   "model": "polycentric",
+   "n": 0,
+   "oracle": {
+    "expected": [
+     "INVALID:None"
+    ]
+   },
+   "reason": "policy",
+   "status": "DENIED"
+  },
+  {
+   "action": "execute",
+   "actor": "u80406-3",
+   "case": "case-2510-3159",
+   "classes": [
+    "procedural_mismatch"
+   ],
+   "domain": "project",
+   "kind": "constitutional",
+   "model": "hierarchical",
+   "n": 9,
+   "oracle": {
+    "expected": [
+     "DENIED:None"
+    ]
+   },
+   "reason": "not_found",
+   "status": "INVALID"
+  },
+  {
+   "action": "execute",
+   "actor": "u80406-3",
+   "case": "case-2510-3159",
+   "classes": [
+    "procedural_mismatch"
+   ],
+   "domain": "project",
+   "kind": "constitutional",
+   "model": "hierarchical",
+   "n": 10,
+   "oracle": {
+    "expected": [
+     "DENIED:None"
+    ]
+   },
+   "reason": "not_found",
+   "status": "INVALID"
+  },
+  {
+   "action": "execute",
+   "actor": "u80406-3",
+   "case": "case-2510-3159",
+   "classes": [
+    "procedural_mismatch"
+   ],
+   "domain": "project",
+   "kind": "constitutional",
+   "model": "hierarchical",
+   "n": 11,
+   "oracle": {
+    "expected": [
+     "DENIED:None"
+    ]
+   },
+   "reason": "not_found",
+   "status": "INVALID"
+  },
+  {
+   "action": "act",
+   "actor": "researcher-2",
+   "case": "case-2510-3471",
+   "classes": [
+    "procedural_mismatch"
+   ],
+   "domain": "project",
+   "kind": "constitutional",
+   "model": "hierarchical",
+   "n": 22,
+   "oracle": {
+    "expected": [
+     "DENIED:None"
+    ]
+   },
+   "reason": "not_found",
+   "status": "INVALID"
+  },
+  {
+   "action": "execute",
+   "actor": "u79119-9",
+   "case": "case-2510-4252",
+   "classes": [
+    "procedural_mismatch"
+   ],
+   "domain": "project",
+   "kind": "constitutional",
+   "model": "collegial",
+   "n": 14,
+   "oracle": {
+    "expected": [
+     "DENIED:None"
+    ]
+   },
+   "reason": "not_found",
+   "status": "INVALID"
+  },
+  {
+   "action": null,
+   "actor": "admin-1",
+   "case": "case-2510-4505",
+   "classes": [
+    "procedural_mismatch"
+   ],
+   "domain": "project",
+   "kind": "request",
+   "model": "polycentric",
+   "n": 12,
+   "oracle": {
+    "expected": [
+     "DENIED:None"
+    ]
+   },
+   "reason": "not_found",
+   "status": "INVALID"
+  },
+  {
+   "action": "act",
+   "actor": "agent-draft-1",
+   "case": "case-2510-4798",
+   "classes": [
+    "procedural_mismatch"
+   ],
+   "domain": "project",
+   "kind": "constitutional",
+   "model": "collegial",
+   "n": 10,
+   "oracle": {
+    "expected": [
+     "DENIED:None"
+    ]
+   },
+   "reason": "not_found",
+   "status": "INVALID"
+  },
+  {
+   "action": "execute",
+   "actor": "researcher-1",
+   "case": "case-2510-5439",
+   "classes": [
+    "procedural_mismatch"
+   ],
+   "domain": "project",
+   "kind": "constitutional",
+   "model": "hierarchical",
+   "n": 7,
+   "oracle": {
+    "expected": [
+     "DENIED:None"
+    ]
+   },
+   "reason": "not_found",
+   "status": "INVALID"
+  },
+  {
+   "action": null,
+   "actor": "u89738-9",
+   "case": "case-2510-8812",
+   "classes": [
+    "procedural_mismatch"
+   ],
+   "domain": "project",
+   "kind": "request",
+   "model": "collegial",
+   "n": 0,
+   "oracle": {
+    "expected": [
+     "INVALID:None"
+    ]
+   },
+   "reason": "policy",
+   "status": "DENIED"
+  },
+  {
+   "action": "execute",
+   "actor": "u11802-5",
+   "case": "race-2510-28-EA_EDGE",
+   "classes": [
+    "procedural_mismatch"
+   ],
+   "domain": "project",
+   "kind": "constitutional",
+   "model": "collegial",
+   "n": 5,
+   "oracle": {
+    "expected": [
+     "DENIED:None"
+    ]
+   },
+   "reason": "not_found",
+   "status": "INVALID"
+  }
+ ]
+}

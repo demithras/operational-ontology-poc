@@ -1,0 +1,68 @@
+{
+  "status": "READY_TO_FREEZE_NOT_YET_PREREGISTERED",
+  "H23": {
+    "min_adversarial_sequences": 10000,
+    "max_forbidden_effects": 0,
+    "max_identity_confusions": 0,
+    "required_direct_engine_backstop": 1.0,
+    "required_mutation_kill_rate": 1.0
+  },
+  "H24": {
+    "min_authority_sequences": 10000,
+    "min_delegation_depth": 4,
+    "min_concurrent_revocation_cases": 1000,
+    "max_scope_amplifications": 0,
+    "max_post_revocation_forbidden_effects": 0,
+    "required_oracle_equality": 1.0,
+    "required_mutation_kill_rate": 1.0
+  },
+  "H25": {
+    "min_governance_models": 3,
+    "min_generated_authority_cases": 10000,
+    "max_domain_specific_privilege_branches": 0,
+    "max_fabricated_discretionary_judgments": 0,
+    "required_procedural_oracle_equality": 1.0,
+    "required_mutation_kill_rate": 1.0
+  },
+  "H26": {
+    "min_noninterference_pairs": 5000,
+    "max_unauthorized_observable_divergences": 0,
+    "max_hidden_capability_disclosures": 0,
+    "max_false_provenance_statements_from_redaction": 0,
+    "required_mutation_kill_rate": 1.0
+  },
+  "H27": {
+    "min_provenance_histories": 5000,
+    "required_tamper_detection_rate": 1.0,
+    "max_silent_fallback_to_current": 0,
+    "max_false_tamper_alarms_on_clean_history": 0,
+    "required_mutation_kill_rate": 1.0
+  },
+  "H28": {
+    "min_byzantine_adapter_cases": 5000,
+    "max_effects_outside_adapter_scope": 0,
+    "max_false_reconciled_success": 0,
+    "max_hidden_governance_in_adapters": 0,
+    "max_duplicate_effects_beyond_contract": 0,
+    "required_mutation_kill_rate": 1.0
+  },
+  "H29": {
+    "min_fault_sequences": 5000,
+    "max_safety_invariant_violations": 0,
+    "min_safe_progress_ratio_when_dependencies_available": 0.95,
+    "max_dependency_failure_misclassifications": 0,
+    "required_recovery_state_equality": 1.0,
+    "required_mutation_kill_rate": 1.0
+  },
+  "H30": {
+    "min_attack_classes": 5,
+    "min_blind_realistic_tasks": 40,
+    "min_classes_with_material_advantage": 2,
+    "support_max_median_blast_radius_ratio": 0.50,
+    "support_max_median_containment_or_recovery_cost_ratio": 0.67,
+    "max_safe_progress_regression_percentage_points": 5,
+    "max_steady_state_p95_latency_ratio": 2.0,
+    "max_recurring_security_machinery_ratio": 2.5,
+    "max_attack_classes_with_candidate_forbidden_effect_regression": 0
+  }
+}

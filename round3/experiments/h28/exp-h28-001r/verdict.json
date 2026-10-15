@@ -1,0 +1,189 @@
+{
+ "comparative": {
+  "forbidden_effects": {
+   "conventional": 0,
+   "paladin": 0
+  },
+  "mutation_kill_rate": {
+   "conventional": 1.0,
+   "paladin": 1.0
+  },
+  "p95_latency_ms": null,
+  "safe_progress_ratio": {
+   "conventional": 1.0,
+   "paladin": 1.0
+  },
+  "security_specific_components": null,
+  "security_specific_loc": null
+ },
+ "conventional_verdict": "SUPPORTED",
+ "evaluator_sha256": "39f1388f502b9be313dc948ccd67c7ee09d899105916f8cf5306aa7cdc6892b2",
+ "experiment_id": "exp-h28-001r",
+ "hypothesis": "H28",
+ "minimum_overrides": {},
+ "paladin_verdict": "SUPPORTED",
+ "scope_limits": [
+  "L1 observer integrity trusted",
+  "L2 effects_only/none systems lower confidence, excluded from detection",
+  "L3 adapter attack code = frozen catalogue",
+  "L4 logical ticks",
+  "L5 byte-exact payload digests",
+  "L6 project external effects only via the H28 overlay",
+  "L7 legacy external_write path untouched"
+ ],
+ "thresholds_sha256": "fa196766b3bc47d26907df6c92f7c80b89a4dc332886e30b58e1aee5e6e4fd19",
+ "variants": {
+  "conventional": {
+   "metrics": {
+    "classes": {
+     "duplicate_effect": 0,
+     "effect_outside_scope": 0,
+     "envelope_mismatch": 0,
+     "false_reconciled_success": 0,
+     "governance_in_adapter": 0,
+     "outcome_mismatch": 0,
+     "progress_loss": 0
+    },
+    "detection": {
+     "attempted": 640,
+     "detected": 640
+    },
+    "detection_rate": 1.0,
+    "floors": {
+     "byzantine_cases": 5600,
+     "controls_observed": {
+      "manufacturing": 429,
+      "project": 286
+     },
+     "crash_cases": 467,
+     "honest_controls": 1000,
+     "none_class_cases": 1600,
+     "observer_fault_cases": 622,
+     "outcome_equal": 24862,
+     "outcome_points": 24862,
+     "per_domain_system": {
+      "manufacturing/ERP": 800,
+      "manufacturing/GEN-NULL": 800,
+      "manufacturing/MES": 800,
+      "manufacturing/WMS": 800,
+      "project/GEN-NULL": 800,
+      "project/NOTIFY": 800,
+      "project/REGISTRY": 800
+     },
+     "per_primitive": {
+      "G1": 680,
+      "G2": 713,
+      "G3": 673,
+      "L1": 640,
+      "L2": 666,
+      "L3": 661,
+      "O1": 696,
+      "O2": 668,
+      "R1": 652,
+      "R2": 618,
+      "T1": 685,
+      "T2": 683,
+      "T3": 687
+     },
+     "progress_checked": 4667
+    },
+    "forbidden_effects": 0,
+    "governance_sub": {},
+    "harness": {},
+    "minimum_overrides": {},
+    "mutants": {
+     "adapter_success_trusted": true,
+     "credential_scope_broadened": true,
+     "divergence_rewritten": true,
+     "idempotency_disabled": true,
+     "observation_coupled": true,
+     "policy_gate_in_adapter": true
+    },
+    "mutation_kill_rate": 1.0,
+    "payload_sha256": "1caa65a3e305c4e46a1ecadfc3f60c5c1181728b524c8bb2f43887d950a09c13",
+    "safe_progress_ratio": 1.0,
+    "static_unresolved": 0
+   },
+   "minimum_overrides": {},
+   "reasons": [],
+   "variant": "conventional",
+   "verdict": "SUPPORTED"
+  },
+  "paladin": {
+   "metrics": {
+    "classes": {
+     "duplicate_effect": 0,
+     "effect_outside_scope": 0,
+     "envelope_mismatch": 0,
+     "false_reconciled_success": 0,
+     "governance_in_adapter": 0,
+     "outcome_mismatch": 0,
+     "progress_loss": 0
+    },
+    "detection": {
+     "attempted": 574,
+     "detected": 574
+    },
+    "detection_rate": 1.0,
+    "floors": {
+     "byzantine_cases": 5600,
+     "controls_observed": {
+      "manufacturing": 429,
+      "project": 286
+     },
+     "crash_cases": 467,
+     "honest_controls": 1000,
+     "none_class_cases": 1600,
+     "observer_fault_cases": 622,
+     "outcome_equal": 24862,
+     "outcome_points": 24862,
+     "per_domain_system": {
+      "manufacturing/ERP": 800,
+      "manufacturing/GEN-NULL": 800,
+      "manufacturing/MES": 800,
+      "manufacturing/WMS": 800,
+      "project/GEN-NULL": 800,
+      "project/NOTIFY": 800,
+      "project/REGISTRY": 800
+     },
+     "per_primitive": {
+      "G1": 680,
+      "G2": 713,
+      "G3": 673,
+      "L1": 640,
+      "L2": 666,
+      "L3": 661,
+      "O1": 696,
+      "O2": 668,
+      "R1": 652,
+      "R2": 618,
+      "T1": 685,
+      "T2": 683,
+      "T3": 687
+     },
+     "progress_checked": 4667
+    },
+    "forbidden_effects": 0,
+    "governance_sub": {},
+    "harness": {},
+    "minimum_overrides": {},
+    "mutants": {
+     "adapter_success_trusted": true,
+     "credential_scope_broadened": true,
+     "divergence_rewritten": true,
+     "idempotency_disabled": true,
+     "observation_coupled": true,
+     "policy_gate_in_adapter": true
+    },
+    "mutation_kill_rate": 1.0,
+    "payload_sha256": "615b19acfa0b118221bca0c21d7c56da7b7337b05eabe921561c573049878ba9",
+    "safe_progress_ratio": 1.0,
+    "static_unresolved": 0
+   },
+   "minimum_overrides": {},
+   "reasons": [],
+   "variant": "paladin",
+   "verdict": "SUPPORTED"
+  }
+ }
+}

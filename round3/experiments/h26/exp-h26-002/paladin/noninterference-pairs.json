@@ -1,0 +1,146 @@
+{
+ "aggregate": {
+  "aa_divergent": 0,
+  "aa_total": 500,
+  "counts": {
+   "d4_ok": 13564,
+   "divergence:authority_used_as:M": 3,
+   "divergence:poll:M": 1,
+   "divergence:prov_decision:M": 3,
+   "divergent_pairs": 1,
+   "exposure_ok": 10000,
+   "hidden_probes": 69426,
+   "pairs": 5000,
+   "prov_ok": 91148,
+   "read_ok": 376470,
+   "read_unjudged": 11248
+  },
+  "pairs_by_channel": {
+   "authority_used_as": 5000,
+   "events": 5000,
+   "mutating": 5000,
+   "provenance": 5000,
+   "read": 5000,
+   "tools": 5000
+  },
+  "pairs_by_kind": {
+   "C": 1180,
+   "D": 1005,
+   "E": 1855,
+   "F": 570,
+   "G": 1095,
+   "L": 559
+  }
+ },
+ "divergent": [
+  {
+   "divergences": [
+    {
+     "class": "divergence:prov_decision:M",
+     "i": 55,
+     "m": "prov_decision"
+    },
+    {
+     "class": "divergence:authority_used_as:M",
+     "i": 56,
+     "m": "authority_used_as"
+    },
+    {
+     "class": "divergence:prov_decision:M",
+     "i": 57,
+     "m": "prov_decision"
+    },
+    {
+     "class": "divergence:authority_used_as:M",
+     "i": 58,
+     "m": "authority_used_as"
+    },
+    {
+     "class": "divergence:prov_decision:M",
+     "i": 59,
+     "m": "prov_decision"
+    },
+    {
+     "class": "divergence:authority_used_as:M",
+     "i": 60,
+     "m": "authority_used_as"
+    },
+    {
+     "class": "divergence:poll:M",
+     "i": 69,
+     "m": "poll"
+    }
+   ],
+   "domain": "project",
+   "id": "p2620-4955",
+   "kinds": [
+    "G",
+    "C",
+    "D",
+    "L"
+   ],
+   "witness": {
+    "observer": "px-4955-2",
+    "varied": {
+     "C": {
+      "children": [
+       "px-4955-3",
+       "researcher-2"
+      ],
+      "edge": "hedge-4955C",
+      "issuer": "researcher-1",
+      "op": "attach_evidence"
+     },
+     "D": {
+      "actor": "px-4955-1",
+      "args": [
+       {
+        "evidence": "EV-D1",
+        "hypothesis": "H-F"
+       },
+       {
+        "evidence": "EV-C1",
+        "hypothesis": "H-F"
+       }
+      ],
+      "mode": "valdiff",
+      "op": "attach_evidence",
+      "rid": "hid-4955D",
+      "visible": true
+     },
+     "G": {
+      "case": "hcase-4955G",
+      "members": [
+       "admin-1",
+       "agent-draft-1",
+       "researcher-1",
+       "viewer-1"
+      ],
+      "requester": "researcher-1"
+     },
+     "L": {
+      "dsts": [
+       "Hypothesis:H-F",
+       "Hypothesis:H-A"
+      ],
+      "link": [
+       "SUPPORTS_OR_REFUTES",
+       "Evidence:EV-D1",
+       "Evidence:EV-C2"
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "generator": {
+  "d4_attempted": 7546,
+  "d4_replaced": 18,
+  "drawn": 5500,
+  "gen_errors": 0,
+  "redraws": 4576,
+  "skipped": 0
+ },
+ "pairs_file": "noninterference-pairs.jsonl.gz",
+ "pairs_sha256": "a74295266a8621fb7b5ccbc263b3d90da89dc5a48ea29d15bcc68ce4f44458fe"
+}

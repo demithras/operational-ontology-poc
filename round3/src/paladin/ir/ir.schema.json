@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eoo.example/schema/ontology-ir.json",
+  "title": "EOO Backend-Neutral Ontology IR",
+  "type": "object",
+  "required": ["package_id", "version", "object_types", "link_types", "interfaces", "functions", "actions", "policies", "authority_rules", "observation_types", "constraints"],
+  "properties": {
+    "package_id": {"type": "string", "minLength": 1},
+    "domain_id": {"type": "string", "minLength": 1},
+    "version": {"type": "string", "minLength": 1},
+    "imports": {"type": "array", "items": {"type": "string"}, "default": []},
+    "object_types": {"type": "array", "items": {"$ref": "#/$defs/objectType"}},
+    "link_types": {"type": "array", "items": {"$ref": "#/$defs/linkType"}},
+    "interfaces": {"type": "array", "items": {"$ref": "#/$defs/interface"}},
+    "functions": {"type": "array", "items": {"$ref": "#/$defs/function"}},
+    "actions": {"type": "array", "items": {"$ref": "#/$defs/action"}},
+    "policies": {"type": "array", "items": {"$ref": "#/$defs/policy"}},
+    "authority_rules": {"type": "array", "items": {"$ref": "#/$defs/authorityRule"}},
+    "observation_types": {"type": "array", "items": {"$ref": "#/$defs/observationType"}},
+    "constraints": {"type": "array", "items": {"$ref": "#/$defs/constraint"}},
+    "metadata": {"type": "object", "additionalProperties": true}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "ref": {"type": "string", "minLength": 1},
+    "cardinality": {
+      "type": "object",
+      "required": ["min", "max"],
+      "properties": {
+        "min": {"type": "integer", "minimum": 0},
+        "max": {"oneOf": [{"type": "integer", "minimum": 1}, {"const": "*"}]}
+      },
+      "additionalProperties": false
+    },
+    "typeExpr": {
+      "oneOf": [
+        {"type": "string", "enum": ["string", "integer", "number", "boolean", "datetime", "date", "json", "bytes"]},
+        {"type": "object", "required": ["ref"], "properties": {"ref": {"type": "string"}}, "additionalProperties": false},
+        {"type": "object", "required": ["list"], "properties": {"list": {"$ref": "#/$defs/typeExpr"}}, "additionalProperties": false},
+        {"type": "object", "required": ["optional"], "properties": {"optional": {"$ref": "#/$defs/typeExpr"}}, "additionalProperties": false}
+      ]
+    },
+    "property": {
+      "type": "object",
+      "required": ["name", "type", "required"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "type": {"$ref": "#/$defs/typeExpr"},
+        "required": {"type": "boolean"},
+        "immutable": {"type": "boolean", "default": false},
+        "description": {"type": "string"},
+        "constraints": {"type": "array", "items": {"type": "string"}, "default": []}
+      },
+      "additionalProperties": false
+    },
+    "objectType": {
+      "type": "object",
+      "required": ["id", "primary_key", "properties", "implements"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "primary_key": {"type": "string", "minLength": 1},
+        "properties": {"type": "array", "items": {"$ref": "#/$defs/property"}},
+        "implements": {"type": "array", "items": {"type": "string"}},
+        "description": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "linkType": {
+      "type": "object",
+      "required": ["id", "from", "to", "from_cardinality", "to_cardinality"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "from": {"type": "string", "minLength": 1},
+        "to": {"type": "string", "minLength": 1},
+        "from_cardinality": {"$ref": "#/$defs/cardinality"},
+        "to_cardinality": {"$ref": "#/$defs/cardinality"},
+        "directed": {"type": "boolean", "default": true},
+        "properties": {"type": "array", "items": {"$ref": "#/$defs/property"}, "default": []}
+      },
+      "additionalProperties": false
+    },
+    "interface": {
+      "type": "object",
+      "required": ["id", "required_properties", "required_links", "capabilities"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "required_properties": {"type": "array", "items": {"$ref": "#/$defs/property"}},
+        "required_links": {"type": "array", "items": {"type": "string"}},
+        "capabilities": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "parameter": {
+      "type": "object",
+      "required": ["name", "type"],
+      "properties": {
+        "name": {"type": "string"},
+        "type": {"$ref": "#/$defs/typeExpr"},
+        "required": {"type": "boolean", "default": true}
+      },
+      "additionalProperties": false
+    },
+    "function": {
+      "type": "object",
+      "required": ["id", "inputs", "output", "purity", "reads", "implementation_ref"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "inputs": {"type": "array", "items": {"$ref": "#/$defs/parameter"}},
+        "output": {"$ref": "#/$defs/typeExpr"},
+        "purity": {"const": "NO_COMMITTED_BUSINESS_SIDE_EFFECT"},
+        "reads": {"type": "array", "items": {"type": "string"}},
+        "implementation_ref": {"type": "string", "minLength": 1},
+        "determinism": {"enum": ["deterministic", "nondeterministic", "external-model"]}
+      },
+      "additionalProperties": false
+    },
+    "actionEffect": {
+      "type": "object",
+      "required": ["target", "operation"],
+      "properties": {
+        "target": {"type": "string"},
+        "operation": {"enum": ["create", "update", "delete", "link", "unlink", "external_call", "git_change"]},
+        "fields": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "action": {
+      "type": "object",
+      "required": ["id", "inputs", "authority_refs", "policy_refs", "preconditions", "effects", "idempotency", "outcome_predicate", "version"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "inputs": {"type": "array", "items": {"$ref": "#/$defs/parameter"}},
+        "authority_refs": {"type": "array", "items": {"type": "string"}},
+        "policy_refs": {"type": "array", "items": {"type": "string"}},
+        "preconditions": {"type": "array", "items": {"type": "string"}},
+        "effects": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/actionEffect"}},
+        "idempotency": {"enum": ["required", "not_applicable"]},
+        "outcome_predicate": {"type": "string", "minLength": 1},
+        "compensation_action": {"type": ["string", "null"]},
+        "version": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "policy": {
+      "type": "object",
+      "required": ["id", "decision", "expression_ref", "version"],
+      "properties": {
+        "id": {"type": "string"},
+        "decision": {"enum": ["allow", "deny", "require_approval", "classify"]},
+        "expression_ref": {"type": "string"},
+        "version": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "authorityRule": {
+      "type": "object",
+      "required": ["id", "principal_selector", "capability", "resource_selector", "effect"],
+      "properties": {
+        "id": {"type": "string"},
+        "principal_selector": {"type": "string"},
+        "capability": {"type": "string"},
+        "resource_selector": {"type": "string"},
+        "effect": {"enum": ["allow", "deny"]},
+        "delegation_allowed": {"type": "boolean", "default": false}
+      },
+      "additionalProperties": false
+    },
+    "observationType": {
+      "type": "object",
+      "required": ["id", "subject_type", "properties", "source_binding", "truth_status"],
+      "properties": {
+        "id": {"type": "string"},
+        "subject_type": {"type": "string"},
+        "properties": {"type": "array", "items": {"$ref": "#/$defs/property"}},
+        "source_binding": {"type": "string"},
+        "truth_status": {"const": "observed"}
+      },
+      "additionalProperties": false
+    },
+    "constraint": {
+      "type": "object",
+      "required": ["id", "scope", "expression_ref", "severity"],
+      "properties": {
+        "id": {"type": "string"},
+        "scope": {"type": "string"},
+        "expression_ref": {"type": "string"},
+        "severity": {"enum": ["hard", "soft"]}
+      },
+      "additionalProperties": false
+    }
+  }
+}

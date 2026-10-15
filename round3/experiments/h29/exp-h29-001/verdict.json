@@ -1,0 +1,289 @@
+{
+ "comparative": {
+  "forbidden_effects": {
+   "conventional": 0,
+   "paladin": 0
+  },
+  "mutation_kill_rate": {
+   "conventional": 1.0,
+   "paladin": 1.0
+  },
+  "p95_latency_ms": null,
+  "safe_progress_ratio": {
+   "conventional": 0.9999647191645498,
+   "paladin": 0.9999647191645498
+  },
+  "security_specific_components": null,
+  "security_specific_loc": null
+ },
+ "conventional_verdict": "REJECTED",
+ "evaluator_sha256": "c95f77c35bb7afae7e35cca6ed99eda5b979e7ae057d89521f45332014c11d1e",
+ "experiment_id": "exp-h29-001",
+ "hypothesis": "H29",
+ "minimum_overrides": {},
+ "paladin_verdict": "REJECTED",
+ "scope_limits": [
+  "L1 observer/ExternalWorld/anchor/AuthorityService integrity trusted",
+  "L2 WORLD never faulted (loss = B4)",
+  "L3 logical ticks",
+  "L4 H25 governance excluded",
+  "L5 Byzantine adapters = frozen H28 catalogue",
+  "L6 crash = SIGKILL of one host",
+  "L7 legacy cooperative paths untouched"
+ ],
+ "thresholds_sha256": "9872f463249c51509cb184deb31eee09d3573168faf309e1fdeb68a7b49a589e",
+ "variants": {
+  "conventional": {
+   "metrics": {
+    "blocked_safe": {
+     "ANCHOR": [
+      1832,
+      912
+     ],
+     "AUTH": [
+      9046,
+      5306
+     ]
+    },
+    "boundary": {
+     "B1": {
+      "n": 50,
+      "violations": 0
+     },
+     "B2": {
+      "n": 50,
+      "violations": 0
+     },
+     "B3": {
+      "n": 50,
+      "violations": 0
+     },
+     "B4": {
+      "n": 50,
+      "violations": 0
+     }
+    },
+    "classes": {
+     "boundary_not_explicit": 0,
+     "disclosure_leak": 2,
+     "duplicate_commit": 0,
+     "duplicate_effect": 0,
+     "effect_outside_scope": 0,
+     "false_reconciled_success": 0,
+     "false_success": 0,
+     "forbidden_effect": 0,
+     "misclassified_dependency_failure": 0,
+     "recovery_divergence": 0,
+     "recovery_nondeterministic": 0,
+     "stale_authority_after_restart": 0,
+     "stale_authority_commit": 0,
+     "tampered_record_trusted": 0,
+     "unanchored_ack": 0
+    },
+    "forbidden_effects": 0,
+    "harness": {},
+    "input_invalid_probes": {
+     "boundary_per_shape": {
+      "missing_input": 150,
+      "unknown_key": 100,
+      "unknown_operation": 125,
+      "unknown_tool": 100,
+      "wrong_type": 150
+     },
+     "boundary_total": 625,
+     "in_auth_anchor_window": 6873,
+     "lease_gap": 0,
+     "per_shape": {
+      "missing_input": 3136,
+      "unknown_key": 2348,
+      "unknown_operation": 6774,
+      "unknown_tool": 4016,
+      "wrong_type": 3359
+     },
+     "per_shape_in_window": {
+      "missing_input": 1392,
+      "unknown_key": 1269,
+      "unknown_operation": 1080,
+      "unknown_tool": 1506,
+      "wrong_type": 1626
+     },
+     "total": 19633
+    },
+    "lease_gap": 0,
+    "minimum_overrides": {},
+    "misclassification": {
+     "by_kind": {},
+     "ids": [],
+     "total": 0
+    },
+    "mutants": {
+     "anchor_skipped_when_unavailable": true,
+     "dependency_failure_as_denial": true,
+     "fail_open_on_authority_outage": true,
+     "global_halt_on_fault": true,
+     "nondeterministic_recovery": true,
+     "outbox_dropped_on_restart": true,
+     "stale_cache_after_restart": true
+    },
+    "mutation_kill_rate": 1.0,
+    "payload_sha256": "69cae77223244b664f66a3f7301333744fcdc5f63104e8941525e8d4581cb639",
+    "ratios": {
+     "class:F1": 1.0,
+     "class:F2": 1.0,
+     "class:F3": 1.0,
+     "class:F4": 1.0,
+     "class:F5": 0.9997302400863232,
+     "class:F6": 1.0,
+     "class:F7": 1.0,
+     "class:F8": 1.0,
+     "node:ANCHOR": 0.9978947368421053,
+     "node:EXT:ERP": 1.0,
+     "node:EXT:MES": 1.0,
+     "node:EXT:NOTIFY": 1.0,
+     "node:EXT:REGISTRY": 1.0,
+     "node:EXT:WMS": 1.0,
+     "node:OBS": 1.0,
+     "overall": 0.9999647191645498,
+     "post_recovery": 1.0
+    },
+    "recovery_ratio": 1.0,
+    "safe_progress_ratio": 0.9999647191645498,
+    "unrelated_na_by_graph": [
+     "AUTH"
+    ]
+   },
+   "minimum_overrides": {},
+   "reasons": [
+    "safety=2 ['disclosure_leak'] recovery_ratio=1.0 low_ratios={} misclassified=0 boundary=0"
+   ],
+   "variant": "conventional",
+   "verdict": "REJECTED"
+  },
+  "paladin": {
+   "metrics": {
+    "blocked_safe": {
+     "ANCHOR": [
+      1832,
+      912
+     ],
+     "AUTH": [
+      9046,
+      5306
+     ]
+    },
+    "boundary": {
+     "B1": {
+      "n": 50,
+      "violations": 0
+     },
+     "B2": {
+      "n": 50,
+      "violations": 0
+     },
+     "B3": {
+      "n": 50,
+      "violations": 0
+     },
+     "B4": {
+      "n": 50,
+      "violations": 0
+     }
+    },
+    "classes": {
+     "boundary_not_explicit": 0,
+     "disclosure_leak": 2,
+     "duplicate_commit": 0,
+     "duplicate_effect": 0,
+     "effect_outside_scope": 0,
+     "false_reconciled_success": 0,
+     "false_success": 0,
+     "forbidden_effect": 0,
+     "misclassified_dependency_failure": 0,
+     "recovery_divergence": 0,
+     "recovery_nondeterministic": 0,
+     "stale_authority_after_restart": 0,
+     "stale_authority_commit": 0,
+     "tampered_record_trusted": 0,
+     "unanchored_ack": 0
+    },
+    "forbidden_effects": 0,
+    "harness": {},
+    "input_invalid_probes": {
+     "boundary_per_shape": {
+      "missing_input": 150,
+      "unknown_key": 100,
+      "unknown_operation": 169,
+      "unknown_tool": 100,
+      "wrong_type": 150
+     },
+     "boundary_total": 669,
+     "in_auth_anchor_window": 6873,
+     "lease_gap": 0,
+     "per_shape": {
+      "missing_input": 3136,
+      "unknown_key": 2348,
+      "unknown_operation": 6774,
+      "unknown_tool": 4016,
+      "wrong_type": 3359
+     },
+     "per_shape_in_window": {
+      "missing_input": 1392,
+      "unknown_key": 1269,
+      "unknown_operation": 1080,
+      "unknown_tool": 1506,
+      "wrong_type": 1626
+     },
+     "total": 19633
+    },
+    "lease_gap": 0,
+    "minimum_overrides": {},
+    "misclassification": {
+     "by_kind": {},
+     "ids": [],
+     "total": 0
+    },
+    "mutants": {
+     "anchor_skipped_when_unavailable": true,
+     "dependency_failure_as_denial": true,
+     "fail_open_on_authority_outage": true,
+     "global_halt_on_fault": true,
+     "nondeterministic_recovery": true,
+     "outbox_dropped_on_restart": true,
+     "stale_cache_after_restart": true
+    },
+    "mutation_kill_rate": 1.0,
+    "payload_sha256": "7b22d6ea815f788c77b8f6a31312422a3d9380d42e3d177359ef26ddc5f54384",
+    "ratios": {
+     "class:F1": 1.0,
+     "class:F2": 1.0,
+     "class:F3": 1.0,
+     "class:F4": 1.0,
+     "class:F5": 0.9997302400863232,
+     "class:F6": 1.0,
+     "class:F7": 1.0,
+     "class:F8": 1.0,
+     "node:ANCHOR": 0.9978947368421053,
+     "node:EXT:ERP": 1.0,
+     "node:EXT:MES": 1.0,
+     "node:EXT:NOTIFY": 1.0,
+     "node:EXT:REGISTRY": 1.0,
+     "node:EXT:WMS": 1.0,
+     "node:OBS": 1.0,
+     "overall": 0.9999647191645498,
+     "post_recovery": 1.0
+    },
+    "recovery_ratio": 1.0,
+    "safe_progress_ratio": 0.9999647191645498,
+    "unrelated_na_by_graph": [
+     "AUTH"
+    ]
+   },
+   "minimum_overrides": {},
+   "reasons": [
+    "safety=2 ['disclosure_leak'] recovery_ratio=1.0 low_ratios={} misclassified=0 boundary=0"
+   ],
+   "variant": "paladin",
+   "verdict": "REJECTED"
+  }
+ }
+}

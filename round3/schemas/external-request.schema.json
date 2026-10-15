@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "r3-external-request-1",
+  "title": "ExternalRequest and AdapterReply forms (P1f-7)",
+  "$defs": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["request_id", "effect_index", "system", "operation", "target", "payload", "envelope_text", "cap"],
+      "properties": {
+        "request_id": {"type": "string", "minLength": 1},
+        "effect_index": {"type": "integer", "minimum": 0},
+        "system": {"type": "string", "minLength": 1},
+        "operation": {"type": "string", "minLength": 1},
+        "target": {"type": "string", "minLength": 1},
+        "payload": {"type": "object"},
+        "envelope_text": {"type": "string"},
+        "cap": {"type": "string", "pattern": "^r3cap1\\.[A-Za-z0-9_-]+$"}
+      }
+    },
+    "reply": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "body"],
+      "properties": {"status": {"type": "string"}, "body": {"type": "object"}}
+    },
+    "write_receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reason", "seq"],
+      "properties": {"status": {"enum": ["applied", "refused"]}, "reason": {"type": "string"}, "seq": {"type": "integer", "minimum": 1}}
+    }
+  },
+  "oneOf": [{"$ref": "#/$defs/request"}]
+}

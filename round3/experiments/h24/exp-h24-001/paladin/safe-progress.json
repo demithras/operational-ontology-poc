@@ -1,0 +1,38 @@
+{
+ "floors": {
+  "effect_first_rv": 1,
+  "overlap_fraction": 0.5,
+  "unaffected_legit_progress": 1.0
+ },
+ "latency_ms": {
+  "n": 151900,
+  "p50": 1.5527079813182354,
+  "p95": 49.1312500089407
+ },
+ "progress": {
+  "committed": 151900,
+  "must": 151900,
+  "ratio": 1.0
+ },
+ "races": {
+  "by_type": {
+   "AP": 175,
+   "CR": 175,
+   "DP": 175,
+   "EX": 175,
+   "RA": 175,
+   "RV": 175,
+   "SA": 175,
+   "SEQ": 175,
+   "UN": 175
+  },
+  "cases": 1575,
+  "executed": 1400,
+  "matched": 1400,
+  "overlap_fraction": 0.9385714285714286,
+  "overlapping": 1314,
+  "rv_effect_first": 82,
+  "rv_overlapping": 174,
+  "rv_revoke_first": 0
+ }
+}

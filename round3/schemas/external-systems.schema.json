@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "r3-external-systems-1",
+  "title": "Frozen external system declarations (PROT-H28 1.1, P1f-3)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "domain",
+    "window",
+    "systems"
+  ],
+  "properties": {
+    "version": {
+      "const": "r3-external-1"
+    },
+    "domain": {
+      "type": "string",
+      "minLength": 1
+    },
+    "window": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "systems": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/$defs/system"
+      }
+    }
+  },
+  "$defs": {
+    "system": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observability",
+        "operations"
+      ],
+      "properties": {
+        "observability": {
+          "enum": [
+            "full",
+            "effects_only",
+            "none"
+          ]
+        },
+        "generated": {
+          "type": "boolean"
+        },
+        "operations": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "$ref": "#/$defs/operation"
+          }
+        }
+      }
+    },
+    "operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "idempotency",
+        "target_rule",
+        "semantics"
+      ],
+      "properties": {
+        "idempotency": {
+          "enum": [
+            "at_most_once",
+            "idempotent_set",
+            "exactly_once_required"
+          ]
+        },
+        "target_rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "semantics": {
+          "enum": [
+            "wms_transfer",
+            "erp_expedite",
+            "mes_set_planned_start",
+            "registry_publish",
+            "notify_set",
+            "gen_record"
+          ]
+        }
+      }
+    }
+  }
+}

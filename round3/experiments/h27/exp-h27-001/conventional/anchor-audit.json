@@ -1,0 +1,30 @@
+{
+ "E1_separate_process": true,
+ "E2_key_only_at_close": true,
+ "E3_enforcement": "sandbox-exec",
+ "E3_holds": true,
+ "E4_all_denied": true,
+ "E4_probe": {
+  "chmod_dir": "PermissionError",
+  "create_file": "PermissionError",
+  "mkdir": "PermissionError",
+  "open_log_for_write": "PermissionError"
+ },
+ "E5_detail": {
+  "chain_ok": true,
+  "entries": 10784,
+  "errors": [],
+  "head_ok": true,
+  "mac_ok": true,
+  "ok": true
+ },
+ "E5_log_integrity": true,
+ "anchor_pid": 58524,
+ "closed_head": {
+  "entries": 10784,
+  "last_entry_sha": "19fbe002ab63813401c6eae94f5c4737a958a4543994cd9e91afb5e94b43386d"
+ },
+ "finalized": true,
+ "harness_pid": 58531,
+ "key_revealed_during_run": false
+}

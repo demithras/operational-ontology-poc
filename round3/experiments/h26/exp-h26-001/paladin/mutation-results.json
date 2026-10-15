@@ -1,0 +1,124 @@
+{
+ "kill_rate": 1.0,
+ "mutants": {
+  "error_detail_leak": {
+   "first_counterexamples": [
+    {
+     "classes": [
+      "divergence:mutate:E"
+     ],
+     "pair": "p2641-1",
+     "witness": {
+      "observer": "px-1-2",
+      "varied": {
+       "E": {
+        "canaries": [
+         "ck-e2ae5fd9",
+         "ck-68c0ac0b",
+         "cv-acbd860abfc5",
+         "cv-afd66d7db0af"
+        ],
+        "keys": [
+         "Evidence:ck-e2ae5fd9",
+         "Evidence:ck-68c0ac0b"
+        ],
+        "ref": "Evidence:EV-C-BAD"
+       }
+      }
+     }
+    }
+   ],
+   "fuzz_hit": true,
+   "killed": true,
+   "pairs_run": 2
+  },
+  "existence_status_split": {
+   "first_counterexamples": [
+    {
+     "classes": [
+      "divergence:read_object:E",
+      "false_provenance",
+      "form_violation"
+     ],
+     "pair": "p2641-0",
+     "witness": {
+      "observer": "px-0-3",
+      "varied": {
+       "E": {
+        "canaries": [
+         "ck-765b155f",
+         "ck-a654b94f"
+        ],
+        "keys": [
+         "PurchaseOrderLine:ck-765b155f",
+         "PurchaseOrderLine:ck-a654b94f"
+        ],
+        "ref": "PurchaseOrderLine:POL-992-1"
+       }
+      }
+     }
+    }
+   ],
+   "fuzz_hit": true,
+   "killed": true,
+   "pairs_run": 1
+  },
+  "hidden_tool_schema": {
+   "first_counterexamples": [
+    {
+     "classes": [
+      "hidden_capability"
+     ],
+     "pair": "p2641-1",
+     "witness": null
+    }
+   ],
+   "fuzz_hit": false,
+   "killed": true,
+   "pairs_run": 2
+  },
+  "provenance_edge_retained": {
+   "first_counterexamples": [
+    {
+     "classes": [
+      "false_provenance"
+     ],
+     "pair": "p2641-0",
+     "witness": null
+    }
+   ],
+   "fuzz_hit": false,
+   "killed": true,
+   "pairs_run": 1
+  },
+  "redaction_fabrication": {
+   "first_counterexamples": [
+    {
+     "classes": [
+      "false_provenance"
+     ],
+     "pair": "p2641-0",
+     "witness": null
+    }
+   ],
+   "fuzz_hit": false,
+   "killed": true,
+   "pairs_run": 1
+  },
+  "subscription_unfiltered": {
+   "first_counterexamples": [
+    {
+     "classes": [
+      "false_provenance"
+     ],
+     "pair": "p2641-0",
+     "witness": null
+    }
+   ],
+   "fuzz_hit": false,
+   "killed": true,
+   "pairs_run": 1
+  }
+ },
+ "pairs_per_mutant": 60
+}

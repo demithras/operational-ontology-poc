@@ -1,0 +1,29 @@
+{
+  "version": "r3-draft-1",
+  "invariants": [
+    {
+      "id": "P1_AUTHORITY_INTEGRITY",
+      "statement": "No effect is legitimate unless the acting capability derives from a currently valid authority path with explicit scope, precedence and version binding."
+    },
+    {
+      "id": "P2_EFFECT_CONTAINMENT",
+      "statement": "Compromise of an agent, tool caller or adapter cannot create effects outside the capability and resource scope granted to that boundary."
+    },
+    {
+      "id": "P3_KNOWLEDGE_SOVEREIGNTY",
+      "statement": "A principal cannot obtain or distinguish protected knowledge outside its declared read/disclosure authority through supported query, tool, error, subscription or provenance surfaces."
+    },
+    {
+      "id": "P4_PROVENANCE_INTEGRITY",
+      "statement": "The evidence, policy, authority and contract lineage used to justify a decision is version-pinned and tamper-evident; corruption cannot be silently accepted as historical truth."
+    },
+    {
+      "id": "P5_EXTERNAL_TRUTH",
+      "statement": "The system does not treat its own command path or an untrusted adapter assertion as proof that a real-world effect occurred; outcome truth requires an independently scoped observation or explicit unresolved status."
+    },
+    {
+      "id": "P6_SAFE_CONTINUITY",
+      "statement": "Inside the frozen survivability envelope, faults and bounded compromise preserve safety while unaffected operations continue; dependency loss is explicit and recovery is deterministic."
+    }
+  ]
+}

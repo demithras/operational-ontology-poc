@@ -1,0 +1,99 @@
+{
+ "attack_class": "A7",
+ "baseline_version": null,
+ "candidate_version": "conventional:9d04b5d794c3530c8752052e20fe7b9f3991eabf55e01f1617f140dcee1c1c1b",
+ "environment": {
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.6",
+  "variant": "conventional"
+ },
+ "experiment_id": "exp-h28-001r",
+ "git_commit": "7da79e562110c2163874c2030d1143ff602831aa",
+ "hypothesis_id": "H28",
+ "oracle_version": "f681fc60e5ba48a0254b9aad8f497254461d88a5c97aa9b9c4d8c51d59764971",
+ "payload_sha256": "1caa65a3e305c4e46a1ecadfc3f60c5c1181728b524c8bb2f43887d950a09c13",
+ "protocol_freeze_hash": "67fdc80ad37f24c6c585c928d78fd60801e13fcb735c48183f1229522eb49294",
+ "raw_observations": {
+  "adapter_catalogue_sha256": "9164cd2b31ac9442e4c102c78f513519334f7dc0022394a39b0c07de77ba26c2",
+  "closes": {
+   "anchor": {
+    "entries": 15322,
+    "last_entry_sha": "cf8fccaa00325b26d0b36aa053823eab8de6a7ec78b314ba76c694ee33d44d74"
+   },
+   "external": {
+    "head": {
+     "audit": 13227,
+     "effects": 4744
+    },
+    "root_key_hex": "cf7b1cbe334c438e2348abcc1556cf66171d677010394cbea31a12ce9fa61581"
+   },
+   "external_twin": {
+    "head": {
+     "audit": 4950,
+     "effects": 4950
+    },
+    "root_key_hex": "741ac72aaca67a509cca91978f47f5f18e6c92949ada92a55e4178ef8a583ff3"
+   }
+  },
+  "dev_overrides": {},
+  "evidence_sha256": {
+   "adapter-governance-audit.json": "d6f2cc6c0db9fe861b6d6b0894ad541c0e650b571a62fb65170f936d465c9166",
+   "byzantine-adapter-corpus.json": "119749d7cfae7c4ebcabf64b69f17ab5b0d74e80c49395d81ace946318b10d57",
+   "cases.jsonl": "4e7838846d361ad6ec8413ec2004a87d74ea0ef828f2289ba6ef880205cae93d",
+   "external-effect-diff.json": "bff89eb018b6c7b7c4305f8e2e0d58776c96974e890895da7c7061db60c2e788",
+   "mutation-results.json": "5eaa5ca2292a3c7b8b6b78dd640c20b4c7fae5d054d37d48d0b65635294087f5",
+   "observation-independence.json": "08eb336d63fd71d6f0f7190e0379cbb53ee920d0c0cd1ac0cc08a58b51d28919"
+  },
+  "freeze_g4_frozen": {
+   "protocol/AUTHOR_DECISIONS_2026-10-09.md": "2ada9daa0dc4176464c4430c8daff8848169c52ace07fec487a93fc469b5079b",
+   "spec/authority/project.h28.v3.json": "49d75aa1e2a325574e96434af63637ac0d9ce62d0775b70bccb83d6fe8b03033",
+   "spec/external/manufacturing.systems.json": "41de0476c42767d1f6976d4ae775a643faad781c892672649bf35904c01a94b3",
+   "spec/external/project.systems.json": "9bac1f4877ec35ac8169bf8311faec9352c6f918f3147ca0d821f023ae63cc00",
+   "spec/gate4/ADAPTER-AUDIT-RESOLUTIONS.json": "f691500874bbfb0308e8de0c6b9e5f470b2e9e304840b2394bc97b199e849dfe",
+   "spec/gate4/EQUIVALENCE-G4.md": "3add2a2779c0ef4176749b9d4719a8e70e85ad5880a5cd0b0848c02ab7337182",
+   "spec/gate4/OPEN-QUESTIONS.md": "95754c2dc9292cc6374474ecee4dfe79b2e65c82a362004b79c6a75b1757ebac",
+   "spec/gate4/ORACLE-AND-HARNESS-G4.md": "5d69a06147eb4f5048406c9e5c4e3acddd134c520497e913497be322d1a19623",
+   "spec/gate4/PROTOCOL-P1f.md": "13daa209c824cee22933016f810b97f22253919f00e9bcfcb526c1b56c3f6ec3",
+   "spec/ops/project.h28.json": "a375f6eaf996dec8da7f2b31ac09f9bb4d3dd964c9c7b46c93b393b114b4b5ae",
+   "spec/protections/PROT-H28.md": "260f53abaa15e6ec561eaf2232c7f1df4f6b6f7a170dbacbd621e07722964952",
+   "src/r3_harness/h28/adapters.py": "9164cd2b31ac9442e4c102c78f513519334f7dc0022394a39b0c07de77ba26c2"
+  },
+  "freeze_g4_sha256": {
+   "protocol/AUTHOR_DECISIONS_2026-10-09.md": "2ada9daa0dc4176464c4430c8daff8848169c52ace07fec487a93fc469b5079b",
+   "spec/authority/project.h28.v3.json": "49d75aa1e2a325574e96434af63637ac0d9ce62d0775b70bccb83d6fe8b03033",
+   "spec/external/manufacturing.systems.json": "41de0476c42767d1f6976d4ae775a643faad781c892672649bf35904c01a94b3",
+   "spec/external/project.systems.json": "9bac1f4877ec35ac8169bf8311faec9352c6f918f3147ca0d821f023ae63cc00",
+   "spec/gate4/ADAPTER-AUDIT-RESOLUTIONS.json": "f691500874bbfb0308e8de0c6b9e5f470b2e9e304840b2394bc97b199e849dfe",
+   "spec/gate4/EQUIVALENCE-G4.md": "3add2a2779c0ef4176749b9d4719a8e70e85ad5880a5cd0b0848c02ab7337182",
+   "spec/gate4/OPEN-QUESTIONS.md": "95754c2dc9292cc6374474ecee4dfe79b2e65c82a362004b79c6a75b1757ebac",
+   "spec/gate4/ORACLE-AND-HARNESS-G4.md": "5d69a06147eb4f5048406c9e5c4e3acddd134c520497e913497be322d1a19623",
+   "spec/gate4/PROTOCOL-P1f.md": "13daa209c824cee22933016f810b97f22253919f00e9bcfcb526c1b56c3f6ec3",
+   "spec/ops/project.h28.json": "a375f6eaf996dec8da7f2b31ac09f9bb4d3dd964c9c7b46c93b393b114b4b5ae",
+   "spec/protections/PROT-H28.md": "260f53abaa15e6ec561eaf2232c7f1df4f6b6f7a170dbacbd621e07722964952",
+   "src/r3_harness/h28/adapters.py": "9164cd2b31ac9442e4c102c78f513519334f7dc0022394a39b0c07de77ba26c2"
+  },
+  "generator_stats": {
+   "cases_built": 5600,
+   "controls_built": 1000,
+   "generator": {
+    "redraw_fallback": 402
+   },
+   "hypothesis": {
+    "byz": {
+     "hypothesis_runs": 1,
+     "hypothesis_shortfall": 0
+    },
+    "control": {
+     "hypothesis_runs": 1,
+     "hypothesis_shortfall": 0
+    }
+   }
+  },
+  "sizes": {
+   "cases": 5600,
+   "controls": 1000
+  },
+  "variant": "conventional"
+ },
+ "seed": 2824
+}

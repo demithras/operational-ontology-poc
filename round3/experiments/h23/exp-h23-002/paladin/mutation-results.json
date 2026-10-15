@@ -1,0 +1,388 @@
+{
+ "backstop_bypass": {
+  "baseline_counts": {
+   "backstop_failure": 0,
+   "concurrency_unserializable": 0,
+   "crash_duplicate_effect": 0,
+   "forbidden_effect": 0,
+   "identity_expansion": 0,
+   "surface_overexposure": 0,
+   "world_lock_timeout": 0
+  },
+  "expected_classes": [
+   "backstop_failure",
+   "world_lock_timeout"
+  ],
+  "gain": {
+   "backstop_failure": 89,
+   "world_lock_timeout": 0
+  },
+  "killed": true,
+  "kills": 89,
+  "mutated_counts": {
+   "backstop_failure": 89,
+   "concurrency_unserializable": 0,
+   "crash_duplicate_effect": 0,
+   "forbidden_effect": 89,
+   "identity_expansion": 2,
+   "surface_overexposure": 0,
+   "world_lock_timeout": 0
+  },
+  "scenarios": 150,
+  "seed": 4242,
+  "sequences": 150,
+  "shrunk_counterexample": {
+   "attacker": "agent-evidence-1",
+   "domain": "project",
+   "original_steps": 7,
+   "steps": [
+    {
+     "args": {
+      "freeze_hash": "abc123",
+      "hypothesis": "H-A"
+     },
+     "attacker": "agent-evidence-1",
+     "extra": {},
+     "obo": null,
+     "op": "preregister_hypothesis",
+     "rule": "hidden",
+     "tok": {
+      "kind": "valid",
+      "sub": "agent-evidence-1"
+     },
+     "via": "direct"
+    }
+   ]
+  }
+ },
+ "identity_substitution": {
+  "baseline_counts": {
+   "backstop_failure": 0,
+   "concurrency_unserializable": 0,
+   "crash_duplicate_effect": 0,
+   "forbidden_effect": 0,
+   "identity_expansion": 0,
+   "surface_overexposure": 0,
+   "world_lock_timeout": 0
+  },
+  "expected_classes": [
+   "forbidden_effect",
+   "identity_expansion",
+   "world_lock_timeout"
+  ],
+  "gain": {
+   "forbidden_effect": 35,
+   "identity_expansion": 35,
+   "world_lock_timeout": 0
+  },
+  "killed": true,
+  "kills": 70,
+  "mutated_counts": {
+   "backstop_failure": 16,
+   "concurrency_unserializable": 0,
+   "crash_duplicate_effect": 0,
+   "forbidden_effect": 35,
+   "identity_expansion": 35,
+   "surface_overexposure": 0,
+   "world_lock_timeout": 0
+  },
+  "scenarios": 150,
+  "seed": 4242,
+  "sequences": 150,
+  "shrunk_counterexample": {
+   "attacker": "agent-orphan",
+   "domain": "manufacturing",
+   "original_steps": 7,
+   "steps": [
+    {
+     "args": {
+      "destination_warehouse": "WH-B",
+      "part": "PX-900",
+      "quantity": 3,
+      "source_warehouse": "WH-C",
+      "work_order": "WO-42"
+     },
+     "attacker": "agent-orphan",
+     "extra": {
+      "inject": {
+       "principal": "agent-1"
+      }
+     },
+     "obo": null,
+     "op": "transfer_inventory",
+     "rule": "ident",
+     "tok": {
+      "kind": "valid",
+      "sub": "agent-orphan"
+     },
+     "via": "direct"
+    }
+   ]
+  }
+ },
+ "ledger_after_commit_volatile": {
+  "baseline_counts": {
+   "backstop_failure": 0,
+   "concurrency_unserializable": 0,
+   "crash_duplicate_effect": 0,
+   "forbidden_effect": 0,
+   "identity_expansion": 0,
+   "surface_overexposure": 0,
+   "world_lock_timeout": 0
+  },
+  "expected_classes": [
+   "crash_duplicate_effect",
+   "world_lock_timeout"
+  ],
+  "gain": {
+   "crash_duplicate_effect": 131,
+   "world_lock_timeout": 0
+  },
+  "killed": true,
+  "kills": 131,
+  "mutated_counts": {
+   "backstop_failure": 0,
+   "concurrency_unserializable": 0,
+   "crash_duplicate_effect": 131,
+   "forbidden_effect": 131,
+   "identity_expansion": 0,
+   "surface_overexposure": 0,
+   "world_lock_timeout": 0
+  },
+  "scenarios": 150,
+  "seed": 4242,
+  "sequences": 150,
+  "shrunk_counterexample": {
+   "attacker": "agent-1",
+   "domain": "manufacturing",
+   "original_steps": 7,
+   "steps": [
+    {
+     "args": {
+      "destination_warehouse": "WH-C",
+      "part": "PX-17",
+      "quantity": 1,
+      "source_warehouse": "WH-B"
+     },
+     "attacker": "agent-1",
+     "extra": {},
+     "obo": null,
+     "op": "transfer_inventory",
+     "rule": "crash_after",
+     "tok": {
+      "kind": "valid",
+      "sub": "agent-1"
+     },
+     "via": "call_tool"
+    }
+   ]
+  }
+ },
+ "mutable_gated_input": {
+  "baseline_counts": {
+   "backstop_failure": 0,
+   "concurrency_unserializable": 0,
+   "crash_duplicate_effect": 0,
+   "forbidden_effect": 0,
+   "identity_expansion": 0,
+   "surface_overexposure": 0,
+   "world_lock_timeout": 0
+  },
+  "expected_classes": [
+   "forbidden_effect",
+   "world_lock_timeout"
+  ],
+  "gain": {
+   "forbidden_effect": 16,
+   "world_lock_timeout": 0
+  },
+  "killed": true,
+  "kills": 16,
+  "mutated_counts": {
+   "backstop_failure": 0,
+   "concurrency_unserializable": 0,
+   "crash_duplicate_effect": 0,
+   "forbidden_effect": 16,
+   "identity_expansion": 0,
+   "surface_overexposure": 0,
+   "world_lock_timeout": 0
+  },
+  "scenarios": 150,
+  "seed": 4242,
+  "sequences": 150,
+  "shrunk_counterexample": {
+   "attacker": "agent-draft-1",
+   "domain": "project",
+   "original_steps": 5,
+   "steps": [
+    {
+     "args": {
+      "claim": "claim beta"
+     },
+     "attacker": "agent-draft-1",
+     "extra": {
+      "alt": {
+       "claim": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+     },
+     "obo": null,
+     "op": "create_hypothesis",
+     "rule": "replay",
+     "tok": {
+      "kind": "valid",
+      "sub": "agent-draft-1"
+     },
+     "via": "call_tool"
+    }
+   ]
+  }
+ },
+ "tool_overexposure": {
+  "baseline_counts": {
+   "backstop_failure": 0,
+   "concurrency_unserializable": 0,
+   "crash_duplicate_effect": 0,
+   "forbidden_effect": 0,
+   "identity_expansion": 0,
+   "surface_overexposure": 0,
+   "world_lock_timeout": 0
+  },
+  "expected_classes": [
+   "surface_overexposure",
+   "world_lock_timeout"
+  ],
+  "first_counterexample": {
+   "could_ever_allow": [
+    "transfer_inventory"
+   ],
+   "domain": "manufacturing",
+   "listed": [
+    "expedite_purchase_order",
+    "reschedule_work_order",
+    "transfer_inventory"
+   ],
+   "overexposed": [
+    "expedite_purchase_order",
+    "reschedule_work_order"
+   ],
+   "principal": "junior-1",
+   "underexposed": [],
+   "unknown_tools": []
+  },
+  "gain": {
+   "surface_overexposure": 44,
+   "world_lock_timeout": 0
+  },
+  "killed": true,
+  "kills": 44,
+  "mutated_counts": {
+   "backstop_failure": 0,
+   "concurrency_unserializable": 0,
+   "crash_duplicate_effect": 0,
+   "forbidden_effect": 0,
+   "identity_expansion": 0,
+   "surface_overexposure": 44,
+   "world_lock_timeout": 0
+  },
+  "scenarios": 150,
+  "seed": 4242,
+  "sequences": 150
+ },
+ "unsynchronized_commit": {
+  "baseline_counts": {
+   "backstop_failure": 0,
+   "concurrency_unserializable": 0,
+   "crash_duplicate_effect": 0,
+   "forbidden_effect": 0,
+   "identity_expansion": 0,
+   "surface_overexposure": 0,
+   "world_lock_timeout": 0
+  },
+  "expected_classes": [
+   "concurrency_unserializable",
+   "world_lock_timeout"
+  ],
+  "first_counterexample": {
+   "classes": [
+    "concurrency_unserializable"
+   ],
+   "conflicting": false,
+   "contention": null,
+   "domain": "manufacturing",
+   "k": 3,
+   "losses": 1,
+   "match": "subset",
+   "order": [
+    0,
+    2
+   ],
+   "requests": [
+    {
+     "args": {
+      "destination_warehouse": "WH-C",
+      "part": "PX-17",
+      "quantity": 40,
+      "source_warehouse": "WH-B",
+      "work_order": "WO-43"
+     },
+     "op": "transfer_inventory",
+     "rid": "cc-cc4242-115-0",
+     "status": "EXCEPTION",
+     "subject": "agent-1"
+    },
+    {
+     "args": {
+      "destination_warehouse": "WH-C",
+      "part": "PX-17",
+      "quantity": 40,
+      "source_warehouse": "WH-B",
+      "work_order": "WO-42"
+     },
+     "op": "transfer_inventory",
+     "rid": "cc-cc4242-115-1",
+     "status": "OK",
+     "subject": "agent-1"
+    },
+    {
+     "args": {
+      "destination_warehouse": "WH-A",
+      "part": "PX-17",
+      "quantity": 40,
+      "source_warehouse": "WH-B",
+      "work_order": "WO-42"
+     },
+     "op": "transfer_inventory",
+     "rid": "cc-cc4242-115-2",
+     "status": "OK",
+     "subject": "agent-1"
+    }
+   ],
+   "scenario": 115,
+   "serial_orders_tried": 9,
+   "skipped": null,
+   "subset": [
+    0,
+    2
+   ],
+   "type": "free"
+  },
+  "gain": {
+   "concurrency_unserializable": 8,
+   "world_lock_timeout": 0
+  },
+  "killed": true,
+  "kills": 8,
+  "mutated_counts": {
+   "backstop_failure": 0,
+   "concurrency_unserializable": 8,
+   "crash_duplicate_effect": 0,
+   "forbidden_effect": 0,
+   "identity_expansion": 0,
+   "surface_overexposure": 0,
+   "world_lock_timeout": 0
+  },
+  "scenarios": 300,
+  "seed": 4242,
+  "sequences": 150
+ }
+}

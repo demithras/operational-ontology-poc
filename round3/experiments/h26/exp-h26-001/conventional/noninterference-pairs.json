@@ -1,0 +1,45 @@
+{
+ "aggregate": {
+  "aa_divergent": 0,
+  "aa_total": 500,
+  "counts": {
+   "d4_ok": 13928,
+   "divergent_pairs": 0,
+   "exposure_ok": 10000,
+   "false_provenance": 3192,
+   "hidden_probes": 69450,
+   "over_redaction": 14080,
+   "pairs": 5000,
+   "prov_ok": 74636,
+   "read_ok": 376480,
+   "read_unjudged": 11260
+  },
+  "pairs_by_channel": {
+   "authority_used_as": 5000,
+   "events": 5000,
+   "mutating": 5000,
+   "provenance": 5000,
+   "read": 5000,
+   "tools": 5000
+  },
+  "pairs_by_kind": {
+   "C": 1199,
+   "D": 1013,
+   "E": 1869,
+   "F": 566,
+   "G": 1121,
+   "L": 548
+  }
+ },
+ "divergent": [],
+ "generator": {
+  "d4_attempted": 7707,
+  "d4_replaced": 23,
+  "drawn": 5500,
+  "gen_errors": 0,
+  "redraws": 4358,
+  "skipped": 0
+ },
+ "pairs_file": "noninterference-pairs.jsonl.gz",
+ "pairs_sha256": "ba2533ce198e92f10d201835e0825e38e36bd842dd355b3f7ebb37fcbef3535d"
+}
