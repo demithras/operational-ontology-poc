@@ -83,3 +83,15 @@ sealing (EQUIVALENCE-G6 s4); Q-A1, Q-A2, Q-A6..Q-A14 accepted as recommended.
 Orchestrator: Q-O1..Q-O10 accepted as recommended. Q-O3: hash commitment only (sealed-corpus.json) unless `openssl enc -aes-256-cbc -pbkdf2`
 is verified on this host before sealing. Q-O9 upstream (verified 2026-10-15, verdict.json files): H23 exp-h23-002, H24 exp-h24-001,
 H25 exp-h25-003, H26 exp-h26-003, H27 exp-h27-001, H28 exp-h28-001r, H29 exp-h29-001r3 - SUPPORTED for both variants; no upstream stop.
+
+## Erratum G6-E1 (orch, 2026-10-15, before any task is authored) - task author isolation is enforced, not only instructed
+G6-E1 TASK-CORPUS-SPEC s5 S3 limits what the task author READS, but an in-session subagent can still read the repository (Paladin design
+      docs, variant source), the user's CLAUDE.md and memory. The task author (dev corpus AND sealed corpora) and the citation auditor
+      therefore run as ISOLATED processes: `claude -p` started in a fresh empty temp directory that contains COPIES of only the allowed
+      inputs (TASK-CORPUS-SPEC.md, PROT-H30.md, task.schema.json, the overlay files, rules table, threat_model/attack_classes.json, the
+      validator's rule text), with --strict-mcp-config, --setting-sources "", --no-session-persistence, a neutral --system-prompt, and
+      tools limited to Read/Write inside that directory plus WebSearch/WebFetch for public sources (no Bash; the orchestrator runs the
+      validator on the output). Before use, a PROBE session in the same configuration is asked to list its tools and to quote any
+      context mentioning Paladin, conventional, round3, CLAUDE.md or the user's projects; any hit = the configuration is rejected and
+      fixed. The probe transcript and the exact command line are recorded with the dev corpus commit (dev corpus) and in
+      fairness-audit.json (sealed corpora). Model: the strongest available (opus); the same configuration for primary and reserve.
