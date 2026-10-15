@@ -17,6 +17,7 @@ from .extsem import SEMANTICS
 from .extsystems import validate_systems
 
 REFUSALS_G5 = ("unavailable",)  # P1g-3/Q12: appended AFTER the frozen P1f-2 reasons, but evaluated FIRST
+REFUSALS_G6 = ("revoked_chain", "route_quarantined")  # P1h (PROT-H30 2.1): evaluated right AFTER unknown_root; unreachable unless an operator acts
 REFUSALS = ("bad_signature", "unknown_root", "system_mismatch", "operation_mismatch", "target_mismatch", "payload_mismatch",
             "correlation_missing", "expired", "uses_exhausted")
 KEY_NAME, HEAD_NAME = "KEY.revealed", "HEAD.final"
@@ -49,6 +50,9 @@ class ExternalWorldCore:
             raise FileExistsError(f"{db} already exists: refusing to reuse an external ledger")
         self.key, self.lock, self.tick, self.closed = root_key or os.urandom(32), threading.RLock(), 0, False
         self.faults: list[dict] = []  # G5 outage/partition windows (P1g-3); empty -> write() is exactly the G4 path
+        self.rev_roots: set[str] = set()      # P1h operator state; all empty -> _write() is exactly the G5 path
+        self.rev_chains: set[str] = set()
+        self.quarantined: set[tuple[str, str]] = set()
         self.con = sqlite3.connect(str(db), isolation_level=None, check_same_thread=False)
         self.con.execute("PRAGMA journal_mode=WAL")
         self.con.executescript(_DDL)
@@ -106,6 +110,46 @@ class ExternalWorldCore:
         return self.con.execute("INSERT INTO audit(tick,deployment,system,operation,target,payload_digest,cap_chain,correlation,"
                                 "adapter_id,outcome,reason) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
                                 (self.tick, dep, system, op, target, dig, chain, cor, adapter, outcome, reason)).lastrowid
+
+    # ---- P1h operator plane (control plane only; tables are created lazily so an unused ledger keeps its G5 DDL) ----------
+    def _op_log(self, action: str, args: dict, operator: str) -> int:
+        self.con.execute("CREATE TABLE IF NOT EXISTS op_log(seq INTEGER PRIMARY KEY AUTOINCREMENT, tick INTEGER NOT NULL,"
+                         " action TEXT NOT NULL, args_json TEXT NOT NULL, operator TEXT NOT NULL)")
+        return self.con.execute("INSERT INTO op_log(tick,action,args_json,operator) VALUES(?,?,?,?)",
+                                (self.tick, action, canon_json(args), operator)).lastrowid
+
+    def revoke_chain(self, root_nonce: str | None = None, chain_id: str | None = None, operator: str = "operator") -> int:
+        """Revoke every cap of one ROOT (root_nonce) or one per-effect CHAIN (chain_id, extcap.chain_id). Exactly one is given.
+        Later writes with such a cap are refused `revoked_chain` BEFORE any effect (server side). Returns the op_log seq."""
+        with self.lock:
+            if (root_nonce is None) == (chain_id is None):
+                raise ValueError("revoke_chain needs exactly one of root_nonce, chain_id")
+            if root_nonce is not None:
+                if self.con.execute("SELECT 1 FROM issued WHERE nonce=?", (root_nonce,)).fetchone() is None:
+                    raise ValueError("unknown root nonce")
+                self.rev_roots.add(root_nonce)
+                return self._op_log("revoke_chain", {"root_nonce": root_nonce}, operator)
+            if not (isinstance(chain_id, str) and len(chain_id) == 64 and all(c in "0123456789abcdef" for c in chain_id)):
+                raise ValueError("chain_id must be 64 lowercase hex chars")
+            self.rev_chains.add(chain_id)
+            return self._op_log("revoke_chain", {"chain_id": chain_id}, operator)
+
+    def quarantine(self, system: str, deployment: str, operator: str = "operator") -> int:
+        """Refuse every write whose (verified) cap is rooted for (system, deployment) with `route_quarantined`. Other routes stay open."""
+        with self.lock:
+            if system not in self.systems["systems"]:
+                raise ValueError(f"unknown system {system!r}")
+            if not (isinstance(deployment, str) and deployment):
+                raise ValueError("quarantine needs a deployment")
+            self.quarantined.add((system, deployment))
+            return self._op_log("quarantine", {"system": system, "deployment": deployment}, operator)
+
+    def op_log(self) -> list[dict]:
+        with self.lock:
+            if self.con.execute("SELECT 1 FROM sqlite_master WHERE name='op_log'").fetchone() is None:
+                return []
+            return [{"seq": r[0], "tick": r[1], "action": r[2], "args": json.loads(r[3]), "operator": r[4]}
+                    for r in self.con.execute("SELECT seq,tick,action,args_json,operator FROM op_log ORDER BY seq")]
 
     # ---- G5 fault controls (control plane only) ---------------------------------------------------------------------
     def fault(self, cmd: dict) -> int:
@@ -201,6 +245,11 @@ class ExternalWorldCore:
             if self.con.execute("SELECT 1 FROM issued WHERE nonce=? AND system=? AND deployment=?",
                                 (extcap.root_nonce(cap), system, dep)).fetchone() is None:
                 return ref("unknown_root")
+            if self.rev_roots or self.rev_chains:  # P1h: attribution is verified, so the row is attributed; no effect is applied
+                if extcap.root_nonce(cap) in self.rev_roots or (chain and chain in self.rev_chains):
+                    return ref("revoked_chain")
+            if self.quarantined and (system, dep) in self.quarantined:
+                return ref("route_quarantined")
             vals = lambda name: [v for n, v in cav if n == name]  # noqa: E731
             sysd = self.systems["systems"].get(system)
             if sysd is None or any(v != system for v in vals("system")):

@@ -16,7 +16,8 @@ from r3_shared.extadapter import canon_json
 from r3_shared.extworld_core import ExternalWorldCore, Unavailable
 
 DATA_OPS = ("write", "ping")
-CONTROL_OPS = ("issue_root", "advance", "observer_key", "seed", "tick", "close", "ping", "fault", "clear_faults", "fault_log")
+CONTROL_OPS = ("issue_root", "advance", "observer_key", "seed", "tick", "close", "ping", "fault", "clear_faults", "fault_log",
+               "revoke_chain", "quarantine", "op_log")
 
 
 class Handler(socketserver.StreamRequestHandler):
@@ -50,6 +51,12 @@ class Handler(socketserver.StreamRequestHandler):
                 out = {}
             elif op == "fault_log":
                 out = {"log": core.fault_log()}
+            elif op == "revoke_chain":
+                out = {"seq": core.revoke_chain(r.get("root_nonce"), r.get("chain_id"), r.get("operator", "operator"))}
+            elif op == "quarantine":
+                out = {"seq": core.quarantine(r["system"], r["deployment"], r.get("operator", "operator"))}
+            elif op == "op_log":
+                out = {"log": core.op_log()}
             else:  # close
                 out = core.close()
                 stop_after_reply = True

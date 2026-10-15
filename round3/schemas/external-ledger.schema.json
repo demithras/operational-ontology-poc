@@ -28,7 +28,8 @@
         "adapter_id": {"type": "string"},
         "outcome": {"enum": ["applied", "refused"]},
         "reason": {"enum": ["", "bad_signature", "unknown_root", "system_mismatch", "operation_mismatch", "target_mismatch",
-                            "payload_mismatch", "correlation_missing", "expired", "uses_exhausted", "unavailable"]},
+                            "payload_mismatch", "correlation_missing", "expired", "uses_exhausted", "unavailable",
+                            "revoked_chain", "route_quarantined"]},
         "deployment": {"type": ["string", "null"]},
         "unverified_claim": {
           "type": "object", "additionalProperties": false, "required": ["system", "deployment", "caveats"],

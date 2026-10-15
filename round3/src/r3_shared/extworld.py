@@ -107,6 +107,16 @@ class ExternalClient:
     def fault_log(self) -> list:
         return self._control({"op": "fault_log"})["log"]
 
+    def revoke_chain(self, root_nonce: str | None = None, chain_id: str | None = None, operator: str = "operator") -> int:
+        """Harness only (P1h): revoke a root (nonce) or one chain (chain id); see opplane.OperatorPlane for the authenticated call."""
+        return self._control({"op": "revoke_chain", "root_nonce": root_nonce, "chain_id": chain_id, "operator": operator})["seq"]
+
+    def quarantine(self, system: str, deployment: str, operator: str = "operator") -> int:
+        return self._control({"op": "quarantine", "system": system, "deployment": deployment, "operator": operator})["seq"]
+
+    def op_log(self) -> list:
+        return self._control({"op": "op_log"})["log"]
+
     def close(self) -> dict:
         r = self._control({"op": "close"})
         return {"root_key_hex": r["root_key_hex"], "head": r["head"]}
