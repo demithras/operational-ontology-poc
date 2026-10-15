@@ -1,0 +1,4 @@
+paladin: run complete (6400 sequences, 8700.5 s, workers 6)
+paladin: finalized classes={} harness={} sysstate_ok=True
+conventional: run complete (6400 sequences, 8509.9 s, workers 6)
+conventional: finalized classes={} harness={} sysstate_ok=True

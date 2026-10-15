@@ -1,0 +1,307 @@
+{
+ "attack_class": "A8",
+ "baseline_version": null,
+ "candidate_version": "conventional:a0b59cda6a7f8beca83ae2c9ca3139ef09de2dc7f2f0de3c7557f0b820ccd125",
+ "environment": {
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.6",
+  "variant": "conventional"
+ },
+ "experiment_id": "exp-h29-001r3",
+ "git_commit": "74df761aac71596a1c44bb72841a91fff219974f",
+ "hypothesis_id": "H29",
+ "oracle_version": "22d6fbfc7bddc71d11597c4dbf4fd295b3318b283100aecec9cc6d887a57112a",
+ "payload_sha256": "35755abf58e30aee1f094373c354072d34cb4689f0ec0ee9d61992fe01a9ff12",
+ "protocol_freeze_hash": "67fdc80ad37f24c6c585c928d78fd60801e13fcb735c48183f1229522eb49294",
+ "raw_observations": {
+  "candidate": {
+   "head_matches_tag": true,
+   "tag": "r3-g5-cand6"
+  },
+  "closes": {
+   "anchor": [
+    {
+     "head": {
+      "entries": 7128,
+      "last_entry_sha": "bc9681dd0b4a1394652c149ad95e19d5a1b18a0b454901dbc7033bfb6eec2050"
+     },
+     "key": "33174686f1c35f27a6838aa2e3207ea68992e5d04ca839e1e5d6c2d6d1355b8d"
+    },
+    {
+     "head": {
+      "entries": 7767,
+      "last_entry_sha": "96a13839c42efb63de9fc94ebaa5cbb2f2366014f1b9d68d43631dcf0744dbd3"
+     },
+     "key": "58e434d956f8c7b56024b34fb8acedd1f78186e64e83c902519a882ba492b2ec"
+    },
+    {
+     "head": {
+      "entries": 7597,
+      "last_entry_sha": "e54212f4e08a2fa5c5ce212fc3346b2f9179b0c21de7ab9ef0d457c3ba54e7f2"
+     },
+     "key": "543fad5af0cc12ca4f396d8709133d6da5eb3a5bbdf566e8abb5a016ac15130e"
+    },
+    {
+     "head": {
+      "entries": 6908,
+      "last_entry_sha": "ed85eefd7617a5bd6beea1cb82eaebb4d412a08a707e1a20bf90864ce03e9655"
+     },
+     "key": "bf05817419e68a59ce06a559ebb1e8b217b2c50d0500fb95d25ba2f237210038"
+    },
+    {
+     "head": {
+      "entries": 7519,
+      "last_entry_sha": "5ae56534f5a496fbaec68125b9e3d935a251d9a9550fd91a6cbb0a0f13a71eb7"
+     },
+     "key": "12930e51019f920b634124aa2ab63d9325716d2af4fedaefbe06f2bb7537cf5e"
+    },
+    {
+     "head": {
+      "entries": 8171,
+      "last_entry_sha": "ce33db9c2e0e636961c2d9c45c2632415497f695adc82bb41d8c653f84e6abe0"
+     },
+     "key": "2f2063cd80acf3b17be9257a5862e22e3cc2c4335367548d3095c4ee93d09846"
+    }
+   ],
+   "auth": [
+    {
+     "head": {
+      "faults": 678,
+      "leases": 11562,
+      "log_sha256": "b751b3af6367bdda98077cdaf53b4a59cb6f85e706ca75b7e17fa19e59aa7687",
+      "refused": 1066,
+      "versions": 1067
+     },
+     "key_hex": "634fe67dadd909599afd204a8f6361bdeaf44f6c92dcac2371f144a29543078b"
+    },
+    {
+     "head": {
+      "faults": 989,
+      "leases": 12793,
+      "log_sha256": "f6f7bad145de7e820e2c9e3ed08401fc40f5451510d1db3d5347cbfc9c3e5943",
+      "refused": 4553,
+      "versions": 1300
+     },
+     "key_hex": "78d37361b8eb9dd705713807f8bc0261b4f895571d37c969563b813db0af69a3"
+    },
+    {
+     "head": {
+      "faults": 688,
+      "leases": 12445,
+      "log_sha256": "0c1eab086d76a4b4964b3f979db23f1053ec43c9bd4cce42618c14ce85d9bb35",
+      "refused": 1091,
+      "versions": 1067
+     },
+     "key_hex": "98224a83824a790e7ad3545a9dd91817fb806693d176ba5bf891384e24283a88"
+    },
+    {
+     "head": {
+      "faults": 1454,
+      "leases": 13826,
+      "log_sha256": "ba01fd9d62e441e067350c61e65529c4e5a8a7060fc190ea5494dbbafc31cc1f",
+      "refused": 3686,
+      "versions": 1300
+     },
+     "key_hex": "e453cc3f0c94b2f7a77842addf87981f5b554f424fcee56f803c09dbf28f8fb4"
+    },
+    {
+     "head": {
+      "faults": 691,
+      "leases": 12424,
+      "log_sha256": "8479327fc9b6fbd6ea9ffd1dfe190b65a2c4c9c74de0c5638305828e26a65c32",
+      "refused": 1142,
+      "versions": 1066
+     },
+     "key_hex": "94b72418fce15677154d49b1389825e49bc13301462868aebad4d4748e4d2be8"
+    },
+    {
+     "head": {
+      "faults": 762,
+      "leases": 14430,
+      "log_sha256": "625a21ef66ef4b5afb910e7b1494c9d3ded1da347799f1549e93108532331fa9",
+      "refused": 2160,
+      "versions": 1300
+     },
+     "key_hex": "6a94991a08c41dfe8ecf85654d5634db60ab507ef731bce38d5b42c500385c67"
+    }
+   ],
+   "ext": [
+    {
+     "head": {
+      "audit": 5265,
+      "effects": 4405
+     },
+     "root_key_hex": "d2c714075a34874aed696d1e87da14eb374d9f621ad3960f0dc256fca3a554a4"
+    },
+    {
+     "head": {
+      "audit": 4343,
+      "effects": 4326
+     },
+     "root_key_hex": "ad6ba61d855ac16838c7be01135a7f916a79a004fc90027634e3b68dffbf2fff"
+    },
+    {
+     "head": {
+      "audit": 6299,
+      "effects": 4898
+     },
+     "root_key_hex": "8b7576a25751c949e24a87e1a89cce9c1678fecdc1fc872437b701d1213934cb"
+    },
+    {
+     "head": {
+      "audit": 3876,
+      "effects": 3837
+     },
+     "root_key_hex": "f40b717a4a607a9667e2a6c76d6350e21349ecc8b2bc5b4e79cf4aa08e60f7e9"
+    },
+    {
+     "head": {
+      "audit": 6134,
+      "effects": 4828
+     },
+     "root_key_hex": "784a50b9e262a1116736a670c10b6a35be1594efabf79f3cd52cae1e91fefb89"
+    },
+    {
+     "head": {
+      "audit": 4443,
+      "effects": 4342
+     },
+     "root_key_hex": "236c068374ceda5cda65b08700d28216095895a94a3d3d86c2ffcc2c44b827e1"
+    }
+   ]
+  },
+  "dev_overrides": {},
+  "evidence_sha256": {
+   "cases.jsonl.gz": "a9d80f9a3c68508321c33a119bd8ddba32ae63bfe41b7157c47edfa67931fa9e",
+   "explicit-unavailability.json": "d984828c3910aeac618eb9bb683a748a0767bf5a23770d12efa1153761c6fac4",
+   "fault-sequences.jsonl.gz": "51010a4bfe8e65c68d9d3cce6c4cf4808ebebf4fb1f09d56136b126fe0434cdb",
+   "injection-effectiveness.json": "29ed13631c5cf0fc8d0af0dddc7045a8fc8f62b8649674f069c006911bd88d5e",
+   "mutation-results.json": "9b4dca83875de573c23b8db4449b85a67966b944c1888cd56f85f5f033005504",
+   "recovery-differential.json": "b0fa97e1ec4e41ef7da1cba940dd55749c8541ce2a5ee6b5a0a7fca802a1a93b",
+   "safe-progress.json": "e97385b0a3dc20c94521f6b92e9df6851b3049142908e3d443620f898856c284",
+   "safety-invariants.json": "604ec7f469be4cb1c624b65d6d9d6652736281c6ba36f581a5ca24f928d23097"
+  },
+  "freeze_g5_frozen": {
+   "protocol/AUTHOR_DECISIONS_2026-10-12.md": "57c5ed40e369dcbe3ffffe407cbb4a4ebbacee9576b30c432b9ab777fa446a8d",
+   "schemas/dependency-graph.schema.json": "74bb04d05700b4bcb2fed70da1b1d7645f18bde1b4acea6e7d2ab701d63bb7e0",
+   "spec/gate5/EQUIVALENCE-G5.md": "d7593eb5e29ca4cbbf5e925ae4e03c9481fd0e67fb21bb96b8cac77d10dd567d",
+   "spec/gate5/OPEN-QUESTIONS.md": "a36d3099270d71148bf916ea8d00bddcd3088713d275f8bd360de2b32d450090",
+   "spec/gate5/ORACLE-AND-HARNESS-G5.md": "310c59734665910e8ba63b65cd138641add0fba15dd261800b650dda95c2d4f9",
+   "spec/gate5/PROTOCOL-P1g.md": "c26d360b2baf2e5014336d947b01a9384680034dc9ffbea674709e6b20010b9e",
+   "spec/gate5/authority-versions/manufacturing/v1.json": "0446777a74aeab7f1b4d6aecf313e8b8658d27fe86b528e74946e51887d81f0a",
+   "spec/gate5/authority-versions/manufacturing/v2.json": "3c1661220f2ca06a706cebe688496a3ba16db3d7bde909a1ab24d4d1f271427a",
+   "spec/gate5/authority-versions/manufacturing/v3.json": "d0ce4cb3f15f5c23c2443b673d12308034c8ff91a1bb3ed33a3f61284db741bb",
+   "spec/gate5/authority-versions/manufacturing/v4.json": "b87f1ae098d88afcffde9b0a97d79faef3321436c08fbb172fdba1006430f20e",
+   "spec/gate5/authority-versions/manufacturing/v5.json": "28202b6bb5cd325a56388b1aa7e7a6353eddaacdb43aa4fe15caa48ddd60081e",
+   "spec/gate5/authority-versions/project/v1.json": "de5f1efacbb84f05eadb9a908dc664286ab3bdce116ec21f9179011e9a7a2380",
+   "spec/gate5/authority-versions/project/v10.json": "7917b4f3caa5600b00d285aebedd76c7c98fe7842a6d00a6449e5fb5bbb10119",
+   "spec/gate5/authority-versions/project/v11.json": "b2c30753662b7833bdfd2e0665348bfb812ea0ecb33b82f7833d53696a66756c",
+   "spec/gate5/authority-versions/project/v12.json": "4e87d7fb199acea1ced14fa3d3f05caf69458e1e6a912465568dfc051e772af6",
+   "spec/gate5/authority-versions/project/v13.json": "893b42a37ae776849495c42a8747740f806bbf10436d6f3c4fc6e610baefb3c2",
+   "spec/gate5/authority-versions/project/v14.json": "7d25f9688dcc83fa99a5870b6d4aee4da53170c9e4a1a36dd54156d98a461aa2",
+   "spec/gate5/authority-versions/project/v15.json": "9a9ad087dfd2134998c3c58429604d1000367ab0df4530ce92a1d5cd2f099a77",
+   "spec/gate5/authority-versions/project/v16.json": "4ca0fb5b25d33d5bbc0287799e508ddbf6dc60de77716480f06f89e945ccd9b7",
+   "spec/gate5/authority-versions/project/v2.json": "78b30a0396a87139134da30e7b40d99fc0c0bbba47c98aadd582295770f397af",
+   "spec/gate5/authority-versions/project/v3.json": "f46ae95c21d5338f66bb928d795aab3e6f1c4d66a44c1bdee319fca0a46a3537",
+   "spec/gate5/authority-versions/project/v4.json": "20337cae3f5f7bd3b648bd712ec76ef61fc5cccafc317840954f2d166870ba4e",
+   "spec/gate5/authority-versions/project/v5.json": "9b7fcd2c3e90f62cff23255d8632a1a95a3ac4a05c8ff3ee31b0e9df5c4db165",
+   "spec/gate5/authority-versions/project/v6.json": "6114c7a994db4d9120bbd76619716b987c5f6fb04bd545193e6bf1584428f523",
+   "spec/gate5/authority-versions/project/v7.json": "2c9d6327ff66d8ae43931c64b09b15762bbe09a87774cc7630bb0a83dc8120df",
+   "spec/gate5/authority-versions/project/v8.json": "fe5f9e515863553aaeacb2f19e81b1302869b8527dcafb576c07b5b6575a3638",
+   "spec/gate5/authority-versions/project/v9.json": "da462c969f7a6bf9aa3c265f1ddfba6c8faa825b6e2ef1805cd39248e30591bb",
+   "spec/gate5/dependency-graph.json": "93ccd7ac237fa01a86bfa7a3f0292902ee9cc3ea7f8ee8a28c4fc082a5e4bce8",
+   "spec/gate5/envelope-ops.json": "81d0b257a4686e93c7e3deb211c0a952aacb6bac0e63dbb626aefc1f9f709812",
+   "spec/gate5/reason-map.json": "812fa781cc9fa3251e7fa54949f2680dae11b105c097597ae331273deea45e53",
+   "spec/protections/PROT-H29.md": "1bda71bb5b23cbab1a39ccbb8a1c6415aff6e81c1ebc55c74623fa84fa44221b",
+   "src/r3_harness/h28/adapters.py": "9164cd2b31ac9442e4c102c78f513519334f7dc0022394a39b0c07de77ba26c2",
+   "src/r3_harness/h29/adapters_h29.py": "995ea232efe3f45e1ce6b13d94996c2ef304243c9155e353d630023abea5a880",
+   "src/r3_harness/h29/evaluator.py": "a5ba2e3a91ef065a178507440b6f7b4fd947d70c1773a848d48c5a9d8eec838a",
+   "src/r3_harness/h29/faults.py": "da65c433cfb9427dcbe18e653183410b45282cb79df1ebcb4028314457bf1a52",
+   "src/r3_harness/h29/rules.py": "36cd02989939dc9f076222e5e797c071019862756e32e5e68b94d8ff0199810d",
+   "src/r3_oracle/authority_v2.py": "e03da4515a6d2a012afadb094bad6ffaec447c9ea760b1b853987b7ad9ac9bb2",
+   "src/r3_oracle/continuity.py": "9859870b5db93575159bbc425b68c6228029a6d925dc812d86fb1a7288a00653",
+   "src/r3_oracle/extoracle.py": "152ac64545c83eab09bc9204864649ef328934fc88ba5cf9e36d13cbac503532",
+   "src/r3_oracle/lowproj.py": "40a84107a8dfc2bcb4ee996221856fec68a256eb459066fb809bbbc03d002968",
+   "src/r3_oracle/ops_model.py": "beb3c3358cbfae684557ef9d35e3dc5c6f8b38efcd0e254bf84c46376979dfae",
+   "src/r3_oracle/recoverymodel.py": "6414dad19688aaf3d5c20ef6de75ede6e399c325d20ccd68eb62dbd322dfc823",
+   "src/r3_oracle/view.py": "600f8a898086e5f7ff6780377063546fc5654e1e35474e069768dc6474735edf",
+   "src/r3_shared/authsvc.py": "244708a34fa275d5696b797ab5b4895d3c022e03d65095f06ad77d70a0df41ee",
+   "src/r3_shared/authsvc_server.py": "db8f21a81975dafea57510216b1df432228af2b9b28c6df6c354f1bbe2e09be0",
+   "src/r3_shared/faultplane.py": "1e95f57e1799749d0a550b439df65cfbd9bd31795286bb82f7e977be3951e0c5",
+   "src/r3_shared/host.py": "ec816e43584a3ebb8289c65dfafc2ee84c4d75fb8f3a24b422850d47286cb9cc",
+   "threat_model/security_invariants.json": "227caa08dfcbbcc9ad9546141a0be6765d8bb8a7680e520aa789afb4d89bd9c2",
+   "threat_model/survivability_envelope.json": "b97048a68e26c69f56d4ee10a9e966f698c62cf760846a5bc403ff30f283658d"
+  },
+  "freeze_g5_sha256": {
+   "protocol/AUTHOR_DECISIONS_2026-10-12.md": "57c5ed40e369dcbe3ffffe407cbb4a4ebbacee9576b30c432b9ab777fa446a8d",
+   "schemas/dependency-graph.schema.json": "74bb04d05700b4bcb2fed70da1b1d7645f18bde1b4acea6e7d2ab701d63bb7e0",
+   "spec/gate5/EQUIVALENCE-G5.md": "d7593eb5e29ca4cbbf5e925ae4e03c9481fd0e67fb21bb96b8cac77d10dd567d",
+   "spec/gate5/OPEN-QUESTIONS.md": "a36d3099270d71148bf916ea8d00bddcd3088713d275f8bd360de2b32d450090",
+   "spec/gate5/ORACLE-AND-HARNESS-G5.md": "310c59734665910e8ba63b65cd138641add0fba15dd261800b650dda95c2d4f9",
+   "spec/gate5/PROTOCOL-P1g.md": "c26d360b2baf2e5014336d947b01a9384680034dc9ffbea674709e6b20010b9e",
+   "spec/gate5/authority-versions/manufacturing/v1.json": "0446777a74aeab7f1b4d6aecf313e8b8658d27fe86b528e74946e51887d81f0a",
+   "spec/gate5/authority-versions/manufacturing/v2.json": "3c1661220f2ca06a706cebe688496a3ba16db3d7bde909a1ab24d4d1f271427a",
+   "spec/gate5/authority-versions/manufacturing/v3.json": "d0ce4cb3f15f5c23c2443b673d12308034c8ff91a1bb3ed33a3f61284db741bb",
+   "spec/gate5/authority-versions/manufacturing/v4.json": "b87f1ae098d88afcffde9b0a97d79faef3321436c08fbb172fdba1006430f20e",
+   "spec/gate5/authority-versions/manufacturing/v5.json": "28202b6bb5cd325a56388b1aa7e7a6353eddaacdb43aa4fe15caa48ddd60081e",
+   "spec/gate5/authority-versions/project/v1.json": "de5f1efacbb84f05eadb9a908dc664286ab3bdce116ec21f9179011e9a7a2380",
+   "spec/gate5/authority-versions/project/v10.json": "7917b4f3caa5600b00d285aebedd76c7c98fe7842a6d00a6449e5fb5bbb10119",
+   "spec/gate5/authority-versions/project/v11.json": "b2c30753662b7833bdfd2e0665348bfb812ea0ecb33b82f7833d53696a66756c",
+   "spec/gate5/authority-versions/project/v12.json": "4e87d7fb199acea1ced14fa3d3f05caf69458e1e6a912465568dfc051e772af6",
+   "spec/gate5/authority-versions/project/v13.json": "893b42a37ae776849495c42a8747740f806bbf10436d6f3c4fc6e610baefb3c2",
+   "spec/gate5/authority-versions/project/v14.json": "7d25f9688dcc83fa99a5870b6d4aee4da53170c9e4a1a36dd54156d98a461aa2",
+   "spec/gate5/authority-versions/project/v15.json": "9a9ad087dfd2134998c3c58429604d1000367ab0df4530ce92a1d5cd2f099a77",
+   "spec/gate5/authority-versions/project/v16.json": "4ca0fb5b25d33d5bbc0287799e508ddbf6dc60de77716480f06f89e945ccd9b7",
+   "spec/gate5/authority-versions/project/v2.json": "78b30a0396a87139134da30e7b40d99fc0c0bbba47c98aadd582295770f397af",
+   "spec/gate5/authority-versions/project/v3.json": "f46ae95c21d5338f66bb928d795aab3e6f1c4d66a44c1bdee319fca0a46a3537",
+   "spec/gate5/authority-versions/project/v4.json": "20337cae3f5f7bd3b648bd712ec76ef61fc5cccafc317840954f2d166870ba4e",
+   "spec/gate5/authority-versions/project/v5.json": "9b7fcd2c3e90f62cff23255d8632a1a95a3ac4a05c8ff3ee31b0e9df5c4db165",
+   "spec/gate5/authority-versions/project/v6.json": "6114c7a994db4d9120bbd76619716b987c5f6fb04bd545193e6bf1584428f523",
+   "spec/gate5/authority-versions/project/v7.json": "2c9d6327ff66d8ae43931c64b09b15762bbe09a87774cc7630bb0a83dc8120df",
+   "spec/gate5/authority-versions/project/v8.json": "fe5f9e515863553aaeacb2f19e81b1302869b8527dcafb576c07b5b6575a3638",
+   "spec/gate5/authority-versions/project/v9.json": "da462c969f7a6bf9aa3c265f1ddfba6c8faa825b6e2ef1805cd39248e30591bb",
+   "spec/gate5/dependency-graph.json": "93ccd7ac237fa01a86bfa7a3f0292902ee9cc3ea7f8ee8a28c4fc082a5e4bce8",
+   "spec/gate5/envelope-ops.json": "81d0b257a4686e93c7e3deb211c0a952aacb6bac0e63dbb626aefc1f9f709812",
+   "spec/gate5/reason-map.json": "812fa781cc9fa3251e7fa54949f2680dae11b105c097597ae331273deea45e53",
+   "spec/protections/PROT-H29.md": "1bda71bb5b23cbab1a39ccbb8a1c6415aff6e81c1ebc55c74623fa84fa44221b",
+   "src/r3_harness/h28/adapters.py": "9164cd2b31ac9442e4c102c78f513519334f7dc0022394a39b0c07de77ba26c2",
+   "src/r3_harness/h29/adapters_h29.py": "995ea232efe3f45e1ce6b13d94996c2ef304243c9155e353d630023abea5a880",
+   "src/r3_harness/h29/evaluator.py": "a5ba2e3a91ef065a178507440b6f7b4fd947d70c1773a848d48c5a9d8eec838a",
+   "src/r3_harness/h29/faults.py": "da65c433cfb9427dcbe18e653183410b45282cb79df1ebcb4028314457bf1a52",
+   "src/r3_harness/h29/rules.py": "36cd02989939dc9f076222e5e797c071019862756e32e5e68b94d8ff0199810d",
+   "src/r3_oracle/authority_v2.py": "e03da4515a6d2a012afadb094bad6ffaec447c9ea760b1b853987b7ad9ac9bb2",
+   "src/r3_oracle/continuity.py": "9859870b5db93575159bbc425b68c6228029a6d925dc812d86fb1a7288a00653",
+   "src/r3_oracle/extoracle.py": "152ac64545c83eab09bc9204864649ef328934fc88ba5cf9e36d13cbac503532",
+   "src/r3_oracle/lowproj.py": "40a84107a8dfc2bcb4ee996221856fec68a256eb459066fb809bbbc03d002968",
+   "src/r3_oracle/ops_model.py": "beb3c3358cbfae684557ef9d35e3dc5c6f8b38efcd0e254bf84c46376979dfae",
+   "src/r3_oracle/recoverymodel.py": "6414dad19688aaf3d5c20ef6de75ede6e399c325d20ccd68eb62dbd322dfc823",
+   "src/r3_oracle/view.py": "600f8a898086e5f7ff6780377063546fc5654e1e35474e069768dc6474735edf",
+   "src/r3_shared/authsvc.py": "244708a34fa275d5696b797ab5b4895d3c022e03d65095f06ad77d70a0df41ee",
+   "src/r3_shared/authsvc_server.py": "db8f21a81975dafea57510216b1df432228af2b9b28c6df6c354f1bbe2e09be0",
+   "src/r3_shared/faultplane.py": "1e95f57e1799749d0a550b439df65cfbd9bd31795286bb82f7e977be3951e0c5",
+   "src/r3_shared/host.py": "ec816e43584a3ebb8289c65dfafc2ee84c4d75fb8f3a24b422850d47286cb9cc",
+   "threat_model/security_invariants.json": "227caa08dfcbbcc9ad9546141a0be6765d8bb8a7680e520aa789afb4d89bd9c2",
+   "threat_model/survivability_envelope.json": "b97048a68e26c69f56d4ee10a9e966f698c62cf760846a5bc403ff30f283658d"
+  },
+  "generator_stats": {
+   "attempts": 725,
+   "episode_redraw": 1,
+   "too_long": 724
+  },
+  "oracle_inputs": [
+   "world_log(shared store)",
+   "authority.db(closed)",
+   "anchor.log(closed)",
+   "external.db(closed)",
+   "harness input log"
+  ],
+  "sizes": {
+   "bnd": 200,
+   "ctrl": 600,
+   "env": 5600
+  },
+  "variant": "conventional",
+  "workers": 6
+ },
+ "seed": 2926
+}
