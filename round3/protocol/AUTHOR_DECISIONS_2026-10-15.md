@@ -26,3 +26,12 @@ Thresholds in protocol/thresholds.json are unchanged.
 ## 3. Domain mix of the H30 corpus (author, AskUserQuestion 2026-10-15)
 Both domains by class (G6-E3): A1/A3/A5/A6 half "project", half "manufacturing"; A2/A7 "manufacturing" only (declared scope limit:
 the frozen project overlay has no delegations or external targets). Chosen over extending the project overlay and over a single domain.
+
+## 4. H30 is not run; Round 3 closes on H23-H29 (author, AskUserQuestion 2026-10-15)
+Decision: stop Gate 6 and close Round 3. Reason given to the author and accepted: H23-H29 are SUPPORTED for BOTH variants with
+parity on every frozen metric and no measured Paladin-specific advantage in any gate (Gate 4 and Gate 5 SUMMARYs), and one measured
+Paladin weakness (Gate 5: resubmission of expired external effects); a synthetic task corpus (author decision 2026-10-15 s1) cannot
+convincingly overturn that under the H30 contract's own rival/falsifier about synthetic-only advantage, while costing ~1-2 days.
+H30 status: NOT RUN (no verdict; not REJECTED, not SUPPORTED). Gate 6 design, errata G6-E1..E3, P1h shared plane and the dev-corpus
+authoring record stay on round3 as documentation; the unfinished builder work stays on local branches (r3-paladin 0ec5166,
+r3-conv 95f1b6b, r3-harness 46a5151, r3-legit af66706), not merged and not reviewed.
