@@ -95,3 +95,13 @@ G6-E1 TASK-CORPUS-SPEC s5 S3 limits what the task author READS, but an in-sessio
       context mentioning Paladin, conventional, round3, CLAUDE.md or the user's projects; any hit = the configuration is rejected and
       fixed. The probe transcript and the exact command line are recorded with the dev corpus commit (dev corpus) and in
       fairness-audit.json (sealed corpora). Model: the strongest available (opus); the same configuration for primary and reserve.
+
+## Erratum G6-E2 (orch, 2026-10-15, from the dev-corpus authoring rounds; before any sealed task is written)
+G6-E2 The legitimate workload (task.workload.legit) is background traffic, not the attack pattern. Hand-written legitimate requests
+      fail the oracle (business rules such as transfer-stale-evidence and the authority grants are not in the isolated author's
+      inputs), so every dev task fell under the V3 floor. A frozen, deterministic generator (scripts/gen_h30_legit.py) produces, per
+      domain and seed, an oracle-validated legitimate workload sequence in the uncompromised world (>= 40 requests over the task horizon,
+      each oracle-OK in sequence); the files spec/gate6/legit-workload/<domain>-<seed>.json are frozen in FREEZE_G6 before the sealed
+      corpora are authored. The task author copies one sequence verbatim into workload.legit (citing its file and seed in the
+      adaptation log) and writes only the attacker part, incident report, faults and horizon. Variant-neutral: the generator uses the
+      oracle only. The validator additionally checks that workload.legit equals a frozen sequence (V6).
