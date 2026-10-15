@@ -354,3 +354,13 @@ G5-E35 Source: rule-by-rule audit of the H29 judge (70 rules: 46 conform, 23 dev
          AuthorityService (G4 root-key re-verification).
       The audit's 15 non-blocking notes are handled by the harness builder or recorded as notes (findings in the scratchpad audit
       are copied to spec/gate5/audit/judge-audit-findings.md).
+
+## Erratum G5-E36 (author decision 2026-10-15, after official exp-h29-001r2)
+G5-E36 Every host death is recorded as a host_dead event (forced flag and tick) at the point where the harness FIRST notices it,
+      whatever step notices it (tick-boundary probe, a request/no_host call, a tamper step, a resume); a kills entry without a matching
+      host_dead event is a harness row (blocking), never "crash point never fired". invalid_if (a) "armed crash point never fired"
+      counts a crash point as fired when a non-forced host death follows it before the next armed point, from that complete record.
+      exp-h29-001r2 (seed 2925, r3-g5-cand5): INVALID by invalid_if (a) because three CP6_idle deaths that happened were recorded
+      without host_dead events (ATTRIBUTION.md, DIAGNOSIS.md); every class was 0 for both variants. AUTHOR DECISION (2026-10-15): fix
+      the recording and repeat on a new candidate with the NEW seed 2926; the evidence stays committed unchanged; seeds 2922/2923 stay
+      reserved for attempts 2 and 3.
