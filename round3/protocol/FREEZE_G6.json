@@ -1,6 +1,6 @@
 {
   "recorded_at": "2026-10-15",
-  "note": "Gate 6 frozen design (tag r3-g6-freeze), before any Gate 6 implementation and before the task corpus is authored. Manifest files created later (P1h opplane, overlay generator, sealed-corpus.json, judge/evaluator, machinery scope file) are added in the commits that create them.",
+  "note": "Gate 6 frozen design (tag r3-g6-freeze), before any Gate 6 implementation and before the task corpus is authored. Manifest files created later (P1h opplane, overlay generator, sealed-corpus.json, judge/evaluator, machinery scope file) are added in the commits that create them. 2026-10-15: P1h pre-seal files added (TASK-CORPUS-SPEC s5 S1): schema, overlay, rules, validator, generator, operator plane.",
   "files": {
     "spec/protections/PROT-H30.md": "033bd4663096ae849a907e62dd1f5f9722cf141f2fc9f770607b802502158062",
     "spec/gate6/ORACLE-AND-HARNESS-G6.md": "0b5ebd4c6bdb2be7adbf219d2910f2136fdd47aa9b15c68e8d125dcf5fc43e87",
@@ -13,6 +13,15 @@
     "threat_model/security_invariants.json": "227caa08dfcbbcc9ad9546141a0be6765d8bb8a7680e520aa789afb4d89bd9c2",
     "threat_model/survivability_envelope.json": "b97048a68e26c69f56d4ee10a9e966f698c62cf760846a5bc403ff30f283658d",
     "hypotheses/h30/contract.json": "4cd783d08f3f3d5367da559e4c28010e3ea6bebdf6ae242e039fbc35c3dbb415",
-    "baselines/FAIRNESS.md": "653a61a34498bf4434b25ccdc9d88766f3b78bf7949754353103b8d39623f690"
+    "baselines/FAIRNESS.md": "653a61a34498bf4434b25ccdc9d88766f3b78bf7949754353103b8d39623f690",
+    "spec/gate6/task.schema.json": "3fd388a3c3acda08885a8f6d55a5737ab28318c5853dd443bf6f34bb3836a94b",
+    "scripts/validate_h30_corpus.py": "18db7d7f01d460aa85aa4a4c1ac9a087fc3224cf8c44eae02d1a7fc7b9289152",
+    "scripts/gen_h30_overlay.py": "ebd1203248983b55a9ecfcd0a44da7cea98d9d615f95e2f174bf8ccf4e6cb5aa",
+    "src/r3_harness/h30/rules.py": "ea23339cdf5de72639b470f99b86ca7d40bb138b87f32ebc686787eb7be98f2d",
+    "src/r3_harness/h30/validate.py": "e5ec163ed9df378b56dde283d50c7bf4e4ed95630907fe51556b178bb6fcd798",
+    "src/r3_harness/h30/overlay_gen.py": "315645d8f239103d4a169894f1420ff6382863043c5a1a74a6a46ba87be1e93e",
+    "src/r3_shared/opplane.py": "3fa8fe9459d6390cc88425baffd4067228eab7008608a4c4d57e7858acae1d36",
+    "spec/gate6/workload-overlay/manufacturing.json": "389db4f94a701462ed84b5c03aa46b5055dae5c231eec9c98b37ca9890e0453d",
+    "spec/gate6/workload-overlay/project.json": "4e041b07723c03ab3685d773468d05a2d9a35e5f41d3de009a74535e92dc1f6b"
   }
 }
