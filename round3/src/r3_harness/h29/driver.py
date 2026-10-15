@@ -81,11 +81,13 @@ class Run:
     def call(self, name: str, *a, **k):
         """-> (CallResult|other|None, err). HostDead -> 'no_reply' and the host is marked dead (a kill is data, not an error)."""
         if self.host is None or not self.host.alive:
+            if self.host is not None:
+                self._died(step=f"call:{name}")                  # G5-E36: a death first noticed by a call on a dead host
             return None, "no_host"
         try:
             return getattr(self.host, name)(*a, **k), None
         except HostDead:
-            self._died()
+            self._died(step=f"call:{name}")
             return None, "no_reply"
         except NotImplementedError as exc:
             self.rec["unsupported"] += 1
@@ -98,12 +100,12 @@ class Run:
         except Exception as exc:  # noqa: BLE001 - a variant exception is data
             return None, f"{type(exc).__name__}: {exc}"
 
-    def _died(self, forced: bool = False) -> None:
+    def _died(self, forced: bool = False, step: str = "") -> None:
         """Record a host death at the CURRENT tick. forced = the harness itself ended a live host (resume / tamper with a live host): that is never
         a crash point firing (G5-E35 B7)."""
         if not self.kills or self.kills[-1].get("resume") is not None:
             self.kills.append({"kill": self.t, "resume": None})
-            self.event("host_dead", kill=self.t, forced=forced)
+            self.event("host_dead", kill=self.t, forced=forced, step=step)      # G5-E36: one death -> exactly one event (guarded by the pending kill)
 
     def kills_pending(self) -> bool:
         return bool(self.kills) and self.kills[-1].get("resume") is None
@@ -192,12 +194,12 @@ class Run:
             self.clock.advance(1)
             self.svc.advance_all(a)
             if self.host is not None and not self.host.alive and not self.kills_pending():
-                self._died()                                      # G5-E35 B7: a death between calls (CP6_idle) is recorded at the tick it is first seen
+                self._died(step="tick_probe")                     # G5-E35 B7: a death between calls (CP6_idle) is recorded at the tick it is first seen
             if self.host is not None and self.host.alive:
                 try:
                     self.host.advance(a)
                 except HostDead:
-                    self._died()
+                    self._died(step="advance")
             self.obs_apply()
 
     # ---- run -----------------------------------------------------------------------------------------------------
@@ -353,7 +355,7 @@ class Run:
             try:
                 self.host.arm(st["point"], st["key"])
             except HostDead:
-                self._died()
+                self._died(step="arm")
         self.event("crash_armed", point=st["point"], key=st["key"])
 
     def s_fault_start(self, st):

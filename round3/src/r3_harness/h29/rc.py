@@ -19,8 +19,10 @@ def do_tamper(r, st) -> None:
     if r.host is not None and r.host.alive:
         if not (r.kills and r.kills[-1].get("resume") is None):
             r.harness_row("tamper_host_alive")      # TamperView is applied while the host is DEAD (F8): kill it first, hard
-            r._died(forced=True)
+            r._died(forced=True, step="tamper")
         r.host.kill()                                # a host already recorded as killed may still be exiting: reap it
+    elif r.host is not None:
+        r._died(step="tamper")                       # G5-E36: dead before the tamper looked (death after a reply): record it now
     rec = services.tamper(st["what"], r.hist_path, r.world_path, r.layout)
     r.event("tamper", **rec)
 
@@ -37,10 +39,12 @@ def resume(r) -> None:
         recorded = bool(r.kills) and r.kills[-1].get("resume") is None
         if not recorded:
             r.harness_row("injection_miss", why="armed crash point never fired", detail="resume with a live host: SIGKILL")
-            r._died(forced=True)
+            r._died(forced=True, step="resume")
         r.host.kill()
+    elif r.host is not None:
+        r._died(step="resume")                       # G5-E36: dead before the resume looked (CP6 death after a reply): event, not just a kills entry
     if not r.kills or r.kills[-1].get("resume") is not None:
-        r.kills.append({"kill": r.t, "resume": None})
+        r.kills.append({"kill": r.t, "resume": None})      # no host at all (never started): a kill without a death event is judged death_unrecorded
     r.kills[-1]["resume"] = r.t
     T, dep_b = r.t, r.dep + "~rc1b"
     copy_dir = r.work / "rc1copy"

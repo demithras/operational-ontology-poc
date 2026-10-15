@@ -5,7 +5,7 @@ returned outcome records and recovery views (compared with the oracle prediction
 from __future__ import annotations
 
 import json
-from collections import defaultdict
+from collections import Counter, defaultdict
 
 from r3_oracle import approvals, extoracle, ops_model
 from r3_oracle import continuity as C
@@ -18,7 +18,7 @@ from . import faults, judge_ext as JE, judge_rec as JR, specs
 CLASSES = ("forbidden_effect", "stale_authority_commit", "stale_authority_after_restart", "effect_outside_scope", "disclosure_leak",
            "unanchored_ack", "tampered_record_trusted", "false_success", "false_reconciled_success", "duplicate_effect", "duplicate_commit",
            "misclassified_dependency_failure", "recovery_nondeterministic", "recovery_divergence", "boundary_not_explicit")
-BLOCKING = ("unsupported", "host_spawn_failure", "harness_exception", "generator_redraw_exhausted", "service_log_unavailable", "observer_log_missing", "anchor_head_unreadable", "world_log_unobserved")
+BLOCKING = ("unsupported", "host_spawn_failure", "harness_exception", "generator_redraw_exhausted", "service_log_unavailable", "observer_log_missing", "anchor_head_unreadable", "world_log_unobserved", "death_unrecorded")
 HARNESS = BLOCKING + ("injection_miss", "call_timeout", "world_lock_timeout", "redeliver_unknown_rid", "tamper_host_alive", "stride_exceeded")
 MIS_KINDS = ("OK", "DENIED", "INVALID", "UNAVAILABLE", "UNKNOWN", "outcome-plane")
 REQ_KINDS = ("request", "redeliver")
@@ -72,6 +72,13 @@ def judge_seq(R: dict, ctx: Ctx) -> dict:
         row["harness"].append(h["row"])
     if R.get("unsupported"):
         row["harness"].append("unsupported")
+    dead = Counter(e.get("kill") for e in R.get("events", []) if e["k"] == "host_dead")      # G5-E36: every kills entry needs its host_dead event
+    for k in R.get("kills", []):
+        if dead[k["kill"]] > 0:
+            dead[k["kill"]] -= 1
+        else:
+            row["harness"].append("death_unrecorded")
+            break
     csl = any(e["k"] == "canonical_state_lost" for e in R.get("events", []))
     if R.get("deploy_error") and not csl and "unsupported" not in row["harness"] and "host_spawn_failure" not in row["harness"]:
         row["harness"].append("host_spawn_failure")
