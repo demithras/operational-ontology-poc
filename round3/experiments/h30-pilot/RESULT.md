@@ -4,7 +4,8 @@ Status: EXPLORATORY (protocol/AUTHOR_DECISIONS_2026-10-16.md). No H30 verdict; A
 
 ## Answer to Q0 (PREREG-step0.md)
 Blast radius CAN differ between the variants, but only through three build-level defects, none of which follows from the
-ontology-vs-conventional architecture. No architectural blast-radius difference was found. The author ruled the three to be bugs to
+ontology-vs-conventional architecture. No architectural blast-radius difference was found by a static reading of round3 HEAD; the
+14 BR-NEUTRAL cells were not verified by code check or test (see Limits), so this is a weak null, not a measurement. The author ruled the three to be bugs to
 fix (AUTHOR_DECISIONS_2026-10-16 s5); they are fixed, so no candidate cell remains for step 1 and the pilot stops here.
 
 | Id | Defect | Variant | Repro (red before fix) | Fix |
@@ -26,6 +27,13 @@ Method validity: the step 0 analysis found the Gate 5 outbox-resubmission differ
   Round 3 suite is not red.
 
 ## Limits
+- Only the CANDIDATE cells were verified (VERIFY-step0.md checks M1-M3). The 14 BR-NEUTRAL cells of step0-report.md rest on the
+  analyst's reading alone. Six are structural (no tamper primitive or no principal in the attacked component, or the attack is a
+  read: A1/A2 prov, A5 obj/ext, A6 disc, A7 disc). Five are code-cited reasoning nobody re-checked (A3 ext, A3 prov, A5 prov,
+  A7 obj, A7 prov). Three rest on H23-H27 gate parity and cap bounds, by the analyst's own note (step0-report.md s5): A3 obj,
+  A6 obj, A6 ext.
+- Scope: round3 HEAD only. The G6 revocation and containment code on the unmerged r3-paladin / r3-conv branches
+  (step0-report.md s6) was not analysed, and containment cost (H30's COST metric, AUTHOR_DECISIONS_2026-10-15) was not asked.
 - M2's window needs no governed call on the conventional service between the publish and the poll (the repro writes the world
   directly); the leak is real but narrow.
 - M3 was reproduced with forged evidence only, not a forged authority `doc`; the fix removes the HistoryStore record as a source
@@ -38,4 +46,5 @@ Method validity: the step 0 analysis found the Gate 5 outbox-resubmission differ
 ## Reading *(model)*
 Under a fair comparison the remaining blast-radius differences were implementation defects in both directions (two in Paladin, one
 in conventional). Nothing here points to an architectural security advantage for the ontology variant; the comparative question is
-answered for blast radius as far as static analysis plus targeted repro can reach: no architectural difference found.
+answered for blast radius only as far as a static reading of HEAD plus targeted repro of the candidate cells reaches: no
+architectural difference found. That is too weak to rule out a Paladin advantage, above all in G6 containment, which was not read.
