@@ -111,16 +111,16 @@ class Ledger:
         with self._lock:
             if self.volatile:
                 for a in self._mem_appr:
-                    if a["fp"] == fp:
+                    if a["fp"] == fp and (verify is None or verify(a)):   # H30-pilot M1: honour the consume-time check
                         self._mem_appr.remove(a)
                         return a["approver"]
                 return None
-            r = self._con.execute("SELECT id,approver FROM approvals WHERE fp=? AND claimed_by IS NULL ORDER BY id LIMIT 1",
-                                  (fp,)).fetchone()
-            if r is None:
-                return None
-            self._con.execute("UPDATE approvals SET claimed_by=? WHERE id=?", (rid, r[0]))
-            return r[1]
+            for r in self._con.execute("SELECT id,approver FROM approvals WHERE fp=? AND claimed_by IS NULL ORDER BY id", (fp,)).fetchall():
+                if verify is not None and not verify({"approver": r[1]}):
+                    continue
+                self._con.execute("UPDATE approvals SET claimed_by=? WHERE id=?", (rid, r[0]))
+                return r[1]
+            return None
 
     def open_approvals(self) -> list[str]:
         """Fingerprints of the single-use approvals neither claimed nor consumed (H29 RECOVERY_VIEW approvals_open)."""

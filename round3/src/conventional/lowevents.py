@@ -26,6 +26,9 @@ class LowEvents:
         with self._lock:
             if self.crashed:
                 return CallResult("UNAVAILABLE", {"reason": "crashed"})
+            gate = self._g5_pregate("read", None)   # H30-pilot M2: decide under the AUTH lease in force, like _low
+            if gate is not None:
+                return gate
             sub = self.authenticate(token)
             if sub is None:
                 return CallResult("DENIED", {"reason": "invalid_token"})
@@ -50,6 +53,9 @@ class LowEvents:
         with self._lock:
             if self.crashed:
                 return CallResult("UNAVAILABLE", {"reason": "crashed"})
+            gate = self._g5_pregate("read", None)   # H30-pilot M2: decide under the AUTH lease in force, like _low
+            if gate is not None:
+                return gate
             who = self.authenticate(token)
             st = self._subs.get(sub) if isinstance(sub, str) else None
             if who is None or st is None or st["who"] != who:

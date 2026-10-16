@@ -409,10 +409,10 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
                             d["reason"] = "case_required"
                             raise _Rollback(CallResult("DENIED", {"gate": "governance", "reason": "case_required"}))
                 d["evidence"] = self.evidence_for(op, args)
-                self.pend_put(d)   # H29: durable before the COMMIT; a rolled-back request leaves a record the recovery sweep discards
+                self.pend_put(d, th)   # H29: durable before the COMMIT; a rolled-back request leaves a record the recovery sweep discards
                 rec = self.eng.propose(op, args, who, idempotency_key=key)
                 if rec["state"] == "PENDING_APPROVAL":
-                    approver = self.ledger.claim_approval(fp, rid, self._approval_check(op, args))  # durable claim: one approval, one commit
+                    approver = self.ledger.claim_approval(fp, rid, self._approval_check(op, args, d))  # durable claim: one approval, one commit
                     if approver is None:
                         raise _Rollback(CallResult("DENIED", {"gate": "approval", "reason": "approval_required"}))
                     rec = self.eng.approve(rec["exec"], self.booted.principals[approver])
@@ -451,13 +451,17 @@ class Core(G3Mixin, SovMixin, SovProvMixin, G2Mixin):
                 self.ext.box.drop(rid)   # rolled back: no intent without its commit
             return CallResult("UNAVAILABLE", {"reason": f"{type(exc).__name__}: {exc}"})
 
-    def _approval_check(self, op: str, args: dict):
+    def _approval_check(self, op: str, args: dict, d: dict | None = None):
         """R27-5: with an anchor, a stored approval counts only if its decision is anchored with a provable envelope that
-        names the same approver, operation and args, and the anchor does not show it consumed."""
+        names the same approver, operation and args, and the anchor does not show it consumed.
+        H30-pilot M1: at consume the approver must also not be an issuer on any Q..requester edge path that exists now."""
+        excl = self.excluded_approvers(d["sub"], d["obo"]) if d and d.get("sub") is not None else set()
         if self.prov is None:
-            return None
+            return (lambda rec: rec.get("approver") not in excl) if excl else None
 
         def verify(rec: dict) -> bool:
+            if rec.get("approver") in excl:
+                return False
             did = rec.get("decision_id") or ""
             try:
                 a = self.prov.anchored_decision(did)

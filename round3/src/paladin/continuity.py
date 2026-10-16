@@ -148,20 +148,23 @@ class ContinuityMixin:
         from r3_shared.anchor import AnchorError  # noqa: PLC0415
         done = 0
         with c.lock:
-            for key in c.history.keys(c.PEND):
-                rid = key[len(c.PEND):]
-                raw = c.history.get(key)
+            world = c.pend_world()   # H30-pilot M3: the record comes from the world DB; the HistoryStore copy is attacker-reachable, never read
+            hist = {k[len(c.PEND):] for k in c.history.keys(c.PEND)}
+            for rid in sorted(set(world) | hist):
+                key = c.PEND + rid
                 try:
-                    rec = json.loads(raw) if raw else None
+                    rec = json.loads(world[rid]) if rid in world else None
                 except ValueError:
                     rec = None
                 mark = self._commit_mark(rid)
-                if rec is None or mark is None:
-                    c.history.delete(key)   # the transaction never committed (or the record is unusable): nothing to anchor
+                if mark is None:
+                    c.history.delete(key)   # the transaction never committed: nothing to anchor
                     continue
+                if rec is None:
+                    continue   # committed but no world-bound record: left unresolved (never rebuilt from the HistoryStore)
                 try:
                     if c.prov.anchored_decision(rid) is not None:
-                        c.history.delete(key)
+                        c.pend_drop(rid)
                         continue
                 except (AnchorError, DependencyUnavailable):
                     break
