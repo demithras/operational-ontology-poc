@@ -307,16 +307,37 @@ class G2Mixin:
     # ---- H29 / G5-E12: the decision of a commit is journaled BEFORE the world COMMIT so a lost anchor entry can be completed later ----
     PEND = "led/pend/"
 
-    def pend_put(self, d: dict) -> None:
-        """Durable record of everything the missing anchor entry needs (the pre-commit evidence and document cannot be re-read after the fact)."""
+    _PEND_DDL = ("CREATE TABLE IF NOT EXISTS pal_pend(request_id TEXT PRIMARY KEY, rec_json TEXT NOT NULL, "
+                 "anchored INTEGER NOT NULL DEFAULT 0)")
+
+    def pend_put(self, d: dict, th=None) -> None:
+        """Durable record of everything the missing anchor entry needs (the pre-commit evidence and document cannot be re-read after the fact).
+        H30-pilot M3: the copy anchor completion trusts lives in the WORLD DB, written in the commit's own transaction (rolled back with it);
+        the HistoryStore copy is only a hint an A6 attacker can edit."""
         if not getattr(self, "h29", False) or self.prov is None or not isinstance(d.get("rid"), str):
             return
         rec = {k: d[k] for k in ("kind", "sub", "obo", "op", "args", "rid", "art_op", "path", "evidence", "doc")}
-        self.history.put(self.PEND + d["rid"], json.dumps(rec, sort_keys=True).encode())
+        raw = json.dumps(rec, sort_keys=True)
+        h = th if th is not None else self._svc
+        h._con.execute(self._PEND_DDL)
+        h._con.execute("INSERT OR REPLACE INTO pal_pend(request_id, rec_json, anchored) VALUES(?,?,0)", (d["rid"], raw))
+        self.history.put(self.PEND + d["rid"], raw.encode())
+
+    def pend_world(self) -> dict:
+        """request_id -> journal record (as stored in the world DB) of every commit not yet confirmed as anchored."""
+        try:
+            rows = self._svc._con.execute("SELECT request_id, rec_json FROM pal_pend WHERE anchored=0").fetchall()
+        except Exception:  # noqa: BLE001 - no table yet: nothing was ever journaled
+            return {}
+        return dict(rows)
 
     def pend_drop(self, rid: Any) -> None:
         if getattr(self, "h29", False) and self.prov is not None and isinstance(rid, str):
             self.history.delete(self.PEND + rid)
+            try:
+                self._svc._con.execute("UPDATE pal_pend SET anchored=1 WHERE request_id=?", (rid,))
+            except Exception:  # noqa: BLE001 - no table / world busy: the row is re-checked against the anchor next pass
+                pass
 
     def guard_history(self, rid: str) -> CallResult | None:
         """R27-5: a request id the anchor knows as a committed decision, but whose idempotency record is gone, never commits twice."""

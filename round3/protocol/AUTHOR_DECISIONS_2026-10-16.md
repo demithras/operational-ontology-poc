@@ -14,3 +14,7 @@ against the strong conventional baseline - stays open. Author chose (AskUserQues
 4. Step 1 execution: review the unmerged Gate 6 WIP branches (r3-harness 46a5151, r3-paladin 0ec5166, r3-conv 95f1b6b,
    r3-legit af66706) with known-negative and mutation checks first, then run real attacks on both variants. No hand-traced
    blast radius is reported as a measurement.
+5. Step 0 found three blast-radius differences (experiments/h30-pilot/VERIFY-step0.md). Author ruling: they are BUGS TO FIX in the
+   defective variant, not architectural properties; step 1 (real incidents) is not run. Erratum for M1: PROT-H24:67-68 "at the
+   approval's commit point" is read as the moment the approval is CONSUMED by the approved request's commit (the stricter reading;
+   conventional already did this). Result and limits: experiments/h30-pilot/RESULT.md.
