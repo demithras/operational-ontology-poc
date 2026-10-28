@@ -1,0 +1,76 @@
+{
+  "id": "H32",
+  "title": "Cross-repo blockers are surfaced before an agent spends a run",
+  "claim": "A cross-repository dependency view (invariant C3 dependency respect) surfaces an open blocker in another repository before an agent starts an item (fault F3), and does so strictly better than beads dependencies inside each repository.",
+  "null_hypothesis": "Per-repository beads dependencies, possibly with cross-references written by hand, already stop agents from starting items with open cross-repo blockers as often as the cross-repo view does.",
+  "rivals": [
+    "The conventional stack already does this: beads dependencies plus a cross-repo reference convention plus a small script that reads both trackers gives the same surfacing.",
+    "The advantage comes only from seeding blockers the baseline convention was never told about (an unfair seed).",
+    "The cross-repo view surfaces blockers late or noisily, so agents still waste runs.",
+    "With two repos the cross-repo graph is too small to matter; the pilot cannot show a gain."
+  ],
+  "mechanism": "A single dependency graph spans all repositories; before an agent is offered an item, the graph is checked for open blockers in any repository and the item is withheld with the blocker named.",
+  "scope": "Pilot: 2 repositories, 2 agents, seeded fault F3 (blocker in the other repository). Gated effects are out of scope.",
+  "predictions": [
+    "Under seeded F3, the treatment withholds every blocked item before a run starts and starts 0 items on a known open cross-repo blocker.",
+    "The conventional arm starts a measurable number of blocked items unless its hand-written convention happens to cover the case.",
+    "Wasted agent runs on blocked items drop by at least thresholds.H32.max_wasted_agent_runs_ratio_vs_baseline relative to the baseline."
+  ],
+  "falsifiers": [
+    "The conventional arm starts 0 blocked items across all seeded F3 cases.",
+    "The treatment starts any item whose cross-repo blocker was open and knowable at the start.",
+    "The treatment's surfacing disappears when the baseline gets an equal-effort cross-repo script."
+  ],
+  "experiment": {
+    "summary": "Seed cross-repo blockers (open, then later closed) in both arms, offer the same items to the same agents, and let an independent observer decide from source-host and tracker state whether the blocker was open when work started.",
+    "steps": [
+      "Freeze the seeded blocker set, including blockers that close mid-run and blockers that were never written down as a dependency anywhere in the baseline arm's convention.",
+      "Run the baseline arm first and record starts on open blockers and wasted runs.",
+      "The comparative thresholds are already fixed by the author (thresholds.json, comparative_basis); the baseline pilot only checks for headroom and does not change them.",
+      "Pilot one item per arm; check treatment graph calls per item and the file-system reach of the control arm.",
+      "Run both arms on the identical fault set under thresholds.fault_sampling: start at thresholds.H32.min_seeded_faults_per_class (initial count, not the final count) seeded F3 cases, then add pre-registered injector batches until the baseline has missed at least min_baseline_misses_for_verdict faults of the class, capped at max_per_class; the stopping point depends on baseline misses only.",
+      "Judge start-versus-blocker order by the observer from timestamps in the source host and tracker, never from agent reports."
+    ],
+    "minimum_runs": 20
+  },
+  "oracle": "Independent observer reconstructing, from source-host and tracker timelines, whether each blocker was open at the instant work on the blocked item started; no code from either arm is imported.",
+  "baseline": "beads dependencies inside each repository, plus a cross-repo reference convention and an equal-effort script that reads both trackers, plus GitHub issue links.",
+  "required_evidence": [
+    "seeded-blocker-manifest.json",
+    "observer-blocker-timeline.json",
+    "starts-on-open-blocker.json",
+    "wasted-runs-comparison.json",
+    "manipulation-check.json",
+    "control-arm-fs-reach-report.json"
+  ],
+  "evaluator": {
+    "support_if": [
+      "Treatment starts at most thresholds.H32.max_starts_on_known_open_cross_repo_blocker items on an open blocker (0).",
+      "Treatment surfacing beats the baseline by at least thresholds.H32.min_blocker_surfacing_advantage_over_baseline_pp, an author-fixed value (fixed before any run, not derived from the baseline pilot). The bar is read through thresholds.headroom_rule: the absolute bar applies while the baseline rate is at most thresholds.headroom_rule.absolute_bar_applies_when_baseline_at_most; above it the treatment must close at least thresholds.headroom_rule.gap_closure_min_fraction of the baseline's misses, (treatment - baseline) / (1 - baseline).",
+      "Wasted-run ratio is within thresholds.H32.max_wasted_agent_runs_ratio_vs_baseline."
+    ],
+    "reject_if": [
+      "The baseline starts no item on an open blocker either (parity: no advantage measured). Exception: when the baseline rate is at least thresholds.headroom_rule.ceiling_when_baseline_at_least this is CEILING, not REJECTED (see inconclusive_if).",
+      "The treatment starts any item on a known open cross-repo blocker."
+    ],
+    "inconclusive_if": [
+      "thresholds.fault_sampling was not followed (initial count thresholds.H32.min_seeded_faults_per_class, batches, cap), or the class ended below the minimum baseline misses at the cap (record CEILING), or both arms pass every gate and no graded metric ranks them.",
+      "The baseline rate on this class is at least thresholds.headroom_rule.ceiling_when_baseline_at_least (ceiling): record CEILING (thresholds.headroom_rule.ceiling_record) with reason \"CEILING\", never REJECTED; the class counts as neither an advantage nor a rejection."
+    ],
+    "invalid_if": [
+      "The oracle trusts agent self-report or candidate logs about when work started or when the blocker closed.",
+      "The baseline lacks a control that is available in plain GitHub or beads (strawman), such as cross-repo links or a script reading both trackers.",
+      "The treatment was not used: the manipulation check shows no dependency-graph calls per item (thresholds.common.treatment_calls_per_item_must_exceed).",
+      "The seeded blockers were chosen after seeing the baseline's convention."
+    ]
+  },
+  "python_hypothesis_role": {
+    "level": "SUPPORTING",
+    "strategy": "Generate random dependency graphs across two or more repositories with open and closed blockers and check that the withheld set equals the set of items with an open transitive blocker in any repository.",
+    "mutation_proof": "Plant a graph that ignores edges across repositories and one that reads a stale blocker status; both must be killed."
+  },
+  "upstream_dependencies": [],
+  "stop_conditions": [
+    "If the baseline withholds every seeded blocked item in the pilot, record the result and stop H32."
+  ]
+}

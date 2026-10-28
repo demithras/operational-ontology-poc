@@ -1,0 +1,80 @@
+{
+  "id": "H31",
+  "title": "Leases catch double claims and stale claims",
+  "claim": "A lease service in front of the work queue (invariants C1 single ownership and C2 liveness) detects and prevents double claims (F1) and detects and releases stale claims (F2) strictly better than the conventional stack of `bd ready` plus GitHub assignees, measured by an independent observer of who actually worked on each item.",
+  "null_hypothesis": "The conventional coordination stack (beads status in_progress plus assignee, bd ready, GitHub assignees, and a reconciliation script of equal effort) catches double and stale claims as well as the lease service does; a lease adds machinery without a measurable gain.",
+  "rivals": [
+    "The conventional stack already does this: bd update --status=in_progress with an assignee, plus a reconciliation script, gives single ownership and stale detection within the same bound.",
+    "The lease advantage appears only because the baseline reconciliation script was written with less effort than the lease service.",
+    "The lease service catches faults only by refusing more legitimate claims (higher false-alarm rate), not by being more correct.",
+    "Double claims are rare in practice with two agents and one repo, so the pilot cannot tell the arms apart."
+  ],
+  "mechanism": "An atomic claim operation grants one lease per work item with an expiry and a heartbeat; a second claim on a live lease is refused and a lease without heartbeat past the frozen bound is released by the service, not by the agent that holds it.",
+  "scope": "Pilot: 2 repositories, 2 worker agents, seeded faults F1 and F2 on ready work items. Not in scope: gated effects (H33), outcome truth (H34).",
+  "predictions": [
+    "Under seeded F1, the lease arm shows 0 items worked by two agents at once; the conventional arm shows a measurable non-zero count or the same zero.",
+    "Under seeded F2, the lease arm releases every stale lease within thresholds.H31.stale_lease_release_bound_seconds; the conventional arm releases only after a human or the reconciliation script notices.",
+    "The lease arm's false-alarm rate on healthy, slow agents stays within thresholds.H31.max_false_alarm_ratio_vs_baseline."
+  ],
+  "falsifiers": [
+    "The conventional arm detects and resolves every seeded F1 and F2 fault within the frozen bound, so there is nothing for the lease to add.",
+    "The lease arm lets any double claim or any unreleased stale lease through.",
+    "The lease arm's gain disappears when the baseline reconciliation script gets equal effort and the same heartbeat input."
+  ],
+  "experiment": {
+    "summary": "Seed F1 and F2 into the same sequence of work items for both arms, run the same two worker agents, and let an independent observer (source-host API: who pushed to which branch and when, tracker history) judge ownership and release time.",
+    "steps": [
+      "Freeze the seeded sequences, the stale bound and the observer before any run.",
+      "Run the baseline arm first (beads in_progress, assignee, bd ready, equal-effort reconciliation script) and record detection rate, time to release and false alarms.",
+      "The comparative thresholds are already fixed by the author (thresholds.json, comparative_basis); the baseline pilot only checks for headroom and does not change them.",
+      "Pilot one item per arm, check that the treatment made lease calls (manipulation check) and that the control arm could not read treatment artifacts through the file system.",
+      "Run both arms on the identical fault set under thresholds.fault_sampling: start at thresholds.H31.min_seeded_faults_per_class (initial count, not the final count) per class, then add pre-registered injector batches until the baseline has missed at least min_baseline_misses_for_verdict faults of the class, capped at max_per_class; the stopping point depends on baseline misses only.",
+      "Judge every item by the observer, never by an agent's report or the arm's own log; report a per-class table and the cost of each arm."
+    ],
+    "minimum_runs": 40
+  },
+  "oracle": "Independent observer reading the source-host REST API (commits and branches by author and time) and tracker history to reconstruct, per item, which agents did work and when each lease or assignment ended; it imports no code from either arm.",
+  "baseline": "beads (bd update --status=in_progress with assignee, bd ready, dependencies) plus GitHub assignees plus a reconciliation script of equal effort to the lease service, with the same heartbeat information available.",
+  "required_evidence": [
+    "seeded-fault-manifest.json",
+    "observer-ownership-timeline.json",
+    "per-class-detection-results.json",
+    "stale-release-times.json",
+    "manipulation-check.json",
+    "control-arm-fs-reach-report.json",
+    "cost-record.json"
+  ],
+  "evaluator": {
+    "support_if": [
+      "Treatment: thresholds.H31.max_double_claims_undetected and thresholds.H31.max_stale_leases_unreleased_beyond_bound both hold at 0 on every seeded fault.",
+      "Treatment detection beats the baseline by at least thresholds.H31.min_detection_advantage_over_baseline_pp, an author-fixed value (fixed before any run, not derived from the baseline pilot). The bar is read through thresholds.headroom_rule: the absolute bar applies while the baseline rate is at most thresholds.headroom_rule.absolute_bar_applies_when_baseline_at_most; above it the treatment must close at least thresholds.headroom_rule.gap_closure_min_fraction of the baseline's misses, (treatment - baseline) / (1 - baseline).",
+      "False-alarm ratio is within thresholds.H31.max_false_alarm_ratio_vs_baseline.",
+      "thresholds.fault_sampling was followed: at least thresholds.H31.min_seeded_faults_per_class seeded faults per class (initial count) were run in each arm."
+    ],
+    "reject_if": [
+      "The baseline reaches the same detection and release outcome as the treatment on every seeded fault (parity: no advantage measured). Exception: when the baseline rate is at least thresholds.headroom_rule.ceiling_when_baseline_at_least this is CEILING, not REJECTED (see inconclusive_if).",
+      "The treatment lets any double claim or stale lease through."
+    ],
+    "inconclusive_if": [
+      "thresholds.fault_sampling was not followed (initial count thresholds.H31.min_seeded_faults_per_class, batches, cap), or a class ended below min_baseline_misses_for_verdict baseline misses at the cap (record CEILING), or both arms pass every gate and the graded metric that would rank them was not measured (ceiling: write 'no advantage measured; comparative question open').",
+      "The baseline rate on this class is at least thresholds.headroom_rule.ceiling_when_baseline_at_least (ceiling): record CEILING (thresholds.headroom_rule.ceiling_record) with reason \"CEILING\", never REJECTED; the class counts as neither an advantage nor a rejection."
+    ],
+    "invalid_if": [
+      "The oracle trusts agent self-report or candidate logs instead of the independent observer.",
+      "The baseline lacks a control that is available in plain GitHub or beads (strawman), including an equal-effort reconciliation script.",
+      "The treatment was not used: the manipulation check shows no lease calls per item (thresholds.common.treatment_calls_per_item_must_exceed).",
+      "The control arm read treatment artifacts through the file system and this was not reported."
+    ]
+  },
+  "python_hypothesis_role": {
+    "level": "PRIMARY",
+    "strategy": "RuleBasedStateMachine over claim, heartbeat, expire, kill, retry-after-lost-response and clock-skew rules; invariants C1 and C2 are checked against a pure ownership model after every step, shrinking any violation to a minimal interleaving.",
+    "mutation_proof": "Plant a non-atomic claim, a lease that never expires and a heartbeat that renews a released lease; all must be killed (thresholds.H33.required_mutation_kill_rate is the shared bar)."
+  },
+  "upstream_dependencies": [
+    "H24"
+  ],
+  "stop_conditions": [
+    "If the baseline still has fewer than min_baseline_misses_for_verdict misses at max_per_class after faults are added under thresholds.fault_sampling (pre-registered batches, decided by baseline misses only), record CEILING and stop H31; never add faults after seeing treatment results."
+  ]
+}

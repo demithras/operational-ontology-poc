@@ -1,0 +1,11 @@
+PY ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
+.PHONY: check freeze index
+
+check:
+	$(PY) scripts/check_pack.py
+
+freeze: check
+	$(PY) scripts/freeze_protocol.py
+
+index:
+	$(PY) scripts/build_file_index.py

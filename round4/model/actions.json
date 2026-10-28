@@ -1,0 +1,55 @@
+{
+  "version": "r4-draft-1",
+  "description": "Gated actions. Each names the effect, the independent observer that confirms it, the authority it needs and the evidence it must carry. The pilot gates merge_pr first and grant_access second (H37); revoke_access is the paired release of a grant.",
+  "actions": [
+    {
+      "id": "merge_pr",
+      "effect": "A pull request is merged into its base branch.",
+      "external_observer": "Source-host REST API: pull request state and merge commit SHA, reviews bound to the head SHA, check-runs for the head SHA.",
+      "required_authority": "A merge grant for this agent, repository and base branch, plus an approval from a principal other than the change author on the head SHA being merged.",
+      "required_evidence": ["work item id", "head SHA", "check-run conclusions for every required check on the head SHA", "independent approval bound to the head SHA", "policy version"]
+    },
+    {
+      "id": "deploy_release",
+      "effect": "A release artifact is deployed to an environment.",
+      "external_observer": "Deploy system: deployment record and status for the environment, deployed version or artifact digest.",
+      "required_authority": "A deploy grant for this agent and environment, plus the approval the environment requires from a reviewer other than the requester.",
+      "required_evidence": ["work item id", "release version or artifact digest", "environment approval record", "green check-runs for the released SHA", "policy version"]
+    },
+    {
+      "id": "push_default_branch",
+      "effect": "A commit is added directly to a repository's default branch.",
+      "external_observer": "Source-host REST API: branch ref and commit list of the default branch.",
+      "required_authority": "An explicit push-to-default grant for this agent and repository; the default is no grant.",
+      "required_evidence": ["work item id", "commit SHA", "grant id", "policy version"]
+    },
+    {
+      "id": "close_work_item",
+      "effect": "A work item is marked closed in the coordination store.",
+      "external_observer": "Source-host REST API for the PR and its check-runs, and the deploy system when the claimed outcome includes a deploy; the tracker is read back.",
+      "required_authority": "Close authority for this item; the closing principal is not only the agent that did the work.",
+      "required_evidence": ["claimed outcome (PR, SHA, version)", "observer confirmation of that outcome", "work item id", "policy version"]
+    },
+    {
+      "id": "write_external_tracker",
+      "effect": "A comment, status change or ticket is written to an external tracker.",
+      "external_observer": "The external tracker's own API, read back after the write.",
+      "required_authority": "A recorded human go-ahead for this write, target ticket and content class.",
+      "required_evidence": ["go-ahead record id", "target ticket", "work item id", "policy version"]
+    },
+    {
+      "id": "grant_access",
+      "effect": "An AI agent (never a human) receives a scoped, time-bound credential or role on a system, database or log store (the pilot uses Postgres and OpenSearch).",
+      "external_observer": "The target system's real permission state (Postgres: pg_roles, pg_auth_members, has_table_privilege; OpenSearch: the security plugin's role and role-mapping API) PLUS an attempted-use probe with the issued credential; never the grant record.",
+      "required_authority": "A request naming the agent, target, scope and duration, plus an approval from a principal other than the requesting agent, or a policy that covers exactly that scope.",
+      "required_evidence": ["work item id", "requested scope", "authorized scope", "expiry", "independent approval or policy id", "policy version"]
+    },
+    {
+      "id": "revoke_access",
+      "effect": "A previously granted credential or role is removed from the target system, on request or at expiry.",
+      "external_observer": "The target system's real permission state (Postgres: pg_roles, pg_auth_members, has_table_privilege, and pg_stat_activity for open sessions of the granted role; OpenSearch: the security plugin's role and role-mapping API) PLUS an attempted-use probe with the credential, covering both a new connection and a session opened before revocation; never the grant record.",
+      "required_authority": "The grant's own expiry, or a revoke by a principal other than the agent holding the grant.",
+      "required_evidence": ["grant id", "reason (expiry or revoke)", "time of revoke", "policy version"]
+    }
+  ]
+}

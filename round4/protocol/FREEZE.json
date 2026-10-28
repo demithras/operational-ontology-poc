@@ -1,0 +1,76 @@
+{
+  "stage": "protocol",
+  "frozen_at": "2026-10-28T13:49:02.238350+00:00",
+  "protocol_sha256": "dd6df2a32fe99c0aabc0e599c92142173c854a1a8a6ac7bd2af309f6f6909ea5",
+  "files": [
+    {
+      "path": "protocol/thresholds.json",
+      "sha256": "2234fdae96aa7604ac8c8f849d9de8ceb8e3f03f3d211d46f94c36b24f187fd2"
+    },
+    {
+      "path": "protocol/UPSTREAM_EVIDENCE.json",
+      "sha256": "737735e351861289e28066426bd5c36563fcc944e8b2fbf24ac2d5d6467cdbaf"
+    },
+    {
+      "path": "protocol/preregistration.md",
+      "sha256": "3b1ff1fdc3009ad45ed2c8f47e0e0d1c5002ef220a40fed749742ef34373f0b6"
+    },
+    {
+      "path": "protocol/AUTHOR_DECISIONS_2026-10-28.md",
+      "sha256": "b737332a5443b39a8e129fc1f6bd2a52f2e690dbaff13c0e9fb591c34c04e6a3"
+    },
+    {
+      "path": "protocol/OPEN_QUESTIONS.md",
+      "sha256": "2904412820be44d1bf7b4c5407bdd12b7cb9a7b7c1f10e6a5a1be496a0af57dd"
+    },
+    {
+      "path": "baselines/FAIRNESS.md",
+      "sha256": "6fbd97f7754d0ef48e26d6eb0410ea97569f65496adc9e2cb53c1d291ec55ca7"
+    },
+    {
+      "path": "docs/04_measurement_model.md",
+      "sha256": "6b9e1f0ab3284b0126d6a448650df2b34c2a27462bb8b8e40b403ec938859d4e"
+    },
+    {
+      "path": "model/agent_ops_invariants.json",
+      "sha256": "7a0920bd99092893692c2807541817fe8bec39044bfab15400883e5d0b8aee76"
+    },
+    {
+      "path": "model/fault_classes.json",
+      "sha256": "7b9d26af228b75038ca8d209c71ad43b6e7661814f73f6e5d0899bc27122e1b1"
+    },
+    {
+      "path": "model/actions.json",
+      "sha256": "f9c4c3e05c6ccced4eaf295f8227afc592ea9594eaa87afc3a3b62ce9940bd07"
+    },
+    {
+      "path": "hypotheses/h31/contract.json",
+      "sha256": "dc537b8395601977e4b6088e25cd0c8566deb9a421b558d1b1249dc58fed9a5b"
+    },
+    {
+      "path": "hypotheses/h32/contract.json",
+      "sha256": "0cb78d710f032e4464cd8c268322f97e721617e068bfdac5031cf1fabd64ddf4"
+    },
+    {
+      "path": "hypotheses/h33/contract.json",
+      "sha256": "3b6370328fc83c46a851ce63ea0530552cc3712aa349f6b98b882aa7773985b6"
+    },
+    {
+      "path": "hypotheses/h34/contract.json",
+      "sha256": "6b1cbac28ccd36053e828845e6b824d739724bf4d56eed2d8a0758af597bce3c"
+    },
+    {
+      "path": "hypotheses/h35/contract.json",
+      "sha256": "b393898f125fa71f2a771a270f79745f82fd9111dacedf613bba6cec7925e693"
+    },
+    {
+      "path": "hypotheses/h36/contract.json",
+      "sha256": "722ea974cf6c51d1ff95941bc01fa1a1a2dd2dad3a3e175b275dfea036c06786"
+    },
+    {
+      "path": "hypotheses/h37/contract.json",
+      "sha256": "c40b8f036a36c32bbf6dab3f2e588bbccc26efe19d470ade41f2c400c3f0e403"
+    }
+  ],
+  "warning": "Any material post-reveal change requires a new experiment version and refreeze."
+}
