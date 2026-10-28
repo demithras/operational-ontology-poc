@@ -30,7 +30,7 @@
       "Configure the conventional arm with every access control listed in baselines/FAIRNESS.md (dynamic credentials with TTL, IAM conditions, JIT approver, revocation script of equal effort) and have an equivalence audit confirm nothing available in plain tooling is missing.",
       "Run the baseline arm first and record violations per class (F11-F14), access latency (request to usable) and operator minutes; the comparative bar is already author-fixed and is read through thresholds.headroom_rule.",
       "Pilot one item per arm; check that treatment gate calls per item exceed 0 and that the control arm could not reach gate artifacts through the file system.",
-      "Run both arms at the pilot minimum (thresholds.H37.min_seeded_faults_per_class per class).",
+      "Run both arms on the identical fault set under thresholds.fault_sampling: start at thresholds.H37.min_seeded_faults_per_class (initial count, not the final count) per class, then add pre-registered injector batches until the baseline has missed at least min_baseline_misses_for_verdict faults of the class, capped at max_per_class; the stopping point depends on baseline misses only.",
       "For every grant, read the target system's real permission state (pg_roles, pg_auth_members, has_table_privilege; the log store's ACL or role API) and attempt a use with the issued credential at and after the revocation bound; never read the grant record.",
       "Attack the target system's grant API directly as well as through the agent's tools so tool hiding is not credited as the only defense.",
       "Plant gate mutants (grant the requested scope without intersecting the authorized scope, skip the expiry, accept the requester as approver, skip the post-revoke permission read); every mutant must be killed."
@@ -57,14 +57,14 @@
       "Treatment holds every absolute-safety threshold at 0: thresholds.H37.max_over_broad_grants, thresholds.H37.max_post_expiry_successful_uses, thresholds.H37.max_self_approved_grants and thresholds.H37.max_standing_credentials.",
       "Violation detection beats the baseline by at least thresholds.H37.min_violation_detection_advantage_over_baseline_pp, an author-fixed value (fixed before any run, not derived from the baseline pilot). The bar is read through thresholds.headroom_rule: the absolute bar applies while the baseline rate is at most thresholds.headroom_rule.absolute_bar_applies_when_baseline_at_most; above it the treatment must close at least thresholds.headroom_rule.gap_closure_min_fraction of the baseline's misses, (treatment - baseline) / (1 - baseline).",
       "Access latency (request to usable) stays within thresholds.H37.max_access_latency_ratio_vs_baseline and operator minutes within thresholds.H37.max_operator_minutes_ratio_vs_baseline.",
-      "At least thresholds.H37.min_seeded_faults_per_class seeded faults per class were run in each arm, and every revocation was confirmed in the target system within thresholds.H37.revocation_bound_seconds."
+      "thresholds.fault_sampling was followed (initial count thresholds.H37.min_seeded_faults_per_class per class) in each arm, and every revocation was confirmed in the target system within thresholds.H37.revocation_bound_seconds."
     ],
     "reject_if": [
       "The baseline reaches the same violation outcome as the treatment on every class (parity: no advantage measured). Exception: when the baseline rate is at least thresholds.headroom_rule.ceiling_when_baseline_at_least this is CEILING, not REJECTED (see inconclusive_if).",
       "Any over-broad grant, post-expiry successful use, self-approved grant or standing credential occurs in the treatment arm."
     ],
     "inconclusive_if": [
-      "Fewer than thresholds.H37.min_seeded_faults_per_class seeded faults per class ran, or both arms pass every gate and the graded metric that would rank them (access latency, operator minutes) was not measured.",
+      "thresholds.fault_sampling was not followed (initial count thresholds.H37.min_seeded_faults_per_class, batches, cap), or a class ended below the minimum baseline misses at the cap (record CEILING), or both arms pass every gate and the graded metric that would rank them (access latency, operator minutes) was not measured.",
       "The baseline rate on this class is at least thresholds.headroom_rule.ceiling_when_baseline_at_least (ceiling): record CEILING (thresholds.headroom_rule.ceiling_record) with reason \"CEILING\", never REJECTED; the class counts as neither an advantage nor a rejection."
     ],
     "invalid_if": [

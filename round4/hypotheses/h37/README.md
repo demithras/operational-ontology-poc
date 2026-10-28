@@ -39,7 +39,7 @@ Seed F11-F14 against both arms on one synthetic Docker Postgres and one Docker l
 2. Configure the conventional arm with every access control listed in baselines/FAIRNESS.md (dynamic credentials with TTL, IAM conditions, JIT approver, revocation script of equal effort) and have an equivalence audit confirm nothing available in plain tooling is missing.
 3. Run the baseline arm first and record violations per class (F11-F14), access latency (request to usable) and operator minutes; the comparative bar is already author-fixed and is read through thresholds.headroom_rule.
 4. Pilot one item per arm; check that treatment gate calls per item exceed 0 and that the control arm could not reach gate artifacts through the file system.
-5. Run both arms at the pilot minimum (thresholds.H37.min_seeded_faults_per_class per class).
+5. Run both arms on the identical fault set under thresholds.fault_sampling: initial count thresholds.H37.min_seeded_faults_per_class per class, then pre-registered batches until the baseline has missed enough, capped.
 6. For every grant, read the target system's real permission state (pg_roles, pg_auth_members, has_table_privilege; the log store's ACL or role API) and attempt a use with the issued credential at and after the revocation bound; never read the grant record.
 7. Attack the target system's grant API directly as well as through the agent's tools so tool hiding is not credited as the only defense.
 8. Plant gate mutants (grant the requested scope without intersecting the authorized scope, skip the expiry, accept the requester as approver, skip the post-revoke permission read); every mutant must be killed.

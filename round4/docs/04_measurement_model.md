@@ -54,3 +54,4 @@ A fixed +20 bar is unreachable by construction above 0.80. A CEILING class count
 - Treatment calls per item above 0 (one item per arm before any fan-out).
 - The control arm's file-system reach to treatment artifacts is checked before and reported after the run.
 - Each seeded fault is recorded in a manifest before the run; judging uses the manifest and the observer only.
+- Fault count is adaptive (`thresholds.fault_sampling`): 20 per class, then batches of 20 from the frozen injector with pre-registered seeds, until the baseline has missed at least 10 of the class or 200 are reached. The stopping point reads baseline misses only, never treatment results. Both arms run the identical fault set. The opus adversary cases are reported separately.

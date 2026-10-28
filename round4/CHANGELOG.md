@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-28 - Adaptive seeded-fault count
+
+- Recorded the follow-up decision: 20 per class was the orchestrator's number, not the author's. New rule `thresholds.fault_sampling`: start at 20, add pre-registered batches of 20 until the baseline has missed at least 10 of the class, cap 200, CEILING below the minimum at the cap.
+- H31-H34 and H37 contracts and READMEs reference `thresholds.fault_sampling`; `min_seeded_faults_per_class` is the initial count only.
+- `check_pack.py` requires `fault_sampling` with the exact values and has a negative control.
+
 ## 2026-10-28 - Access grants (H37) and headroom rule
 
 - Recorded the follow-up author decisions (agents-only access grants, new H37, `grant_access` as the second pilot action, headroom rule).

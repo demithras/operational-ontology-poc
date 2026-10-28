@@ -15,5 +15,6 @@
 - [ ] Every threshold has a fixed value (comparative ones are the author's minimum material effect, not derived from the baseline pilot).
 - [ ] `baselines/FAIRNESS.md` lists every plain GitHub and beads control available.
 - [ ] The pilot scope (2 repos, 2 agents, 2 gated actions: merge_pr and grant_access) and the stop rule are acceptable.
+- [ ] The adaptive fault count (`thresholds.fault_sampling`: 20 initial, batches of 20, at least 10 baseline misses, cap 200, CEILING below the minimum at the cap) is acceptable.
 - [ ] Every item in `protocol/OPEN_QUESTIONS.md` is answered and checked.
 - [ ] Only after review: `make check`, `make freeze`, commit `protocol/FREEZE.json`, then run the baseline pilot.

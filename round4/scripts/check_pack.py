@@ -21,6 +21,14 @@ HEADROOM = {
     "ceiling_when_baseline_at_least": 0.95,
     "ceiling_record": "CEILING: no advantage measured (not REJECTED)",
 }
+FAULT_SAMPLING = {
+    "initial_per_class": 20,
+    "batch_size": 20,
+    "min_baseline_misses_for_verdict": 10,
+    "max_per_class": 200,
+    "stop_on": "baseline misses only",
+    "below_min_at_cap": "CEILING",
+}
 H37_THRESHOLDS = {
     "min_seeded_faults_per_class": 20,
     "max_over_broad_grants": 0,
@@ -155,6 +163,12 @@ def check_thresholds(errors: list[str], contracts: list[dict]) -> None:
             errors.append(f"thresholds.json missing section {sec}")
     if thr.get("headroom_rule") != HEADROOM:
         errors.append("thresholds.headroom_rule missing or not exactly the four author-fixed keys and values")
+    if thr.get("fault_sampling") != FAULT_SAMPLING:
+        errors.append("thresholds.fault_sampling missing or not exactly the author-fixed values")
+    for c in contracts:
+        if c["id"] in ("H31", "H32", "H33", "H34", "H37"):
+            if "thresholds.fault_sampling" not in json.dumps(c):
+                errors.append(f"{c['id']}: contract must reference thresholds.fault_sampling")
     if thr.get("H37") != H37_THRESHOLDS:
         errors.append("thresholds.H37 missing or not exactly the author-fixed values")
     for sec in ("headroom_rule",):
@@ -281,6 +295,7 @@ def self_test() -> int:
         "remove headroom_rule": mutate_thr(lambda d: d.pop("headroom_rule")),
         "change headroom ceiling value": mutate_thr(lambda d: d["headroom_rule"].update(ceiling_when_baseline_at_least=0.9)),
         "null a threshold": mutate_thr(lambda d: d["H31"].update(max_double_claims_undetected=None)),
+        "remove fault_sampling": mutate_thr(lambda d: d.pop("fault_sampling")),
         "remove H37 thresholds": mutate_thr(lambda d: d.pop("H37")),
         "drop conventional-stack rival from H31": mutate_contract("h31", lambda d: d.update(rivals=["a rival that is something else", "another different rival"])),
         "H35 support_if stops citing headroom_rule": mutate_contract("h35", lambda d: d["evaluator"].update(support_if=[s.replace("thresholds.headroom_rule", "thresholds.x") for s in d["evaluator"]["support_if"]])),

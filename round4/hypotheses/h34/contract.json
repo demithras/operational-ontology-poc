@@ -30,7 +30,7 @@
       "Run the baseline arm first (agent self-report plus human spot check at the 10% sampling rate thresholds.H34.baseline_spot_check_rate, with a reconciliation script of equal effort) and record false-done closures and operator minutes.",
       "The comparative thresholds are already fixed by the author (thresholds.json, comparative_basis); the baseline pilot only checks for headroom and does not change them.",
       "Pilot one item per arm; check treatment observer calls per item and the file-system reach of the control arm.",
-      "Run both arms at the pilot minimum (thresholds.H34.min_seeded_faults_per_class per form).",
+      "Run both arms on the identical fault set under thresholds.fault_sampling: start at thresholds.H34.min_seeded_faults_per_class (initial count, not the final count) per false-done form, then add pre-registered injector batches until the baseline has missed at least min_baseline_misses_for_verdict faults of the class, capped at max_per_class; the stopping point depends on baseline misses only.",
       "Include an observer-outage condition to test the explicit unavailable state.",
       "Judge every closure from the real source-host and deploy state, never from the agent's report or either arm's log."
     ],
@@ -62,7 +62,7 @@
       "Any false done closes in the treatment arm."
     ],
     "inconclusive_if": [
-      "Fewer than thresholds.H34.min_seeded_faults_per_class cases per false-done form ran, or both arms pass every gate and operator minutes (the graded metric) were not measured.",
+      "thresholds.fault_sampling was not followed (initial count thresholds.H34.min_seeded_faults_per_class per false-done form, batches, cap), or a form ended below the minimum baseline misses at the cap (record CEILING), or both arms pass every gate and operator minutes (the graded metric) were not measured.",
       "The baseline rate on this class is at least thresholds.headroom_rule.ceiling_when_baseline_at_least (ceiling): record CEILING (thresholds.headroom_rule.ceiling_record) with reason \"CEILING\", never REJECTED; the class counts as neither an advantage nor a rejection."
     ],
     "invalid_if": [
@@ -81,6 +81,6 @@
     "H28"
   ],
   "stop_conditions": [
-    "If the baseline catches every seeded F4 case in the pilot, record the result and stop H34."
+    "If the baseline still has fewer than min_baseline_misses_for_verdict misses at max_per_class after F4 faults are added under thresholds.fault_sampling (pre-registered batches, decided by baseline misses only), record CEILING and stop H34."
   ]
 }

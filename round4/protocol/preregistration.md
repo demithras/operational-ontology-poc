@@ -45,6 +45,10 @@ Before any fan-out, pilot **one item per arm**. The treatment arm must show gate
 
 The control arm can read treatment artifacts (gate code, lease store, provenance records, seeded manifests) through the file system. Before the run, check for this (separate working directories, read permissions, no shared mounts). After the run, report in `control-arm-fs-reach-report.json` whether any control run read such a file. If it did, flag those runs and report results with and without them. "The fact came from the treatment" is not value if the control reached it anyway.
 
+## Fault sampling
+
+The number of seeded faults per class follows `thresholds.fault_sampling`: 20 initially, then pre-registered batches of 20 from the frozen injector, until the baseline arm has missed at least 10 faults of that class, capped at 200. The stopping rule depends only on baseline misses, never on treatment results. All batch seeds are pre-registered before the first run. A class with fewer than 10 baseline misses at the cap is recorded as CEILING (no advantage measured, not REJECTED).
+
 ## After freeze
 
 Any material change after evidence reveal creates a new experiment version and a new freeze. Never edit thresholds, fault-class membership or the cost model in place after seeing results.

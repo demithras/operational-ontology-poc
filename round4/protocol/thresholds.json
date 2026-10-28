@@ -11,6 +11,14 @@
     "H36.min_pilot_items",
     "H37.min_seeded_faults_per_class"
   ],
+  "fault_sampling": {
+    "initial_per_class": 20,
+    "batch_size": 20,
+    "min_baseline_misses_for_verdict": 10,
+    "max_per_class": 200,
+    "stop_on": "baseline misses only",
+    "below_min_at_cap": "CEILING"
+  },
   "headroom_rule": {
     "absolute_bar_applies_when_baseline_at_most": 0.80,
     "gap_closure_min_fraction": 0.5,

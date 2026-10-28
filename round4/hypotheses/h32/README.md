@@ -33,7 +33,7 @@ Seed cross-repo blockers (open, then later closed) in both arms, offer the same 
 2. Run the baseline arm first and record starts on open blockers and wasted runs.
 3. The comparative thresholds are already fixed by the author (thresholds.json, comparative_basis); the baseline pilot only checks for headroom and does not change them.
 4. Pilot one item per arm; check treatment graph calls per item and the file-system reach of the control arm.
-5. Run both arms at the pilot minimum (thresholds.H32.min_seeded_faults_per_class).
+5. Run both arms on the identical fault set under thresholds.fault_sampling: initial count thresholds.H32.min_seeded_faults_per_class seeded F3 cases, then pre-registered batches until the baseline has missed enough, capped.
 6. Judge start-versus-blocker order by the observer from timestamps in the source host and tracker, never from agent reports.
 
 ## Headroom rule

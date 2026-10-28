@@ -28,7 +28,7 @@
       "Run the baseline arm first and record starts on open blockers and wasted runs.",
       "The comparative thresholds are already fixed by the author (thresholds.json, comparative_basis); the baseline pilot only checks for headroom and does not change them.",
       "Pilot one item per arm; check treatment graph calls per item and the file-system reach of the control arm.",
-      "Run both arms at the pilot minimum (thresholds.H32.min_seeded_faults_per_class).",
+      "Run both arms on the identical fault set under thresholds.fault_sampling: start at thresholds.H32.min_seeded_faults_per_class (initial count, not the final count) seeded F3 cases, then add pre-registered injector batches until the baseline has missed at least min_baseline_misses_for_verdict faults of the class, capped at max_per_class; the stopping point depends on baseline misses only.",
       "Judge start-versus-blocker order by the observer from timestamps in the source host and tracker, never from agent reports."
     ],
     "minimum_runs": 20
@@ -54,7 +54,7 @@
       "The treatment starts any item on a known open cross-repo blocker."
     ],
     "inconclusive_if": [
-      "Fewer than thresholds.H32.min_seeded_faults_per_class seeded F3 cases ran, or both arms pass every gate and no graded metric ranks them.",
+      "thresholds.fault_sampling was not followed (initial count thresholds.H32.min_seeded_faults_per_class, batches, cap), or the class ended below the minimum baseline misses at the cap (record CEILING), or both arms pass every gate and no graded metric ranks them.",
       "The baseline rate on this class is at least thresholds.headroom_rule.ceiling_when_baseline_at_least (ceiling): record CEILING (thresholds.headroom_rule.ceiling_record) with reason \"CEILING\", never REJECTED; the class counts as neither an advantage nor a rejection."
     ],
     "invalid_if": [

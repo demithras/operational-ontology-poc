@@ -33,7 +33,7 @@ Seed F1 and F2 into the same sequence of work items for both arms, run the same 
 2. Run the baseline arm first (beads in_progress, assignee, bd ready, equal-effort reconciliation script) and record detection rate, time to release and false alarms.
 3. The comparative thresholds are already fixed by the author (thresholds.json, comparative_basis); the baseline pilot only checks for headroom and does not change them.
 4. Pilot one item per arm, check that the treatment made lease calls (manipulation check) and that the control arm could not read treatment artifacts through the file system.
-5. Run both arms on at least the pilot minimum of seeded faults per class (thresholds.H31.min_seeded_faults_per_class).
+5. Run both arms on the identical fault set under thresholds.fault_sampling: initial count thresholds.H31.min_seeded_faults_per_class per class, then pre-registered batches until the baseline has missed enough, capped.
 6. Judge every item by the observer, never by an agent's report or the arm's own log; report a per-class table and the cost of each arm.
 
 ## Headroom rule
@@ -50,4 +50,4 @@ beads (bd update --status=in_progress with assignee, bd ready, dependencies) plu
 
 ## Stop rule
 
-- If the baseline catches every seeded F1 and F2 fault in the pilot, record the result and stop H31; do not add faults after seeing the outcome.
+- If the baseline still has fewer than min_baseline_misses_for_verdict misses at max_per_class after faults are added under thresholds.fault_sampling (pre-registered batches, decided by baseline misses only), record CEILING and stop H31; never add faults after seeing treatment results.

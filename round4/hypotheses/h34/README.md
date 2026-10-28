@@ -39,7 +39,7 @@ Script worker agents to report completion on seeded F4 cases mixed with truly do
 2. Run the baseline arm first (agent self-report plus human spot check at the 10% sampling rate thresholds.H34.baseline_spot_check_rate, with a reconciliation script of equal effort) and record false-done closures and operator minutes.
 3. The comparative thresholds are already fixed by the author (thresholds.json, comparative_basis); the baseline pilot only checks for headroom and does not change them.
 4. Pilot one item per arm; check treatment observer calls per item and the file-system reach of the control arm.
-5. Run both arms at the pilot minimum (thresholds.H34.min_seeded_faults_per_class per form).
+5. Run both arms on the identical fault set under thresholds.fault_sampling: initial count thresholds.H34.min_seeded_faults_per_class per false-done form, then pre-registered batches until the baseline has missed enough, capped.
 6. Include an observer-outage condition to test the explicit unavailable state.
 7. Judge every closure from the real source-host and deploy state, never from the agent's report or either arm's log.
 
@@ -57,4 +57,4 @@ Agent self-report plus a human spot check of 10% of closed items (thresholds.H34
 
 ## Stop rule
 
-- If the baseline catches every seeded F4 case in the pilot, record the result and stop H34.
+- If the baseline still has fewer than min_baseline_misses_for_verdict misses at max_per_class after F4 faults are added under thresholds.fault_sampling (pre-registered batches, decided by baseline misses only), record CEILING and stop H34.
