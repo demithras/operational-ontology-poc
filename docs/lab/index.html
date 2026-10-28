@@ -1,0 +1,1275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Operational Ontology Lab</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: single column notebook, sticky section nav, each section = one instrument panel.
+   Amber (--gate) appears ONLY at gate moments of the decision pipeline. */
+:root{
+  --bg:#F3F5F4; --surface:#FFFFFF; --surface2:#E8EEEE; --fg:#13212E; --muted:#4F616D;
+  --line:#CBD5D8; --line-strong:#8A9DA7; --band:#E3EAEA;
+  --accent:#0F5E7A; --accent-tint:#D7EAF1; --accent-fg:#FFFFFF;
+  --gate:#C77A12; --gate-tint:#F7E6C9;
+  --ok:#1B7443; --ok-tint:#D6ECDD; --bad:#B3261E; --bad-tint:#F6DAD7;
+  --warn:#8A5F00; --warn-tint:#F3E5BE; --neutral:#56656E; --neutral-tint:#E1E7E9;
+  --series-a:#0F5E7A; --series-b:#B8467F;
+  --font-sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-disp:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E151C; --surface:#16212B; --surface2:#1D2B37; --fg:#DCE4EA; --muted:#93A6B3;
+    --line:#2B3C49; --line-strong:#5A7282; --band:#142029;
+    --accent:#5FB3D3; --accent-tint:#17384A; --accent-fg:#0E151C;
+    --gate:#E8A33D; --gate-tint:#3D2D12;
+    --ok:#5CC98A; --ok-tint:#14392A; --bad:#F0827A; --bad-tint:#432320;
+    --warn:#E2B84A; --warn-tint:#3B3112; --neutral:#9AAAB4; --neutral-tint:#26343E;
+    --series-a:#5FB3D3; --series-b:#E27AAE;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E151C; --surface:#16212B; --surface2:#1D2B37; --fg:#DCE4EA; --muted:#93A6B3;
+  --line:#2B3C49; --line-strong:#5A7282; --band:#142029;
+  --accent:#5FB3D3; --accent-tint:#17384A; --accent-fg:#0E151C;
+  --gate:#E8A33D; --gate-tint:#3D2D12;
+  --ok:#5CC98A; --ok-tint:#14392A; --bad:#F0827A; --bad-tint:#432320;
+  --warn:#E2B84A; --warn-tint:#3B3112; --neutral:#9AAAB4; --neutral-tint:#26343E;
+  --series-a:#5FB3D3; --series-b:#E27AAE;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.55 var(--font-sans);overflow-x:clip}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3,h4{font-family:var(--font-disp);text-wrap:balance;margin:0 0 .4em;line-height:1.15}
+h1{font-size:clamp(34px,6vw,58px);font-weight:700;letter-spacing:-.01em}
+h2{font-size:clamp(25px,3.6vw,34px);font-weight:600}
+h3{font-size:18px;font-weight:600}
+p{max-width:68ch;margin:0 0 .8em}
+.mono{font-family:var(--font-mono)}
+.num,td,.chart text{font-variant-numeric:tabular-nums}
+.label,.eyebrow{font:500 11px/1.3 var(--font-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 6px}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+section{padding-block:44px 8px;scroll-margin-top:56px}
+.intro{color:var(--muted)}
+.topnav{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
+.navin{display:flex;align-items:center;gap:10px;padding-block:8px}
+.brand{font:500 14px var(--font-mono);color:var(--fg);text-decoration:none;padding:4px 8px;border:1px solid var(--line-strong);border-radius:6px;white-space:nowrap}
+.links{flex:1;min-width:0;display:flex;gap:2px;overflow-x:auto;white-space:nowrap;scrollbar-width:thin}
+.links a{padding:6px 10px;color:var(--muted);text-decoration:none;font-size:14px;border-radius:6px}
+.links a:hover{color:var(--accent);background:var(--accent-tint)}
+.btn{font:500 13px/1.2 var(--font-sans);padding:8px 12px;border-radius:6px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-fg);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.ghost:hover{background:var(--accent-tint)}
+.btn.sm{padding:5px 9px;font-size:12px;white-space:nowrap}
+.btn[aria-pressed=true]{background:var(--accent);color:var(--accent-fg)}
+.btn[aria-pressed=true]:hover{background:var(--accent);color:var(--accent-fg)}
+.btn:disabled,.btn[aria-disabled=true]{opacity:.5;cursor:not-allowed}
+.chip{display:inline-block;font:500 11px/1 var(--font-mono);text-transform:uppercase;letter-spacing:.06em;padding:4px 8px;border-radius:99px;background:var(--neutral-tint);color:var(--neutral);white-space:nowrap}
+.chip.ok{background:var(--ok-tint);color:var(--ok)}
+.chip.bad{background:var(--bad-tint);color:var(--bad)}
+.chip.warn{background:var(--warn-tint);color:var(--warn)}
+.chip.acc{background:var(--accent-tint);color:var(--accent)}
+.chip.gate{background:var(--gate-tint);color:var(--gate)}
+.chip.dash{background:transparent;border:1px dashed var(--line-strong)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px;min-width:0}
+.card h3{margin-bottom:8px}
+.hero{padding-block:36px 8px}
+.lead{font-size:18px;max-width:62ch}
+.bl{display:grid;grid-template-columns:104px minmax(0,1fr);gap:12px;align-items:start;padding:10px 0;border-top:1px solid var(--line)}
+.bl p{margin:0}
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-top:20px}
+.rcard{text-align:left;font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:6px;padding:12px;cursor:pointer;display:grid;gap:4px;min-width:0}
+.rcard:hover{background:var(--accent-tint)}
+.rcard b{font:600 17px var(--font-disp)}
+.rcard span{font-size:13px;color:var(--muted)}
+.playgrid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:920px){.playgrid{grid-template-columns:minmax(0,380px) minmax(0,1fr)}}
+.col{display:grid;gap:16px;align-content:start;min-width:0}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.field{display:grid;gap:4px;margin-bottom:10px;min-width:0}
+.field label,legend{font:500 11px/1.3 var(--font-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+select{font:400 14px var(--font-sans);padding:8px;border:1px solid var(--line-strong);border-radius:6px;background:var(--surface);color:var(--fg);width:100%;min-width:0}
+input[type=range]{width:100%;accent-color:var(--accent);margin:4px 0}
+.ro{font:500 14px var(--font-mono);color:var(--accent)}
+.rowflex{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.ticks{position:relative;height:28px;font:400 10px var(--font-mono);color:var(--muted);margin:0 8px}
+.ticks span{position:absolute;top:0;transform:translateX(-50%);text-align:center;white-space:nowrap}
+.ticks span::before{content:"";display:block;width:1px;height:6px;background:var(--line-strong);margin:0 auto 2px}
+fieldset{border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin:0 0 10px;min-width:0}
+.chk{display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:6px 0}
+.chk input{margin-top:3px;accent-color:var(--accent)}
+.hint{font-size:12.5px;color:var(--muted);margin:2px 0 0}
+.wrow{display:grid;grid-template-columns:64px minmax(0,1fr) 40px;gap:8px;align-items:center;margin:9px 0;font:400 12px var(--font-mono)}
+.wrow .v{text-align:right;font-weight:500;font-variant-numeric:tabular-nums}
+.bar{position:relative;height:16px;background:var(--surface2);border-radius:3px}
+.bar i{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:3px;transition:width .6s ease}
+.bar b{position:absolute;top:-4px;bottom:-4px;width:0;border-left:2px dashed var(--fg);transition:left .6s ease}
+.legend{font-size:12px;color:var(--muted);margin:4px 0}
+.wo{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.policybox{margin-top:10px;padding:8px 10px;border:1px solid var(--line);border-left:3px solid var(--gate);border-radius:6px;font:400 12px/1.5 var(--font-mono);background:var(--surface2)}
+.stations{display:grid;grid-template-columns:repeat(auto-fit,minmax(122px,1fr));gap:8px}
+.station{border:1px dashed var(--line-strong);border-top:3px solid var(--line-strong);border-radius:6px;padding:8px;min-width:0;background:var(--surface)}
+.station.done{border-style:solid;border-color:var(--line);border-top-color:var(--gate)}
+.station.wide{grid-column:span 2}
+.station h4{margin:0 0 6px;font:600 12.5px var(--font-disp);text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.station .sreason{font-size:11.5px;color:var(--muted);margin-top:6px;overflow-wrap:anywhere}
+.station .hash{font:400 11px var(--font-mono);overflow-wrap:anywhere;margin-top:6px}
+.station.wait .chip,.station.wait .sreason,.station.wait .verdict{visibility:hidden}
+.verdict{font:700 clamp(14px,2vw,19px)/1.2 var(--font-mono);overflow-wrap:anywhere}
+.verdict.ok{color:var(--ok)}.verdict.bad{color:var(--bad)}.verdict.warn{color:var(--warn)}.verdict.neu{color:var(--neutral)}
+.why{margin:12px 0 0;font-size:14.5px}
+.note{margin:10px 0 0;padding:8px 10px;border-left:3px solid var(--warn);background:var(--warn-tint);color:var(--fg);font-size:13px;border-radius:0 6px 6px 0}
+.zero{font:500 13px var(--font-mono);color:var(--muted);margin:0 0 10px}
+.steps{list-style:none;margin:10px 0 0;padding:0;font:400 12.5px/1.5 var(--font-mono);min-height:20px}
+.steps li{padding:2px 0 2px 16px;position:relative;overflow-wrap:anywhere}
+.steps li::before{content:"";position:absolute;left:3px;top:.75em;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.steps li.wait{color:var(--muted)}
+.steps li.wait::before{background:var(--line-strong)}
+.rec{font:400 12px/1.5 var(--font-mono);background:var(--surface2);border-radius:6px;padding:10px;overflow:auto;max-height:340px;margin:0;white-space:pre;tab-size:2}
+.second{display:grid;gap:6px;margin:10px 0}
+.second div{font-size:13.5px}
+.second small{display:block;color:var(--muted)}
+.dlog{display:grid;gap:4px;margin:6px 0 0;padding:0;list-style:none}
+.dlog button{width:100%;display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:8px;align-items:center;text-align:left;font:400 12.5px var(--font-mono);background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;cursor:pointer}
+.dlog button:hover{background:var(--accent-tint)}
+.scroller{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--surface);max-width:100%}
+.map{display:block;min-width:820px;width:100%;height:auto}
+.lane-bg{fill:var(--surface2)}
+.lane-t{font:500 11px var(--font-mono);fill:var(--muted);letter-spacing:.06em}
+.node{cursor:pointer}
+.node rect{fill:var(--surface);stroke:var(--line-strong);stroke-width:1.2}
+.node text{font:500 11px var(--font-mono);fill:var(--fg)}
+.node .port{font:400 9.5px var(--font-mono);fill:var(--muted)}
+.node.hl rect{stroke:var(--accent);stroke-width:2.2;fill:var(--accent-tint)}
+.node.sel rect{stroke:var(--accent);stroke-width:3}
+.node:focus-visible rect{stroke:var(--accent);stroke-width:3.5}
+.cnode:focus-visible circle{stroke:var(--accent);stroke-width:3.5}
+.cmark{fill:var(--accent)}
+.node.baseline rect{stroke-dasharray:5 3}
+.node.baseline.faded,.edge.faded{opacity:.3}
+.node.baseline.on rect{stroke:var(--series-b);stroke-width:2.2}
+.edge{fill:none;stroke:var(--line-strong);stroke-width:1.4}
+.edge.dashed{stroke-dasharray:6 4}
+.edge.dotted{stroke-dasharray:2 4}
+.edge.active{stroke:var(--accent);stroke-width:2.4;stroke-dasharray:7 5;animation:dash .8s linear infinite}
+.edge.on{stroke:var(--series-b);stroke-width:2}
+@keyframes dash{to{stroke-dashoffset:-24}}
+.mk path{fill:var(--line-strong)}
+.mk.act path{fill:var(--accent)}
+.elabel{font:400 10px var(--font-mono);fill:var(--muted)}
+.mapgrid{display:grid;gap:16px;margin-top:12px;grid-template-columns:minmax(0,1fr)}
+.mapctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+.caption{font-size:14px;margin:8px 0 0}
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.tile{text-align:left;font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 10px;cursor:pointer;display:grid;gap:4px;min-width:0;align-content:start}
+.tile:hover{border-color:var(--accent)}
+.tile[aria-pressed=true]{border-color:var(--accent);background:var(--accent-tint)}
+.tile .id{font:500 12px var(--font-mono);color:var(--accent);display:flex;justify-content:space-between;gap:6px;align-items:center}
+.tile .nm{font-size:13px;line-height:1.3}
+.try::before{content:"";display:inline-block;border-left:6px solid currentColor;border-top:4px solid transparent;border-bottom:4px solid transparent;margin-right:5px}
+.try{font:500 11px var(--font-mono);color:var(--accent);text-transform:uppercase;letter-spacing:.06em}
+.fdetail{margin-top:12px}
+.fdetail dl{display:grid;grid-template-columns:110px minmax(0,1fr);gap:4px 12px;margin:8px 0}
+.fdetail dt{font:500 11px var(--font-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.fdetail dd{margin:0}
+.sumline{font:500 13px var(--font-mono);margin:8px 0}
+.lrow{border-top:1px solid var(--line)}
+.lhead{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;color:inherit;font:inherit;padding:10px 4px;cursor:pointer}
+.lhead:hover{background:var(--accent-tint)}
+.lhead .hid{font:500 13px var(--font-mono);color:var(--accent)}
+.lhead::after{content:none}
+.vchips{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.lbody{padding:0 4px 12px 62px;color:var(--muted);font-size:14px}
+.lbody p{margin:0}
+.grouph{font:600 17px var(--font-disp);margin:22px 0 4px}
+.chart{display:block;width:100%;height:auto;min-width:640px}
+.chart text{font:400 11px var(--font-mono);fill:var(--muted)}
+.chart .strong{fill:var(--fg);font-weight:500}
+.chart .gridline{stroke:var(--line);stroke-width:1}
+.chart .axis{stroke:var(--line-strong);stroke-width:1}
+.chart .band{fill:var(--band)}
+.chart .bandl{font:500 10px var(--font-mono);fill:var(--muted);letter-spacing:.04em}
+.chart .bar-a{fill:var(--series-a)}
+.chart .bar-b{fill:var(--series-b)}
+.chart .bar-x{fill:var(--accent)}
+.chart .bar-x:hover,.chart .bar-x:focus{fill:var(--series-b)}
+.chart .whisk{stroke:var(--fg);stroke-width:1.6;fill:none}
+.chart .parity{stroke:var(--fg);stroke-width:1.4;stroke-dasharray:5 4}
+.chart .ghost{fill:none;stroke:var(--accent);stroke-width:1.6;stroke-dasharray:3 3}
+.tipwrap{position:relative}
+.tip{position:absolute;pointer-events:none;background:var(--surface);color:var(--fg);border:1px solid var(--line-strong);border-radius:6px;padding:8px 10px;font:400 12px/1.4 var(--font-mono);max-width:260px;box-shadow:0 6px 18px color-mix(in srgb,var(--fg) 22%,transparent);z-index:5}
+.tip[hidden]{display:none}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:14px 0}
+.stat{border-top:2px solid var(--accent);padding:8px 0}
+.stat b{display:block;font:700 22px var(--font-disp)}
+.stat span{font-size:13px;color:var(--muted)}
+.ladder{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.ladder .btn{font-family:var(--font-mono);min-width:48px}
+.cyclewrap{display:grid;gap:16px;grid-template-columns:minmax(0,1fr);align-items:center}
+@media (min-width:760px){.cyclewrap{grid-template-columns:minmax(0,340px) minmax(0,1fr)}}
+.cycle{display:block;width:100%;max-width:340px;height:auto;margin:0 auto}
+.cnode{cursor:pointer}
+.cnode circle{fill:var(--surface);stroke:var(--line-strong);stroke-width:1.5}
+.cnode text{font:600 10.5px var(--font-mono);fill:var(--fg)}
+.cnode[aria-pressed=true] circle{fill:var(--accent-tint);stroke:var(--accent);stroke-width:2.5}
+.cring{fill:none;stroke:var(--line);stroke-width:1.5;stroke-dasharray:4 4}
+.matrix{display:grid;grid-template-columns:100px repeat(4,minmax(0,1fr));gap:4px;max-width:560px;margin:10px 0}
+.matrix .h{font:500 11px var(--font-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:4px}
+.matrix .rl{text-align:left;font:500 13px var(--font-mono);background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:8px;cursor:pointer}
+.matrix .rl[aria-pressed=true]{border-color:var(--accent);background:var(--accent-tint)}
+.matrix .c{height:38px;background:var(--surface2);border-radius:6px;position:relative}
+.matrix .c::after{content:"";position:absolute;left:50%;top:50%;width:7px;height:13px;border:solid var(--ok);border-width:0 3px 3px 0;transform:translate(-50%,-62%) rotate(45deg)}
+pre.code{font:400 12.5px/1.6 var(--font-mono);background:var(--surface2);border-radius:6px;padding:10px 12px;overflow:auto;margin:8px 0;white-space:pre}
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+.legendrow{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;margin:6px 0}
+.sw{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.sw.a{background:var(--series-a)}.sw.b{background:var(--series-b)}
+.vsteps{display:grid;gap:10px;margin:12px 0;counter-reset:vs}
+.vcard{display:grid;grid-template-columns:36px minmax(0,1fr);gap:12px;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:6px;background:var(--surface);padding:12px}
+.vcard .n{font:700 24px var(--font-disp);color:var(--accent)}
+.vcard h3{margin:0 0 4px;font-size:16px}
+.vcard p{margin:4px 0 0;font-size:14px}
+.threads{list-style:none;margin:10px 0;padding:0;display:grid;gap:8px}
+.threads li{display:grid;grid-template-columns:130px minmax(0,1fr);gap:12px;align-items:start;border-top:1px solid var(--line);padding-top:8px}
+@media (max-width:560px){.threads li,.bl{grid-template-columns:minmax(0,1fr)}}
+footer{margin-top:48px;padding-block:20px 40px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important;scroll-behavior:auto !important}
+}
+</style>
+</head>
+<body>
+<nav class="topnav" aria-label="Sections">
+  <div class="wrap navin">
+    <a class="brand" href="#top">OO Lab</a>
+    <div class="links">
+      <a href="#play">Play</a><a href="#map">Architecture</a><a href="#faults">Faults</a><a href="#ledger">Hypotheses</a><a href="#built">How it was built</a><a href="#rounds">Rounds 2–3</a><a href="#next">Where it goes</a>
+    </div>
+    <button id="theme-toggle" type="button" class="btn ghost sm">Theme: system</button>
+  </div>
+</nav>
+<main class="wrap">
+<header class="hero" id="top">
+  <p class="eyebrow">operational-ontology-poc · 2026-09-23 → 2026-10-16 · 539 commits</p>
+  <h1>Operational Ontology Lab</h1>
+  <p class="lead">A falsifiable local proof-of-concept: can a small, open-source operational ontology drive a real operational decision, gate it before any external effect, observe the real outcome, and replay the decision months later? And is any of that worth its cost over a simpler baseline?</p>
+  <p class="label" style="margin-top:22px">Bottom line</p>
+  <div class="bl"><span><span class="chip ok">Works</span></span><p>The machinery works. Governed decisions, hard gates, durable actions, replay across contract evolution, bounded agents: all supported in Round 1 (13 of 14 hypotheses) and again as a generic engine in Round 2.</p></div>
+  <div class="bl"><span><span class="chip bad">Not shown</span></span><p>The value claim has not been shown. Three times the question was asked a different way, and each time an equally strong conventional build matched it at lower cost.</p></div>
+  <div class="bl" style="border-bottom:1px solid var(--line)"><span><span class="chip warn">Open</span></span><p>One comparative question is still open: does the ontology control plane contain a compromise better than a conventional one (H30, not run)?</p></div>
+  <div class="strip">
+    <button type="button" class="rcard" id="rc-1" data-round="Round 1"><span class="label">Round 1 · 2026-09-23 → 09-25</span><b>Manufacturing loop</b><span>H1–H14: 13 supported, H11 rejected</span></button>
+    <button type="button" class="rcard" id="rc-2" data-round="Round 2"><span class="label">Round 2 · 2026-10-01 → 10-05</span><b>Language, Engine, Toolchain</b><span>H15–H22: engine supported, value (H18, H22) rejected</span></button>
+    <button type="button" class="rcard" id="rc-3" data-round="Round 3"><span class="label">Round 3 · 2026-10-06 → 10-16</span><b>Paladin security, dual track</b><span>H23–H29 supported for both variants, H30 not run</span></button>
+  </div>
+</header>
+
+<section id="play" aria-labelledby="play-h">
+  <p class="eyebrow">01 · instrument</p>
+  <h2 id="play-h">Play: the canonical incident</h2>
+  <p>Supplier S-7 delays PO-991 by five days (transport_delay). Work order WO-42 (priority HIGH, starts in 18 h) needs 80 × PX-17. WH-A holds 20, so WO-42 is short by 60. WH-B holds 140. Propose a transfer and watch every gate decide. This is a JavaScript port of the repo's pure reference model (<code class="mono">reference_model/transitions.py</code>), the oracle the real stack was tested against.</p>
+  <div class="presets" id="presets" role="group" aria-label="Presets"></div>
+  <div class="playgrid">
+    <div class="col">
+      <div class="card" id="world">
+        <h3>World state</h3>
+        <div class="wrow"><span>WH-A</span><div class="bar"><i id="bar-a"></i><b id="tick-a" title="WO-42 needs 80"></b></div><span class="v" id="val-a">20</span></div>
+        <div class="wrow"><span>WH-B</span><div class="bar"><i id="bar-b"></i><b id="tick-b" title="safety stock 50"></b></div><span class="v" id="val-b">140</span></div>
+        <p class="legend">Bars show available units. Dashed tick on WH-A = WO-42 requirement (80); on WH-B = safety stock (50).</p>
+        <div class="wo"><div class="wrow" style="margin:0"><span>WO-42</span><div class="bar"><i id="bar-wo" style="background:var(--neutral)"></i></div><span class="v">80</span></div>
+          <p class="small" id="wo-line" style="margin:6px 0 0"></p></div>
+        <p class="small mono" style="margin:8px 0 0">PO-991: <span id="po-line">expected T+5d (was T+8h)</span></p>
+        <div class="policybox">approval threshold 100 units · safety stock PX-17@WH-B = 50 · evidence max age 5 s</div>
+        <p style="margin:10px 0 0"><button id="reset-world" type="button" class="btn ghost sm">Reset world</button></p>
+      </div>
+      <div class="card" id="controls">
+        <h3>Proposal</h3>
+        <div class="field"><label for="actor">Actor</label>
+          <select id="actor">
+            <option value="planner">Planner (region-1)</option>
+            <option value="planner-r2">Planner (region-2 only)</option>
+            <option value="junior">Junior planner</option>
+            <option value="supervisor">Supervisor (region-1)</option>
+            <option value="agent-grant">Agent with task grant transfer_inventory (region-1)</option>
+            <option value="agent-nogrant">Agent without task grant</option>
+          </select></div>
+        <div class="field"><label for="src">Source warehouse</label><select id="src"><option>WH-B</option><option>WH-A</option></select></div>
+        <div class="field"><label for="dst">Destination warehouse</label><select id="dst"><option>WH-A</option><option>WH-B</option></select></div>
+        <div class="field"><div class="rowflex"><label for="qty">Quantity</label><span class="ro" id="qty-out">60</span></div>
+          <input type="range" id="qty" min="0" max="140" step="1" value="60">
+          <div class="ticks" id="ticks" aria-hidden="true"></div>
+          <p class="hint">With 140 on hand and safety stock 50, anything above 90 is denied by policy before the approval threshold matters. Set quality, or try the bug toggles.</p></div>
+        <div class="field"><div class="rowflex"><label for="wh-b-onhand">WH-B on hand (what-if)</label><span class="ro" id="whb-out">140</span></div>
+          <input type="range" id="wh-b-onhand" min="140" max="300" step="1" value="140"></div>
+        <div class="field"><label for="quality">Source lot quality</label><select id="quality"><option>OK</option><option>QUARANTINE</option></select></div>
+        <div class="field"><div class="rowflex"><label for="age">Evidence snapshot age</label><span class="ro" id="age-out">1 s</span></div>
+          <input type="range" id="age" min="0" max="15" step="1" value="1"></div>
+        <fieldset><legend>Inject a reference-model bug</legend>
+          <label class="chk" for="bug-authz"><input type="checkbox" id="bug-authz"><span>BUG_SKIP_AUTHZ: authorization gate always allows</span></label>
+          <label class="chk" for="bug-threshold"><input type="checkbox" id="bug-threshold"><span>BUG_POLICY_THRESHOLD_LT: <code class="mono">&lt;=</code> becomes <code class="mono">&lt;</code> (exactly 100 now needs approval)</span></label>
+          <label class="chk" for="bug-idem"><input type="checkbox" id="bug-idem"><span>BUG_SKIP_IDEMPOTENCY: duplicate execution applies twice</span></label>
+        </fieldset>
+        <button id="propose" type="button" class="btn">Propose transfer</button>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card" id="pipeline" aria-live="polite">
+        <h3>Gate pipeline</h3>
+        <div class="stations" id="stations"></div>
+        <p class="why" id="why"></p>
+        <p class="note" id="f33" hidden></p>
+        <p style="margin:10px 0 0"><button id="approve" type="button" class="btn" hidden>Approve as supervisor</button></p>
+      </div>
+      <div class="card" id="execpanel">
+        <h3>Execution</h3>
+        <p class="zero" id="zero-line">Nothing executes: 0 external effects</p>
+        <div class="field"><label for="wms">WMS behaviour (fault injection)</label>
+          <select id="wms">
+            <option value="normal">Normal commit</option>
+            <option value="dup">Duplicate request (F10): the action is sent twice with the same idempotency key</option>
+            <option value="timeout">Commit, then timeout (F14)</option>
+            <option value="nocommit">200 OK without commit (F15)</option>
+            <option value="partial">Partial commit (F16): only half the quantity moves</option>
+            <option value="wrong">Wrong quantity (F17): WMS moves qty+5</option>
+            <option value="cdcdelay">CDC delayed (F18)</option>
+            <option value="temporal">Temporal unavailable (F25)</option>
+          </select></div>
+        <button id="execute" type="button" class="btn" disabled>Execute via Temporal</button>
+        <ol class="steps" id="exec-log" aria-live="polite"></ol>
+        <p id="exec-outcome" style="margin:10px 0 0"></p>
+        <p class="note" id="exec-note" hidden></p>
+      </div>
+      <div class="card" id="recordpanel">
+        <h3>Decision record</h3>
+        <pre class="rec" id="record" tabindex="0"></pre>
+        <div class="second">
+          <div><span class="chip ok">same</span> Relational baseline (Variant A): same decision<small>500/500 identical decisions on the W7 corpus</small></div>
+          <div><span class="chip ok">same</span> Reference model oracle: same decision<small>this page IS the oracle's logic</small></div>
+        </div>
+        <p class="label" style="margin-top:12px">Decision log · last 8 proposals</p>
+        <ul class="dlog" id="dlog"></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="map" aria-labelledby="map-h">
+  <p class="eyebrow">02 · architecture</p>
+  <h2 id="map-h">Architecture map</h2>
+  <p>Round 1 built the loop for real on a local Docker stack: 20+ services. Click a box. Press Trace to walk the 21 steps of the canonical flow from spec 03.</p>
+  <div class="mapctl">
+    <label class="chk" for="show-baseline" style="margin:0"><input type="checkbox" id="show-baseline"><span>Show the baseline variant</span></label>
+    <button id="trace-prev" type="button" class="btn ghost sm">Prev</button>
+    <button id="trace-play" type="button" class="btn sm">Trace</button>
+    <button id="trace-next" type="button" class="btn ghost sm">Next</button>
+  </div>
+  <p class="caption mono" id="trace-cap" aria-live="polite">Step 0/21: press Trace or Next to start.</p>
+  <p class="note" id="base-note" hidden>Variant A skips RDF4J, SHACL and the projection pipeline. Outcome: identical decisions, ~5× lower ingestion lag, fewer moving parts (H11 rejected).</p>
+  <div class="mapgrid">
+    <div class="scroller"><svg id="mapsvg" class="map" viewBox="0 0 1120 560" role="group" aria-label="Architecture map of the Round 1 stack"></svg></div>
+    <div class="card" id="nodedetail" aria-live="polite"><h3>Select a box</h3><p class="muted">Click or press Enter on any node to see its port, phase and neighbours.</p></div>
+  </div>
+</section>
+
+<section id="faults" aria-labelledby="faults-h">
+  <p class="eyebrow">03 · fault matrix</p>
+  <h2 id="faults-h">Fault explorer</h2>
+  <p>Spec 09 lists 40 failure and adversarial cases. By Phase 10a all 40 passed against the real stack (<code class="mono">make test-faults</code>, real docker kill/stop/start), 0 not tested. Filter by component; tiles marked <span class="try">Try it</span> load into the simulator.</p>
+  <div class="filters" id="ffilters" role="group" aria-label="Filter by group"></div>
+  <div class="tiles" id="tiles"></div>
+  <div class="card fdetail" id="fdetail" aria-live="polite"></div>
+</section>
+
+<section id="ledger" aria-labelledby="ledger-h">
+  <p class="eyebrow">04 · pre-registered claims</p>
+  <h2 id="ledger-h">Hypothesis ledger</h2>
+  <p>Every claim was pre-registered with a threshold and a falsifier before the code that tests it, then frozen by hash. Failed attempts stay on the record.</p>
+  <div class="filters" id="lf-round" role="group" aria-label="Filter by round"></div>
+  <div class="filters" id="lf-verdict" role="group" aria-label="Filter by verdict"></div>
+  <p class="sumline" id="lsum" aria-live="polite"></p>
+  <div id="lrows"></div>
+</section>
+<section id="built" aria-labelledby="built-h">
+  <p class="eyebrow">05 · process</p>
+  <h2 id="built-h">How it was built</h2>
+  <h3>Commits per day</h3>
+  <p class="muted">Every day from 2026-09-23 to 2026-10-16 is plotted, including the empty ones, so the gap between rounds is visible. Hover or focus a bar for the tags created that day.</p>
+  <div class="tipwrap">
+    <div class="scroller"><svg id="timeline" class="chart" viewBox="0 0 920 330" role="group" aria-label="Commits per day"></svg></div>
+    <div class="tip" id="tip" hidden></div>
+  </div>
+  <div class="stats">
+    <div class="stat"><b class="num">539</b><span>commits</span></div>
+    <div class="stat"><b class="num">≈146k</b><span>lines of Python across 2,889 tracked files</span></div>
+    <div class="stat"><b class="num">3</b><span>rounds in 24 days</span></div>
+  </div>
+  <h3 style="margin-top:28px">Round 1 phase ladder</h3>
+  <div class="ladder" id="ladder" role="group" aria-label="Round 1 phases"></div>
+  <div class="card"><p class="caption" id="phase-cap" style="margin:0" aria-live="polite"></p></div>
+  <h3 style="margin-top:28px">The method</h3>
+  <div class="cyclewrap">
+    <svg id="cycle" class="cycle" viewBox="0 0 340 320" role="group" aria-label="The method cycle"></svg>
+    <div class="card" id="cycle-cap" aria-live="polite"></div>
+  </div>
+  <p style="margin-top:12px">Round 3 added a dual track: every protection in the ontology variant got the strongest reasonable conventional equivalent, and both ran the identical frozen corpus and oracle.</p>
+</section>
+
+<section id="rounds" aria-labelledby="rounds-h">
+  <p class="eyebrow">06 · numbers</p>
+  <h2 id="rounds-h">Rounds 2–3 in numbers</h2>
+  <h3>Round 2 target matrix</h3>
+  <div class="matrix" id="matrix"></div>
+  <p class="caption" id="matrix-cap" aria-live="polite">Click a row label to see which hypotheses tested it.</p>
+  <p class="muted">Round 2's definition of 'Palantir-class': (Language × Engine × Toolchain) over (Data × Logic × Action × Security), tested as an open-source behavioural architecture, not product parity.</p>
+  <pre class="code" tabindex="0">kulupu ni li lon
+tenpo ni la kulupu li lon
+ma ni la kulupu li lon
+ijo ni li lon
+ijo ni li sama e selo ni
+ijo ni la sona ni li sitelen toki
+ijo ni la sona ni li wile
+ijo ni la nasin ni li lawa e sona ni</pre>
+  <p class="muted small">From <code class="mono">round2/domains/manufacturing/openpona2.op</code>. OpenPona, a toki-pona-based Ontology Language surface over the same typed IR (H15). Lossless, but 4.9–5.7× the tokens of the direct DSL.</p>
+  <h3 style="margin-top:28px">What did the ontology cost?</h3>
+  <div class="scroller"><svg id="costchart" class="chart" viewBox="0 0 780 410" role="img" aria-label="Effort ratio of ontology versus baseline per task"></svg></div>
+  <p class="muted small">Effort ratio ontology ÷ strong relational/event baseline, per task, measured by fresh agents on blind tasks. Above 1× means the ontology cost more. No row reaches parity.</p>
+  <h3 style="margin-top:28px">Round 3 dual track</h3>
+  <div class="seg" id="r3-metric" role="group" aria-label="Metric">
+    <button type="button" class="btn ghost sm" data-m="loc" aria-pressed="true">Security-specific LOC</button>
+    <button type="button" class="btn ghost sm" data-m="p95" aria-pressed="false">p95 latency (ms)</button>
+    <button type="button" class="btn ghost sm" data-m="runs" aria-pressed="false">Official runs to final verdict</button>
+  </div>
+  <div class="legendrow"><span><i class="sw a"></i>Paladin (ontology variant)</span><span><i class="sw b"></i>Conventional</span></div>
+  <div class="scroller"><svg id="r3chart" class="chart" viewBox="0 0 780 320" role="img" aria-label="Round 3 grouped bars per gate"></svg></div>
+  <p class="small muted" id="r3note" aria-live="polite"></p>
+  <p>Both variants passed every frozen bar at every gate (all forbidden-effect counts 0, ratios 1.0). These gates are pass/fail at the ceiling, so they cannot rank the variants: no Paladin-specific advantage was measured, which is not the same as equal security.</p>
+</section>
+
+<section id="next" aria-labelledby="next-h">
+  <p class="eyebrow">07 · direction</p>
+  <h2 id="next-h">Where it goes</h2>
+  <h3>The value question, asked four ways</h3>
+  <div class="vsteps">
+    <div class="vcard"><span class="n">1</span><div><span class="label">Round 1</span><h3>Does an ontology beat a simpler baseline on one real loop?</h3><span class="chip bad">Rejected (H11)</span><p>Parity on correctness, forensics, replay; baseline cheaper to change and run.</p></div></div>
+    <div class="vcard"><span class="n">2</span><div><span class="label">Round 2</span><h3>Does reuse across many domains repay the ontology tax?</h3><span class="chip bad">Rejected (H22, H22w)</span><p>1.3×–6.7× the effort of a strong baseline; the generator helps but does not reach parity.</p></div></div>
+    <div class="vcard"><span class="n">3</span><div><span class="label">Round 3</span><h3>Does an ontology control plane buy security under hostile operation?</h3><span class="chip warn">Open (H30 not run)</span><p>Both variants pass all 7 gates; the one comparative gate was stopped; a static pilot found only 3 bugs (fixed), no architectural difference, a weak null.</p></div></div>
+    <div class="vcard"><span class="n">4</span><div><span class="label">Round 4</span><h3>Does the governance pattern give AI agents working across several IT projects a measurable coordination and control advantage?</h3><span class="chip">FROZEN · NOT RUN</span><p>Protocol frozen 2026-10-28; no evidence yet. Stage 1 pilot gates <code class="mono">merge_pr</code> (H31–H35). Baseline: beads + GitHub branch protection + CODEOWNERS + required CI.</p></div></div>
+  </div>
+  <h3 style="margin-top:28px">Open threads</h3>
+  <ul class="threads">
+    <li><span><span class="chip warn">Open</span></span><span>H30 comparative value (blast radius, containment cost): needs a new author decision and a realistic, non-synthetic corpus.</span></li>
+    <li><span><span class="chip warn">Unreviewed</span></span><span>Gate 6 revocation/containment code sits on unmerged local branches; the pilot did not read it.</span></li>
+    <li><span><span class="chip bad">Coverage gap</span></span><span>H24 oracle does not model the edge-path issuer exclusion (that gap hid defect M1 at Gate 2).</span></li>
+    <li><span><span class="chip warn">Caveat</span></span><span>H29 judge: verdicts hold with 14 open judge deviations, not certified against the full frozen text.</span></li>
+    <li><span><span class="chip ok">Fallback ready</span></span><span>The conventional implementation met every bar: it is a viable product path on the evidence.</span></li>
+  </ul>
+  <h3 style="margin-top:28px">Round 4: agent operations (frozen, not run)</h3>
+  <p>Round 4 moves from manufacturing to agent-run IT work. It asks whether the decision → authorization → policy → approval → action → observed outcome pattern, plus Round 3 containment, helps AI agents that work across several repositories. It covers coordination (who works on what) and control (what an agent may do, with the outcome confirmed from GitHub, CI or deploy, not from the agent). It runs on a relational store and is staged. Stage 1, the pilot, gates <code class="mono">merge_pr</code> and tests H31–H35. Stage 2 (H37, access grants) runs only if at least one of H31–H35 is supported; otherwise the round stops after stage 1 and H37 is recorded as not run, never rejected. The protocol was frozen on 2026-10-28 (<a href="https://github.com/demithras/operational-ontology-poc/tree/main/round4">round4/</a>); no Round 4 evidence exists yet.</p>
+  <ul class="threads">
+    <li><span><span class="chip mono">H31</span></span><span>Do leases catch double claims and stale claims? <span class="muted small">Baseline to beat: <code class="mono">bd ready</code> + GitHub assignees.</span></span></li>
+    <li><span><span class="chip mono">H32</span></span><span>Are cross-repo blockers surfaced before an agent spends a run? <span class="muted small">Baseline to beat: beads dependencies inside each repo.</span></span></li>
+    <li><span><span class="chip mono">H33</span></span><span>Does the control gate contain an adversarial agent? <span class="muted small">Baseline to beat: branch protection + CODEOWNERS + required checks.</span></span></li>
+    <li><span><span class="chip mono">H34</span></span><span>Do items close only on an independently observed outcome, so a false "done" is caught? <span class="muted small">Baseline to beat: agent self-report + human spot check.</span></span></li>
+    <li><span><span class="chip mono">H35</span></span><span>Is "why did this merge or deploy happen" answerable months later? <span class="muted small">Baseline to beat: GitHub audit log + PR timeline + bead history.</span></span></li>
+    <li><span><span class="chip mono">H37</span></span><span><span class="muted small">Stage 2, triggered.</span> Do agent access grants stay least-privilege, expire and really revoke? <span class="muted small">Baseline to beat: Vault dynamic credentials + IAM conditions + JIT access.</span></span></li>
+    <li><span><span class="chip mono">H36</span></span><span>Do the gains outweigh setup and maintenance cost? Parity counts as REJECTED. <span class="muted small">Baseline to beat: the whole conventional stack.</span></span></li>
+  </ul>
+  <p class="note">Headroom rule: a +20-point bar applies while the baseline succeeds at most 80% of the time; above that the treatment must close half of the baseline's misses; at 95% or more the class is recorded as CEILING (no advantage measured), never REJECTED. This is the lesson of Round 3's ceiling effect.</p>
+  <p class="note">The Attractor game (an Alchemy × Factorio game whose save file is a working ontology machine) was the earlier Round 4 plan; whether it returns for Round 5+ is undecided.</p>
+</section>
+</main>
+<footer><div class="wrap">Built from the repository at main 4058fdd (2026-10-16); Round 4 text reflects the pack frozen on 2026-10-28 (main 0d8e1a2). Sources: README.md, round2/RESULTS.md, round3/RESULTS.md, round3/experiments/h30-pilot/RESULT.md, docs/experiment/spec/03 and 09, reference_model/transitions.py.</div></footer>
+<script>
+// BEGIN-PURE
+const ACTORS={
+  planner:{role:'planner',regions:['region-1'],grants:[]},
+  'planner-r2':{role:'planner',regions:['region-2'],grants:[]},
+  junior:{role:'junior_planner',regions:['region-1'],grants:[]},
+  supervisor:{role:'supervisor',regions:['region-1'],grants:[]},
+  'agent-grant':{role:'agent',regions:['region-1'],grants:['transfer_inventory']},
+  'agent-nogrant':{role:'agent',regions:['region-1'],grants:[]}
+};
+const REGION={'WH-A':'region-1','WH-B':'region-1'};
+function evaluate(i){
+  const bugs=i.bugs||{}, a=ACTORS[i.actor]||ACTORS.planner;
+  const inv={'WH-A':{on:i.aOn,res:0,q:'OK'},'WH-B':{on:i.bOn,res:0,q:i.quality}};
+  const avail=w=>inv[w]?inv[w].on-inv[w].res:0;
+  const ev={actor:i.actor,src:i.src,dst:i.dst,part:'PX-17',qty:i.qty,src_available:avail(i.src),dst_available:avail(i.dst),
+    policy:{threshold:100,safety_stock:50,max_age_s:5},work_order:'WO-42'};
+  const g={evidence:null,authorization:null,policy:null,conformance:null};
+  const out=(status,reason)=>({gates:g,status,reason,evidence:ev});
+  // gate 2: evidence
+  if(i.age>5){
+    g.evidence={status:'INSUFFICIENT_EVIDENCE',reason:'inventory snapshot older than 5 s'};
+    return out('INSUFFICIENT_EVIDENCE',g.evidence.reason);
+  }
+  g.evidence={status:'ALLOW',reason:'snapshot age '+i.age+' s, within 5 s'};
+  // gate 3: authorization
+  let az;
+  if(bugs.authz) az=['ALLOW','bug: authz skipped'];
+  else if(!inv[i.src]) az=['DENY','unknown source warehouse'];
+  else if(a.role==='junior_planner') az=['DENY','junior_planner cannot transfer inventory'];
+  else if(a.role==='agent'){
+    if(a.grants.indexOf('transfer_inventory')<0) az=['DENY','agent lacks exact task grant'];
+    else if(a.regions.indexOf(REGION[i.src])<0) az=['DENY','agent outside assigned region'];
+    else az=['ALLOW','agent holds the task grant in region'];
+  } else az=a.regions.indexOf(REGION[i.src])>=0?['ALLOW',a.role+' in assigned region']:['DENY','actor outside assigned region'];
+  g.authorization={status:az[0],reason:az[1]};
+  if(az[0]==='DENY') return out('DENIED_AUTHORIZATION',az[1]);
+  // gate 4: policy
+  const safety=i.src==='WH-B'?50:0, remaining=avail(i.src)-i.qty;
+  if(inv[i.src]&&inv[i.src].q==='QUARANTINE'){
+    g.policy={status:'DENY',reason:'source lot is in quarantine'};
+    return out('DENIED_POLICY',g.policy.reason);
+  }
+  if(remaining<safety){
+    g.policy={status:'DENY',reason:'transfer would breach safety stock (remaining='+remaining+' < safety_stock='+safety+')'};
+    return out('DENIED_POLICY',g.policy.reason);
+  }
+  const needs=bugs.threshold?i.qty>=100:i.qty>100;
+  if(needs){
+    const why='quantity '+i.qty+' exceeds threshold 100'+(bugs.threshold&&i.qty===100?' (bug: exactly 100 now needs approval)':'');
+    g.policy={status:'REQUIRES_APPROVAL',reason:why};
+    return out('REQUIRES_APPROVAL',why);
+  }
+  g.policy={status:'ALLOW',reason:'quality OK, remaining '+remaining+' >= safety stock '+safety+', quantity within threshold'};
+  // gate 5: conformance
+  if(i.qty<1) g.conformance={status:'INVALID',reason:'quantity must be >= 1'};
+  else if(i.src===i.dst) g.conformance={status:'INVALID',reason:'source and destination must differ'};
+  if(g.conformance) return out('INVALID_CONFORMANCE',g.conformance.reason);
+  g.conformance={status:'ALLOW',reason:'state transition is valid'};
+  return out('APPROVED','all four gates passed');
+}
+function simulateExec(mode,qty,bugIdem,key){
+  const k='ae-'+String(key).slice(0,8);
+  const start='Temporal starts ActionExecutionWorkflow', recv='WMS receives idempotency key '+k, commit='WMS commits transfer';
+  const tail=['Debezium emits WMS change','Ingestion observes fac:WmsTransferRecord','Outcome predicate holds'];
+  const half=Math.floor(qty/2);
+  let S,outcome='OBSERVED_SUCCESS',moved=qty,note='';
+  switch(mode){
+    case 'dup':
+      if(bugIdem){
+        S=[start,recv,commit,'Second identical request arrives with key '+k,'BUG_SKIP_IDEMPOTENCY: WMS applies the second request again','Debezium emits WMS change','Ingestion observes fac:WmsTransferRecord','Observed effect is 2x the expected quantity'];
+        outcome='DIVERGED';moved=2*qty;
+        note="BUG_SKIP_IDEMPOTENCY: the reference model's invariant check catches the double effect (H4/H5)";
+      } else S=[start,recv,commit,'Second identical request arrives with key '+k,'WMS returns the stored result (same idempotency key): no second effect'].concat(tail);
+      break;
+    case 'timeout':
+      S=[start,recv,commit,'Worker sees a timeout: no response received','Worker retries with the same key '+k,'WMS returns the committed result'].concat(tail);break;
+    case 'nocommit':
+      S=[start,recv,'WMS answers 200 OK but commits nothing','Waiting for a CDC record: none arrives'];
+      outcome='OUTCOME_UNKNOWN';moved=0;note='never OBSERVED_SUCCESS without an observed record';break;
+    case 'partial':
+      S=[start,recv,'WMS commits half the quantity ('+half+' of '+qty+')',tail[0],tail[1],'Observed record disagrees with expected: DIVERGED','Compensatable: Temporal runs reverse_transfer','Inventory restored to before'];
+      outcome='DIVERGED';moved=0;note='compensated: reverse_transfer restored the inventory';break;
+    case 'wrong':
+      S=[start,recv,'WMS commits '+(qty+5)+' instead of '+qty,tail[0],tail[1],'Observed record disagrees with expected: DIVERGED','Compensatable: Temporal runs reverse_transfer','Inventory restored to before'];
+      outcome='DIVERGED';moved=0;note='compensated: reverse_transfer restored the inventory';break;
+    case 'cdcdelay':
+      S=[start,recv,commit,'Awaiting observation…','Awaiting observation…','Awaiting observation…','Debezium emits WMS change (late)',tail[1],tail[2]];break;
+    case 'temporal':
+      S=['Temporal frontend unreachable','Decision stays APPROVED, unexecuted and auditable'];
+      outcome='EXECUTION_NOT_STARTED';moved=0;break;
+    default: S=[start,recv,commit].concat(tail);
+  }
+  return {steps:S,outcome:outcome,moved:moved,note:note};
+}
+// END-PURE
+(function(){
+'use strict';
+const $=(s,r)=>(r||document).querySelector(s);
+const $$=(s,r)=>Array.prototype.slice.call((r||document).querySelectorAll(s));
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const reduce=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+const sleep=ms=>new Promise(r=>setTimeout(r,reduce?0:ms));
+const pad=n=>String(n).padStart(4,'0');
+const shaCache={};
+async function sha(str){
+  if(shaCache[str]) return shaCache[str];
+  let res=null;
+  try{
+    if(window.crypto&&crypto.subtle){
+      const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
+      res={hex:Array.prototype.map.call(new Uint8Array(b),x=>x.toString(16).padStart(2,'0')).join(''),algo:'SHA-256'};
+    }
+  }catch(e){res=null;}
+  if(!res){
+    let h=0x811c9dc5;
+    for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}
+    res={hex:h.toString(16).padStart(8,'0'),algo:'fnv1a (fallback)'};
+  }
+  shaCache[str]=res;return res;
+}
+const TONE={ALLOW:'ok',APPROVED:'ok',OBSERVED_SUCCESS:'ok',DENY:'bad',DENIED_AUTHORIZATION:'bad',DENIED_POLICY:'bad',INSUFFICIENT_EVIDENCE:'bad',INVALID:'bad',INVALID_CONFORMANCE:'bad',DIVERGED:'bad',REQUIRES_APPROVAL:'warn',OUTCOME_UNKNOWN:'warn',EXECUTION_NOT_STARTED:'neu'};
+const LABEL={INSUFFICIENT_EVIDENCE:'INSUFFICIENT',REQUIRES_APPROVAL:'REQUIRES APPROVAL'};
+const chip=(s,label)=>'<span class="chip '+(TONE[s]&&TONE[s]!=='neu'?TONE[s]:'')+'">'+esc(label||LABEL[s]||s.replace(/_/g,' '))+'</span>';
+const st={cnt:0,last:null,log:[],approval:null,executed:null,dA:0,dB:0,cur:null,tok:0,xtok:0,lastExec:null,running:false,moved:false};
+const CTL=['actor','src','dst','qty','quality','age','wh-b-onhand','wms'];
+const CHK=['bug-authz','bug-threshold','bug-idem'];
+function readInputs(){
+  return {actor:$('#actor').value,src:$('#src').value,dst:$('#dst').value,qty:+$('#qty').value,quality:$('#quality').value,age:+$('#age').value,
+    bugs:{authz:$('#bug-authz').checked,threshold:$('#bug-threshold').checked,idem:$('#bug-idem').checked},
+    aOn:20+st.dA,bOn:(+$('#wh-b-onhand').value)+st.dB};
+}
+function snapshotCtl(){const o={};CTL.forEach(k=>{o[k]=$('#'+k).value;});CHK.forEach(k=>{o[k]=$('#'+k).checked;});return o;}
+function setControls(m){
+  ['wh-b-onhand'].concat(CTL.filter(k=>k!=='wh-b-onhand'),CHK).forEach(k=>{
+    if(!(k in m)) return;
+    const el=$('#'+k); if(el.type==='checkbox') el.checked=!!m[k]; else el.value=m[k];
+    if(k==='wh-b-onhand') setQtyMax();
+  });
+  syncOut();
+}
+function setQtyMax(){
+  const max=+$('#wh-b-onhand').value, q=$('#qty');
+  q.max=max; if(+q.value>max) q.value=max;
+  $('#ticks').innerHTML=[60,90,100].filter(v=>v<=max).map(v=>'<span style="left:'+(v/max*100)+'%">'+v+'</span>').join('')+
+    '<em style="position:absolute;left:0;right:0;top:20px;font-style:normal;white-space:normal">60 shortage · 90 safety-stock limit · 100 threshold</em>';
+}
+function syncOut(){
+  $('#qty-out').textContent=$('#qty').value; $('#whb-out').textContent=$('#wh-b-onhand').value; $('#age-out').textContent=$('#age').value+' s';
+}
+function renderWorld(){
+  const a=20+st.dA, b=(+$('#wh-b-onhand').value)+st.dB, scale=Math.max(160,a,b);
+  $('#bar-a').style.width=(Math.max(0,a)/scale*100)+'%'; $('#bar-b').style.width=(Math.max(0,b)/scale*100)+'%';
+  $('#tick-a').style.left=(80/scale*100)+'%'; $('#tick-b').style.left=(50/scale*100)+'%';
+  $('#val-a').textContent=a; $('#val-b').textContent=b;
+  const short=Math.max(0,80-a);
+  $('#bar-wo').style.width=(Math.min(Math.max(a,0),80)/80*100)+'%';
+  $('#wo-line').innerHTML=short===0?'<span class="chip ok">WO-42: mitigated</span>':'<span class="chip bad">WO-42 '+(st.moved?'still ':'')+'short by '+short+'</span>';
+}
+const STN=['Evidence snapshot','Evidence check','Authorization (OpenFGA)','Policy (OPA)','Conformance (SHACL)','Decision'];
+function stationsHTML(c){
+  const g=c.r.gates, out=[];
+  const box=(i,body,done)=>'<div class="station'+(done?' done':'')+(i===5?' wide':'')+'" id="st-'+i+'"><h4>'+STN[i]+'</h4>'+body+'</div>';
+  out.push(box(0,'<span class="chip acc">'+esc(c.hash.algo)+'</span><div class="hash">'+esc(c.hash.hex.slice(0,16))+'…</div>',true));
+  [g.evidence,g.authorization,g.policy,g.conformance].forEach((x,k)=>{
+    out.push(box(k+1,x?chip(x.status)+'<div class="sreason">'+esc(x.reason)+'</div>':'<span class="chip dash">not evaluated</span>',!!x));
+  });
+  const t=TONE[c.status]||'neu';
+  out.push(box(5,'<div class="verdict '+t+'">'+esc(c.status)+'</div>',true));
+  return out.join('');
+}
+function whyText(c){
+  if(c.status==='APPROVED') return c.approved?'A supervisor approval bound to this exact evidence hash is on record, so the decision is APPROVED and may execute.':'All four gates passed, so the decision is APPROVED and may execute.';
+  if(c.status==='REQUIRES_APPROVAL') return 'Policy allows this only with approval: '+c.r.reason+'. Conformance is not evaluated and nothing executes until a supervisor approves.';
+  return c.status+': '+c.r.reason+'. The gates stop here and nothing executes.';
+}
+function recordText(c){
+  const gs=c.r.gates, gv=x=>x?{status:x.status,reason:x.reason}:{status:'NOT_EVALUATED'};
+  const rec={decision_id:c.id,status:c.status,actor:c.inp.actor,action_type:'transfer_inventory',action_version:1,evidence_hash:c.hash.hex,
+    gates:{evidence:gv(gs.evidence),authorization:gv(gs.authorization),policy:gv(gs.policy),conformance:gv(gs.conformance)},
+    contract_versions:{ontology:'v3',shape_set:'v3',authz_model:'v3',policy_bundle:'v3'}};
+  if(c.approved) rec.approval={approved_by:'supervisor',bound_to_hash:c.approved.hash};
+  if(st.lastExec&&st.lastExec.id===c.id) rec.execution={outcome:st.lastExec.outcome};
+  let s=JSON.stringify(rec,null,2).replace('"contract_versions": {','"contract_versions": { // fresh stack auto-advances V1→V2→V3');
+  if(c.draft) s='// draft: not yet proposed. Press "Propose transfer" to record it.\n'+s;
+  return s;
+}
+function renderLog(){
+  const items=st.log.slice(-8).reverse();
+  $('#dlog').innerHTML=items.length?items.map((e,i)=>'<li><button type="button" id="dl-'+i+'" data-id="'+e.id+'"><span>'+e.id+'</span><span>'+esc(e.actor)+' · '+e.qty+'</span>'+chip(e.status)+'</button></li>').join(''):'<li class="muted small">No proposals yet in this session.</li>';
+}
+function renderAll(c,animate){
+  renderWorld();
+  $('#stations').innerHTML=stationsHTML(c);
+  if(animate&&!reduce){const els=$$('#stations .station');els.forEach(e=>e.classList.add('wait'));els.forEach((e,i)=>setTimeout(()=>e.classList.remove('wait'),180*(i+1)));}
+  $('#why').textContent=whyText(c);
+  const f=$('#f33'); f.hidden=!c.f33; f.textContent=c.f33;
+  $('#approve').hidden=c.status!=='REQUIRES_APPROVAL';
+  const ok=c.status==='APPROVED', done=st.executed&&st.executed.id===c.id;
+  const zl=$('#zero-line'); zl.textContent=ok?'Decision APPROVED: execution is available.':'Nothing executes: 0 external effects';
+  const eb=$('#execute'); eb.disabled=!ok||st.running; eb.setAttribute('aria-disabled',String(!ok||st.running||!!done));
+  eb.textContent=ok&&done?'Already executed — idempotent: no second effect':'Execute via Temporal';
+  $('#record').textContent=recordText(c);
+  renderLog();
+}
+function logUpdate(id,patch){const e=st.log.filter(x=>x.id===id)[0];if(e) Object.assign(e,patch);}
+async function update(animate){
+  const my=++st.tok, inp=readInputs(), r=evaluate(inp), key=JSON.stringify(r.evidence), h=await sha(key);
+  if(my!==st.tok) return st.cur;
+  let status=r.status, approved=null, f33='';
+  if(status==='REQUIRES_APPROVAL'){
+    if(st.approval&&st.approval.key===key){status='APPROVED';approved=st.approval;}
+    else if(st.approval) f33='F33: approval was bound to hash '+st.approval.hash.slice(0,16)+'…; the proposal changed, so the approval no longer applies';
+  }
+  const sig=key+'|'+inp.actor+'|'+inp.quality+'|'+inp.age+'|'+JSON.stringify(inp.bugs);
+  const matches=!!(st.last&&st.last.sig===sig);
+  const id=matches?st.last.id:'dec-'+pad(st.cnt+1);
+  const c={inp:inp,r:r,key:key,hash:h,status:status,approved:approved,f33:f33,sig:sig,id:id,draft:!matches};
+  st.cur=c;
+  if(matches) logUpdate(id,{status:status});
+  renderAll(c,animate);
+  return c;
+}
+function commit(c){
+  st.cnt++; st.last={id:'dec-'+pad(st.cnt),sig:c.sig};
+  st.log.push({id:st.last.id,actor:c.inp.actor,qty:c.inp.qty,status:c.status,ctl:snapshotCtl()});
+  if(st.log.length>50) st.log.shift();
+}
+async function propose(animate){
+  const c=await update(false); commit(c); st.executed=null;
+  return update(animate!==false);
+}
+async function ensureCommitted(){
+  const c=await update(false); if(!c.draft) return c;
+  commit(c); return update(false);
+}
+async function approve(){
+  const c=await ensureCommitted();
+  st.approval={key:c.key,hash:c.hash.hex,by:'supervisor'};
+  await update(false);
+}
+async function execute(){
+  if(st.running) return;
+  let c=await update(false);
+  if(c.status!=='APPROVED') return;
+  if(st.executed&&st.executed.id===c.id) return;
+  c=await ensureCommitted();
+  st.running=true; const xt=++st.xtok;
+  const mode=$('#wms').value, sim=simulateExec(mode,c.inp.qty,c.inp.bugs.idem,c.hash.hex);
+  const ul=$('#exec-log'); ul.innerHTML=''; $('#exec-outcome').innerHTML=''; $('#exec-note').hidden=true;
+  $('#execute').disabled=true;
+  for(let i=0;i<sim.steps.length;i++){
+    if(xt!==st.xtok) return;
+    const li=document.createElement('li'); li.textContent=sim.steps[i];
+    if(/^Awaiting/.test(sim.steps[i])) li.className='wait';
+    ul.appendChild(li); await sleep(250);
+  }
+  if(xt!==st.xtok) return;
+  const m=sim.moved;
+  if(m){ if(c.inp.src==='WH-B'){st.dB-=m;st.dA+=m;} else {st.dA-=m;st.dB+=m;} st.moved=true; }
+  $('#exec-outcome').innerHTML='Outcome: '+chip(sim.outcome);
+  const nt=$('#exec-note'); nt.hidden=!sim.note; nt.textContent=sim.note;
+  st.lastExec={id:c.id,outcome:sim.outcome}; if(mode!=='temporal') st.executed={id:c.id};
+  logUpdate(c.id,{outcome:sim.outcome});
+  st.running=false; await update(false);
+}
+function resetWorld(){
+  st.dA=0;st.dB=0;st.moved=false;st.executed=null;st.lastExec=null;st.approval=null;st.xtok++;st.running=false;
+  $('#wh-b-onhand').value=140; setQtyMax(); syncOut();
+  $('#exec-log').innerHTML=''; $('#exec-outcome').innerHTML=''; $('#exec-note').hidden=true;
+}
+const BASE={actor:'planner',src:'WH-B',dst:'WH-A',qty:60,quality:'OK',age:1,'wh-b-onhand':140,wms:'normal','bug-authz':false,'bug-threshold':false,'bug-idem':false};
+const PRESET_DEF={
+  canonical:{label:'Canonical: planner moves 60',delta:{}},
+  junior:{label:'Junior planner tries (F03)',delta:{actor:'junior'}},
+  'agent-nogrant':{label:'Agent without grant (F04)',delta:{actor:'agent-nogrant'}},
+  stale:{label:'Stale evidence (F02)',delta:{age:8}},
+  quarantine:{label:'Quarantined lot (F05)',delta:{quality:'QUARANTINE'}},
+  safety:{label:'Breach safety stock (F05)',delta:{qty:100}},
+  approval:{label:'Needs approval (F06)',delta:{'wh-b-onhand':200,qty:120}},
+  samewh:{label:'Same warehouse (F07)',delta:{dst:'WH-B'}},
+  wrong:{label:'Wrong quantity at WMS (F17)',delta:{wms:'wrong'},auto:true}
+};
+['dup','timeout','nocommit','partial','cdcdelay','temporal'].forEach(m=>{PRESET_DEF[m]={label:m,delta:{wms:m},auto:true};});
+async function applyPreset(key){
+  const d=PRESET_DEF[key]; if(!d) return;
+  resetWorld(); setControls(Object.assign({},BASE,d.delta));
+  await propose(true);
+  if(d.auto) await execute();
+}
+window.ooRunPreset=async function(key){
+  await applyPreset(key);
+  const p=$('#play'); if(p&&p.scrollIntoView) p.scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});
+};
+function initPlay(){
+  $('#presets').innerHTML=['canonical','junior','agent-nogrant','stale','quarantine','safety','approval','samewh','wrong'].map(k=>'<button type="button" class="btn ghost sm" id="preset-'+k+'" data-preset="'+k+'">'+esc(PRESET_DEF[k].label)+'</button>').join('');
+  $('#presets').addEventListener('click',e=>{const b=e.target.closest('button[data-preset]');if(b) applyPreset(b.getAttribute('data-preset'));});
+  CTL.filter(k=>k!=='wms').concat(CHK).forEach(k=>{
+    const el=$('#'+k); const fn=()=>{syncOut(); if(k==='wh-b-onhand') setQtyMax(); update(false);};
+    el.addEventListener('input',fn); el.addEventListener('change',fn);
+  });
+  $('#propose').addEventListener('click',()=>propose(true));
+  $('#approve').addEventListener('click',approve);
+  $('#execute').addEventListener('click',execute);
+  $('#reset-world').addEventListener('click',()=>{resetWorld();update(false);});
+  $('#dlog').addEventListener('click',e=>{
+    const b=e.target.closest('button[data-id]'); if(!b) return;
+    const en=st.log.filter(x=>x.id===b.getAttribute('data-id'))[0]; if(!en) return;
+    setControls(en.ctl); update(true);
+  });
+  setQtyMax(); syncOut();
+  propose(false);
+}
+/* ---------- Architecture map ---------- */
+const NW=154,NH=44;
+const LANES=['Sources','Change capture','Semantic core','Read path','Decision & gates','Action runtime'];
+const ND=[
+ ['erp','ERP','ERP',15401,'Phase 2','Fake ERP (FastAPI + Postgres), owns purchase orders.',0,50],
+ ['mes','MES','MES',15402,'Phase 2','Fake MES, owns work orders.',0,130],
+ ['wms','WMS','WMS',15403,'Phase 2','Fake WMS, owns inventory lots; accepts transfers with an idempotency key; has fault-injection test modes.',0,210],
+ ['srcpg','Source Postgres','Source Postgres',15432,'Phase 2','The three source databases.',1,130],
+ ['debezium','Debezium Connect','Debezium Connect',null,'Phase 3','CDC from source Postgres into Kafka; built in Phase 3, not deferred (ADR 0002).',1,210],
+ ['kafka','Kafka','Kafka',null,null,'Change-event transport; the baseline reads the SAME topics under its own consumer group.',1,290],
+ ['ingest','Ingestion+identity','Ingestion + identity resolver',null,'Phase 3','Maps source records to ontology objects; ambiguous identity is quarantined, never guessed (F09).',1,370],
+ ['rdf4j','RDF4J core','RDF4J semantic core',null,'Phase 3','Ontology + SHACL shapes + PROV-O provenance in named graphs; the SHACL gate rejects invalid writes transactionally.',2,290],
+ ['baseline','Baseline (Variant A)','Baseline service (Variant A)',15411,'Phase 8','Conventional relational build: own CDC consumer, own Postgres, own Temporal queue, same API; reuses the authz/policy/action code verbatim.',2,450],
+ ['proj','Projection builder','Projection builder',null,'Phase 4','Derives hot tables from SPARQL only, never from source DBs; rebuild proves hash(rebuilt) == hash(before).',3,50],
+ ['hot','Hot projections','Hot projections (Postgres)',null,'Phase 4','work_order_risk, transfer_candidates, current_inventory, action_eligibility_summary.',3,130],
+ ['planner','Planner (human)','Planner (human)',null,null,'Reads the hot projection, proposes, approves.',3,210],
+ ['mcp','MCP server','MCP server',15490,'Phase 9','The agent surface: exactly 7 tools (get_object, query_work_order_risk, list_transfer_candidates, propose_transfer_inventory, get_decision, execute_approved_decision, explain_decision). No run_sql, write_triple or approve tool exists.',3,370],
+ ['agent','AI agent','AI agent',null,null,'Acts as one fixed software-agent identity; the human it acts for is resolved server-side.',3,450],
+ ['otel','OTel collector','OTel collector',15491,'Phase 10a','Minimal tracing; a dead collector never fails a request (F40).',4,50],
+ ['openfga','OpenFGA','OpenFGA',15481,null,'Relationship-based authorization; historical model + tuple snapshot for replay (ADR 0004).',4,130],
+ ['opa','OPA','OPA',15482,null,'Contextual policy (thresholds, safety stock); every published policy version stays servable for replay.',4,210],
+ ['decision','Decision service','Decision service',15410,'Phases 5–7','POST /decisions/propose, /approve, /execute, /replay, /reevaluate. Freezes an evidence snapshot, runs authorization → policy → SHACL, stores every gate result separately.',4,290],
+ ['temporal','Temporal','Temporal',15473,'Phase 6','Durable workflow engine for ActionExecutionWorkflow.',5,290],
+ ['worker','Action worker','Action worker',15486,'Phase 6','Calls WMS with action_execution_id as idempotency key, waits for the CDC-observed record, evaluates the outcome predicate, compensates where the contract says compensatable.',5,370],
+ ['recon','Reconciliation','Reconciliation',15487,'Phase 6','Independent CDC re-check loop; detects divergence (H12).',5,450]
+];
+const NODE={};
+ND.forEach(a=>{NODE[a[0]]={id:a[0],short:a[1],label:a[2],port:a[3],phase:a[4],desc:a[5],lane:a[6],x:14+a[6]*186,y:a[7]};});
+NODE.baseline.baseline=true;
+const R=(id,dy)=>[NODE[id].x+NW,NODE[id].y+(dy==null?22:dy)];
+const L=(id,dy)=>[NODE[id].x,NODE[id].y+(dy==null?22:dy)];
+const T=(id,dx)=>[NODE[id].x+(dx==null?77:dx),NODE[id].y];
+const B=(id,dx)=>[NODE[id].x+(dx==null?77:dx),NODE[id].y+NH];
+const ED=[
+ ['erp','srcpg','c',[R('erp'),L('srcpg',12)]],
+ ['mes','srcpg','c',[R('mes'),L('srcpg',22)]],
+ ['wms','srcpg','c',[R('wms'),L('srcpg',32)]],
+ ['srcpg','debezium','p',[B('srcpg'),T('debezium')]],
+ ['debezium','kafka','p',[B('debezium'),T('kafka')]],
+ ['kafka','ingest','p',[B('kafka'),T('ingest')]],
+ ['ingest','rdf4j','c',[R('ingest'),L('rdf4j')]],
+ ['rdf4j','proj','p',[T('rdf4j'),[T('rdf4j')[0],NODE.proj.y+22],L('proj')]],
+ ['proj','hot','p',[B('proj'),T('hot')]],
+ ['hot','planner','p',[B('hot'),T('planner')]],
+ ['planner','decision','c',[R('planner'),L('decision',10)]],
+ ['agent','mcp','p',[T('agent'),B('mcp')]],
+ ['mcp','decision','p',[R('mcp'),[NODE.decision.x+42,R('mcp')[1]],B('decision',42)]],
+ ['decision','openfga','p',[R('decision',10),[921,NODE.decision.y+10],[921,R('openfga')[1]],R('openfga')]],
+ ['decision','opa','p',[T('decision'),B('opa')]],
+ ['decision','rdf4j','p',[L('decision',32),R('rdf4j',32)],'SHACL-validated write',560,316],
+ ['decision','temporal','p',[R('decision',36),L('temporal',36)]],
+ ['temporal','worker','p',[B('temporal'),T('worker')]],
+ ['worker','wms','p',[R('worker'),[1110,R('worker')[1]],[1110,512],[91,512],B('wms')]],
+ ['kafka','recon','p',[L('kafka'),[184,L('kafka')[1]],[184,530],[1021,530],B('recon',77)]],
+ ['recon','decision','p',[L('recon'),[870,L('recon')[1]],B('decision',112)],'outcome',878,410],
+ ['kafka','baseline','c',[R('kafka'),L('baseline')],null,0,0,'dashed baseline'],
+ ['decision','otel','p',[R('decision',22),[931,R('decision',22)[1]],[931,R('otel')[1]],R('otel')],null,0,0,'dotted']
+];
+function edgePath(kind,pts){
+  if(kind==='c'){const a=pts[0],b=pts[1],mx=(a[0]+b[0])/2;return 'M'+a[0]+','+a[1]+' C'+mx+','+a[1]+' '+mx+','+b[1]+' '+b[0]+','+b[1];}
+  return pts.map((p,i)=>(i?'L':'M')+p[0]+','+p[1]).join(' ');
+}
+function drawMap(){
+  let s='<defs><marker id="mk1" class="mk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z"/></marker>'+
+    '<marker id="mk2" class="mk act" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z"/></marker></defs>';
+  LANES.forEach((n,i)=>{s+='<rect class="lane-bg" x="'+(6+i*186)+'" y="34" width="170" height="470" rx="6"/><text class="lane-t" x="'+(91+i*186)+'" y="24" text-anchor="middle">'+n.toUpperCase()+'</text>';});
+  ED.forEach((e,i)=>{
+    s+='<path class="edge '+(e[7]||'')+'" id="e-'+i+'" d="'+edgePath(e[2],e[3])+'" marker-end="url(#mk1)"/>';
+    if(e[4]) s+='<text class="elabel" x="'+e[5]+'" y="'+e[6]+'">'+esc(e[4])+'</text>';
+  });
+  ND.forEach(a=>{
+    const n=NODE[a[0]];
+    s+='<g class="node'+(n.baseline?' baseline faded':'')+'" id="n-'+n.id+'" tabindex="0" role="button" aria-label="'+esc(n.label)+(n.port?', port '+n.port:'')+'. Press Enter for details"><rect x="'+n.x+'" y="'+n.y+'" width="'+NW+'" height="'+NH+'" rx="6"/>'+
+      '<text x="'+(n.x+10)+'" y="'+(n.y+19)+'">'+esc(n.short)+'</text><text class="port" x="'+(n.x+10)+'" y="'+(n.y+35)+'">'+(n.port?'port '+n.port:(n.phase||''))+'</text></g>';
+  });
+  $('#mapsvg').innerHTML=s;
+  $('#e-21').classList.add('faded');
+}
+const TR=[
+ [['erp'],"ERP event changes PO-991's expected arrival"],
+ [['debezium'],'Debezium emits the source event'],
+ [['ingest'],'Identity resolver maps source objects to ontology objects'],
+ [['rdf4j'],'RDF core updates observed state and provenance'],
+ [['proj','hot'],'Projection builder updates work_order_risk'],
+ [['hot','planner'],'Planner reads the hot projection'],
+ [['planner','decision'],'Planner proposes transfer_inventory'],
+ [['decision'],'Immutable evidence snapshot captured'],
+ [['decision'],'Decision recorded as PROPOSED'],
+ [['openfga'],'OpenFGA evaluates authority'],
+ [['opa'],'OPA evaluates contextual policy'],
+ [['rdf4j'],'SHACL validates the proposed state transition'],
+ [['decision'],'Decision becomes APPROVED'],
+ [['temporal'],'Temporal starts the ActionExecution'],
+ [['worker','wms'],'WMS receives the idempotency key'],
+ [['wms'],'WMS commits the transfer'],
+ [['debezium','kafka'],'Debezium emits WMS changes'],
+ [['recon'],'Reconciliation correlates observed vs expected effects'],
+ [['worker','decision'],'Outcome becomes OBSERVED_SUCCESS'],
+ [['proj','hot'],'work_order_risk changes from critical to mitigated'],
+ [['decision','rdf4j'],'Provenance links evidence → decision → action → observed outcome']
+];
+const mp={sel:null,step:0,timer:null};
+function showTrace(){
+  const cur=new Set(mp.step?TR[mp.step-1][0]:[]), prev=new Set(mp.step>1?TR[mp.step-2][0]:[]);
+  ND.forEach(a=>{$('#n-'+a[0]).classList.toggle('hl',cur.has(a[0]));});
+  ED.forEach((e,i)=>{
+    const on=(cur.has(e[0])&&cur.has(e[1]))||(prev.has(e[0])&&cur.has(e[1]));
+    const p=$('#e-'+i); p.classList.toggle('active',on); p.setAttribute('marker-end',on?'url(#mk2)':'url(#mk1)');
+  });
+  $('#trace-cap').textContent=mp.step?'Step '+mp.step+'/21: '+TR[mp.step-1][1]:'Step 0/21: press Trace or Next to start.';
+  $('#trace-play').textContent=mp.timer?'Pause':'Trace';
+}
+function stopTrace(){if(mp.timer){clearInterval(mp.timer);mp.timer=null;}}
+function stepTrace(d){mp.step=Math.max(0,Math.min(21,mp.step+d));if(mp.step>=21) stopTrace();showTrace();}
+function toggleTrace(){
+  if(mp.timer){stopTrace();showTrace();return;}
+  if(reduce){stepTrace(mp.step>=21?-21:1);return;}
+  if(mp.step>=21) mp.step=0;
+  stepTrace(1);
+  mp.timer=setInterval(()=>stepTrace(1),1400); showTrace();
+}
+function selectNode(id){
+  mp.sel=id; ND.forEach(a=>{$('#n-'+a[0]).classList.toggle('sel',a[0]===id);});
+  const n=NODE[id], con=[];
+  ED.forEach(e=>{
+    if(e[0]===id) con.push('→ '+NODE[e[1]].label+(e[4]?' ('+e[4]+')':''));
+    else if(e[1]===id) con.push('← '+NODE[e[0]].label+(e[4]?' ('+e[4]+')':''));
+  });
+  $('#nodedetail').innerHTML='<h3>'+esc(n.label)+'</h3><p class="mono small" style="margin:0 0 8px">'+(n.port?'port '+n.port:'no fixed port stated')+(n.phase?' · '+esc(n.phase):'')+'</p><p>'+esc(n.desc)+'</p><p class="label">Connected to</p><p class="small mono" style="margin:0">'+con.map(esc).join('<br>')+'</p>';
+}
+function initMap(){
+  drawMap();
+  const svg=$('#mapsvg');
+  svg.addEventListener('click',e=>{const g=e.target.closest('.node');if(g) selectNode(g.id.slice(2));});
+  svg.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const g=e.target.closest('.node');if(g){e.preventDefault();selectNode(g.id.slice(2));}}});
+  $('#show-baseline').addEventListener('change',e=>{
+    const on=e.target.checked, n=$('#n-baseline'), ed=$('#e-21');
+    n.classList.toggle('faded',!on); n.classList.toggle('on',on); ed.classList.toggle('faded',!on); ed.classList.toggle('on',on);
+    $('#base-note').hidden=!on;
+  });
+  $('#trace-prev').addEventListener('click',()=>{stopTrace();stepTrace(-1);});
+  $('#trace-next').addEventListener('click',()=>{stopTrace();stepTrace(1);});
+  $('#trace-play').addEventListener('click',toggleTrace);
+  selectNode('decision'); showTrace();
+}
+/* ---------- Fault explorer ---------- */
+const FG=['All','Gates','Execution','CDC & transport','Availability','Replay & contracts','Agent','Other'];
+const FD=[
+ ['F01','malformed decision','Decision API','reject; 0 external effects','Gates'],
+ ['F02','missing evidence','gate','INSUFFICIENT_EVIDENCE','Gates','stale'],
+ ['F03','unauthorized human','OpenFGA','deny; 0 external effects','Gates','junior'],
+ ['F04','unauthorized agent','OpenFGA/MCP','tool/action unavailable or denied; 0 effects','Agent','agent-nogrant'],
+ ['F05','policy deny','OPA','deny; explanation recorded','Gates','quarantine'],
+ ['F06','approval required','OPA','no execution before valid approval','Gates','approval'],
+ ['F07','invalid RDF transition','SHACL','transaction rejected','Gates','samewh'],
+ ['F08','stale evidence','Decision service','reject/require refresh per policy','Gates','stale'],
+ ['F09','source identity ambiguous','resolver','quarantine/typed failure; no guessing','CDC & transport'],
+ ['F10','duplicate API request','Action service','same logical effect once','Execution','dup'],
+ ['F11','concurrent duplicate','WMS/Temporal','unique idempotency enforcement','Execution'],
+ ['F12','worker crash pre-call','Temporal worker','resume safely','Execution'],
+ ['F13','worker crash post-call/pre-record','Temporal','recover without duplicate effect','Execution'],
+ ['F14','commit-then-timeout','WMS','retry resolves via idempotency/reconciliation','Execution','timeout'],
+ ['F15','200 without commit','WMS','never observed_success','Execution','nocommit'],
+ ['F16','partial commit','WMS','DIVERGED / compensation path','Execution','partial'],
+ ['F17','wrong quantity','WMS','DIVERGED','Execution','wrong'],
+ ['F18','CDC delayed','Debezium/Kafka','awaiting observation, then converge','CDC & transport','cdcdelay'],
+ ['F19','CDC duplicated','Kafka consumer','idempotent ingestion','CDC & transport'],
+ ['F20','CDC reordered','event stream','no invariant break; version/order logic explicit','CDC & transport'],
+ ['F21','Kafka temporarily down','transport','backpressure/recovery, no fabricated freshness','Availability'],
+ ['F22','RDF4J temporarily down','semantic core','governed proposal fails safely','Availability'],
+ ['F23','OpenFGA unavailable','gate','fail closed for protected action (GATE_UNAVAILABLE, HTTP 503)','Availability'],
+ ['F24','OPA unavailable','gate','fail closed unless action explicitly classified otherwise','Availability'],
+ ['F25','Temporal unavailable','execution','approved decision remains unexecuted, auditable','Availability','temporal'],
+ ['F26','hot projection stale','read path','freshness visible; policy may reject','Other'],
+ ['F27','projection corrupt','test hook','consistency check detects mismatch','Other'],
+ ['F28','ontology migration incompatible','CI/replay','build fails','Replay & contracts'],
+ ['F29','old policy deleted','replay','replay fails loudly (HTTP 409)','Replay & contracts'],
+ ['F30','prompt injection','agent','no policy bypass','Agent'],
+ ['F31','tool parameter injection','MCP/action API','normal gates re-run server-side','Agent'],
+ ['F32','agent impersonates human','identity','impossible without explicit delegation','Agent'],
+ ['F33','approval replay on changed decision','approval','rejected due to decision hash mismatch','Agent','approval'],
+ ['F34','action definition changes post-approval','runtime','approved pinned version executes or decision invalidated','Replay & contracts'],
+ ['F35','clock skew','distributed services','ordering relies on source offsets/IDs, not wall clock alone','Other'],
+ ['F36','unrelated concurrent stock receipt','WMS','reconciliation recognizes the intended transfer correctly','Execution'],
+ ['F37','source DB direct manual edit','WMS','observed as external fact with provenance, not attributed to the action','Other'],
+ ['F38','event poison message','ingestion','DLQ/quarantine; pipeline health visible','CDC & transport'],
+ ['F39','invalid mapping rule deployment','identity','compatibility fixture catches it or ambiguity exposed','Replay & contracts'],
+ ['F40','trace/log unavailable','observability','business correctness survives; provenance stays in the data model','Availability']
+];
+const fs={group:'All',sel:'F10'};
+function renderFaults(){
+  $('#ffilters').innerHTML=FG.map((g,i)=>'<button type="button" class="btn ghost sm" id="ff-'+i+'" data-g="'+esc(g)+'" aria-pressed="'+(fs.group===g)+'">'+esc(g)+'</button>').join('');
+  $('#tiles').innerHTML=FD.filter(f=>fs.group==='All'||f[4]===fs.group).map(f=>
+    '<button type="button" class="tile" id="tile-'+f[0]+'" data-f="'+f[0]+'" aria-pressed="'+(fs.sel===f[0])+'"><span class="id">'+f[0]+'<span class="chip ok">pass</span></span><span class="nm">'+esc(f[1])+'</span>'+(f[5]?'<span class="try">Try it</span>':'')+'</button>').join('');
+  const f=FD.filter(x=>x[0]===fs.sel)[0];
+  $('#fdetail').innerHTML=f?'<h3>'+f[0]+' · '+esc(f[1])+' <span class="chip ok">pass</span></h3><dl><dt>Component</dt><dd>'+esc(f[2])+'</dd><dt>Expected</dt><dd>'+esc(f[3])+'</dd><dt>Group</dt><dd>'+esc(f[4])+'</dd></dl>'+
+    (f[5]?'<p class="small muted">'+(f[0]==='F33'?'In the simulator: approve, then move the slider. The approval stays bound to the old hash. ':'')+'</p><button type="button" class="btn" id="run-sim" data-p="'+f[5]+'">Run in simulator</button>':'<p class="small muted">Covered by the real-stack fault suite; no simulator preset for this case.</p>'):'';
+}
+function initFaults(){
+  renderFaults();
+  $('#ffilters').addEventListener('click',e=>{const b=e.target.closest('button[data-g]');if(b){fs.group=b.getAttribute('data-g');renderFaults();}});
+  $('#tiles').addEventListener('click',e=>{const b=e.target.closest('button[data-f]');if(b){fs.sel=b.getAttribute('data-f');renderFaults();const t=$('#tile-'+fs.sel);if(t) t.focus();}});
+  $('#fdetail').addEventListener('click',e=>{const b=e.target.closest('#run-sim');if(b) window.ooRunPreset(b.getAttribute('data-p'));});
+}
+/* ---------- Hypothesis ledger ---------- */
+const RH={
+ 'Round 1':'Round 1 · Manufacturing loop (exp-003, tag poc-v1.0-experiment; 310 tests passed, 40/40 faults)',
+ 'Round 2':'Round 2 · Language × Engine × Toolchain',
+ 'Round 3':'Round 3 · Paladin vs conventional, dual track'
+};
+const LD=[
+ ['H1','Decision as first-class data, complete record','Round 1',['S']],
+ ['H2','Gates prevent invalid external effects','Round 1',['S']],
+ ['H3','Closed-loop truth: outcomes observed, not trusted from the command path','Round 1',['S']],
+ ['H4','Durable, idempotent actions','Round 1',['S']],
+ ['H5','Concurrency invariants hold','Round 1',['S']],
+ ['H6','Hot-path read latency within SLO','Round 1',['S']],
+ ['H7','Replay across contract evolution (V1→V2→V3)','Round 1',['S'],'make test-replay 10/10; 740 sampled decisions PASS with live authz replay. First attempt (Phase 7) was fail-open on authorization; caught by audit and redone in 7b.'],
+ ['H8','Controlled ontology evolution','Round 1',['S']],
+ ['H9','Agent boundedness (MCP, 7 tools, 21 adversarial tests)','Round 1',['S']],
+ ['H10','Deterministic operation without AI','Round 1',['S']],
+ ['H11','The ontology gives measurable benefit over a simpler baseline','Round 1',['R'],'Correctness 500/500 identical, forensics and replay at parity. Baseline ahead on change effort, ingestion lag and infrastructure. The one apparent ontology advantage (SHACL catching a cardinality mutation) was parity once tested like-for-like: Postgres NOT NULL rejects the same write. Conclusion: an operational ontology is not necessary for this bounded domain.'],
+ ['H12','Divergence detection','Round 1',['S']],
+ ['H13','Queryable provenance (forensic queries on 5,000 decisions)','Round 1',['S']],
+ ['H14','Open/closed semantic coexistence','Round 1',['S']],
+ ['H15','OpenPona as a lossless Ontology Language over a typed IR','Round 2',['S'],'v1 encoding rejected by the author: every reference relied on meaningless labels. v2 passed; text+record cost 2.6–2.9× bytes vs the direct DSL.','v2'],
+ ['H16','One bounded kernel serves two domains, no new primitives','Round 2',['S']],
+ ['H17','Function ≠ Action is a hard effect boundary','Round 2',['S'],'Engine v1 REJECTED (editing returned execution records executed gate-denied actions); one run INVALID (orchestrator ran another builder in the same tree); passed on Engine v1.2.'],
+ ['H18','Project Ontology governs its own research lifecycle better than file discipline','Round 2',['R'],'≈4–5× the bespoke surface of a Git + JSON Schema + scripts baseline; 2,191 vs 39 LOC of recurring machinery.'],
+ ['H18w','The executable Project Ontology works','Round 2',['S'],'formulated after H18\'s result; lower evidential weight.','post-hoc'],
+ ['H19','Git stays canonical while the ontology is executable','Round 2',['S']],
+ ['H20','One generic Engine, zero domain branches','Round 2',['S']],
+ ['H21','Generated Toolchain with security equivalence','Round 2',['S']],
+ ['H22','Reuse across semantic variety repays the ontology tax','Round 2',['R'],'3 domains, 33 blind change tasks, 66 attempts. Ontology cost 1.31×–6.74× per change class; 24 vs 15 regressions; equal security failures (3 vs 3).'],
+ ['H22w','Schema + generator reaches parity','Round 2',['R'],'36 new blind tasks, 90 attempts: 1.48× [1.11, 1.68] and 1.84× [1.43, 2.45]. Generator cut cost to 0.28× of hand-built, not to parity.','post-hoc'],
+ ['H23','A fully compromised agent stays effect-contained','Round 3',['S','S'],'2nd official run; run 1 rejected both (contradictory pre-run spec).'],
+ ['H24','Delegation, attenuation, expiry, revocation under concurrency','Round 3',['S','S'],'single run; 1,400/1,400 race outcomes both.'],
+ ['H25','Constitutional authority executed generically','Round 3',['S','S'],'Paladin needed 3 attempts, conventional 2; 3rd pre-registered as final.'],
+ ['H26','Knowledge sovereignty / noninterference','Round 3',['S','S'],'3rd attempt; earlier runs failed on a launch fault and a harness generator fault.'],
+ ['H27','Tamper-evident decision provenance','Round 3',['S','S'],'19,234/19,234 vs 19,231/19,231 affected decisions detected; 0 tampered histories accepted.'],
+ ['H28','Byzantine adapters cannot become hidden authorities','Round 3',['S','S'],'conventional ≈2.5× higher throughput.'],
+ ['H29','Safe continuity and deterministic recovery','Round 3',['S','S'],'4th official run; three earlier runs harness-invalid or invalid by author decision.'],
+ ['H30','Total security premium produces measurable value','Round 3',['N','N'],'Stopped by the author 2026-10-15: the task corpus had become synthetic and could not convincingly overturn H23–H29. The comparative question stays open.']
+];
+const VN={S:['Supported','ok'],R:['Rejected','bad'],N:['Not run','']};
+const VF={All:null,Supported:'S',Rejected:'R','Not run':'N'};
+const ls={round:'All',verdict:'All',open:{}};
+function renderLedger(){
+  const rounds=['All','Round 1','Round 2','Round 3'], verdicts=Object.keys(VF);
+  $('#lf-round').innerHTML=rounds.map((r,i)=>'<button type="button" class="btn ghost sm" id="lr-'+i+'" data-r="'+r+'" aria-pressed="'+(ls.round===r)+'">'+r+'</button>').join('');
+  $('#lf-verdict').innerHTML=verdicts.map((v,i)=>'<button type="button" class="btn ghost sm" id="lv-'+i+'" data-v="'+v+'" aria-pressed="'+(ls.verdict===v)+'">'+v+'</button>').join('');
+  const rows=LD.filter(r=>(ls.round==='All'||r[2]===ls.round)&&(ls.verdict==='All'||r[3].indexOf(VF[ls.verdict])>=0));
+  const s=rows.filter(r=>r[3].every(x=>x==='S')).length, rj=rows.filter(r=>r[3].indexOf('R')>=0).length, nr=rows.filter(r=>r[3].every(x=>x==='N')).length;
+  $('#lsum').textContent=rows.length+' hypotheses · '+s+' supported · '+rj+' rejected · '+nr+' not run';
+  let html='', cur='';
+  rows.forEach(r=>{
+    if(r[2]!==cur){cur=r[2];html+='<div class="grouph">'+esc(RH[cur])+'</div>';}
+    const dual=r[3].length===2, open=!!ls.open[r[0]];
+    const chips=r[3].map((v,i)=>'<span class="chip '+VN[v][1]+'">'+(dual?(i?'Conventional: ':'Paladin: '):'')+VN[v][0]+'</span>').join('')+(r[5]?'<span class="chip acc">'+r[5]+'</span>':'');
+    html+='<div class="lrow"><button type="button" class="lhead" id="lh-'+r[0]+'" data-h="'+r[0]+'" aria-expanded="'+open+'" aria-controls="lb-'+r[0]+'"><span class="hid">'+r[0]+'</span><span>'+esc(r[1])+'</span><span class="vchips">'+chips+'</span></button>'+
+      '<div class="lbody" id="lb-'+r[0]+'"'+(open?'':' hidden')+'><p>'+esc(r[4]||(RH[r[2]]+'. No further detail recorded for this row.'))+'</p></div></div>';
+  });
+  $('#lrows').innerHTML=html;
+}
+function setRound(r){ls.round=r;renderLedger();}
+function initLedger(){
+  renderLedger();
+  $('#lf-round').addEventListener('click',e=>{const b=e.target.closest('button[data-r]');if(b){ls.round=b.getAttribute('data-r');renderLedger();}});
+  $('#lf-verdict').addEventListener('click',e=>{const b=e.target.closest('button[data-v]');if(b){ls.verdict=b.getAttribute('data-v');renderLedger();}});
+  $('#lrows').addEventListener('click',e=>{
+    const b=e.target.closest('button[data-h]'); if(!b) return;
+    const id=b.getAttribute('data-h'), open=b.getAttribute('aria-expanded')!=='true';
+    ls.open[id]=open; b.setAttribute('aria-expanded',String(open)); $('#lb-'+id).hidden=!open;
+  });
+  $$('.rcard').forEach(b=>b.addEventListener('click',()=>{
+    ls.verdict='All'; setRound(b.getAttribute('data-round'));
+    $('#ledger').scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});
+  }));
+}
+/* ---------- How it was built ---------- */
+const CM={'09-23':2,'09-24':64,'09-25':2,'10-01':3,'10-02':20,'10-03':9,'10-05':7,'10-06':69,'10-07':88,'10-08':72,'10-09':60,'10-10':13,'10-12':68,'10-13':30,'10-14':6,'10-15':20,'10-16':6};
+const TG={
+ '09-23':'poc-v0.1-model, poc-v0.2-sources',
+ '09-24':'poc-v0.3-semantic … poc-v0.10a-hardened (11 tags: v0.3-semantic, v0.4-projections, v0.4.1-stable, v0.5-gates, v0.6-actions, v0.6.1-faults, v0.7-replay, v0.7.1-replay, v0.8-baseline, v0.9-agent, v0.10a-hardened)',
+ '09-25':'poc-v1.0-experiment',
+ '10-01':'r2-h15-gate0, r2-h15-openpona',
+ '10-02':'16 Round 2 tags incl. r2-engine-prereg, r2-engine-core, r2-h16-exp001, r2-h17-exp001 (rejected), r2-h18-exp001',
+ '10-03':'r2-engine-v1.2, r2-h15v2-exp001, r2-h17-exp004, r2-h20-exp002, r2-h21-exp002',
+ '10-05':'r2-h18w-exp001, r2-h19-exp001, r2-results',
+ '10-06':'Round 3 protocol freeze',
+ '10-15':'r3-results (Round 3 closed)',
+ '10-16':'H30 pilot (PR #3, #4)'
+};
+const DAYS=[];
+for(let d=23;d<=30;d++) DAYS.push('09-'+d);
+for(let d=1;d<=16;d++) DAYS.push('10-'+(d<10?'0'+d:d));
+const BANDS=[['ROUND 1','09-23','09-25'],['ROUND 2','10-01','10-05'],['ROUND 3','10-06','10-15'],['H30','10-16','10-16']];
+function drawTimeline(){
+  const X0=50,W=850,Y0=270,H=230,step=W/DAYS.length,bw=step*0.68;
+  const xi=d=>X0+DAYS.indexOf(d)*step;
+  let s='';
+  BANDS.forEach(b=>{const x=xi(b[1]),w=xi(b[2])+step-x;s+='<rect class="band" x="'+x+'" y="30" width="'+w+'" height="'+(Y0-30)+'"/><text class="bandl" x="'+(x+w/2)+'" y="24" text-anchor="middle">'+b[0]+'</text>';});
+  [0,25,50,75,100].forEach(v=>{const y=Y0-v/100*H;s+='<line class="gridline" x1="'+X0+'" x2="'+(X0+W)+'" y1="'+y+'" y2="'+y+'"/><text x="'+(X0-8)+'" y="'+(y+4)+'" text-anchor="end">'+v+'</text>';});
+  s+='<line class="axis" x1="'+X0+'" x2="'+(X0+W)+'" y1="'+Y0+'" y2="'+Y0+'"/>';
+  DAYS.forEach((d,i)=>{
+    const x=X0+i*step, n=CM[d]||0, h=n/100*H;
+    s+='<text x="'+(x+step/2)+'" y="'+(Y0+16)+'" text-anchor="middle">'+d.slice(3)+'</text>';
+    if(i===0||d==='10-01') s+='<text class="strong" x="'+(x+step/2)+'" y="'+(Y0+34)+'" text-anchor="middle">'+(d.slice(0,2)==='09'?'SEP':'OCT')+'</text>';
+    if(n) s+='<rect class="bar-x" tabindex="0" data-d="'+d+'" x="'+(x+(step-bw)/2)+'" y="'+(Y0-h)+'" width="'+bw+'" height="'+h+'" rx="2" aria-label="'+d+': '+n+' commits"/><text x="'+(x+step/2)+'" y="'+(Y0-h-5)+'" text-anchor="middle">'+n+'</text>';
+  });
+  s+='<text x="'+X0+'" y="'+(Y0+58)+'">Empty days are plotted with no bar: 09-26 to 09-30, 10-04, 10-11.</text>';
+  $('#timeline').innerHTML=s;
+  const tip=$('#tip'), wrap=tip.parentNode;
+  function show(el){
+    const d=el.getAttribute('data-d'), n=CM[d];
+    tip.innerHTML='<b>'+d+'</b><br>'+n+' commit'+(n===1?'':'s')+'<br>'+(TG[d]?'tags: '+esc(TG[d]):'no tags created');
+    tip.hidden=false;
+    const r=el.getBoundingClientRect(), w=wrap.getBoundingClientRect();
+    let left=r.left-w.left+r.width/2-tip.offsetWidth/2; left=Math.max(0,Math.min(w.width-tip.offsetWidth,left));
+    tip.style.left=left+'px'; tip.style.top=Math.max(0,r.top-w.top-tip.offsetHeight-8)+'px';
+  }
+  const svg=$('#timeline');
+  svg.addEventListener('mouseover',e=>{const b=e.target.closest('.bar-x');if(b) show(b);});
+  svg.addEventListener('focusin',e=>{const b=e.target.closest('.bar-x');if(b) show(b);});
+  svg.addEventListener('mouseout',e=>{if(e.target.closest('.bar-x')) tip.hidden=true;});
+  svg.addEventListener('focusout',()=>{tip.hidden=true;});
+}
+const PH=[
+ ['0','Experiment lock: hypothesis ledger, thresholds, canonical fixtures, ADR template.'],
+ ['1','Pure reference model: deterministic transitions, invariants, Hypothesis state machine. No infrastructure.'],
+ ['2','Fake ERP / MES / WMS source systems (FastAPI + Postgres).'],
+ ['3','RDF4J semantic core, SHACL, PROV-O, identity resolver, CDC via Kafka + Debezium.'],
+ ['4','Hot projections in Postgres, derived from SPARQL only.'],
+ ['4fix','One readiness contract (make wait-converged); flaky CDC check root-caused.'],
+ ['5','Decision service + gates: OpenFGA, OPA, SHACL.'],
+ ['6','Durable actions on Temporal; idempotency; reconciliation.'],
+ ['6b','Full fault matrix; two real concurrency bugs and a SPARQL/IRI injection vulnerability found and fixed.'],
+ ['7','Contract versioning and replay V1→V2→V3 (superseded: authz replay was fail-open).'],
+ ['7b','Honest replay: historical OpenFGA tuple snapshot; corpus from real policy evaluation.'],
+ ['8','Relational baseline (Variant A) and the A/B experiment: 500/500 identical decisions.'],
+ ['9','MCP agent layer: 7 tools, 21 adversarial tests.'],
+ ['10a','Hardening: projection deadlock fixed, stateful testing on the live stack, mutation testing, tracing; 40/40 faults.'],
+ ['10afix','Two residual flaky tests rebuilt on synthetic preconditions; 73/73 integration, 3× back to back.'],
+ ['10b','make experiment: exp-003, exit 0, 310/310 tests, H11 rejected honestly.']
+];
+function showPhase(i){
+  $$('#ladder button').forEach((b,k)=>b.setAttribute('aria-pressed',String(k===i)));
+  $('#phase-cap').innerHTML='<b class="mono">Phase '+PH[i][0]+'</b> · '+esc(PH[i][1]);
+}
+const CY=[
+ ['Pre-register','Hypothesis, rival, prediction, falsifier, threshold, written before code.'],
+ ['Freeze','Protocol hashed; material change after a reveal = new experiment version.'],
+ ['Build','An orchestrator dispatches builder agents per phase and independently re-verifies every "done".'],
+ ['Run','Official runs against a fixed seed; dev and smoke runs never count.'],
+ ['Attribute','Every rejection gets an ATTRIBUTION.md: variant defect, harness defect, or orchestrator fault.'],
+ ['Record','Nothing deleted: rejected, INVALID and superseded runs stay in RESULTS.md; post-hoc claims are labelled with a "w".']
+];
+function showCycle(i){
+  $$('#cycle .cnode').forEach((g,k)=>g.setAttribute('aria-pressed',String(k===i)));
+  $('#cycle-cap').innerHTML='<p class="label">Step '+(i+1)+' of 6</p><h3>'+CY[i][0]+'</h3><p style="margin:0">'+esc(CY[i][1])+'</p>';
+}
+function initBuilt(){
+  drawTimeline();
+  $('#ladder').innerHTML=PH.map((p,i)=>'<button type="button" class="btn ghost sm" id="ph-'+p[0]+'" data-i="'+i+'" aria-pressed="false">'+p[0]+'</button>').join('');
+  $('#ladder').addEventListener('click',e=>{const b=e.target.closest('button[data-i]');if(b) showPhase(+b.getAttribute('data-i'));});
+  let s='<circle class="cring" cx="170" cy="160" r="118"/>';
+  CY.forEach((c,k)=>{
+    const a=(-90+60*k)*Math.PI/180, cx=170+118*Math.cos(a), cy=160+118*Math.sin(a);
+    const m=(-60+60*k)*Math.PI/180, mx=170+118*Math.cos(m), my=160+118*Math.sin(m), rot=-60+60*k+90;
+    s+='<path class="cmark" transform="translate('+mx.toFixed(1)+' '+my.toFixed(1)+') rotate('+rot+')" d="M-5,-4L5,0L-5,4z"/>';
+    s+='<g class="cnode" tabindex="0" role="button" aria-pressed="false" data-i="'+k+'" aria-label="'+(k+1)+'. '+c[0]+'"><circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="38"/><text x="'+cx.toFixed(1)+'" y="'+(cy-4).toFixed(1)+'" text-anchor="middle">'+(k+1)+'</text><text x="'+cx.toFixed(1)+'" y="'+(cy+10).toFixed(1)+'" text-anchor="middle">'+c[0]+'</text></g>';
+  });
+  $('#cycle').innerHTML=s;
+  const act=e=>{const g=e.target.closest('.cnode');if(g) showCycle(+g.getAttribute('data-i'));};
+  $('#cycle').addEventListener('click',act);
+  $('#cycle').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();act(e);}});
+  showPhase(0); showCycle(0);
+}
+/* ---------- Rounds 2-3 ---------- */
+const MX=[['Language','H15, H16'],['Engine','H17, H19, H20'],['Toolchain','H21']];
+function initMatrix(){
+  let s='<span class="h"></span>'+['Data','Logic','Action','Security'].map(c=>'<span class="h">'+c+'</span>').join('');
+  MX.forEach((r,i)=>{s+='<button type="button" class="rl" id="mx-'+r[0]+'" data-i="'+i+'" aria-pressed="false">'+r[0]+'</button><span class="c"></span><span class="c"></span><span class="c"></span><span class="c"></span>';});
+  const m=$('#matrix'); m.innerHTML=s;
+  m.addEventListener('click',e=>{
+    const b=e.target.closest('button[data-i]'); if(!b) return;
+    const r=MX[+b.getAttribute('data-i')];
+    $$('#matrix .rl').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+    $('#matrix-cap').textContent=r[0]+' was tested by '+r[1]+'.';
+  });
+}
+const CD=[
+ ['H18 project lifecycle surface',4.5,[4,5],'4.5× (range 4–5)'],
+ ['H22 per change class, best',1.31,null,'1.31×'],
+ ['H22 per change class, worst',6.74,null,'6.74×'],
+ ['H22 public domain 1',5.11,null,'5.11×'],
+ ['H22 public domain 2',2.64,null,'2.64×'],
+ ['H22 domain 3 (schema-generated)',1.12,null,'1.12×',3.74],
+ ['H22w manufacturing from schema',1.48,[1.11,1.68],'1.48× [1.11, 1.68]'],
+ ['H22w synthetic billing domain',1.84,[1.43,2.45],'1.84× [1.43, 2.45]']
+];
+function drawCost(){
+  const X0=270,U=68,Y0=352; let s='';
+  for(let v=0;v<=7;v++){const x=X0+v*U;s+='<line class="gridline" x1="'+x+'" x2="'+x+'" y1="44" y2="'+Y0+'"/><text x="'+x+'" y="'+(Y0+18)+'" text-anchor="middle">'+v+'×</text>';}
+  s+='<line class="axis" x1="'+X0+'" x2="'+(X0+7*U)+'" y1="'+Y0+'" y2="'+Y0+'"/>';
+  s+='<line class="parity" x1="'+(X0+U)+'" x2="'+(X0+U)+'" y1="40" y2="'+Y0+'"/><text class="strong" x="'+(X0+U+6)+'" y="36">baseline = 1×</text>';
+  CD.forEach((r,i)=>{
+    const cy=68+i*38, x2=X0+r[1]*U;
+    s+='<text class="strong" x="'+(X0-10)+'" y="'+(cy+4)+'" text-anchor="end">'+esc(r[0])+'</text>';
+    if(r[4]) s+='<rect class="ghost" x="'+X0+'" y="'+(cy-9)+'" width="'+(r[4]*U)+'" height="18" rx="2"><title>'+r[4]+'× if generated files count</title></rect>';
+    s+='<rect class="bar-x" x="'+X0+'" y="'+(cy-9)+'" width="'+(r[1]*U)+'" height="18" rx="2"><title>'+esc(r[0])+': '+r[3]+'</title></rect>';
+    let end=x2;
+    if(r[2]){const a=X0+r[2][0]*U,b=X0+r[2][1]*U;end=Math.max(x2,b);s+='<path class="whisk" d="M'+a+','+cy+' L'+b+','+cy+' M'+a+','+(cy-6)+' L'+a+','+(cy+6)+' M'+b+','+(cy-6)+' L'+b+','+(cy+6)+'"/>';}
+    if(r[4]) end=X0+r[4]*U;
+    if(r[4]){
+      s+='<text x="'+(x2+8)+'" y="'+(cy+4)+'">'+r[3]+'</text><text x="'+(end+8)+'" y="'+(cy+4)+'">'+r[4]+'× if generated files count</text>';
+    } else s+='<text x="'+(end+8)+'" y="'+(cy+4)+'">'+r[3]+'</text>';
+  });
+  $('#costchart').innerHTML=s;
+}
+const R3=['H23','H24','H25','H26','H27','H28','H29'];
+const R3D={
+ loc:{d:[[1672,1370],[2759,2299],[4999,3443],[4999,3443],[2759,2299],[478,482],[505,574]],max:5000,fmt:v=>v.toLocaleString('en-US'),lab:[0,0,0,0,0,'*',0],
+  note:'Security-specific lines of code per gate. * H28 counts lines added since the freeze, so it is not directly comparable with the other gates.'},
+ p95:{d:[[17.4,1.3],[49.1,7.8],[28.3,2.4],[6.4,4.4],[6.0,1.2],[null,null],[null,null]],max:50,fmt:v=>v.toFixed(1),lab:[],
+  note:'Contended hosts, non-authoritative; H28 and H29 not recorded.'},
+ runs:{d:[[2,2],[1,1],[3,3],[3,3],[1,1],[2,2],[4,4]],max:5,fmt:v=>String(v),lab:[],
+  note:"H25: Paladin's first SUPPORTED came on run 3, conventional's on run 2. H28: run 1 INVALID, launch fault. H29: 3 runs harness-invalid or invalid by author decision."}
+};
+function drawR3(m){
+  const D=R3D[m], X0=56,W=704,Y0=262,H=210,gw=W/7,bw=34; let s='';
+  const ticks=m==='runs'?[0,1,2,3,4,5]:[0,1,2,3,4].map(i=>D.max/4*i);
+  ticks.forEach(v=>{const y=Y0-v/D.max*H;s+='<line class="gridline" x1="'+X0+'" x2="'+(X0+W)+'" y1="'+y+'" y2="'+y+'"/><text x="'+(X0-8)+'" y="'+(y+4)+'" text-anchor="end">'+(m==='p95'?v:Math.round(v).toLocaleString('en-US'))+'</text>';});
+  s+='<line class="axis" x1="'+X0+'" x2="'+(X0+W)+'" y1="'+Y0+'" y2="'+Y0+'"/>';
+  R3.forEach((g,i)=>{
+    const cx=X0+gw*i+gw/2;
+    s+='<text class="strong" x="'+cx+'" y="'+(Y0+18)+'" text-anchor="middle">'+g+(D.lab[i]||'')+'</text>';
+    if(D.d[i][0]===null){s+='<text x="'+cx+'" y="'+(Y0-8)+'" text-anchor="middle">n/a</text>';return;}
+    [0,1].forEach(k=>{
+      const v=D.d[i][k], h=v/D.max*H, x=cx+(k?2:-bw-2);
+      s+='<rect class="'+(k?'bar-b':'bar-a')+'" x="'+x+'" y="'+(Y0-h)+'" width="'+bw+'" height="'+h+'" rx="2"><title>'+g+' '+(k?'Conventional':'Paladin')+': '+D.fmt(v)+'</title></rect><text x="'+(x+bw/2)+'" y="'+(Y0-h-5)+'" text-anchor="middle">'+D.fmt(v)+'</text>';
+    });
+  });
+  $('#r3chart').innerHTML=s; $('#r3note').textContent=D.note;
+  $$('#r3-metric button').forEach(b=>b.setAttribute('aria-pressed',String(b.getAttribute('data-m')===m)));
+}
+function initRounds(){
+  initMatrix(); drawCost(); drawR3('loc');
+  $('#r3-metric').addEventListener('click',e=>{const b=e.target.closest('button[data-m]');if(b) drawR3(b.getAttribute('data-m'));});
+}
+/* ---------- Theme toggle ---------- */
+function initTheme(){
+  const modes=['system','light','dark']; let i=0;
+  try{const v=localStorage.getItem('oo-theme');if(modes.indexOf(v)>=0) i=modes.indexOf(v);}catch(e){}
+  const root=document.documentElement, btn=$('#theme-toggle');
+  function apply(){
+    if(modes[i]==='system') root.removeAttribute('data-theme'); else root.setAttribute('data-theme',modes[i]);
+    btn.textContent='Theme: '+modes[i];
+  }
+  btn.addEventListener('click',()=>{i=(i+1)%3;apply();try{localStorage.setItem('oo-theme',modes[i]);}catch(e){}});
+  apply();
+}
+[initTheme,initPlay,initMap,initFaults,initLedger,initBuilt,initRounds].forEach(fn=>{
+  try{fn();}catch(err){if(window.console) console.error(fn.name,err);}
+});
+})();
+</script>
+</body>
+</html>
