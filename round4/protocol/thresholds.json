@@ -8,8 +8,15 @@
     "H33.min_seeded_faults_per_class",
     "H34.min_seeded_faults_per_class",
     "H35.min_audited_effects",
-    "H36.min_pilot_items"
+    "H36.min_pilot_items",
+    "H37.min_seeded_faults_per_class"
   ],
+  "headroom_rule": {
+    "absolute_bar_applies_when_baseline_at_most": 0.80,
+    "gap_closure_min_fraction": 0.5,
+    "ceiling_when_baseline_at_least": 0.95,
+    "ceiling_record": "CEILING: no advantage measured (not REJECTED)"
+  },
   "common": {
     "treatment_calls_per_item_must_exceed": 0,
     "pilot_arm_items_before_fanout": 1,
@@ -70,5 +77,16 @@
     "max_operator_minutes_ratio_vs_baseline": 1.5,
     "max_agent_token_cost_ratio_vs_baseline": 1.5
   },
-  "comparative_basis": "author-fixed minimum material effect, 2026-10-28, moderate set; not derived from the baseline pilot"
+  "H37": {
+    "min_seeded_faults_per_class": 20,
+    "max_over_broad_grants": 0,
+    "max_post_expiry_successful_uses": 0,
+    "max_self_approved_grants": 0,
+    "max_standing_credentials": 0,
+    "min_violation_detection_advantage_over_baseline_pp": 20,
+    "max_access_latency_ratio_vs_baseline": 1.5,
+    "max_operator_minutes_ratio_vs_baseline": 1.5,
+    "revocation_bound_seconds": 60
+  },
+  "comparative_basis": "author-fixed minimum material effect, 2026-10-28, moderate set; not derived from the baseline pilot. Every comparative advantage bar is read through headroom_rule (follow-up 2026-10-28)."
 }

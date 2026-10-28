@@ -3,10 +3,11 @@
 ## For the draft pack (this stage)
 
 - [ ] `python scripts/check_pack.py` exits 0.
-- [ ] H31-H36 contracts validate against `schemas/hypothesis-contract.schema.json`.
-- [ ] Every invariant C1-C3 and K1-K5 and every fault class F1-F10 is covered by at least one contract.
+- [ ] H31-H37 contracts validate against `schemas/hypothesis-contract.schema.json`.
+- [ ] Every invariant C1-C3 and K1-K8 and every fault class F1-F14 is covered by at least one contract.
 - [ ] `protocol/thresholds.json` is `DRAFT_NOT_FROZEN`; every threshold, comparative ones included, has a fixed non-null value (`comparative_basis` recorded).
 - [ ] No `protocol/FREEZE.json` exists; the author freezes.
+- [ ] `thresholds.headroom_rule` exists and every `*_advantage_over_baseline_pp` contract cites it.
 - [ ] The author has answered every item in `protocol/OPEN_QUESTIONS.md`.
 
 ## For the pilot
@@ -20,7 +21,7 @@
 
 ## For the round
 
-- [ ] Each of H31-H36 has a verdict: SUPPORTED, REJECTED, INCONCLUSIVE or INVALID, with the implementation status kept separately.
+- [ ] Each of H31-H37 has a verdict: SUPPORTED, REJECTED, INCONCLUSIVE or INVALID (a CEILING class is INCONCLUSIVE with reason "CEILING"), with the implementation status kept separately.
 - [ ] Where both arms pass every gate, the result says "no advantage measured" and names the graded metric.
 - [ ] H36 reports a cost and benefit frontier, not one score.
 - [ ] A results file lists per hypothesis the evidence path, with parity and costs stated.

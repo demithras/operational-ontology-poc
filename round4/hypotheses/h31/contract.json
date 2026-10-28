@@ -47,16 +47,17 @@
   "evaluator": {
     "support_if": [
       "Treatment: thresholds.H31.max_double_claims_undetected and thresholds.H31.max_stale_leases_unreleased_beyond_bound both hold at 0 on every seeded fault.",
-      "Treatment detection beats the baseline by at least thresholds.H31.min_detection_advantage_over_baseline_pp, an author-fixed value (fixed before any run, not derived from the baseline pilot).",
+      "Treatment detection beats the baseline by at least thresholds.H31.min_detection_advantage_over_baseline_pp, an author-fixed value (fixed before any run, not derived from the baseline pilot). The bar is read through thresholds.headroom_rule: the absolute bar applies while the baseline rate is at most thresholds.headroom_rule.absolute_bar_applies_when_baseline_at_most; above it the treatment must close at least thresholds.headroom_rule.gap_closure_min_fraction of the baseline's misses, (treatment - baseline) / (1 - baseline).",
       "False-alarm ratio is within thresholds.H31.max_false_alarm_ratio_vs_baseline.",
       "At least thresholds.H31.min_seeded_faults_per_class seeded faults per class were run in each arm."
     ],
     "reject_if": [
-      "The baseline reaches the same detection and release outcome as the treatment on every seeded fault (parity: no advantage measured).",
+      "The baseline reaches the same detection and release outcome as the treatment on every seeded fault (parity: no advantage measured). Exception: when the baseline rate is at least thresholds.headroom_rule.ceiling_when_baseline_at_least this is CEILING, not REJECTED (see inconclusive_if).",
       "The treatment lets any double claim or stale lease through."
     ],
     "inconclusive_if": [
-      "Fewer seeded faults per class than thresholds.H31.min_seeded_faults_per_class ran, or both arms pass every gate and the graded metric that would rank them was not measured (ceiling: write 'no advantage measured; comparative question open')."
+      "Fewer seeded faults per class than thresholds.H31.min_seeded_faults_per_class ran, or both arms pass every gate and the graded metric that would rank them was not measured (ceiling: write 'no advantage measured; comparative question open').",
+      "The baseline rate on this class is at least thresholds.headroom_rule.ceiling_when_baseline_at_least (ceiling): record CEILING (thresholds.headroom_rule.ceiling_record) with reason \"CEILING\", never REJECTED; the class counts as neither an advantage nor a rejection."
     ],
     "invalid_if": [
       "The oracle trusts agent self-report or candidate logs instead of the independent observer.",

@@ -27,7 +27,7 @@ observation → hypothesis → strongest rival (the conventional stack already d
 
 ## Pilot posture
 
-The pilot is 2 repositories, 2 agents, 1 gated action. Adversarial agents hold exactly the credentials and call surface frozen for them; do not grant more and do not weaken them.
+The pilot is 2 repositories, 2 agents, 2 gated actions (merge_pr, then grant_access). Adversarial agents hold exactly the credentials and call surface frozen for them; do not grant more and do not weaken them.
 
 ## Stop conditions
 

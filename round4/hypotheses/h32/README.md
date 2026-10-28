@@ -36,6 +36,10 @@ Seed cross-repo blockers (open, then later closed) in both arms, offer the same 
 5. Run both arms at the pilot minimum (thresholds.H32.min_seeded_faults_per_class).
 6. Judge start-versus-blocker order by the observer from timestamps in the source host and tracker, never from agent reports.
 
+## Headroom rule
+
+The comparative bar of this contract is read through `thresholds.headroom_rule`: the absolute bar applies while the baseline rate is at most 0.80; above it the treatment must close at least 50% of the baseline's misses, (treatment - baseline) / (1 - baseline); at a baseline of 0.95 or more the class is recorded as CEILING: no advantage measured, never REJECTED (verdict INCONCLUSIVE with reason "CEILING"). A fixed +20 bar is unreachable by construction above 0.80.
+
 ## Independent oracle
 
 Independent observer reconstructing, from source-host and tracker timelines, whether each blocker was open at the instant work on the blocked item started; no code from either arm is imported.

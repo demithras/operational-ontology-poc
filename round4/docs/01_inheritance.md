@@ -17,8 +17,8 @@
 
 ## What is dropped
 
-- The Paladin class definition (P1-P6) as the organising frame; Round 4 uses C1-C3 and K1-K5.
-- Attack classes A1-A10 and the survivability envelope of Round 3; Round 4 uses fault classes F1-F10.
+- The Paladin class definition (P1-P6) as the organising frame; Round 4 uses C1-C3 and K1-K8.
+- Attack classes A1-A10 and the survivability envelope of Round 3; Round 4 uses fault classes F1-F14.
 - The Attractor game as Round 4 (R5+ status undecided).
 - The manufacturing and project-ontology domains as test domains.
 - Any attempt to reopen H11, H22 or H22w.

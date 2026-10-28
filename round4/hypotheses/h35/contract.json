@@ -47,15 +47,16 @@
   "evaluator": {
     "support_if": [
       "Treatment: thresholds.H35.max_unresolvable_provenance_links and thresholds.H35.max_provenance_links_rewritable_by_actor both hold at 0 over all audited effects.",
-      "Answer completeness beats the baseline by at least thresholds.H35.min_answer_completeness_advantage_over_baseline_pp, an author-fixed value (fixed before any run, not derived from the baseline pilot).",
+      "Answer completeness beats the baseline by at least thresholds.H35.min_answer_completeness_advantage_over_baseline_pp, an author-fixed value (fixed before any run, not derived from the baseline pilot). The bar is read through thresholds.headroom_rule: the absolute bar applies while the baseline rate is at most thresholds.headroom_rule.absolute_bar_applies_when_baseline_at_most; above it the treatment must close at least thresholds.headroom_rule.gap_closure_min_fraction of the baseline's misses, (treatment - baseline) / (1 - baseline).",
       "Time to answer is within thresholds.H35.max_time_to_answer_ratio_vs_baseline."
     ],
     "reject_if": [
-      "The baseline resolves all six links for every audited effect from records the actor cannot rewrite (parity: no advantage measured).",
+      "The baseline resolves all six links for every audited effect from records the actor cannot rewrite (parity: no advantage measured). Exception: when the baseline rate is at least thresholds.headroom_rule.ceiling_when_baseline_at_least this is CEILING, not REJECTED (see inconclusive_if).",
       "Any audited effect in the treatment has an unresolved or actor-rewritable link."
     ],
     "inconclusive_if": [
-      "Fewer than thresholds.H35.min_audited_effects effects were audited, or both arms are complete and the graded metric (time to answer) was not measured."
+      "Fewer than thresholds.H35.min_audited_effects effects were audited, or both arms are complete and the graded metric (time to answer) was not measured.",
+      "The baseline rate on this class is at least thresholds.headroom_rule.ceiling_when_baseline_at_least (ceiling): record CEILING (thresholds.headroom_rule.ceiling_record) with reason \"CEILING\", never REJECTED; the class counts as neither an advantage nor a rejection."
     ],
     "invalid_if": [
       "The grader trusts agent self-report or candidate logs instead of source-host and deploy ground truth.",

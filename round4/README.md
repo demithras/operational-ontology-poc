@@ -24,9 +24,11 @@ Round 4 changes the domain from manufacturing to agent-run IT work (author decis
 Coordination: C1 single ownership   C2 liveness            C3 dependency respect
 Control:      K1 effect authority   K2 review separation   K3 green gate
               K4 external truth     K5 provenance
+Access:       K6 least privilege    K7 effective          K8 no self-grant
+              and expiry            revocation
 ```
 
-Defined in `model/agent_ops_invariants.json`. Faults F1-F10: `model/fault_classes.json`. Gated actions: `model/actions.json`.
+Defined in `model/agent_ops_invariants.json`. Faults F1-F14: `model/fault_classes.json`. Gated actions: `model/actions.json`.
 
 ## Hypotheses
 
@@ -37,7 +39,8 @@ Defined in `model/agent_ops_invariants.json`. Faults F1-F10: `model/fault_classe
 | H33 | Does the control gate contain an adversarial agent (K1-K3; F5-F10)? | branch protection + CODEOWNERS + required checks |
 | H34 | Do items close only on an independently observed outcome, so false done is caught (K4; F4)? | agent self-report + human spot check |
 | H35 | Is "why did this merge or deploy happen" answerable months later (K5)? | GitHub audit log + PR timeline + bead history |
-| H36 | Do the H31-H35 gains outweigh setup and maintenance cost? Parity is REJECTED. | the whole conventional stack |
+| H37 | Do agent access grants stay least-privilege, expire and revoke for real (K6-K8; F11-F14)? | Vault dynamic credentials + IAM conditions + JIT access |
+| H36 | Do the H31-H35 and H37 gains outweigh setup and maintenance cost? Parity is REJECTED. | the whole conventional stack |
 
 ## Kill-chain
 
@@ -46,10 +49,13 @@ H31 leases ───────────┐
 H32 cross-repo ───────┤
 H33 control gate ─────┼──► H36 total value (frontier, parity = REJECTED)
 H34 external truth ───┤
-H35 provenance ───────┘
+H35 provenance ───────┤
+H37 access grants ────┘
 ```
 
-H36 may not be called SUPPORTED merely because H31-H35 are green. It needs a cost and benefit frontier and a surviving fairness audit. H33 carries a stated risk of ending in parity like H11. H34 is expected to be the strongest hypothesis.
+H36 may not be called SUPPORTED merely because H31-H35 and H37 are green. It needs a cost and benefit frontier and a surviving fairness audit. H33 carries a stated risk of ending in parity like H11. H34 is expected to be the strongest hypothesis. H37 carries a stated parity risk (mature just-in-time access tooling).
+
+**Headroom rule.** Every comparative bar is read through `thresholds.headroom_rule`: the +20 point bar applies while the baseline rate is at most 0.80; above it the treatment must close at least 50% of the baseline's misses; at a baseline of 0.95 or more the class is recorded as CEILING ("no advantage measured", never REJECTED), because a fixed +20 bar is unreachable by construction above 0.80.
 
 ## Non-goals
 

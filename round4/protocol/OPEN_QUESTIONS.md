@@ -1,6 +1,6 @@
 # Open questions: author decisions needed before freeze
 
-`scripts/freeze_protocol.py` refuses to freeze while any item below is unchecked. All seven items were decided in the 2026-10-28 interview.
+`scripts/freeze_protocol.py` refuses to freeze while any item below is unchecked. Seven items were decided in the 2026-10-28 interview; one new item from the access-grant follow-up is open.
 
 - [x] **Test repositories.** Sandbox GitHub repositories (real branch protection, real check-runs, rate limits and account setup) or a local Gitea (no network dependency, but branch-protection behavior may differ from GitHub)? The baseline must use real GitHub controls to be fair, so Gitea needs an equivalence argument.
   Decision: two PUBLIC sandbox repositories on GitHub (real branch protection, required checks, CODEOWNERS). No Gitea. (author, 2026-10-28)
@@ -16,3 +16,4 @@
   Decision: 15 minutes (900 s), identical for both arms (`thresholds.H31.stale_lease_release_bound_seconds`). (author, 2026-10-28)
 - [x] **Human spot-check rate.** The sampling rate of the human spot check in the H34 baseline.
   Decision: 10% of closed items (`thresholds.H34.baseline_spot_check_rate` = 0.10). (author, 2026-10-28)
+- [ ] **Log store for the pilot (e.g. Loki or OpenSearch) and whether `revocation_bound_seconds` = 60 is right.** H37 needs one log store in Docker with a real ACL or role API, and a revocation bound (`thresholds.H37.revocation_bound_seconds`) identical for both arms. The freeze refuses until the author answers.

@@ -40,6 +40,10 @@ Produce effects in both arms, then pose the same fixed set of 'why' questions ab
 5. Audit at least thresholds.H35.min_audited_effects effects per arm, in the same session as the effects (same-session audit; 'months later' is not tested).
 6. For each link test whether the actor could rewrite the record it resolves to.
 
+## Headroom rule
+
+The comparative bar of this contract is read through `thresholds.headroom_rule`: the absolute bar applies while the baseline rate is at most 0.80; above it the treatment must close at least 50% of the baseline's misses, (treatment - baseline) / (1 - baseline); at a baseline of 0.95 or more the class is recorded as CEILING: no advantage measured, never REJECTED (verdict INCONCLUSIVE with reason "CEILING"). A fixed +20 bar is unreachable by construction above 0.80.
+
 ## Independent oracle
 
 Independent grader that resolves each of the six K5 links from source-host API, deploy system and tracker ground truth, and checks writability of the cited record by the acting agent's credentials; it never accepts an arm's own summary of why.

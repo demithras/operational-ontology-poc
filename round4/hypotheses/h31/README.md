@@ -36,6 +36,10 @@ Seed F1 and F2 into the same sequence of work items for both arms, run the same 
 5. Run both arms on at least the pilot minimum of seeded faults per class (thresholds.H31.min_seeded_faults_per_class).
 6. Judge every item by the observer, never by an agent's report or the arm's own log; report a per-class table and the cost of each arm.
 
+## Headroom rule
+
+The comparative bar of this contract is read through `thresholds.headroom_rule`: the absolute bar applies while the baseline rate is at most 0.80; above it the treatment must close at least 50% of the baseline's misses, (treatment - baseline) / (1 - baseline); at a baseline of 0.95 or more the class is recorded as CEILING: no advantage measured, never REJECTED (verdict INCONCLUSIVE with reason "CEILING"). A fixed +20 bar is unreachable by construction above 0.80.
+
 ## Independent oracle
 
 Independent observer reading the source-host REST API (commits and branches by author and time) and tracker history to reconstruct, per item, which agents did work and when each lease or assignment ended; it imports no code from either arm.

@@ -14,6 +14,7 @@ The conventional arm receives every control that plain beads and GitHub offer, c
 - the audit log, with a regular export;
 - a reconciliation script of equal effort to the treatment's equivalent component (same engineer-hours, same inputs, same heartbeat data);
 - commit trailers and close-reason conventions that a well-run team would use;
+- for H37, strong conventional just-in-time access: Vault (or equivalent) dynamic database credentials with a TTL and policy, cloud or IAM time-bound conditions, an access request with an independent approver, and a revocation script of equal effort (same engineer-hours, same inputs), including a log-store ACL path equivalent to the treatment's;
 - for H34, a human spot check of closed items at the rate `thresholds.H34.baseline_spot_check_rate` (10% of closed items).
 
 The baseline runs on the same two public GitHub sandbox repositories as the treatment, so its controls are real GitHub controls. The reconciliation script has equal effort in engineer-hours (logged) to the treatment's equivalent component.

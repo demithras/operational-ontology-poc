@@ -38,3 +38,10 @@ Nothing in `OPEN_QUESTIONS.md` remains open after the interview below.
 7. **Stale-lease bound.** 15 minutes (900 s), identical for both arms.
 8. **Baseline human spot-check rate for H34.** 10% of closed items.
 9. **H35.** A same-session audit is enough for the pilot. "Months later" is an explicit stated limitation, not tested.
+
+## Follow-up: access grants and headroom
+
+1. EOO also grants AI agents (agents only, not humans) scoped, time-bound access to systems, databases and logs.
+2. This is a new hypothesis H37, separate from H33.
+3. `grant_access` is the SECOND gated action of the first pilot (after `merge_pr`), on one synthetic local Postgres and one log store, both in Docker.
+4. Headroom rule for every comparative "advantage over baseline" bar: the absolute bar (+20 points) applies while the baseline detection rate is <= 0.80; above 0.80 the treatment must close >= 50% of the baseline's misses, (treatment - baseline) / (1 - baseline) >= 0.5; at baseline >= 0.95 the class is recorded as CEILING: "no advantage measured", never REJECTED. Reason: a fixed +20 bar is unreachable by construction above 0.80. Stored in `thresholds.headroom_rule`.

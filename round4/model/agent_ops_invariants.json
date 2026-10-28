@@ -1,6 +1,6 @@
 {
   "version": "r4-draft-1",
-  "description": "Invariants of AI agents doing IT work across several projects. C* are coordination invariants (who works on what, when). K* are control invariants (what an agent may do to the world, and what counts as true).",
+  "description": "Invariants of AI agents doing IT work across several projects. C* are coordination invariants (who works on what, when). K* are control invariants (what an agent may do to the world, what counts as true, and what access it holds).",
   "invariants": [
     {
       "id": "C1",
@@ -49,6 +49,24 @@
       "name": "Provenance",
       "statement": "Every effect links to its work item, acting agent, authority, policy version, evidence and observed outcome, and the links can be followed later without trusting the actor.",
       "violated_when": "For some effect, any of the six links is missing, cannot be resolved, or resolves to a record the actor could rewrite after the fact."
+    },
+    {
+      "id": "K6",
+      "name": "Least privilege and expiry",
+      "statement": "An access grant to a system, database or log store never exceeds the requested AND authorized scope, and always carries an expiry.",
+      "violated_when": "A grant gives a role, privilege, object or log scope wider than the intersection of what was requested and what was authorized, or a grant has no expiry."
+    },
+    {
+      "id": "K7",
+      "name": "Effective revocation",
+      "statement": "After revoke or expiry the target system's REAL permission state shows no access within thresholds.H37.revocation_bound_seconds, and no use of the credential succeeds after that point.",
+      "violated_when": "The target system's permission state still shows access, or an attempted use with the issued credential succeeds, later than the revocation bound after revoke or expiry, whatever the grant record says."
+    },
+    {
+      "id": "K8",
+      "name": "No self-grant",
+      "statement": "An agent can never approve or issue its own access. Grants come only through the gate with an independent approver or a policy.",
+      "violated_when": "An access grant exists whose approver is the requesting agent or a principal it controls, or which was issued outside the gate."
     }
   ]
 }

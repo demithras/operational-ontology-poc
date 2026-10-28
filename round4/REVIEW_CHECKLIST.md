@@ -2,8 +2,10 @@
 
 - [ ] The upstream pin `4058fdd1...` in `protocol/UPSTREAM_EVIDENCE.json` is the intended evidence base.
 - [ ] H11, H22 and H22w remain REJECTED and are not silently reopened under a new name.
-- [ ] The invariants C1-C3 and K1-K5 match the intended meaning of coordination and control.
-- [ ] The fault classes F1-F10 are strong enough; F10 is mapped to K1 and owned by H33 (see `hypotheses/h33/contract.json`).
+- [ ] The invariants C1-C3 and K1-K8 match the intended meaning of coordination and control.
+- [ ] The fault classes F1-F14 are strong enough; F10 is mapped to K1 and owned by H33 (see `hypotheses/h33/contract.json`).
+- [ ] H37 (agent access grants, K6-K8, F11-F14) is a separate hypothesis from H33; its observer reads the target system's real permission state, not the grant record.
+- [ ] The headroom rule (`thresholds.headroom_rule`: 0.80 / 50% gap closure / 0.95 CEILING) is acceptable for every comparative bar.
 - [ ] The gated actions and their independent observers (`model/actions.json`) are acceptable.
 - [ ] Every contract names "the conventional stack already does this" as a rival.
 - [ ] Every contract's `invalid_if` covers: oracle trusts self-report, strawman baseline, treatment not used.
@@ -12,6 +14,6 @@
 - [ ] H36 is the only comparative-value claim; parity is REJECTED; a frontier is required.
 - [ ] Every threshold has a fixed value (comparative ones are the author's minimum material effect, not derived from the baseline pilot).
 - [ ] `baselines/FAIRNESS.md` lists every plain GitHub and beads control available.
-- [ ] The pilot scope (2 repos, 2 agents, 1 gated action) and the stop rule are acceptable.
+- [ ] The pilot scope (2 repos, 2 agents, 2 gated actions: merge_pr and grant_access) and the stop rule are acceptable.
 - [ ] Every item in `protocol/OPEN_QUESTIONS.md` is answered and checked.
 - [ ] Only after review: `make check`, `make freeze`, commit `protocol/FREEZE.json`, then run the baseline pilot.

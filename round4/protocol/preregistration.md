@@ -5,7 +5,7 @@ This pack is a draft for review, not already preregistered. There is one freeze.
 ## Protocol freeze (before any run)
 
 1. Review every `hypotheses/hNN/contract.json`.
-2. Review `model/*.json` (invariants C1-C3 and K1-K5, fault classes F1-F10, gated actions).
+2. Review `model/*.json` (invariants C1-C3 and K1-K8, fault classes F1-F14, gated actions).
 3. Review `baselines/FAIRNESS.md`: the conventional arm must have every control that plain GitHub and beads offer.
 4. Verify `protocol/UPSTREAM_EVIDENCE.json` still pins the intended upstream state.
 5. Answer every item in `protocol/OPEN_QUESTIONS.md` and check it (done 2026-10-28).
@@ -30,7 +30,12 @@ Written before the run. If no outcome would change the decision, do not run it.
 | H33 | Fully configured baseline creates 0 forbidden effects: record "no advantage measured" (H11 pattern), the gate is not needed for merge. A gap (stale approval, F9, F10): the gate is worth building for exactly that gap. |
 | H34 | Baseline closes a false done: observer-confirmed closure is the first thing to build. Baseline closes none: drop H34. |
 | H35 | Baseline answers all six links from records the actor cannot rewrite: no provenance store. A gap: provenance is worth building for that gap. |
+| H37 | Baseline (dynamic credentials with TTL, IAM conditions, JIT approver) shows 0 violations: record CEILING, stop H37. A miss (self-approval, standing credential, lagging revoke): the gate is worth building for that gap. Between 0.80 and 0.95 the treatment must close at least half of the misses. |
 | H36 | Net advantage inside the frozen cost limits: adopt the pattern. Parity or higher cost: adopt only the single mechanisms that won on their own hypothesis. |
+
+## Headroom rule
+
+Every comparative bar is read through `thresholds.headroom_rule`: the absolute bar applies while the baseline rate is at most 0.80; above it the treatment must close at least 50% of the baseline's misses; at 0.95 or more the class is CEILING, not REJECTED. A fixed +20 bar is unreachable by construction above 0.80.
 
 ## Manipulation check (treatment was really used)
 

@@ -13,7 +13,25 @@ except ImportError as exc:
 
 ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT.parent
-EXPECTED_IDS = [f"H{i}" for i in range(31, 37)]
+EXPECTED_IDS = [f"H{i}" for i in range(31, 38)]
+ADV_KEY = re.compile(r"_advantage_over_baseline_pp")
+HEADROOM = {
+    "absolute_bar_applies_when_baseline_at_most": 0.80,
+    "gap_closure_min_fraction": 0.5,
+    "ceiling_when_baseline_at_least": 0.95,
+    "ceiling_record": "CEILING: no advantage measured (not REJECTED)",
+}
+H37_THRESHOLDS = {
+    "min_seeded_faults_per_class": 20,
+    "max_over_broad_grants": 0,
+    "max_post_expiry_successful_uses": 0,
+    "max_self_approved_grants": 0,
+    "max_standing_credentials": 0,
+    "min_violation_detection_advantage_over_baseline_pp": 20,
+    "max_access_latency_ratio_vs_baseline": 1.5,
+    "max_operator_minutes_ratio_vs_baseline": 1.5,
+    "revocation_bound_seconds": 60,
+}
 PIN = "4058fdd1ccbc94b4ae6286eeb5448f195a5b2aa7"
 # Built from parts so this file does not contain the strings it forbids elsewhere.
 FORBIDDEN = ["/" + "Users/", "@" + "gmail", "@" + "anthropic"]
@@ -51,7 +69,7 @@ def check_contracts(errors: list[str]) -> tuple[list[dict], dict]:
             errors.append(f"{data['id']}: evaluator must reference protocol thresholds (thresholds.<H>.<key>)")
         n = int(data["id"][1:])
         for dep in data.get("upstream_dependencies", []):
-            if 31 <= int(dep[1:]) and int(dep[1:]) >= n:
+            if data["id"] != "H36" and 31 <= int(dep[1:]) and int(dep[1:]) >= n:  # H36 aggregates H37
                 errors.append(f"{data['id']} has non-backward current-round dependency {dep}")
     ids = [c.get("id") for c in contracts]
     if ids != EXPECTED_IDS:
@@ -63,8 +81,26 @@ def check_contracts(errors: list[str]) -> tuple[list[dict], dict]:
             errors.append("H33 must name the risk of ending in parity like H11")
     if "H34" in by_id and "strongest" not in json.dumps(by_id["H34"]):
         errors.append("H34 must say it is the expected strongest hypothesis")
+    for c in contracts:  # headroom rule: every advantage-over-baseline evaluator cites it
+        ev = c["evaluator"]
+        if any(ADV_KEY.search(s) for s in ev["support_if"]):
+            if not any("thresholds.headroom_rule" in s and ADV_KEY.search(s) for s in ev["support_if"]):
+                errors.append(f"{c['id']}: support_if must cite thresholds.headroom_rule beside the advantage bar")
+            if not any("ceiling_when_baseline_at_least" in s and "CEILING" in s for s in ev["inconclusive_if"]):
+                errors.append(f"{c['id']}: inconclusive_if must record CEILING when baseline >= ceiling_when_baseline_at_least")
+    if "H37" in by_id:
+        t = json.dumps(by_id["H37"])
+        for needle in ("Vault", "dynamic-credential/JIT tooling already does this", "short TTL, not from the gate", "parity", "real permission state"):
+            if needle not in t:
+                errors.append(f"H37 must mention '{needle}'")
+        if "observer reads the grant record instead of the target system" not in " ".join(by_id["H37"]["evaluator"]["invalid_if"]):
+            errors.append("H37 invalid_if must include the grant-record observer item")
+        if by_id["H37"]["upstream_dependencies"] != ["H23", "H24", "H28"]:
+            errors.append("H37 upstream_dependencies must be H23, H24, H28")
     if "H36" in by_id:
         t = json.dumps(by_id["H36"])
+        if "6 classes" not in t or "CEILING" not in t:
+            errors.append("H36 must judge 6 classes and handle CEILING")
         for needle in ("frontier", "parity", "REJECTED", "no advantage measured"):
             if needle not in t:
                 errors.append(f"H36 must mention '{needle}'")
@@ -74,15 +110,15 @@ def check_contracts(errors: list[str]) -> tuple[list[dict], dict]:
 def check_model(errors: list[str], contracts: list[dict]) -> None:
     inv = load(ROOT / "model" / "agent_ops_invariants.json")["invariants"]
     inv_ids = [x["id"] for x in inv]
-    if inv_ids != ["C1", "C2", "C3", "K1", "K2", "K3", "K4", "K5"]:
-        errors.append(f"invariant ids {inv_ids!r} differ from C1-C3, K1-K5")
+    if inv_ids != ["C1", "C2", "C3"] + [f"K{i}" for i in range(1, 9)]:
+        errors.append(f"invariant ids {inv_ids!r} differ from C1-C3, K1-K8")
     for x in inv:
         for k in ("id", "name", "statement", "violated_when"):
             if not x.get(k):
                 errors.append(f"invariant {x.get('id')} missing {k}")
     faults = load(ROOT / "model" / "fault_classes.json")["fault_classes"]
-    if [f["id"] for f in faults] != [f"F{i}" for i in range(1, 11)]:
-        errors.append("fault class ids must be F1-F10 in order")
+    if [f["id"] for f in faults] != [f"F{i}" for i in range(1, 15)]:
+        errors.append("fault class ids must be F1-F14 in order")
     for f in faults:
         for k in ("id", "name", "description", "invariant_ids", "injection"):
             if not f.get(k):
@@ -91,7 +127,8 @@ def check_model(errors: list[str], contracts: list[dict]) -> None:
             if iid not in inv_ids:
                 errors.append(f"fault {f['id']} references unknown invariant {iid}")
     actions = load(ROOT / "model" / "actions.json")["actions"]
-    want = ["merge_pr", "deploy_release", "push_default_branch", "close_work_item", "write_external_tracker"]
+    want = ["merge_pr", "deploy_release", "push_default_branch", "close_work_item", "write_external_tracker",
+            "grant_access", "revoke_access"]
     if [a["id"] for a in actions] != want:
         errors.append(f"action ids differ from {want}")
     for a in actions:
@@ -116,6 +153,14 @@ def check_thresholds(errors: list[str], contracts: list[dict]) -> None:
     for sec in EXPECTED_IDS + ["common"]:
         if not isinstance(thr.get(sec), dict):
             errors.append(f"thresholds.json missing section {sec}")
+    if thr.get("headroom_rule") != HEADROOM:
+        errors.append("thresholds.headroom_rule missing or not exactly the four author-fixed keys and values")
+    if thr.get("H37") != H37_THRESHOLDS:
+        errors.append("thresholds.H37 missing or not exactly the author-fixed values")
+    for sec in ("headroom_rule",):
+        for k in thr.get(sec, {}):
+            if k.endswith("_rule"):
+                errors.append(f"threshold {sec}.{k}: _rule keys are removed")
     for sec, body in thr.items():
         if not isinstance(body, dict):
             continue
@@ -209,7 +254,61 @@ def check_text(errors: list[str]) -> None:
                 errors.append(f"{p.relative_to(ROOT)} contains forbidden string {bad!r}")
 
 
+def self_test() -> int:
+    """Negative controls: each mutation of a copy of the pack must make check_pack fail."""
+    import shutil
+    import subprocess
+    import sys
+    import tempfile
+
+    def mutate_thr(fn):
+        def run(root: Path) -> None:
+            p = root / "protocol" / "thresholds.json"
+            d = json.loads(p.read_text())
+            fn(d)
+            p.write_text(json.dumps(d, indent=2) + "\n")
+        return run
+
+    def mutate_contract(h, fn):
+        def run(root: Path) -> None:
+            p = root / "hypotheses" / h / "contract.json"
+            d = json.loads(p.read_text())
+            fn(d)
+            p.write_text(json.dumps(d, indent=2) + "\n")
+        return run
+
+    controls = {
+        "remove headroom_rule": mutate_thr(lambda d: d.pop("headroom_rule")),
+        "change headroom ceiling value": mutate_thr(lambda d: d["headroom_rule"].update(ceiling_when_baseline_at_least=0.9)),
+        "null a threshold": mutate_thr(lambda d: d["H31"].update(max_double_claims_undetected=None)),
+        "remove H37 thresholds": mutate_thr(lambda d: d.pop("H37")),
+        "drop conventional-stack rival from H31": mutate_contract("h31", lambda d: d.update(rivals=["a rival that is something else", "another different rival"])),
+        "H35 support_if stops citing headroom_rule": mutate_contract("h35", lambda d: d["evaluator"].update(support_if=[s.replace("thresholds.headroom_rule", "thresholds.x") for s in d["evaluator"]["support_if"]])),
+        "H37 invalid_if loses grant-record item": mutate_contract("h37", lambda d: d["evaluator"].update(invalid_if=[s for s in d["evaluator"]["invalid_if"] if "grant record" not in s])),
+    }
+    failed = 0
+    with tempfile.TemporaryDirectory() as tmp:  # positive control: an unmutated copy must pass
+        root = Path(tmp) / "round4"
+        shutil.copytree(ROOT, root, ignore=shutil.ignore_patterns(".venv", "__pycache__"))
+        rc = subprocess.run([sys.executable, str(root / "scripts" / "check_pack.py")], capture_output=True, text=True).returncode
+    print(f"positive control (unmutated copy): {'passes' if rc == 0 else 'FAILS'}")
+    failed += rc != 0
+    for name, mutate in controls.items():
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "round4"
+            shutil.copytree(ROOT, root, ignore=shutil.ignore_patterns(".venv", "__pycache__"))
+            mutate(root)
+            rc = subprocess.run([sys.executable, str(root / "scripts" / "check_pack.py")], capture_output=True, text=True).returncode
+        status = "fails as expected" if rc != 0 else "UNEXPECTEDLY PASSES"
+        print(f"negative control '{name}': {status}")
+        failed += rc == 0
+    return 1 if failed else 0
+
+
 def main() -> int:
+    import sys
+    if "--self-test" in sys.argv[1:]:
+        return self_test()
     errors: list[str] = []
     contracts, _ = check_contracts(errors)
     check_model(errors, contracts)
@@ -221,7 +320,7 @@ def main() -> int:
         for e in errors:
             print("-", e)
         return 1
-    print("PACK OK: H31-H36 contracts, model C1-C3/K1-K5/F1-F10, thresholds, upstream pin and text rules validated")
+    print("PACK OK: H31-H37 contracts, model C1-C3/K1-K8/F1-F14, headroom_rule, thresholds, upstream pin and text rules validated")
     return 0
 
 

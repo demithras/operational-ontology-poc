@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-28 - Access grants (H37) and headroom rule
+
+- Recorded the follow-up author decisions (agents-only access grants, new H37, `grant_access` as the second pilot action, headroom rule).
+- Added invariants K6-K8, fault classes F11-F14, actions `grant_access` and `revoke_access`, hypothesis H37, `thresholds.H37` and `thresholds.headroom_rule`.
+- H31, H32, H34, H35 contracts read their advantage bar through the headroom rule; a CEILING class is INCONCLUSIVE with reason "CEILING", never REJECTED. H36 now judges 6 classes (H31-H35 and H37).
+- New open question (log store and revocation bound) blocks the freeze. Removed the stale `protocol/FREEZE.json`: thresholds changed, so it no longer matched the pack.
+- `check_pack.py` covers H31-H37, C1-C3, K1-K8, F1-F14 and requires `headroom_rule`.
+
 ## 2026-10-28 - Author interview applied
 
 - Recorded decisions 1-9 of the 2026-10-28 interview (sandbox repos, agents, synthetic projects, H34 forbid-vs-detect, H36 cost axes, fixed comparative thresholds, 900 s stale-lease bound, 10% spot check, H35 same-session audit).
