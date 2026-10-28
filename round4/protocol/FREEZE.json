@@ -1,7 +1,7 @@
 {
   "stage": "protocol",
-  "frozen_at": "2026-10-28T13:49:02.238350+00:00",
-  "protocol_sha256": "dd6df2a32fe99c0aabc0e599c92142173c854a1a8a6ac7bd2af309f6f6909ea5",
+  "frozen_at": "2026-10-28T14:22:58.390675+00:00",
+  "protocol_sha256": "b4ba90689478912f1d5545cdc5e4a0cc325c3cd9803ca7fe346d3eff289d3d89",
   "files": [
     {
       "path": "protocol/thresholds.json",
@@ -17,7 +17,7 @@
     },
     {
       "path": "protocol/AUTHOR_DECISIONS_2026-10-28.md",
-      "sha256": "b737332a5443b39a8e129fc1f6bd2a52f2e690dbaff13c0e9fb591c34c04e6a3"
+      "sha256": "b5af86e25e9bd80c1a167a47e5d15c560df7af71e8b52e4f97a51425dd233cbf"
     },
     {
       "path": "protocol/OPEN_QUESTIONS.md",

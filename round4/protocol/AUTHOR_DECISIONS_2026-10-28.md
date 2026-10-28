@@ -71,3 +71,12 @@ Nothing in `OPEN_QUESTIONS.md` remains open after the interview below.
 5. The access baseline (Vault, TTLs, approver, revocation script) is NOT built before the stage-1 result.
 6. H36 keeps `min_classes_with_material_advantage` = 2, judged over the classes that actually ran (5 after stage 1, 6 if stage 2 ran); it is first reported after stage 1 and re-reported after stage 2 if it runs.
 7. Reason: restore the cheap early stop. The trigger is fixed before any pilot result.
+
+## Amendment A1 (pre-run, before any evidence): emulated human steps, calibrated by the author
+
+Recorded 2026-10-28 before any pilot run or evidence reveal; refreeze v1.1 supersedes the v1 freeze (protocol_sha256 dd6df2a3...).
+
+1. **Context.** The frozen baseline has a human spot check of 10% of closed items (`thresholds.H34.baseline_spot_check_rate`) and an operator-minutes axis from a manual log (H36 cost model). The automated pilot also needs an independent approver acting as the CODEOWNER. Nobody had been assigned to do this human work during an automated run.
+2. **Decision (author).** A script performs the 10% spot check, reading the same facts a human reads on the PR page (merged state, merge SHA, required check on the head SHA). An automated policy approver acts as the CODEOWNER in both arms. Operator minutes per spot check and per approval are **calibrated from the author's own timed sample**, not guessed. Before the official baseline run, the author performs 10 timed spot checks and 3 timed approvals on dry-run items. The minutes per action is the median of the author's times. Each emulated action is charged that median.
+3. **Unchanged.** The sampling rate (10%), the sample seed, every threshold, every fault class and the observer are unchanged. Both arms are charged with the same calibrated minutes per action type.
+4. **Disclosure.** H34 and H36 results state "human steps emulated by script, minutes calibrated from the author's timed sample (n=10 checks, n=3 approvals)". This is a known limit: a script does not tire or skip, so the baseline spot check may be stricter than a real human's.
