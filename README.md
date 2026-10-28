@@ -13,7 +13,7 @@ Full specification: [`docs/experiment/spec/`](docs/experiment/spec/)
 for this run: [`experiments/exp-000/manifest.yaml`](experiments/exp-000/manifest.yaml).
 
 Interactive overview: **[open the OO Lab page](https://demithras.github.io/operational-ontology-poc/lab/)**
-(source: [`docs/lab/index.html`](docs/lab/index.html)) — one self-contained page with a playable decision-gate simulator built on the reference model, the architecture map, the 40-case fault matrix, the H1–H30 hypothesis ledger, how the three rounds were built, and the Round 4 draft. It is
+(source: [`docs/lab/index.html`](docs/lab/index.html)) — one self-contained page with a playable decision-gate simulator built on the reference model, the architecture map, the 40-case fault matrix, the H1–H30 hypothesis ledger, how the three rounds were built, and the frozen Round 4 plan. It is
 served by GitHub Pages from `docs/` on `main`; offline, open your local
 clone's `docs/lab/index.html` in a browser (no server or install needed).
 

@@ -465,7 +465,7 @@ ijo ni la nasin ni li lawa e sona ni</pre>
     <div class="vcard"><span class="n">1</span><div><span class="label">Round 1</span><h3>Does an ontology beat a simpler baseline on one real loop?</h3><span class="chip bad">Rejected (H11)</span><p>Parity on correctness, forensics, replay; baseline cheaper to change and run.</p></div></div>
     <div class="vcard"><span class="n">2</span><div><span class="label">Round 2</span><h3>Does reuse across many domains repay the ontology tax?</h3><span class="chip bad">Rejected (H22, H22w)</span><p>1.3×–6.7× the effort of a strong baseline; the generator helps but does not reach parity.</p></div></div>
     <div class="vcard"><span class="n">3</span><div><span class="label">Round 3</span><h3>Does an ontology control plane buy security under hostile operation?</h3><span class="chip warn">Open (H30 not run)</span><p>Both variants pass all 7 gates; the one comparative gate was stopped; a static pilot found only 3 bugs (fixed), no architectural difference, a weak null.</p></div></div>
-    <div class="vcard"><span class="n">4</span><div><span class="label">Round 4</span><h3>Does the governance pattern give AI agents working across several IT projects a measurable coordination and control advantage?</h3><span class="chip">DRAFT</span><p>Pilot-first: 2 repos, 2 agents, gated actions. Baseline: beads + GitHub branch protection + CODEOWNERS + required CI. Not frozen; no evidence yet.</p></div></div>
+    <div class="vcard"><span class="n">4</span><div><span class="label">Round 4</span><h3>Does the governance pattern give AI agents working across several IT projects a measurable coordination and control advantage?</h3><span class="chip">FROZEN · NOT RUN</span><p>Protocol frozen 2026-10-28; no evidence yet. Stage 1 pilot gates <code class="mono">merge_pr</code> (H31–H35). Baseline: beads + GitHub branch protection + CODEOWNERS + required CI.</p></div></div>
   </div>
   <h3 style="margin-top:28px">Open threads</h3>
   <ul class="threads">
@@ -475,22 +475,22 @@ ijo ni la nasin ni li lawa e sona ni</pre>
     <li><span><span class="chip warn">Caveat</span></span><span>H29 judge: verdicts hold with 14 open judge deviations, not certified against the full frozen text.</span></li>
     <li><span><span class="chip ok">Fallback ready</span></span><span>The conventional implementation met every bar: it is a viable product path on the evidence.</span></li>
   </ul>
-  <h3 style="margin-top:28px">Round 4: agent operations (draft)</h3>
-  <p>Round 4 moves from manufacturing to agent-run IT work. It asks whether the decision → authorization → policy → approval → action → observed outcome pattern, plus Round 3 containment, helps AI agents that work across several repositories. It covers coordination (who works on what) and control (what an agent may do, with the outcome confirmed from GitHub, CI or deploy, not from the agent). It runs on a relational store, and it is pilot-first: if neither pilot question shows an advantage, the round stops cheaply.</p>
+  <h3 style="margin-top:28px">Round 4: agent operations (frozen, not run)</h3>
+  <p>Round 4 moves from manufacturing to agent-run IT work. It asks whether the decision → authorization → policy → approval → action → observed outcome pattern, plus Round 3 containment, helps AI agents that work across several repositories. It covers coordination (who works on what) and control (what an agent may do, with the outcome confirmed from GitHub, CI or deploy, not from the agent). It runs on a relational store and is staged. Stage 1, the pilot, gates <code class="mono">merge_pr</code> and tests H31–H35. Stage 2 (H37, access grants) runs only if at least one of H31–H35 is supported; otherwise the round stops after stage 1 and H37 is recorded as not run, never rejected. The protocol was frozen on 2026-10-28 (<a href="https://github.com/demithras/operational-ontology-poc/tree/main/round4">round4/</a>); no Round 4 evidence exists yet.</p>
   <ul class="threads">
     <li><span><span class="chip mono">H31</span></span><span>Do leases catch double claims and stale claims? <span class="muted small">Baseline to beat: <code class="mono">bd ready</code> + GitHub assignees.</span></span></li>
     <li><span><span class="chip mono">H32</span></span><span>Are cross-repo blockers surfaced before an agent spends a run? <span class="muted small">Baseline to beat: beads dependencies inside each repo.</span></span></li>
     <li><span><span class="chip mono">H33</span></span><span>Does the control gate contain an adversarial agent? <span class="muted small">Baseline to beat: branch protection + CODEOWNERS + required checks.</span></span></li>
     <li><span><span class="chip mono">H34</span></span><span>Do items close only on an independently observed outcome, so a false "done" is caught? <span class="muted small">Baseline to beat: agent self-report + human spot check.</span></span></li>
     <li><span><span class="chip mono">H35</span></span><span>Is "why did this merge or deploy happen" answerable months later? <span class="muted small">Baseline to beat: GitHub audit log + PR timeline + bead history.</span></span></li>
-    <li><span><span class="chip mono">H37</span></span><span>Do agent access grants stay least-privilege, expire and really revoke? <span class="muted small">Baseline to beat: Vault dynamic credentials + IAM conditions + JIT access.</span></span></li>
+    <li><span><span class="chip mono">H37</span></span><span><span class="muted small">Stage 2, triggered.</span> Do agent access grants stay least-privilege, expire and really revoke? <span class="muted small">Baseline to beat: Vault dynamic credentials + IAM conditions + JIT access.</span></span></li>
     <li><span><span class="chip mono">H36</span></span><span>Do the gains outweigh setup and maintenance cost? Parity counts as REJECTED. <span class="muted small">Baseline to beat: the whole conventional stack.</span></span></li>
   </ul>
   <p class="note">Headroom rule: a +20-point bar applies while the baseline succeeds at most 80% of the time; above that the treatment must close half of the baseline's misses; at 95% or more the class is recorded as CEILING (no advantage measured), never REJECTED. This is the lesson of Round 3's ceiling effect.</p>
   <p class="note">The Attractor game (an Alchemy × Factorio game whose save file is a working ontology machine) was the earlier Round 4 plan; whether it returns for Round 5+ is undecided.</p>
 </section>
 </main>
-<footer><div class="wrap">Built from the repository at main 4058fdd (2026-10-16); Round 4 text reflects the draft pack of 2026-10-28. Sources: README.md, round2/RESULTS.md, round3/RESULTS.md, round3/experiments/h30-pilot/RESULT.md, docs/experiment/spec/03 and 09, reference_model/transitions.py.</div></footer>
+<footer><div class="wrap">Built from the repository at main 4058fdd (2026-10-16); Round 4 text reflects the pack frozen on 2026-10-28 (main 0d8e1a2). Sources: README.md, round2/RESULTS.md, round3/RESULTS.md, round3/experiments/h30-pilot/RESULT.md, docs/experiment/spec/03 and 09, reference_model/transitions.py.</div></footer>
 <script>
 // BEGIN-PURE
 const ACTORS={
@@ -1271,6 +1271,5 @@ function initTheme(){
 });
 })();
 </script>
-
 </body>
 </html>
