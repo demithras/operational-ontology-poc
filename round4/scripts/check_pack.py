@@ -215,8 +215,6 @@ def check_thresholds(errors: list[str], contracts: list[dict]) -> None:
         for key in thr.get(sec, {}):
             if not key.endswith("_rule") and key not in used:
                 errors.append(f"{sec}: threshold {key} is never referenced as thresholds.{sec}.{key}")
-    if (ROOT / "protocol" / "FREEZE.json").exists():
-        errors.append("protocol/FREEZE.json exists; the author freezes, not the pack builder")
 
 
 def check_upstream(errors: list[str]) -> None:
@@ -289,6 +287,51 @@ def check_text(errors: list[str]) -> None:
                 errors.append(f"{p.relative_to(ROOT)} contains forbidden string {bad!r}")
 
 
+def freeze_state() -> tuple[bool, dict | None, list[str]]:
+    """Compare protocol/FREEZE.json with the files on disk.
+
+    Returns (exists, freeze_data, bad_paths); bad_paths lists every listed file that
+    is missing or whose sha256 differs. Uses the format written by freeze_protocol.py.
+    """
+    import hashlib
+    path = ROOT / "protocol" / "FREEZE.json"
+    if not path.exists():
+        return False, None, []
+    data = load(path)
+    bad = []
+    for entry in data.get("files", []):
+        f = ROOT / entry["path"]
+        if not f.is_file() or hashlib.sha256(f.read_bytes()).hexdigest() != entry["sha256"]:
+            bad.append(entry["path"])
+    return True, data, bad
+
+
+def verify_freeze() -> int:
+    exists, data, bad = freeze_state()
+    if not exists:
+        print("VERIFY-FREEZE FAILED: protocol/FREEZE.json is missing")
+        return 1
+    if not data.get("files"):
+        print("VERIFY-FREEZE FAILED: protocol/FREEZE.json lists no files")
+        return 1
+    if bad:
+        print("VERIFY-FREEZE FAILED: missing or changed since freeze:")
+        for b in bad:
+            print("-", b)
+        return 1
+    print(f"VERIFY-FREEZE OK: protocol_sha256 {data['protocol_sha256'][:8]}, {len(data['files'])} files match")
+    return 0
+
+
+def freeze_line() -> str | None:
+    exists, data, bad = freeze_state()
+    if not exists:
+        return None
+    if bad:
+        return f"FREEZE: STALE ({len(bad)} files changed: {', '.join(bad)}) - refreeze required"
+    return f"FREEZE: current (protocol_sha256 {data['protocol_sha256'][:8]})"
+
+
 def self_test() -> int:
     """Negative controls: each mutation of a copy of the pack must make check_pack fail."""
     import shutil
@@ -346,6 +389,39 @@ def self_test() -> int:
         rc = subprocess.run([sys.executable, str(root / "scripts" / "check_pack.py")], capture_output=True, text=True).returncode
     print(f"positive control (unmutated copy): {'passes' if rc == 0 else 'FAILS'}")
     failed += rc != 0
+    def run_check(root: Path, *flags: str) -> int:
+        return subprocess.run([sys.executable, str(root / "scripts" / "check_pack.py"), *flags], capture_output=True, text=True).returncode
+
+    def frozen_copy(tmp: str) -> Path:
+        root = Path(tmp) / "round4"
+        shutil.copytree(ROOT, root, ignore=shutil.ignore_patterns(".venv", "__pycache__"))
+        (root / "protocol" / "FREEZE.json").unlink(missing_ok=True)
+        fr = subprocess.run([sys.executable, str(root / "scripts" / "freeze_protocol.py")], capture_output=True, text=True)
+        if fr.returncode != 0:
+            print(f"freeze_protocol.py failed in temp copy: {fr.stdout.strip()} {fr.stderr.strip()}")
+        return root
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = frozen_copy(tmp)
+        rc_v, rc_n = run_check(root, "--verify-freeze"), run_check(root)
+    ok = rc_v == 0 and rc_n == 0
+    print(f"freeze control (unmodified frozen copy): --verify-freeze exit {rc_v}, normal check exit {rc_n}: {'ok' if ok else 'FAILS'}")
+    failed += not ok
+    with tempfile.TemporaryDirectory() as tmp:
+        root = frozen_copy(tmp)
+        with (root / "baselines" / "FAIRNESS.md").open("a") as fh:
+            fh.write("\nedited after freeze\n")
+        rc_v, rc_n = run_check(root, "--verify-freeze"), run_check(root)
+    ok = rc_v == 1 and rc_n == 0
+    print(f"freeze control (hashed file edited): --verify-freeze exit {rc_v}, normal check exit {rc_n}: {'ok' if ok else 'FAILS'}")
+    failed += not ok
+    with tempfile.TemporaryDirectory() as tmp:
+        root = frozen_copy(tmp)
+        (root / "protocol" / "FREEZE.json").unlink()
+        rc_v = run_check(root, "--verify-freeze")
+    ok = rc_v == 1
+    print(f"freeze control (FREEZE.json missing): --verify-freeze exit {rc_v}: {'ok' if ok else 'FAILS'}")
+    failed += not ok
     for name, mutate in controls.items():
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "round4"
@@ -362,12 +438,17 @@ def main() -> int:
     import sys
     if "--self-test" in sys.argv[1:]:
         return self_test()
+    if "--verify-freeze" in sys.argv[1:]:
+        return verify_freeze()
     errors: list[str] = []
     contracts, _ = check_contracts(errors)
     check_model(errors, contracts)
     check_thresholds(errors, contracts)
     check_upstream(errors)
     check_text(errors)
+    line = freeze_line()
+    if line:
+        print(line)
     if errors:
         print("PACK INVALID")
         for e in errors:
