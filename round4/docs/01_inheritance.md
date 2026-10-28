@@ -12,7 +12,7 @@
 | Round 3 H24 | Delegation, attenuation, expiry, revocation | H31 leases are expiring, revocable grants. |
 | Round 3 H27 | Tamper-evident decision provenance | H35 (provenance) reuses it. |
 | Round 3 H28 | Adapter boundary: adapters are not authorities or truth oracles | H34 independent observers follow the same rule. |
-| Round 3 method | Freeze, thresholds, two ledgers, mutation proof, dual track | Kept, with a two-stage freeze (see `protocol/preregistration.md`). |
+| Round 3 method | Freeze, thresholds, two ledgers, mutation proof, dual track | Kept, with a single freeze and author-fixed comparative thresholds (see `protocol/preregistration.md`). |
 | beads | Task tracker with dependencies and `bd ready` | The coordination arm builds on it; the conventional arm is built on it too. |
 
 ## What is dropped
@@ -27,5 +27,5 @@
 
 - Coordination invariants (C1-C3) that Round 3 did not cover.
 - The test subjects are real agents doing real repository work.
-- A baseline pilot that fixes comparative thresholds before the treatment run.
+- A baseline pilot that checks headroom; comparative thresholds are author-fixed before any run.
 - A value-of-information line per hypothesis and an explicit stop rule.

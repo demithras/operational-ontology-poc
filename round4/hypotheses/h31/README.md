@@ -31,7 +31,7 @@ Seed F1 and F2 into the same sequence of work items for both arms, run the same 
 
 1. Freeze the seeded sequences, the stale bound and the observer before any run.
 2. Run the baseline arm first (beads in_progress, assignee, bd ready, equal-effort reconciliation script) and record detection rate, time to release and false alarms.
-3. Set the comparative thresholds from the baseline pilot, then freeze them.
+3. The comparative thresholds are already fixed by the author (thresholds.json, comparative_basis); the baseline pilot only checks for headroom and does not change them.
 4. Pilot one item per arm, check that the treatment made lease calls (manipulation check) and that the control arm could not read treatment artifacts through the file system.
 5. Run both arms on at least the pilot minimum of seeded faults per class (thresholds.H31.min_seeded_faults_per_class).
 6. Judge every item by the observer, never by an agent's report or the arm's own log; report a per-class table and the cost of each arm.

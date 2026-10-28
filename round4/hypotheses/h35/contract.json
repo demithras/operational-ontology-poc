@@ -10,7 +10,7 @@
     "Provenance quality depends on discipline (commit trailers, close reasons) that a well-run conventional team also has."
   ],
   "mechanism": "Each gated effect writes an append-only record binding work item, agent, grant, policy version, evidence digests and the observer's confirmation; the record sits in a store the acting agent cannot write to or alter.",
-  "scope": "Pilot: effects produced by the H33 and H34 pilot runs (merges and closures), queried after a retention gap or a time-shift replay if the author orders one (see OPEN_QUESTIONS.md). Not in scope: cryptographic anchoring beyond what Round 3 H27 already supported.",
+  "scope": "Pilot: effects produced by the H33 and H34 pilot runs (merges and closures), audited in the same session (author decision 2026-10-28). Limitation, stated and not tested: 'months later' retention (renamed repositories, deleted branches, expired logs) is not tested in the pilot. Not in scope: cryptographic anchoring beyond what Round 3 H27 already supported.",
   "predictions": [
     "For every audited effect the treatment resolves all six K5 links; links that resolve to a record the actor can rewrite count as unresolved.",
     "The conventional stack leaves some links unanswerable (for example the policy version in force at merge time, or the evidence set behind a closure) or answers them with discipline-dependent records.",
@@ -26,9 +26,9 @@
     "steps": [
       "Freeze the question set, the six-link rubric and the grader before any run.",
       "Run the baseline arm first with all plain controls from baselines/FAIRNESS.md enabled (audit log export, PR timeline, bead history, commit trailers) and record completeness and time to answer.",
-      "Set the comparative thresholds from the baseline pilot and freeze them.",
+      "The comparative thresholds are already fixed by the author (thresholds.json, comparative_basis); the baseline pilot only checks for headroom and does not change them.",
       "Pilot one effect per arm; check that the treatment wrote provenance records (manipulation check) and that the control arm could not reach them through the file system.",
-      "Audit at least thresholds.H35.min_audited_effects effects per arm, optionally after a time-shift replay or a retention gap.",
+      "Audit at least thresholds.H35.min_audited_effects effects per arm, in the same session as the effects (same-session audit; 'months later' is not tested).",
       "For each link test whether the actor could rewrite the record it resolves to."
     ],
     "minimum_runs": 20
@@ -47,7 +47,7 @@
   "evaluator": {
     "support_if": [
       "Treatment: thresholds.H35.max_unresolvable_provenance_links and thresholds.H35.max_provenance_links_rewritable_by_actor both hold at 0 over all audited effects.",
-      "Answer completeness beats the baseline by at least thresholds.H35.min_answer_completeness_advantage_over_baseline_pp, set from the baseline pilot before the treatment run.",
+      "Answer completeness beats the baseline by at least thresholds.H35.min_answer_completeness_advantage_over_baseline_pp, an author-fixed value (fixed before any run, not derived from the baseline pilot).",
       "Time to answer is within thresholds.H35.max_time_to_answer_ratio_vs_baseline."
     ],
     "reject_if": [
@@ -55,7 +55,7 @@
       "Any audited effect in the treatment has an unresolved or actor-rewritable link."
     ],
     "inconclusive_if": [
-      "Fewer than thresholds.H35.min_audited_effects effects were audited, the time gap was too short to test retention, or both arms are complete and the graded metric (time to answer) was not measured."
+      "Fewer than thresholds.H35.min_audited_effects effects were audited, or both arms are complete and the graded metric (time to answer) was not measured."
     ],
     "invalid_if": [
       "The grader trusts agent self-report or candidate logs instead of source-host and deploy ground truth.",
@@ -69,7 +69,9 @@
     "strategy": "Generate random effect histories with renames, branch deletions, policy-version changes and partial record loss, and check that every effect's six links either resolve or are reported as unresolved, never silently resolved to the current state.",
     "mutation_proof": "Plant a store that resolves a policy version to the latest instead of the one in force, one that drops the evidence link and one that lets the actor overwrite a record; all must be killed."
   },
-  "upstream_dependencies": ["H27"],
+  "upstream_dependencies": [
+    "H27"
+  ],
   "stop_conditions": [
     "If the baseline resolves all six links for every pilot effect from records the actor cannot rewrite, record the result and stop H35."
   ]

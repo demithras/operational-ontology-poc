@@ -1,23 +1,23 @@
 # Preregistration and freeze procedure
 
-This pack is a draft for review, not already preregistered. There are two freeze stages because comparative thresholds can only be set after the baseline has been measured.
+This pack is a draft for review, not already preregistered. There is one freeze. Every threshold, absolute and comparative, is fixed by the author before any run (`protocol/thresholds.json`, `comparative_basis`). The baseline pilot only shows whether there is headroom; it does not set thresholds.
 
-## Stage A: protocol freeze (before any run)
+## Protocol freeze (before any run)
 
 1. Review every `hypotheses/hNN/contract.json`.
 2. Review `model/*.json` (invariants C1-C3 and K1-K5, fault classes F1-F10, gated actions).
 3. Review `baselines/FAIRNESS.md`: the conventional arm must have every control that plain GitHub and beads offer.
 4. Verify `protocol/UPSTREAM_EVIDENCE.json` still pins the intended upstream state.
-5. Answer every item in `protocol/OPEN_QUESTIONS.md` and check it.
-6. Run `python scripts/check_pack.py`.
+5. Answer every item in `protocol/OPEN_QUESTIONS.md` and check it (done 2026-10-28).
+6. Run `python scripts/check_pack.py` (fails if any threshold is null).
 7. Run `python scripts/freeze_protocol.py` and commit the generated `protocol/FREEZE.json` before any implementation or run.
 
-## Stage B: baseline pilot, then comparative thresholds
+## Order after the freeze
 
-1. Run the **baseline pilot first** (conventional arm only) and record its numbers.
-2. Set every comparative threshold in `protocol/thresholds.json` from those numbers, "just above the measured baseline value", before the treatment run.
-3. Run `python scripts/freeze_protocol.py --stage thresholds` (refuses while any comparative threshold is null) and commit `protocol/FREEZE_THRESHOLDS.json`.
-4. Only then run the treatment arm.
+1. Run the **baseline pilot** (conventional arm only) as a headroom check. The stop rule in `docs/03_pilot_design.md` is unchanged.
+2. Run the manipulation check, one item per arm.
+3. Run the treatment arm.
+4. Compute verdicts against the frozen thresholds.
 
 ## Per-hypothesis value of information
 

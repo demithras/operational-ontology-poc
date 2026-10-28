@@ -10,7 +10,7 @@
 - [ ] H33 states the risk of ending in parity like H11.
 - [ ] H34 is recorded as the expected strongest hypothesis, with the reason.
 - [ ] H36 is the only comparative-value claim; parity is REJECTED; a frontier is required.
-- [ ] Every comparative threshold is null with a `_rule`; absolute-safety thresholds are acceptable.
+- [ ] Every threshold has a fixed value (comparative ones are the author's minimum material effect, not derived from the baseline pilot).
 - [ ] `baselines/FAIRNESS.md` lists every plain GitHub and beads control available.
 - [ ] The pilot scope (2 repos, 2 agents, 1 gated action) and the stop rule are acceptable.
 - [ ] Every item in `protocol/OPEN_QUESTIONS.md` is answered and checked.

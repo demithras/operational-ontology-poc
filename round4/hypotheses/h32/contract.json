@@ -26,7 +26,7 @@
     "steps": [
       "Freeze the seeded blocker set, including blockers that close mid-run and blockers that were never written down as a dependency anywhere in the baseline arm's convention.",
       "Run the baseline arm first and record starts on open blockers and wasted runs.",
-      "Set the comparative thresholds from the baseline pilot and freeze them.",
+      "The comparative thresholds are already fixed by the author (thresholds.json, comparative_basis); the baseline pilot only checks for headroom and does not change them.",
       "Pilot one item per arm; check treatment graph calls per item and the file-system reach of the control arm.",
       "Run both arms at the pilot minimum (thresholds.H32.min_seeded_faults_per_class).",
       "Judge start-versus-blocker order by the observer from timestamps in the source host and tracker, never from agent reports."
@@ -46,7 +46,7 @@
   "evaluator": {
     "support_if": [
       "Treatment starts at most thresholds.H32.max_starts_on_known_open_cross_repo_blocker items on an open blocker (0).",
-      "Treatment surfacing beats the baseline by at least thresholds.H32.min_blocker_surfacing_advantage_over_baseline_pp, set from the baseline pilot before the treatment run.",
+      "Treatment surfacing beats the baseline by at least thresholds.H32.min_blocker_surfacing_advantage_over_baseline_pp, an author-fixed value (fixed before any run, not derived from the baseline pilot).",
       "Wasted-run ratio is within thresholds.H32.max_wasted_agent_runs_ratio_vs_baseline."
     ],
     "reject_if": [

@@ -111,6 +111,8 @@ def check_thresholds(errors: list[str], contracts: list[dict]) -> None:
     thr = load(ROOT / "protocol" / "thresholds.json")
     if thr.get("status") != "DRAFT_NOT_FROZEN":
         errors.append("thresholds.json status must be DRAFT_NOT_FROZEN")
+    if not isinstance(thr.get("comparative_basis"), str) or "not derived from the baseline pilot" not in thr["comparative_basis"]:
+        errors.append("thresholds.json needs a comparative_basis string saying thresholds are not derived from the baseline pilot")
     for sec in EXPECTED_IDS + ["common"]:
         if not isinstance(thr.get(sec), dict):
             errors.append(f"thresholds.json missing section {sec}")
@@ -118,10 +120,10 @@ def check_thresholds(errors: list[str], contracts: list[dict]) -> None:
         if not isinstance(body, dict):
             continue
         for key, val in body.items():
-            if val is None and not isinstance(body.get(f"{key}_rule"), str):
-                errors.append(f"threshold {sec}.{key} is null without a {key}_rule string")
-            if key.endswith("_rule") and key[:-5] not in body:
-                errors.append(f"threshold {sec}.{key} has no sibling value key")
+            if val is None:
+                errors.append(f"threshold {sec}.{key} is null; all thresholds are author-fixed")
+            if key.endswith("_rule"):
+                errors.append(f"threshold {sec}.{key}: _rule keys are removed (values are fixed)")
     for ref in thr.get("pilot_values", []):
         sec, _, key = ref.partition(".")
         if key not in thr.get(sec, {}):

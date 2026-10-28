@@ -5,14 +5,14 @@
 - [ ] `python scripts/check_pack.py` exits 0.
 - [ ] H31-H36 contracts validate against `schemas/hypothesis-contract.schema.json`.
 - [ ] Every invariant C1-C3 and K1-K5 and every fault class F1-F10 is covered by at least one contract.
-- [ ] `protocol/thresholds.json` is `DRAFT_NOT_FROZEN`; every comparative threshold is null with a `_rule`.
+- [ ] `protocol/thresholds.json` is `DRAFT_NOT_FROZEN`; every threshold, comparative ones included, has a fixed non-null value (`comparative_basis` recorded).
 - [ ] No `protocol/FREEZE.json` exists; the author freezes.
 - [ ] The author has answered every item in `protocol/OPEN_QUESTIONS.md`.
 
 ## For the pilot
 
-- [ ] Stage A freeze committed before any run.
-- [ ] Baseline pilot run first; numbers recorded; comparative thresholds set from them; Stage B freeze committed.
+- [ ] Protocol freeze committed before any run.
+- [ ] Baseline pilot run as a headroom check; numbers recorded; thresholds not changed by them.
 - [ ] Manipulation check passed (treatment calls per item above 0, one item per arm).
 - [ ] Control-arm file-system reach checked before and reported after.
 - [ ] Fairness audit signed off: no control available in plain GitHub or beads is missing from the baseline.

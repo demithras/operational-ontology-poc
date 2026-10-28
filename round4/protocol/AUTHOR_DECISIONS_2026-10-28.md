@@ -25,4 +25,16 @@ Relational, as in Round 1 H11. No RDF4J, Kafka or Debezium unless a hypothesis n
 
 ## Not decided here
 
-Everything in `OPEN_QUESTIONS.md`. The pack cannot be frozen while those questions are open.
+Nothing in `OPEN_QUESTIONS.md` remains open after the interview below.
+
+## Interview 2026-10-28
+
+1. **Test repositories.** Two PUBLIC sandbox repositories on GitHub, with real branch protection, required checks and CODEOWNERS.
+2. **Agents.** Workers are Claude Code sessions on sonnet. The adversary is a deterministic fault injector for F1-F10 plus one opus agent with an adversarial prompt.
+3. **Projects.** Synthetic: generated small repositories and work items, known oracle, no real effects.
+4. **H34 versus the baseline reconciliation script.** The treatment FORBIDS closing an item without observer confirmation; the baseline script DETECTS a false done after the fact. Graded metrics: false-done lifetime (seconds from false close to detection; 0 when prevented) and downstream work built on a false done (count of items or PRs started that depend on it).
+5. **H36 cost model.** Operator minutes (manual log), agent tokens (from session transcripts), setup and maintenance hours (from git log). Separate frontier axes, never one combined score.
+6. **Comparative thresholds.** The minimum material effect is fixed by the author BEFORE the pilot (the "moderate" set, in `protocol/thresholds.json`). The baseline pilot only shows whether there is headroom; it does not set thresholds.
+7. **Stale-lease bound.** 15 minutes (900 s), identical for both arms.
+8. **Baseline human spot-check rate for H34.** 10% of closed items.
+9. **H35.** A same-session audit is enough for the pilot. "Months later" is an explicit stated limitation, not tested.

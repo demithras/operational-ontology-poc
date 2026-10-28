@@ -30,15 +30,19 @@ One executable contract jointly derives leases, the cross-repo dependency view, 
 
 Combine the H31-H35 pilot results with a recorded cost model (operator minutes, agent tokens, setup effort, maintenance) and present a frontier of safety and coordination benefit against cost, per class, without collapsing them into one score.
 
-1. Freeze the cost model (what counts as setup, recurring maintenance, operator minute and token) before any run; the author decides it, see OPEN_QUESTIONS.md.
-2. Record the baseline arm's costs and outcomes first and set the comparative thresholds from them.
+1. Freeze the cost model (what counts as setup, recurring maintenance, operator minute and token) before any run; cost axes are fixed by the author (2026-10-28): operator minutes (manual log), agent tokens (from session transcripts), setup and maintenance hours (from git log).
+2. Record the baseline arm's costs and outcomes first and treat them as a headroom check; the comparative thresholds are already author-fixed.
 3. Record the treatment's costs and outcomes with the same agents and the same seeded faults.
 4. Run the equivalence audit: for every treatment gain, check whether an obvious plain GitHub or beads control would erase it, and add that control to the baseline if so (before freeze) or invalidate.
 5. Report a per-class benefit and cost table and a frontier; where both arms pass every gate write 'no advantage measured', not parity or a win.
 
+## Cost axes
+
+Separate frontier axes, never one combined score: operator minutes (manual log), agent tokens (from session transcripts), setup hours and maintenance hours (from git log).
+
 ## Independent oracle
 
-The independent observers and graders of H31-H35 for benefit, plus a frozen cost meter (operator minutes logged by the operator, tokens from the model provider's usage records, setup and maintenance effort in logged hours); no figure comes from an agent's own estimate.
+The independent observers and graders of H31-H35 for benefit, plus a frozen cost meter (operator minutes in a manual log kept by the operator, agent tokens from the session transcripts, setup and maintenance hours from the git log); no figure comes from an agent's own estimate.
 
 ## Fair baseline
 

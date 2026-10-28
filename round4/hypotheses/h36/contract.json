@@ -10,7 +10,7 @@
     "The pilot is too small (2 repos, 2 agents, 1 gated action) to say anything about total value."
   ],
   "mechanism": "One executable contract jointly derives leases, the cross-repo dependency view, the control gate, observer-confirmed closure and provenance, so fewer inconsistent decisions are made across repos than when each control is configured separately.",
-  "scope": "All of H31-H35 as run, with the cost of setup, recurring maintenance, operator minutes and agent tokens measured for both arms. H36 is the only comparative-value claim of the round. Parity is REJECTED.",
+  "scope": "All of H31-H35 as run, with the cost of setup, recurring maintenance, operator minutes and agent tokens measured for both arms. H36 is the only comparative-value claim of the round. Parity is REJECTED. Cost axes are separate frontier axes, never one combined score: operator minutes (manual log), agent tokens (from session transcripts), setup hours and maintenance hours (from git log).",
   "predictions": [
     "In at least thresholds.H36.min_classes_with_material_advantage fault classes the treatment shows a measured advantage over the baseline on a graded metric.",
     "Setup, maintenance, operator-minute and token costs stay within the frozen ratios (thresholds.H36 keys).",
@@ -25,15 +25,15 @@
   "experiment": {
     "summary": "Combine the H31-H35 pilot results with a recorded cost model (operator minutes, agent tokens, setup effort, maintenance) and present a frontier of safety and coordination benefit against cost, per class, without collapsing them into one score.",
     "steps": [
-      "Freeze the cost model (what counts as setup, recurring maintenance, operator minute and token) before any run; the author decides it, see OPEN_QUESTIONS.md.",
-      "Record the baseline arm's costs and outcomes first and set the comparative thresholds from them.",
+      "Freeze the cost model (what counts as setup, recurring maintenance, operator minute and token) before any run; cost axes are fixed by the author (2026-10-28): operator minutes (manual log), agent tokens (from session transcripts), setup and maintenance hours (from git log).",
+      "Record the baseline arm's costs and outcomes first as a headroom check; the comparative thresholds are already author-fixed.",
       "Record the treatment's costs and outcomes with the same agents and the same seeded faults.",
       "Run the equivalence audit: for every treatment gain, check whether an obvious plain GitHub or beads control would erase it, and add that control to the baseline if so (before freeze) or invalidate.",
       "Report a per-class benefit and cost table and a frontier; where both arms pass every gate write 'no advantage measured', not parity or a win."
     ],
     "minimum_runs": 20
   },
-  "oracle": "The independent observers and graders of H31-H35 for benefit, plus a frozen cost meter (operator minutes logged by the operator, tokens from the model provider's usage records, setup and maintenance effort in logged hours); no figure comes from an agent's own estimate.",
+  "oracle": "The independent observers and graders of H31-H35 for benefit, plus a frozen cost meter (operator minutes in a manual log kept by the operator, agent tokens from the session transcripts, setup and maintenance hours from the git log); no figure comes from an agent's own estimate.",
   "baseline": "The whole conventional stack at equal engineering effort: beads (leases via status and assignee, bd ready, dependencies), GitHub branch protection, CODEOWNERS, required status checks and reviews with dismiss-stale-approvals, merge queue if available, deploy environments with required reviewers, audit log and a reconciliation script of equal effort.",
   "required_evidence": [
     "h31-h35-verdict-summary.json",

@@ -67,9 +67,8 @@ source .venv/bin/activate
 pip install -e '.[test]'
 make check
 # review REVIEW_CHECKLIST.md and answer protocol/OPEN_QUESTIONS.md
-make freeze            # Stage A: protocol freeze
-# run the baseline pilot, set comparative thresholds, then:
-make freeze-thresholds # Stage B
+make freeze            # single protocol freeze (all thresholds are already fixed)
+# then: baseline pilot (headroom check), manipulation check, treatment run, verdicts
 ```
 
 `make freeze` hashes the contracts, model, thresholds, fairness rules, measurement model and upstream pin. It refuses while open questions remain. Any material post-reveal change requires a new experiment version and a new freeze.

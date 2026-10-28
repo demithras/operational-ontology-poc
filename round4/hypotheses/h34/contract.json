@@ -9,12 +9,14 @@
     "The gate catches false done only by closing fewer items (higher backlog), not by being more accurate.",
     "The observer and the agent share a failure mode (for example both read the same cached CI result), so the gate's confirmation is not independent."
   ],
-  "mechanism": "close_work_item requires the claimed outcome (PR, SHA, version) and re-reads it from the source-host API, the check-runs for the claimed SHA and the deploy system at close time; when the observer is unavailable the item stays open and the state is explicit, never closed.",
+  "mechanism": "The treatment FORBIDS closing an item without observer confirmation; the baseline reconciliation script only DETECTS a false done after the fact. close_work_item requires the claimed outcome (PR, SHA, version) and re-reads it from the source-host API, the check-runs for the claimed SHA and the deploy system at close time; when the observer is unavailable the item stays open and the state is explicit, never closed.",
   "scope": "Pilot: 2 repositories, 2 agents, seeded fault F4 in its three forms (PR unmerged, CI red on the head SHA, merged SHA differs from the claimed SHA). Closing is a gated action in the full plan only.",
   "predictions": [
     "This is expected to be the strongest hypothesis of the round: an agent's self-reported success is unreliable (it can be wrong or optimistic without any adversary), so a baseline that leans on self-report plus a spot check is expected to close some false-done items that the gate does not.",
+    "Forbid versus detect: the treatment prevents a false-done closure (false-done lifetime 0 s, thresholds.H34.max_treatment_false_done_lifetime_seconds), while the baseline reconciliation script detects it only after the false close, so its lifetime is above 0 and work can be built on it.",
     "The treatment closes 0 items with a false done (thresholds.H34.max_false_done_closures).",
-    "When the observer is unavailable the treatment closes nothing (thresholds.H34.max_closures_with_observer_unavailable)."
+    "When the observer is unavailable the treatment closes nothing (thresholds.H34.max_closures_with_observer_unavailable).",
+    "Downstream work built on a false done (count of items or PRs started that depend on it) is lower in the treatment than in the baseline."
   ],
   "falsifiers": [
     "The baseline, with a reconciliation script of equal effort, closes 0 false-done items as well.",
@@ -22,11 +24,11 @@
     "The gate's detection advantage disappears when the baseline human spot check is given the same observer data the gate reads."
   ],
   "experiment": {
-    "summary": "Script worker agents to report completion on seeded F4 cases mixed with truly done items; both arms decide whether to close; an independent observer reads the real PR, check-run and deploy state to say which closures were false.",
+    "summary": "Script worker agents to report completion on seeded F4 cases mixed with truly done items; both arms decide whether to close; an independent observer reads the real PR, check-run and deploy state to say which closures were false. Graded metrics: false-done lifetime (seconds from false close to detection; 0 when prevented) and downstream work built on a false done.",
     "steps": [
       "Freeze the F4 case mix (three false-done forms plus truly done items) and the observer before any run.",
-      "Run the baseline arm first (agent self-report plus human spot check at a frozen sampling rate, with a reconciliation script of equal effort) and record false-done closures and operator minutes.",
-      "Set the comparative thresholds from the baseline pilot and freeze them.",
+      "Run the baseline arm first (agent self-report plus human spot check at the 10% sampling rate thresholds.H34.baseline_spot_check_rate, with a reconciliation script of equal effort) and record false-done closures and operator minutes.",
+      "The comparative thresholds are already fixed by the author (thresholds.json, comparative_basis); the baseline pilot only checks for headroom and does not change them.",
       "Pilot one item per arm; check treatment observer calls per item and the file-system reach of the control arm.",
       "Run both arms at the pilot minimum (thresholds.H34.min_seeded_faults_per_class per form).",
       "Include an observer-outage condition to test the explicit unavailable state.",
@@ -35,12 +37,14 @@
     "minimum_runs": 20
   },
   "oracle": "Independent observer reading the source-host REST API (PR state and merge SHA), check-runs for the claimed SHA and the deploy system's deployed version; it never reads an agent's completion report.",
-  "baseline": "Agent self-report plus a human spot check, strengthened with every plain control from baselines/FAIRNESS.md: required status checks, PR-linked close, beads close reasons, and a reconciliation script of equal effort that reads PR and CI state.",
+  "baseline": "Agent self-report plus a human spot check of 10% of closed items (thresholds.H34.baseline_spot_check_rate), strengthened with every plain control from baselines/FAIRNESS.md: required status checks, PR-linked close, beads close reasons, and a reconciliation script of equal effort that reads PR and CI state and detects a false done after the fact.",
   "required_evidence": [
     "f4-case-manifest.json",
     "observer-truth-per-item.json",
     "closure-decisions-per-arm.json",
     "false-done-closures.json",
+    "false-done-lifetimes.json",
+    "downstream-work.json",
     "observer-outage-results.json",
     "operator-minutes.json",
     "manipulation-check.json",
@@ -49,7 +53,8 @@
   "evaluator": {
     "support_if": [
       "Treatment false-done closures stay at thresholds.H34.max_false_done_closures (0) and closures with observer unavailable stay at thresholds.H34.max_closures_with_observer_unavailable (0).",
-      "Treatment detection beats the baseline by at least thresholds.H34.min_false_done_detection_advantage_over_baseline_pp, set from the baseline pilot before the treatment run.",
+      "Treatment detection beats the baseline by at least thresholds.H34.min_false_done_detection_advantage_over_baseline_pp, an author-fixed value (fixed before any run, not derived from the baseline pilot).",
+      "Treatment false-done lifetime (seconds from false close to detection; 0 when prevented) is at most thresholds.H34.max_treatment_false_done_lifetime_seconds, and downstream work built on a false done is lower than in the baseline.",
       "Operator minutes stay within thresholds.H34.max_operator_minutes_ratio_vs_baseline."
     ],
     "reject_if": [
@@ -71,7 +76,9 @@
     "strategy": "Generate random (claimed outcome, real state) pairs including unmerged PRs, SHA drift, red and missing checks and observer outages, and check that close is allowed exactly when the real state confirms the claim.",
     "mutation_proof": "Plant a gate that closes on the claimed SHA without re-reading it, one that treats a missing check as green and one that closes when the observer errors; all must be killed."
   },
-  "upstream_dependencies": ["H28"],
+  "upstream_dependencies": [
+    "H28"
+  ],
   "stop_conditions": [
     "If the baseline catches every seeded F4 case in the pilot, record the result and stop H34."
   ]

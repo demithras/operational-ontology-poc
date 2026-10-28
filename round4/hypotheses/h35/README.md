@@ -15,6 +15,10 @@ The GitHub audit log, the PR timeline and the bead history together answer 'why 
 - The links resolve, but to records the actor could rewrite, so the provenance is not trustworthy.
 - Provenance quality depends on discipline (commit trailers, close reasons) that a well-run conventional team also has.
 
+## Scope and limitation
+
+The pilot uses a same-session audit (author decision 2026-10-28). Limitation, stated and not tested: "months later" retention (renamed repositories, deleted branches, expired logs) is not covered by this pilot.
+
 ## Mechanism under test
 
 Each gated effect writes an append-only record binding work item, agent, grant, policy version, evidence digests and the observer's confirmation; the record sits in a store the acting agent cannot write to or alter.
@@ -31,9 +35,9 @@ Produce effects in both arms, then pose the same fixed set of 'why' questions ab
 
 1. Freeze the question set, the six-link rubric and the grader before any run.
 2. Run the baseline arm first with all plain controls from baselines/FAIRNESS.md enabled (audit log export, PR timeline, bead history, commit trailers) and record completeness and time to answer.
-3. Set the comparative thresholds from the baseline pilot and freeze them.
+3. The comparative thresholds are already fixed by the author (thresholds.json, comparative_basis); the baseline pilot only checks for headroom and does not change them.
 4. Pilot one effect per arm; check that the treatment wrote provenance records (manipulation check) and that the control arm could not reach them through the file system.
-5. Audit at least thresholds.H35.min_audited_effects effects per arm, optionally after a time-shift replay or a retention gap.
+5. Audit at least thresholds.H35.min_audited_effects effects per arm, in the same session as the effects (same-session audit; 'months later' is not tested).
 6. For each link test whether the actor could rewrite the record it resolves to.
 
 ## Independent oracle

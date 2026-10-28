@@ -26,7 +26,7 @@
     "steps": [
       "Freeze the seeded sequences, the stale bound and the observer before any run.",
       "Run the baseline arm first (beads in_progress, assignee, bd ready, equal-effort reconciliation script) and record detection rate, time to release and false alarms.",
-      "Set the comparative thresholds from the baseline pilot, then freeze them.",
+      "The comparative thresholds are already fixed by the author (thresholds.json, comparative_basis); the baseline pilot only checks for headroom and does not change them.",
       "Pilot one item per arm, check that the treatment made lease calls (manipulation check) and that the control arm could not read treatment artifacts through the file system.",
       "Run both arms on at least the pilot minimum of seeded faults per class (thresholds.H31.min_seeded_faults_per_class).",
       "Judge every item by the observer, never by an agent's report or the arm's own log; report a per-class table and the cost of each arm."
@@ -47,7 +47,7 @@
   "evaluator": {
     "support_if": [
       "Treatment: thresholds.H31.max_double_claims_undetected and thresholds.H31.max_stale_leases_unreleased_beyond_bound both hold at 0 on every seeded fault.",
-      "Treatment detection beats the baseline by at least thresholds.H31.min_detection_advantage_over_baseline_pp, set from the baseline pilot before the treatment run.",
+      "Treatment detection beats the baseline by at least thresholds.H31.min_detection_advantage_over_baseline_pp, an author-fixed value (fixed before any run, not derived from the baseline pilot).",
       "False-alarm ratio is within thresholds.H31.max_false_alarm_ratio_vs_baseline.",
       "At least thresholds.H31.min_seeded_faults_per_class seeded faults per class were run in each arm."
     ],
@@ -70,7 +70,9 @@
     "strategy": "RuleBasedStateMachine over claim, heartbeat, expire, kill, retry-after-lost-response and clock-skew rules; invariants C1 and C2 are checked against a pure ownership model after every step, shrinking any violation to a minimal interleaving.",
     "mutation_proof": "Plant a non-atomic claim, a lease that never expires and a heartbeat that renews a released lease; all must be killed (thresholds.H33.required_mutation_kill_rate is the shared bar)."
   },
-  "upstream_dependencies": ["H24"],
+  "upstream_dependencies": [
+    "H24"
+  ],
   "stop_conditions": [
     "If the baseline catches every seeded F1 and F2 fault in the pilot, record the result and stop H31; do not add faults after seeing the outcome."
   ]

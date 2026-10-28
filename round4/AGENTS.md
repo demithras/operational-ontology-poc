@@ -17,7 +17,7 @@ observation → hypothesis → strongest rival (the conventional stack already d
 2. **No self-report as truth.** An agent's "done", its summary, a success response from an action call and either arm's own log are never ground truth. Read the outcome from the independent observer (source-host API, check-runs for the head SHA, deploy system, tracker API).
 3. **No strawman.** The conventional arm gets every control plain GitHub and beads offer, with equal effort (`baselines/FAIRNESS.md`). If you find a missing control, say so; do not leave it out because it weakens the treatment advantage.
 4. **Same agents, same faults.** Both arms get the same agents and the same seeded faults in the same order.
-5. **Baseline first.** Run the baseline pilot, record its numbers, set comparative thresholds from them, then run the treatment.
+5. **Baseline first.** Run the baseline pilot as a headroom check and record its numbers; comparative thresholds are author-fixed and are not changed by them. Then run the treatment.
 6. **Prove the treatment was used.** Pilot one item per arm; require treatment gate or lease calls per item above 0 before any fan-out. Report whether the control arm could reach treatment artifacts through the file system.
 7. **No oracle laundering.** An oracle may read frozen facts and observer data but may not import candidate or baseline decision code.
 8. **No post-reveal scope surgery.** A fault class that fails to discriminate cannot be removed after results without a new experiment version and a new freeze.

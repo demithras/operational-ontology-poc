@@ -17,7 +17,13 @@ Agent self-report plus a human spot check closes items as correctly as an indepe
 
 ## Mechanism under test
 
-close_work_item requires the claimed outcome (PR, SHA, version) and re-reads it from the source-host API, the check-runs for the claimed SHA and the deploy system at close time; when the observer is unavailable the item stays open and the state is explicit, never closed.
+The treatment FORBIDS closing an item without observer confirmation; the baseline reconciliation script only DETECTS a false done after the fact. close_work_item requires the claimed outcome (PR, SHA, version) and re-reads it from the source-host API, the check-runs for the claimed SHA and the deploy system at close time; when the observer is unavailable the item stays open and the state is explicit, never closed.
+
+## Predictions and graded metrics
+
+- Forbid versus detect: the treatment prevents a false-done closure (false-done lifetime 0 s, `thresholds.H34.max_treatment_false_done_lifetime_seconds`); the baseline script detects it only after the false close, so its lifetime is above 0.
+- False-done lifetime = seconds from false close to detection (0 when prevented). Downstream work on a false done = count of items or PRs started that depend on it; it must be lower in the treatment than in the baseline.
+- Extra evidence: `false-done-lifetimes.json`, `downstream-work.json`.
 
 ## Primary falsifiers
 
@@ -30,8 +36,8 @@ close_work_item requires the claimed outcome (PR, SHA, version) and re-reads it 
 Script worker agents to report completion on seeded F4 cases mixed with truly done items; both arms decide whether to close; an independent observer reads the real PR, check-run and deploy state to say which closures were false.
 
 1. Freeze the F4 case mix (three false-done forms plus truly done items) and the observer before any run.
-2. Run the baseline arm first (agent self-report plus human spot check at a frozen sampling rate, with a reconciliation script of equal effort) and record false-done closures and operator minutes.
-3. Set the comparative thresholds from the baseline pilot and freeze them.
+2. Run the baseline arm first (agent self-report plus human spot check at the 10% sampling rate thresholds.H34.baseline_spot_check_rate, with a reconciliation script of equal effort) and record false-done closures and operator minutes.
+3. The comparative thresholds are already fixed by the author (thresholds.json, comparative_basis); the baseline pilot only checks for headroom and does not change them.
 4. Pilot one item per arm; check treatment observer calls per item and the file-system reach of the control arm.
 5. Run both arms at the pilot minimum (thresholds.H34.min_seeded_faults_per_class per form).
 6. Include an observer-outage condition to test the explicit unavailable state.
@@ -43,7 +49,7 @@ Independent observer reading the source-host REST API (PR state and merge SHA), 
 
 ## Fair baseline
 
-Agent self-report plus a human spot check, strengthened with every plain control from baselines/FAIRNESS.md: required status checks, PR-linked close, beads close reasons, and a reconciliation script of equal effort that reads PR and CI state.
+Agent self-report plus a human spot check of 10% of closed items (thresholds.H34.baseline_spot_check_rate), strengthened with every plain control from baselines/FAIRNESS.md: required status checks, PR-linked close, beads close reasons, and a reconciliation script of equal effort that reads PR and CI state and detects a false done after the fact.
 
 ## Stop rule
 

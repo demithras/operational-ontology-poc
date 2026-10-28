@@ -13,7 +13,10 @@ The conventional arm receives every control that plain beads and GitHub offer, c
 - deploy environments with required reviewers;
 - the audit log, with a regular export;
 - a reconciliation script of equal effort to the treatment's equivalent component (same engineer-hours, same inputs, same heartbeat data);
-- commit trailers and close-reason conventions that a well-run team would use.
+- commit trailers and close-reason conventions that a well-run team would use;
+- for H34, a human spot check of closed items at the rate `thresholds.H34.baseline_spot_check_rate` (10% of closed items).
+
+The baseline runs on the same two public GitHub sandbox repositories as the treatment, so its controls are real GitHub controls. The reconciliation script has equal effort in engineer-hours (logged) to the treatment's equivalent component.
 
 ## Same bar for both arms
 

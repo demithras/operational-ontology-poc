@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
-"""Two-stage protocol freeze.
+"""Single-stage protocol freeze.
 
---stage pack        freezes contracts, model, fairness, measurement model, upstream pin and
-                    the draft thresholds (comparative values may still be null). Refuses while
-                    protocol/OPEN_QUESTIONS.md has an unchecked item. Writes protocol/FREEZE.json.
---stage thresholds  freezes the thresholds after the baseline pilot. Refuses while any
-                    comparative threshold is still null. Writes protocol/FREEZE_THRESHOLDS.json.
+Freezes contracts, model, fairness, measurement model, upstream pin and thresholds
+(all thresholds are fixed values). Refuses while protocol/OPEN_QUESTIONS.md has an
+unchecked item or any threshold is null. Writes protocol/FREEZE.json.
 """
 from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 import re
@@ -44,39 +41,26 @@ def digest(targets: list[Path]) -> tuple[str, list[dict]]:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", choices=["pack", "thresholds"], default="pack")
-    args = ap.parse_args()
-
-    if args.stage == "pack":
-        text = (ROOT / "protocol" / "OPEN_QUESTIONS.md").read_text()
-        open_items = re.findall(r"^- \[ \] (.+)$", text, flags=re.M)
-        if open_items:
-            print(f"REFUSED: {len(open_items)} open question(s) in protocol/OPEN_QUESTIONS.md")
-            return 2
-        sha, files = digest(PACK_TARGETS)
-        out_path = ROOT / "protocol" / "FREEZE.json"
-    else:
-        thr = json.loads((ROOT / "protocol" / "thresholds.json").read_text())
-        nulls = [f"{sec}.{k}" for sec, v in thr.items() if isinstance(v, dict)
-                 for k, val in v.items() if val is None]
-        if nulls:
-            print(f"REFUSED: {len(nulls)} comparative threshold(s) still null: {', '.join(nulls)}")
-            return 2
-        if not (ROOT / "protocol" / "FREEZE.json").exists():
-            print("REFUSED: protocol/FREEZE.json (stage pack) does not exist yet")
-            return 2
-        sha, files = digest([ROOT / "protocol" / "thresholds.json"])
-        out_path = ROOT / "protocol" / "FREEZE_THRESHOLDS.json"
-
+    text = (ROOT / "protocol" / "OPEN_QUESTIONS.md").read_text()
+    open_items = re.findall(r"^- \[ \] (.+)$", text, flags=re.M)
+    if open_items:
+        print(f"REFUSED: {len(open_items)} open question(s) in protocol/OPEN_QUESTIONS.md")
+        return 2
+    thr = json.loads((ROOT / "protocol" / "thresholds.json").read_text())
+    nulls = [f"{sec}.{k}" for sec, v in thr.items() if isinstance(v, dict)
+             for k, val in v.items() if val is None]
+    if nulls:
+        print(f"REFUSED: {len(nulls)} threshold(s) are null: {', '.join(nulls)}")
+        return 2
+    sha, files = digest(PACK_TARGETS)
     out = {
-        "stage": args.stage,
+        "stage": "protocol",
         "frozen_at": datetime.now(timezone.utc).isoformat(),
         "protocol_sha256": sha,
         "files": files,
         "warning": "Any material post-reveal change requires a new experiment version and refreeze.",
     }
-    out_path.write_text(json.dumps(out, indent=2) + "\n")
+    (ROOT / "protocol" / "FREEZE.json").write_text(json.dumps(out, indent=2) + "\n")
     print(sha)
     return 0
 
