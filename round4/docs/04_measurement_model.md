@@ -12,7 +12,7 @@ The one rule: **the oracle never trusts an agent's report or a candidate log.** 
 | Was the release deployed, at which version? | The deploy system | deployment record and status per environment |
 | Who worked on an item, and when? | GitHub REST API and tracker history | commits, branches, assignment and status history |
 | Did the tracker write happen? | The tracker's own API | read-back after the write |
-| Does an agent really have access, and does it stop? | The target system's ACL state (Postgres: `pg_roles`, `pg_auth_members`, `has_table_privilege`; log store: its ACL or role API) | permission state, plus an attempted use with the issued credential; never the grant record |
+| Does an agent really have access, and does it stop? | The target system's ACL state (Postgres: `pg_roles`, `pg_auth_members`, `has_table_privilege`, `pg_stat_activity` for open sessions; OpenSearch: the security plugin's role and role-mapping API) | permission state, plus an attempted use with the issued credential on a new connection and on a session opened before revocation; never the grant record |
 
 ## What is never evidence
 

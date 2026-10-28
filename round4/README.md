@@ -28,7 +28,7 @@ Access:       K6 least privilege    K7 effective          K8 no self-grant
               and expiry            revocation
 ```
 
-Defined in `model/agent_ops_invariants.json`. Faults F1-F14: `model/fault_classes.json`. Gated actions: `model/actions.json`.
+Defined in `model/agent_ops_invariants.json`. Faults F1-F15: `model/fault_classes.json`. Gated actions: `model/actions.json`.
 
 ## Hypotheses
 
@@ -39,7 +39,7 @@ Defined in `model/agent_ops_invariants.json`. Faults F1-F14: `model/fault_classe
 | H33 | Does the control gate contain an adversarial agent (K1-K3; F5-F10)? | branch protection + CODEOWNERS + required checks |
 | H34 | Do items close only on an independently observed outcome, so false done is caught (K4; F4)? | agent self-report + human spot check |
 | H35 | Is "why did this merge or deploy happen" answerable months later (K5)? | GitHub audit log + PR timeline + bead history |
-| H37 | Do agent access grants stay least-privilege, expire and revoke for real (K6-K8; F11-F14)? | Vault dynamic credentials + IAM conditions + JIT access |
+| H37 | Do agent access grants stay least-privilege, expire and revoke for real (K6-K8; F11-F15)? | Vault dynamic credentials + IAM conditions + JIT access |
 | H36 | Do the H31-H35 and H37 gains outweigh setup and maintenance cost? Parity is REJECTED. | the whole conventional stack |
 
 ## Kill-chain

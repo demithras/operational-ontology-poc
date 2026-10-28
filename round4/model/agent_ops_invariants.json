@@ -59,8 +59,8 @@
     {
       "id": "K7",
       "name": "Effective revocation",
-      "statement": "After revoke or expiry the target system's REAL permission state shows no access within thresholds.H37.revocation_bound_seconds, and no use of the credential succeeds after that point.",
-      "violated_when": "The target system's permission state still shows access, or an attempted use with the issued credential succeeds, later than the revocation bound after revoke or expiry, whatever the grant record says."
+      "statement": "After revoke or expiry the target system's REAL permission state shows no access within thresholds.H37.revocation_bound_seconds: new connections and requests with the credential fail AND sessions already open at revocation are terminated, so no use of the credential succeeds after that point.",
+      "violated_when": "The target system's permission state still shows access, or an attempted use with the issued credential succeeds (on a new connection or on a session opened before revocation), or a session of the granted role is still listed, later than the revocation bound after revoke or expiry, whatever the grant record says."
     },
     {
       "id": "K8",

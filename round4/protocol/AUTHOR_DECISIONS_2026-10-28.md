@@ -54,3 +54,10 @@ Nothing in `OPEN_QUESTIONS.md` remains open after the interview below.
 4. The identical fault set runs in both arms. Batches come from the frozen injector with pre-registered seeds.
 5. The stopping point depends only on baseline misses, never on treatment results.
 6. The opus adversary agent is not part of the batch extension; its cases are reported separately.
+
+## Follow-up: H37 pilot targets
+
+1. Log store for the H37 pilot: OpenSearch with its security plugin (roles, role mappings, index permissions). The observer reads the security plugin's role and role-mapping API plus an attempted-use probe.
+2. `thresholds.H37.revocation_bound_seconds` stays 60, identical for both arms.
+3. "Access revoked" means BOTH: new connections and requests with the credential fail AND sessions already open at revocation are terminated, within the bound. For Postgres the observer reads `pg_stat_activity` (sessions of the granted role) besides `pg_roles`, `pg_auth_members` and `has_table_privilege`; for OpenSearch it probes the credential.
+4. Next step: privacy scan and PR; the author freezes the protocol later.

@@ -6,7 +6,7 @@
    │ H31 leases         │        │ H33 control gate   (K1-K3; F5-F10)    │
    │ (C1, C2; F1, F2)   │        │ H34 external truth (K4; F4)           │
    │ H32 cross-repo     │        │ H35 provenance     (K5)               │
-   │ blockers (C3; F3)  │        │ H37 access grants  (K6-K8; F11-F14)   │
+   │ blockers (C3; F3)  │        │ H37 access grants  (K6-K8; F11-F15)   │
    └─────────┬──────────┘        └──────────────────┬────────────────────┘
              │                                      │
              └──────────────────┬───────────────────┘

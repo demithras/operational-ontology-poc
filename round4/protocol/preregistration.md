@@ -5,7 +5,7 @@ This pack is a draft for review, not already preregistered. There is one freeze.
 ## Protocol freeze (before any run)
 
 1. Review every `hypotheses/hNN/contract.json`.
-2. Review `model/*.json` (invariants C1-C3 and K1-K8, fault classes F1-F14, gated actions).
+2. Review `model/*.json` (invariants C1-C3 and K1-K8, fault classes F1-F15, gated actions).
 3. Review `baselines/FAIRNESS.md`: the conventional arm must have every control that plain GitHub and beads offer.
 4. Verify `protocol/UPSTREAM_EVIDENCE.json` still pins the intended upstream state.
 5. Answer every item in `protocol/OPEN_QUESTIONS.md` and check it (done 2026-10-28).

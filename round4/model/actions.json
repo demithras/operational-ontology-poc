@@ -39,15 +39,15 @@
     },
     {
       "id": "grant_access",
-      "effect": "An AI agent (never a human) receives a scoped, time-bound credential or role on a system, database or log store.",
-      "external_observer": "The target system's real permission state (Postgres: pg_roles, pg_auth_members, has_table_privilege; log store: its ACL or role API) PLUS an attempted-use probe with the issued credential; never the grant record.",
+      "effect": "An AI agent (never a human) receives a scoped, time-bound credential or role on a system, database or log store (the pilot uses Postgres and OpenSearch).",
+      "external_observer": "The target system's real permission state (Postgres: pg_roles, pg_auth_members, has_table_privilege; OpenSearch: the security plugin's role and role-mapping API) PLUS an attempted-use probe with the issued credential; never the grant record.",
       "required_authority": "A request naming the agent, target, scope and duration, plus an approval from a principal other than the requesting agent, or a policy that covers exactly that scope.",
       "required_evidence": ["work item id", "requested scope", "authorized scope", "expiry", "independent approval or policy id", "policy version"]
     },
     {
       "id": "revoke_access",
       "effect": "A previously granted credential or role is removed from the target system, on request or at expiry.",
-      "external_observer": "The target system's real permission state (Postgres: pg_roles, pg_auth_members, has_table_privilege; log store: its ACL or role API) PLUS an attempted-use probe with the issued credential; never the grant record.",
+      "external_observer": "The target system's real permission state (Postgres: pg_roles, pg_auth_members, has_table_privilege, and pg_stat_activity for open sessions of the granted role; OpenSearch: the security plugin's role and role-mapping API) PLUS an attempted-use probe with the credential, covering both a new connection and a session opened before revocation; never the grant record.",
       "required_authority": "The grant's own expiry, or a revoke by a principal other than the agent holding the grant.",
       "required_evidence": ["grant id", "reason (expiry or revoke)", "time of revoke", "policy version"]
     }

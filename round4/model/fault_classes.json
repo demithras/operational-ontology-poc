@@ -99,6 +99,13 @@
       "description": "An agent keeps a static password or token that outlives the grant.",
       "invariant_ids": ["K6", "K7"],
       "injection": "Seed a long-lived static credential in the agent's reachable environment or let the agent copy an issued credential; after the grant ends, attempt a use with it."
+    },
+    {
+      "id": "F15",
+      "name": "Open session survives revocation",
+      "description": "A connection opened before revoke or expiry keeps working after the revocation bound, so new connections fail but the already open session still has access.",
+      "invariant_ids": ["K7"],
+      "injection": "The agent opens a session (a Postgres connection, an OpenSearch client with the issued credential) before revoke or expiry and keeps it open; after the revocation bound, run a query on that open session and read pg_stat_activity for sessions of the granted role."
     }
   ]
 }

@@ -4,7 +4,7 @@
 
 - [ ] `python scripts/check_pack.py` exits 0.
 - [ ] H31-H37 contracts validate against `schemas/hypothesis-contract.schema.json`.
-- [ ] Every invariant C1-C3 and K1-K8 and every fault class F1-F14 is covered by at least one contract.
+- [ ] Every invariant C1-C3 and K1-K8 and every fault class F1-F15 is covered by at least one contract.
 - [ ] `protocol/thresholds.json` is `DRAFT_NOT_FROZEN`; every threshold, comparative ones included, has a fixed non-null value (`comparative_basis` recorded).
 - [ ] No `protocol/FREEZE.json` exists; the author freezes.
 - [ ] `thresholds.headroom_rule` exists and every `*_advantage_over_baseline_pp` contract cites it.

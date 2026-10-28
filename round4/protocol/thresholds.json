@@ -94,7 +94,8 @@
     "min_violation_detection_advantage_over_baseline_pp": 20,
     "max_access_latency_ratio_vs_baseline": 1.5,
     "max_operator_minutes_ratio_vs_baseline": 1.5,
-    "revocation_bound_seconds": 60
+    "revocation_bound_seconds": 60,
+    "max_sessions_surviving_revocation": 0
   },
   "comparative_basis": "author-fixed minimum material effect, 2026-10-28, moderate set; not derived from the baseline pilot. Every comparative advantage bar is read through headroom_rule (follow-up 2026-10-28)."
 }

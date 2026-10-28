@@ -39,6 +39,7 @@ H37_THRESHOLDS = {
     "max_access_latency_ratio_vs_baseline": 1.5,
     "max_operator_minutes_ratio_vs_baseline": 1.5,
     "revocation_bound_seconds": 60,
+    "max_sessions_surviving_revocation": 0,
 }
 PIN = "4058fdd1ccbc94b4ae6286eeb5448f195a5b2aa7"
 # Built from parts so this file does not contain the strings it forbids elsewhere.
@@ -98,7 +99,7 @@ def check_contracts(errors: list[str]) -> tuple[list[dict], dict]:
                 errors.append(f"{c['id']}: inconclusive_if must record CEILING when baseline >= ceiling_when_baseline_at_least")
     if "H37" in by_id:
         t = json.dumps(by_id["H37"])
-        for needle in ("Vault", "dynamic-credential/JIT tooling already does this", "short TTL, not from the gate", "parity", "real permission state"):
+        for needle in ("Vault", "dynamic-credential/JIT tooling already does this", "short TTL, not from the gate", "parity", "real permission state", "F15", "pg_stat_activity", "OpenSearch"):
             if needle not in t:
                 errors.append(f"H37 must mention '{needle}'")
         if "observer reads the grant record instead of the target system" not in " ".join(by_id["H37"]["evaluator"]["invalid_if"]):
@@ -125,8 +126,11 @@ def check_model(errors: list[str], contracts: list[dict]) -> None:
             if not x.get(k):
                 errors.append(f"invariant {x.get('id')} missing {k}")
     faults = load(ROOT / "model" / "fault_classes.json")["fault_classes"]
-    if [f["id"] for f in faults] != [f"F{i}" for i in range(1, 15)]:
-        errors.append("fault class ids must be F1-F14 in order")
+    if [f["id"] for f in faults] != [f"F{i}" for i in range(1, 16)]:
+        errors.append("fault class ids must be F1-F15 in order")
+    f15 = next((f for f in faults if f["id"] == "F15"), None)
+    if not f15 or f15.get("invariant_ids") != ["K7"]:
+        errors.append("fault F15 must map to exactly K7")
     for f in faults:
         for k in ("id", "name", "description", "invariant_ids", "injection"):
             if not f.get(k):
@@ -291,6 +295,16 @@ def self_test() -> int:
             p.write_text(json.dumps(d, indent=2) + "\n")
         return run
 
+    def _drop_f15(root: Path) -> None:
+        p = root / "model" / "fault_classes.json"
+        d = json.loads(p.read_text())
+        d["fault_classes"] = [f for f in d["fault_classes"] if f["id"] != "F15"]
+        p.write_text(json.dumps(d, indent=2) + "\n")
+
+    def _strip_h37(root: Path) -> None:
+        p = root / "hypotheses" / "h37" / "contract.json"
+        p.write_text(p.read_text().replace("pg_stat_activity", "x"))
+
     controls = {
         "remove headroom_rule": mutate_thr(lambda d: d.pop("headroom_rule")),
         "change headroom ceiling value": mutate_thr(lambda d: d["headroom_rule"].update(ceiling_when_baseline_at_least=0.9)),
@@ -299,6 +313,9 @@ def self_test() -> int:
         "remove H37 thresholds": mutate_thr(lambda d: d.pop("H37")),
         "drop conventional-stack rival from H31": mutate_contract("h31", lambda d: d.update(rivals=["a rival that is something else", "another different rival"])),
         "H35 support_if stops citing headroom_rule": mutate_contract("h35", lambda d: d["evaluator"].update(support_if=[s.replace("thresholds.headroom_rule", "thresholds.x") for s in d["evaluator"]["support_if"]])),
+        "drop F15 fault class": lambda root: _drop_f15(root),
+        "H37 contract stops naming pg_stat_activity": lambda root: _strip_h37(root),
+        "H37 threshold loses max_sessions_surviving_revocation": mutate_thr(lambda d: d["H37"].pop("max_sessions_surviving_revocation")),
         "H37 invalid_if loses grant-record item": mutate_contract("h37", lambda d: d["evaluator"].update(invalid_if=[s for s in d["evaluator"]["invalid_if"] if "grant record" not in s])),
     }
     failed = 0
@@ -335,7 +352,7 @@ def main() -> int:
         for e in errors:
             print("-", e)
         return 1
-    print("PACK OK: H31-H37 contracts, model C1-C3/K1-K8/F1-F14, headroom_rule, thresholds, upstream pin and text rules validated")
+    print("PACK OK: H31-H37 contracts, model C1-C3/K1-K8/F1-F15, headroom_rule, thresholds, upstream pin and text rules validated")
     return 0
 
 

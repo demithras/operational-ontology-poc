@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-28 - H37 pilot targets decided
+
+- Closed the last open question: log store is OpenSearch with its security plugin; `revocation_bound_seconds` stays 60 for both arms; "access revoked" means new connections fail AND already open sessions are terminated within the bound.
+- Added fault class F15 (open session survives revocation, K7), `thresholds.H37.max_sessions_surviving_revocation` = 0, pg_stat_activity and OpenSearch security API in the revoke_access and grant_access observers, and K7 now covers open sessions.
+- H37 contract and README, docs, FAIRNESS, REVIEW_CHECKLIST and `check_pack.py` (F1-F15, new controls) updated. `protocol/OPEN_QUESTIONS.md` has no unchecked items; the freeze is left to the author after review.
+
 ## 2026-10-28 - Adaptive seeded-fault count
 
 - Recorded the follow-up decision: 20 per class was the orchestrator's number, not the author's. New rule `thresholds.fault_sampling`: start at 20, add pre-registered batches of 20 until the baseline has missed at least 10 of the class, cap 200, CEILING below the minimum at the cap.
