@@ -1,0 +1,76 @@
+{
+  "id": "H35",
+  "title": "Provenance: why did this merge or deploy happen, answerable months later",
+  "claim": "For any merge, deploy or closure, the question 'why did this happen' is answerable months later with all six K5 links (work item, agent, authority, policy version, evidence, observed outcome) resolvable without trusting the actor, and answerable more completely than from the GitHub audit log, the PR timeline and the bead history.",
+  "null_hypothesis": "The GitHub audit log, the PR timeline and the bead history together answer 'why did this happen' as completely as a provenance record does; a separate provenance store adds nothing.",
+  "rivals": [
+    "The conventional stack already does this: PR timeline, audit log, bead close reasons and commit trailers link effect to item, actor and approval.",
+    "The provenance record is complete only because the harness wrote it on a fast path; real months-old queries fail on retention, renamed repos or deleted branches.",
+    "The links resolve, but to records the actor could rewrite, so the provenance is not trustworthy.",
+    "Provenance quality depends on discipline (commit trailers, close reasons) that a well-run conventional team also has."
+  ],
+  "mechanism": "Each gated effect writes an append-only record binding work item, agent, grant, policy version, evidence digests and the observer's confirmation; the record sits in a store the acting agent cannot write to or alter.",
+  "scope": "Pilot: effects produced by the H33 and H34 pilot runs (merges and closures), queried after a retention gap or a time-shift replay if the author orders one (see OPEN_QUESTIONS.md). Not in scope: cryptographic anchoring beyond what Round 3 H27 already supported.",
+  "predictions": [
+    "For every audited effect the treatment resolves all six K5 links; links that resolve to a record the actor can rewrite count as unresolved.",
+    "The conventional stack leaves some links unanswerable (for example the policy version in force at merge time, or the evidence set behind a closure) or answers them with discipline-dependent records.",
+    "Time to answer is within thresholds.H35.max_time_to_answer_ratio_vs_baseline."
+  ],
+  "falsifiers": [
+    "The conventional stack resolves all six links for every audited effect from sources the actor cannot rewrite.",
+    "Any audited effect in the treatment has an unresolved link, or a link resolving to an actor-writable record.",
+    "The treatment's completeness advantage disappears when the baseline adds an obvious plain control (commit trailers, close-reason convention, exported audit log)."
+  ],
+  "experiment": {
+    "summary": "Produce effects in both arms, then pose the same fixed set of 'why' questions about each effect to a question-answerer that may use only the arm's records; an independent grader resolves each of the six links against source-host and deploy ground truth.",
+    "steps": [
+      "Freeze the question set, the six-link rubric and the grader before any run.",
+      "Run the baseline arm first with all plain controls from baselines/FAIRNESS.md enabled (audit log export, PR timeline, bead history, commit trailers) and record completeness and time to answer.",
+      "Set the comparative thresholds from the baseline pilot and freeze them.",
+      "Pilot one effect per arm; check that the treatment wrote provenance records (manipulation check) and that the control arm could not reach them through the file system.",
+      "Audit at least thresholds.H35.min_audited_effects effects per arm, optionally after a time-shift replay or a retention gap.",
+      "For each link test whether the actor could rewrite the record it resolves to."
+    ],
+    "minimum_runs": 20
+  },
+  "oracle": "Independent grader that resolves each of the six K5 links from source-host API, deploy system and tracker ground truth, and checks writability of the cited record by the acting agent's credentials; it never accepts an arm's own summary of why.",
+  "baseline": "GitHub audit log, PR timeline, bead history and close reasons, commit trailers and an equal-effort script that joins them into one answer.",
+  "required_evidence": [
+    "audited-effects-manifest.json",
+    "why-question-set.json",
+    "six-link-resolution-per-effect.json",
+    "actor-writability-check.json",
+    "time-to-answer.json",
+    "manipulation-check.json",
+    "control-arm-fs-reach-report.json"
+  ],
+  "evaluator": {
+    "support_if": [
+      "Treatment: thresholds.H35.max_unresolvable_provenance_links and thresholds.H35.max_provenance_links_rewritable_by_actor both hold at 0 over all audited effects.",
+      "Answer completeness beats the baseline by at least thresholds.H35.min_answer_completeness_advantage_over_baseline_pp, set from the baseline pilot before the treatment run.",
+      "Time to answer is within thresholds.H35.max_time_to_answer_ratio_vs_baseline."
+    ],
+    "reject_if": [
+      "The baseline resolves all six links for every audited effect from records the actor cannot rewrite (parity: no advantage measured).",
+      "Any audited effect in the treatment has an unresolved or actor-rewritable link."
+    ],
+    "inconclusive_if": [
+      "Fewer than thresholds.H35.min_audited_effects effects were audited, the time gap was too short to test retention, or both arms are complete and the graded metric (time to answer) was not measured."
+    ],
+    "invalid_if": [
+      "The grader trusts agent self-report or candidate logs instead of source-host and deploy ground truth.",
+      "The baseline lacks a control that is available in plain GitHub or beads (strawman), such as commit trailers, close reasons or an exported audit log.",
+      "The treatment was not used: the manipulation check shows no provenance records written per effect (thresholds.common.treatment_calls_per_item_must_exceed).",
+      "The question set was changed after the baseline answers were seen."
+    ]
+  },
+  "python_hypothesis_role": {
+    "level": "SUPPORTING",
+    "strategy": "Generate random effect histories with renames, branch deletions, policy-version changes and partial record loss, and check that every effect's six links either resolve or are reported as unresolved, never silently resolved to the current state.",
+    "mutation_proof": "Plant a store that resolves a policy version to the latest instead of the one in force, one that drops the evidence link and one that lets the actor overwrite a record; all must be killed."
+  },
+  "upstream_dependencies": ["H27"],
+  "stop_conditions": [
+    "If the baseline resolves all six links for every pilot effect from records the actor cannot rewrite, record the result and stop H35."
+  ]
+}

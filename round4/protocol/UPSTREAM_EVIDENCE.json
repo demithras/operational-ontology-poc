@@ -1,0 +1,40 @@
+{
+  "repository": "demithras/operational-ontology-poc",
+  "main_commit": "4058fdd1ccbc94b4ae6286eeb5448f195a5b2aa7",
+  "main_commit_date": "2026-10-16",
+  "observed_at": "2026-10-28",
+  "round1_exp003": {
+    "source": "experiments/exp-003/results/hypothesis-results.json (field hypotheses.<id>.status); summarised in README.md section 'Final result (exp-003, tag poc-v1.0-experiment)'",
+    "status": {
+      "H1": "SUPPORTED", "H2": "SUPPORTED", "H3": "SUPPORTED", "H4": "SUPPORTED",
+      "H5": "SUPPORTED", "H6": "SUPPORTED", "H7": "SUPPORTED", "H8": "SUPPORTED",
+      "H9": "SUPPORTED", "H10": "SUPPORTED", "H11": "REJECTED", "H12": "SUPPORTED",
+      "H13": "SUPPORTED", "H14": "SUPPORTED"
+    },
+    "h11_meaning": "The ontology's own central claim (measurable benefit over a simpler baseline) was REJECTED: the relational baseline reached parity on correctness and forensics."
+  },
+  "round2": {
+    "source": "round2/RESULTS.md (table rows for H22 and H22w)",
+    "status": {
+      "H22": "REJECTED",
+      "H22w": "REJECTED_post_hoc_weaker_claim"
+    },
+    "meaning": "The ontology tax does not repay with domain variety, including the weaker schema+generator follow-up."
+  },
+  "round3": {
+    "source": "round3/RESULTS.md (Final verdicts table, both tracks) and round3/experiments/h30/NOT-RUN.md",
+    "status": {
+      "H23": "SUPPORTED", "H24": "SUPPORTED", "H25": "SUPPORTED", "H26": "SUPPORTED",
+      "H27": "SUPPORTED", "H28": "SUPPORTED", "H29": "SUPPORTED",
+      "H30": "NOT_RUN"
+    },
+    "tracks": ["paladin", "conventional"],
+    "note": "H23-H29 are SUPPORTED for BOTH tracks; both variants sit at the ceiling at almost every gate, so no Paladin-specific advantage was measured. H30 was stopped before any measurement: not REJECTED, not SUPPORTED."
+  },
+  "round4_inheritance": [
+    "Round 4 does not reopen H11, H22 or H22w. It asks a new value question in a new domain: agent-run IT work.",
+    "Round 3 H23 (containment), H24 (delegation and revocation), H27 (provenance) and H28 (adapter boundary) are used as prior supported patterns inside their Round 3 scope, not re-proved.",
+    "Round 3 H30 was never run; Round 4 H36 asks the comparative-value question again in a domain where a measurable control problem exists."
+  ],
+  "warning": "This file pins the upstream state used to design the pack. Freeze a new Round 4 protocol if upstream assumptions materially change before execution."
+}

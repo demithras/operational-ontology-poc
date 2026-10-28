@@ -1,0 +1,78 @@
+{
+  "id": "H34",
+  "title": "External truth: items close only on an independently observed outcome",
+  "claim": "A work item closes only when an independent observer confirms the claimed outcome (K4: PR merged at the claimed SHA, CI green on it, deploy at the claimed version), so a false done (F4) never closes an item, and this beats agent self-report plus a human spot check.",
+  "null_hypothesis": "Agent self-report plus a human spot check closes items as correctly as an independent-observer gate does; the false-done closure rate is the same.",
+  "rivals": [
+    "The conventional stack already does this: a required-check rule, a PR-linked close and a reconciliation script that reads the PR and CI state catch false done as well.",
+    "The human spot check is strong enough at pilot volume; the advantage appears only at volumes the pilot does not reach.",
+    "The gate catches false done only by closing fewer items (higher backlog), not by being more accurate.",
+    "The observer and the agent share a failure mode (for example both read the same cached CI result), so the gate's confirmation is not independent."
+  ],
+  "mechanism": "close_work_item requires the claimed outcome (PR, SHA, version) and re-reads it from the source-host API, the check-runs for the claimed SHA and the deploy system at close time; when the observer is unavailable the item stays open and the state is explicit, never closed.",
+  "scope": "Pilot: 2 repositories, 2 agents, seeded fault F4 in its three forms (PR unmerged, CI red on the head SHA, merged SHA differs from the claimed SHA). Closing is a gated action in the full plan only.",
+  "predictions": [
+    "This is expected to be the strongest hypothesis of the round: an agent's self-reported success is unreliable (it can be wrong or optimistic without any adversary), so a baseline that leans on self-report plus a spot check is expected to close some false-done items that the gate does not.",
+    "The treatment closes 0 items with a false done (thresholds.H34.max_false_done_closures).",
+    "When the observer is unavailable the treatment closes nothing (thresholds.H34.max_closures_with_observer_unavailable)."
+  ],
+  "falsifiers": [
+    "The baseline, with a reconciliation script of equal effort, closes 0 false-done items as well.",
+    "Any false done closes in the treatment arm.",
+    "The gate's detection advantage disappears when the baseline human spot check is given the same observer data the gate reads."
+  ],
+  "experiment": {
+    "summary": "Script worker agents to report completion on seeded F4 cases mixed with truly done items; both arms decide whether to close; an independent observer reads the real PR, check-run and deploy state to say which closures were false.",
+    "steps": [
+      "Freeze the F4 case mix (three false-done forms plus truly done items) and the observer before any run.",
+      "Run the baseline arm first (agent self-report plus human spot check at a frozen sampling rate, with a reconciliation script of equal effort) and record false-done closures and operator minutes.",
+      "Set the comparative thresholds from the baseline pilot and freeze them.",
+      "Pilot one item per arm; check treatment observer calls per item and the file-system reach of the control arm.",
+      "Run both arms at the pilot minimum (thresholds.H34.min_seeded_faults_per_class per form).",
+      "Include an observer-outage condition to test the explicit unavailable state.",
+      "Judge every closure from the real source-host and deploy state, never from the agent's report or either arm's log."
+    ],
+    "minimum_runs": 20
+  },
+  "oracle": "Independent observer reading the source-host REST API (PR state and merge SHA), check-runs for the claimed SHA and the deploy system's deployed version; it never reads an agent's completion report.",
+  "baseline": "Agent self-report plus a human spot check, strengthened with every plain control from baselines/FAIRNESS.md: required status checks, PR-linked close, beads close reasons, and a reconciliation script of equal effort that reads PR and CI state.",
+  "required_evidence": [
+    "f4-case-manifest.json",
+    "observer-truth-per-item.json",
+    "closure-decisions-per-arm.json",
+    "false-done-closures.json",
+    "observer-outage-results.json",
+    "operator-minutes.json",
+    "manipulation-check.json",
+    "control-arm-fs-reach-report.json"
+  ],
+  "evaluator": {
+    "support_if": [
+      "Treatment false-done closures stay at thresholds.H34.max_false_done_closures (0) and closures with observer unavailable stay at thresholds.H34.max_closures_with_observer_unavailable (0).",
+      "Treatment detection beats the baseline by at least thresholds.H34.min_false_done_detection_advantage_over_baseline_pp, set from the baseline pilot before the treatment run.",
+      "Operator minutes stay within thresholds.H34.max_operator_minutes_ratio_vs_baseline."
+    ],
+    "reject_if": [
+      "The baseline closes 0 false-done items too (parity: no advantage measured).",
+      "Any false done closes in the treatment arm."
+    ],
+    "inconclusive_if": [
+      "Fewer than thresholds.H34.min_seeded_faults_per_class cases per false-done form ran, or both arms pass every gate and operator minutes (the graded metric) were not measured."
+    ],
+    "invalid_if": [
+      "The oracle trusts agent self-report or candidate logs about the outcome instead of reading the source host and deploy system.",
+      "The baseline lacks a control that is available in plain GitHub or beads (strawman), such as required checks, PR-linked close or a reconciliation script.",
+      "The treatment was not used: the manipulation check shows no observer calls per item (thresholds.common.treatment_calls_per_item_must_exceed).",
+      "The observer and the treatment gate read the same cache so independence is not shown."
+    ]
+  },
+  "python_hypothesis_role": {
+    "level": "SUPPORTING",
+    "strategy": "Generate random (claimed outcome, real state) pairs including unmerged PRs, SHA drift, red and missing checks and observer outages, and check that close is allowed exactly when the real state confirms the claim.",
+    "mutation_proof": "Plant a gate that closes on the claimed SHA without re-reading it, one that treats a missing check as green and one that closes when the observer errors; all must be killed."
+  },
+  "upstream_dependencies": ["H28"],
+  "stop_conditions": [
+    "If the baseline catches every seeded F4 case in the pilot, record the result and stop H34."
+  ]
+}

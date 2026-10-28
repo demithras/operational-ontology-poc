@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "round4-agent-ops"
+version = "0.1.0"
+description = "Research-contract pack for agent-operations hypotheses H31-H36 (documents and JSON contracts only)"
+requires-python = ">=3.11"
+dependencies = ["jsonschema>=4.20"]
+
+[project.optional-dependencies]
+test = [
+  "jsonschema>=4.20",
+  "pytest>=8"
+]
+
+[tool.setuptools]
+packages = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
