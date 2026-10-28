@@ -12,6 +12,10 @@ This pack is a draft for review, not already preregistered. There is one freeze.
 6. Run `python scripts/check_pack.py` (fails if any threshold is null).
 7. Run `python scripts/freeze_protocol.py` and commit the generated `protocol/FREEZE.json` before any implementation or run.
 
+## Stages and the H37 trigger (part of the freeze)
+
+Stage 1 is `merge_pr` with H31-H35 (+ H36 over them), faults F1-F10. Stage 2 is H37 (`grant_access`, `revoke_access`, F11-F15). Stage 2 runs ONLY IF at least 1 of H31-H35 SUPPORTED in stage 1 (`thresholds.stages.stage2.trigger`). Otherwise H37 is recorded NOT RUN (trigger not met), never REJECTED. The trigger is fixed before any pilot result and cannot be changed after it. The access baseline is not built before the stage-1 result.
+
 ## Order after the freeze
 
 1. Run the **baseline pilot** (conventional arm only) as a headroom check. The stop rule in `docs/03_pilot_design.md` is unchanged.
@@ -30,7 +34,7 @@ Written before the run. If no outcome would change the decision, do not run it.
 | H33 | Fully configured baseline creates 0 forbidden effects: record "no advantage measured" (H11 pattern), the gate is not needed for merge. A gap (stale approval, F9, F10): the gate is worth building for exactly that gap. |
 | H34 | Baseline closes a false done: observer-confirmed closure is the first thing to build. Baseline closes none: drop H34. |
 | H35 | Baseline answers all six links from records the actor cannot rewrite: no provenance store. A gap: provenance is worth building for that gap. |
-| H37 | Baseline (dynamic credentials with TTL, IAM conditions, JIT approver) shows 0 violations: record CEILING, stop H37. A miss (self-approval, standing credential, lagging revoke): the gate is worth building for that gap. Between 0.80 and 0.95 the treatment must close at least half of the misses. |
+| H37 | Stage 2, only if at least 1 of H31-H35 SUPPORTED in stage 1; otherwise NOT RUN (trigger not met). Baseline (dynamic credentials with TTL, IAM conditions, JIT approver) shows 0 violations: record CEILING, stop H37. A miss (self-approval, standing credential, lagging revoke): the gate is worth building for that gap. Between 0.80 and 0.95 the treatment must close at least half of the misses. |
 | H36 | Net advantage inside the frozen cost limits: adopt the pattern. Parity or higher cost: adopt only the single mechanisms that won on their own hypothesis. |
 
 ## Headroom rule

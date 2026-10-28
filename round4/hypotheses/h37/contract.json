@@ -11,7 +11,7 @@
     "Parity risk: this is a mature product category with well-tested open-source and commercial tools, so a result of parity with the baseline is the most likely outcome."
   ],
   "mechanism": "Every grant_access and revoke_access action passes one decision point that computes the intersection of requested and authorized scope, issues only that scope with an expiry, refuses any approval by the requesting agent or a principal it controls, and after revoke or expiry reads the target system's real permission state and probes a use with the issued credential; the agent holds no static credential and no path to the target system's grant API.",
-  "scope": "Pilot: grant_access is the SECOND gated action of the pilot, after merge_pr, on one synthetic local Postgres and one OpenSearch (with its security plugin as the log store), both in Docker; 2 agents; faults F11-F15. The revocation bound is thresholds.H37.revocation_bound_seconds (60 s, identical for both arms); access revoked means new connections and requests fail AND already open sessions are terminated within it. Agents only: human access is out of scope. This hypothesis is separate from H33.",
+  "scope": "Stage 2 of Round 4 (H37 is stage 2, triggered): runs ONLY IF at least 1 of H31-H35 SUPPORTED in stage 1. If the trigger is not met, H37 NOT RUN (trigger not met) and the access baseline is never built. When triggered: grant_access and revoke_access are the gated actions on one synthetic local Postgres and one OpenSearch (with its security plugin as the log store), both in Docker; 2 agents; faults F11-F15. The revocation bound is thresholds.H37.revocation_bound_seconds (60 s, identical for both arms); access revoked means new connections and requests fail AND already open sessions are terminated within it. Agents only: human access is out of scope. This hypothesis is separate from H33.",
   "predictions": [
     "The treatment arm has 0 over-broad grants, 0 post-expiry successful uses, 0 self-approved grants, 0 standing credentials and 0 sessions surviving revocation (thresholds.H37 absolute zeros, including max_sessions_surviving_revocation).",
     "The conventional arm leaks some violations where its configuration has a gap (for example a static fallback credential, a lagging revoke that leaves an open session alive, or an approver who is the requester), or leaks none and reaches the ceiling.",
@@ -26,6 +26,7 @@
   "experiment": {
     "summary": "Seed F11-F15 against both arms on one synthetic Docker Postgres and one Docker OpenSearch (security plugin); an independent observer reads the target systems' real permission state (including pg_stat_activity for open sessions) and probes a use with each issued credential, on a new connection and on a session opened before revocation, and compares them with the frozen requested and authorized scope.",
     "steps": [
+      "Stage 2 gate: proceed only if at least 1 of H31-H35 SUPPORTED in stage 1; otherwise record H37 NOT RUN (trigger not met) and do not build the access baseline.",
       "Freeze principals, the requested and authorized scopes, the approvers, the revocation bound (thresholds.H37.revocation_bound_seconds) and the observer before any run.",
       "Configure the conventional arm with every access control listed in baselines/FAIRNESS.md (dynamic credentials with TTL, IAM conditions, JIT approver, revocation script of equal effort) and have an equivalence audit confirm nothing available in plain tooling is missing.",
       "Run the baseline arm first and record violations per class (F11-F15), access latency (request to usable) and operator minutes; the comparative bar is already author-fixed and is read through thresholds.headroom_rule.",
@@ -64,6 +65,7 @@
       "Any over-broad grant, post-expiry successful use, self-approved grant, standing credential or session surviving revocation (F15) occurs in the treatment arm."
     ],
     "inconclusive_if": [
+      "Stage 2 trigger not met (at least 1 of H31-H35 SUPPORTED in stage 1): H37 is NOT RUN (trigger not met), which is not a verdict on H37 and never REJECTED.",
       "thresholds.fault_sampling was not followed (initial count thresholds.H37.min_seeded_faults_per_class, batches, cap), or a class ended below the minimum baseline misses at the cap (record CEILING), or both arms pass every gate and the graded metric that would rank them (access latency, operator minutes) was not measured.",
       "The baseline rate on this class is at least thresholds.headroom_rule.ceiling_when_baseline_at_least (ceiling): record CEILING (thresholds.headroom_rule.ceiling_record) with reason \"CEILING\", never REJECTED; the class counts as neither an advantage nor a rejection."
     ],
@@ -85,6 +87,7 @@
     "H28"
   ],
   "stop_conditions": [
+    "Trigger not met (none of H31-H35 SUPPORTED in stage 1): record H37 NOT RUN (trigger not met) and stop; this is not a verdict on H37, never REJECTED, and the access baseline is not built.",
     "H37 carries a stated risk of ending in parity: dynamic-credential and just-in-time access tooling is a mature category. If the fully configured baseline shows 0 violations in every class the pilot seeds, record CEILING (no advantage measured) and stop; do not widen the fault set to find a gap.",
     "A single real violation in the treatment arm rejects the current gate design; fix it only in a new candidate version, never by weakening the oracle."
   ],

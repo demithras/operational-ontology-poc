@@ -61,3 +61,13 @@ Nothing in `OPEN_QUESTIONS.md` remains open after the interview below.
 2. `thresholds.H37.revocation_bound_seconds` stays 60, identical for both arms.
 3. "Access revoked" means BOTH: new connections and requests with the credential fail AND sessions already open at revocation are terminated, within the bound. For Postgres the observer reads `pg_stat_activity` (sessions of the granted role) besides `pg_roles`, `pg_auth_members` and `has_table_privilege`; for OpenSearch it probes the credential.
 4. Next step: privacy scan and PR; the author freezes the protocol later.
+
+## Follow-up: H37 as triggered stage 2
+
+1. Stage 1 (the pilot) is `merge_pr` only, hypotheses H31-H35 (+ H36 over them): 2 public sandbox repos, 2 sonnet workers, a fault injector plus one opus adversary, synthetic projects, faults F1-F10.
+2. Stage 2 is H37 (`grant_access` / `revoke_access` on Docker Postgres and OpenSearch, faults F11-F15, access baseline).
+3. Pre-registered trigger: stage 2 runs ONLY IF at least one of H31-H35 is SUPPORTED in stage 1 (`thresholds.stages.stage2.trigger`).
+4. If all of H31-H35 end REJECTED, CEILING or INCONCLUSIVE, the round stops and H37 is recorded NOT RUN (trigger not met), never REJECTED.
+5. The access baseline (Vault, TTLs, approver, revocation script) is NOT built before the stage-1 result.
+6. H36 keeps `min_classes_with_material_advantage` = 2, judged over the classes that actually ran (5 after stage 1, 6 if stage 2 ran); it is first reported after stage 1 and re-reported after stage 2 if it runs.
+7. Reason: restore the cheap early stop. The trigger is fixed before any pilot result.

@@ -7,10 +7,10 @@
     "The conventional stack already does this: its safety and coordination equal the treatment's, and it is cheaper to set up and keep running.",
     "H31-H35 and H37 gains are real but each can be extracted as a small script or setting on the conventional stack without the EOO pattern.",
     "The treatment wins only by denying more legitimate work or costing more operator minutes and agent tokens than the frozen limits allow.",
-    "The pilot is too small (2 repos, 2 agents, 2 gated actions) to say anything about total value."
+    "The pilot is too small (2 repos, 2 agents, 1 gated action in stage 1) to say anything about total value."
   ],
   "mechanism": "One executable contract jointly derives leases, the cross-repo dependency view, the control gate, observer-confirmed closure, provenance and scoped, expiring access grants, so fewer inconsistent decisions are made across repos than when each control is configured separately.",
-  "scope": "All of H31-H35 and H37 as run, with the cost of setup, recurring maintenance, operator minutes and agent tokens measured for both arms. H36 is the only comparative-value claim of the round. Parity is REJECTED. Cost axes are separate frontier axes, never one combined score: operator minutes (manual log), agent tokens (from session transcripts), setup hours and maintenance hours (from git log). Access-grant costs (access latency, operator minutes for approvals and revocation, setup of the revocation script) sit on the same frontier as separate axes.",
+  "scope": "All of H31-H35 and H37 as run, with the cost of setup, recurring maintenance, operator minutes and agent tokens measured for both arms. H36 is the only comparative-value claim of the round. Parity is REJECTED. Cost axes are separate frontier axes, never one combined score: operator minutes (manual log), agent tokens (from session transcripts), setup hours and maintenance hours (from git log). Access-grant costs (access latency, operator minutes for approvals and revocation, setup of the revocation script) sit on the same frontier as separate axes. Two-reading rule: H36 is judged over the classes that actually ran, 5 classes (H31-H35) after stage 1 and 6 classes (H31-H35 and H37) if stage 2 ran; thresholds.H36.min_classes_with_material_advantage stays 2 in both readings. H36 is first reported after stage 1 and re-reported after stage 2 if it runs.",
   "predictions": [
     "In at least thresholds.H36.min_classes_with_material_advantage of the 6 classes (H31-H35 and H37) the treatment shows a measured advantage over the baseline on a graded metric.",
     "Setup, maintenance, operator-minute and token costs stay within the frozen ratios (thresholds.H36 keys).",
@@ -49,7 +49,7 @@
   ],
   "evaluator": {
     "support_if": [
-      "Material advantage in at least thresholds.H36.min_classes_with_material_advantage of the 6 classes H31-H35 and H37 (each class judged through thresholds.headroom_rule; a CEILING class counts as neither an advantage nor a rejection), each measured by an independent observer, with no forbidden-effect regression (thresholds.H36.max_forbidden_effect_regression_in_any_class = 0).",
+      "Material advantage in at least thresholds.H36.min_classes_with_material_advantage of the classes that ran (5 classes H31-H35 after stage 1; 6 classes H31-H35 and H37 if stage 2 ran) (each class judged through thresholds.headroom_rule; a CEILING class counts as neither an advantage nor a rejection), each measured by an independent observer, with no forbidden-effect regression (thresholds.H36.max_forbidden_effect_regression_in_any_class = 0).",
       "Safe-progress regression is within thresholds.H36.max_safe_progress_regression_pp.",
       "Setup, recurring-maintenance, operator-minute and token costs are within thresholds.H36.max_setup_cost_ratio_vs_baseline, thresholds.H36.max_recurring_maintenance_cost_ratio_vs_baseline, thresholds.H36.max_operator_minutes_ratio_vs_baseline and thresholds.H36.max_agent_token_cost_ratio_vs_baseline.",
       "The advantage survives the fairness audit after every obvious equivalent baseline control is added.",
@@ -61,7 +61,7 @@
     ],
     "inconclusive_if": [
       "Fewer than thresholds.H36.min_pilot_items items ran, a prerequisite hypothesis ended INVALID, the cost model was not frozen, or uncertainty spans both the advantage and parity regions.",
-      "Fewer than thresholds.H36.min_classes_with_material_advantage of the 6 classes can show an advantage because the baseline is at or above thresholds.headroom_rule.ceiling_when_baseline_at_least in the rest: record CEILING for those classes (reason \"CEILING\"), never REJECTED."
+      "Fewer than thresholds.H36.min_classes_with_material_advantage of the classes that ran (5 after stage 1, 6 if stage 2 ran) can show an advantage because the baseline is at or above thresholds.headroom_rule.ceiling_when_baseline_at_least in the rest: record CEILING for those classes (reason \"CEILING\"), never REJECTED."
     ],
     "invalid_if": [
       "The oracle trusts agent self-report or candidate logs, including agent estimates of cost.",

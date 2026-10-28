@@ -16,7 +16,7 @@ This is a **research contract**, not an architecture sales document. It is a dra
 - Round 2: H22 and H22w REJECTED. The ontology tax does not repay with domain variety.
 - Round 3: H23-H29 SUPPORTED for both tracks, H30 NOT RUN. Both variants sat at the ceiling, so no security value was measured.
 
-Round 4 changes the domain from manufacturing to agent-run IT work (author decision 2026-10-28, replacing the earlier Attractor-game plan for Round 4). It is **pilot-first**: the round may stop after the pilot. Sources are pinned in `protocol/UPSTREAM_EVIDENCE.json`.
+Round 4 changes the domain from manufacturing to agent-run IT work (author decision 2026-10-28, replacing the earlier Attractor-game plan for Round 4). It is **pilot-first and staged**: stage 1 (the pilot) tests `merge_pr` with H31-H35; stage 2 (H37, access grants) runs only if at least 1 of H31-H35 SUPPORTED in stage 1. The round may stop after stage 1. Sources are pinned in `protocol/UPSTREAM_EVIDENCE.json`.
 
 ## Invariants
 
@@ -39,7 +39,7 @@ Defined in `model/agent_ops_invariants.json`. Faults F1-F15: `model/fault_classe
 | H33 | Does the control gate contain an adversarial agent (K1-K3; F5-F10)? | branch protection + CODEOWNERS + required checks |
 | H34 | Do items close only on an independently observed outcome, so false done is caught (K4; F4)? | agent self-report + human spot check |
 | H35 | Is "why did this merge or deploy happen" answerable months later (K5)? | GitHub audit log + PR timeline + bead history |
-| H37 | Do agent access grants stay least-privilege, expire and revoke for real (K6-K8; F11-F15)? | Vault dynamic credentials + IAM conditions + JIT access |
+| H37 (stage 2, triggered) | Do agent access grants stay least-privilege, expire and revoke for real (K6-K8; F11-F15)? | Vault dynamic credentials + IAM conditions + JIT access |
 | H36 | Do the H31-H35 and H37 gains outweigh setup and maintenance cost? Parity is REJECTED. | the whole conventional stack |
 
 ## Kill-chain
@@ -51,6 +51,11 @@ H33 control gate ─────┼──► H36 total value (frontier, parity =
 H34 external truth ───┤
 H35 provenance ───────┤
 H37 access grants ────┘
+   (stage 2, triggered)
+
+trigger (fixed before any result):  at least 1 of H31-H35 SUPPORTED in stage 1
+  met     -> build the access baseline, run stage 2 (H37), re-report H36 over 6 classes
+  not met -> stop after stage 1; H37 NOT RUN (trigger not met), never REJECTED
 ```
 
 H36 may not be called SUPPORTED merely because H31-H35 and H37 are green. It needs a cost and benefit frontier and a surviving fairness audit. H33 carries a stated risk of ending in parity like H11. H34 is expected to be the strongest hypothesis. H37 carries a stated parity risk (mature just-in-time access tooling).

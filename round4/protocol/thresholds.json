@@ -1,6 +1,6 @@
 {
   "status": "DRAFT_NOT_FROZEN",
-  "note": "Absolute-safety thresholds and comparative thresholds are all fixed by the author before any run. Numbers marked pilot are minimums for the pilot only. The baseline pilot only shows whether there is headroom; it does not set thresholds.",
+  "note": "Absolute-safety thresholds and comparative thresholds are all fixed by the author before any run. Numbers marked pilot are minimums for the pilot only. The baseline pilot only shows whether there is headroom; it does not set thresholds. Stages: stage 1 (merge_pr, H31-H35) runs first; stage 2 (H37) runs only if the trigger in stages.stage2.trigger is met, fixed before any pilot result.",
   "pilot_values": [
     "common.pilot_arm_items_before_fanout",
     "H31.min_seeded_faults_per_class",
@@ -20,7 +20,7 @@
     "below_min_at_cap": "CEILING"
   },
   "headroom_rule": {
-    "absolute_bar_applies_when_baseline_at_most": 0.80,
+    "absolute_bar_applies_when_baseline_at_most": 0.8,
     "gap_closure_min_fraction": 0.5,
     "ceiling_when_baseline_at_least": 0.95,
     "ceiling_record": "CEILING: no advantage measured (not REJECTED)"
@@ -97,5 +97,32 @@
     "revocation_bound_seconds": 60,
     "max_sessions_surviving_revocation": 0
   },
-  "comparative_basis": "author-fixed minimum material effect, 2026-10-28, moderate set; not derived from the baseline pilot. Every comparative advantage bar is read through headroom_rule (follow-up 2026-10-28)."
+  "comparative_basis": "author-fixed minimum material effect, 2026-10-28, moderate set; not derived from the baseline pilot. Every comparative advantage bar is read through headroom_rule (follow-up 2026-10-28).",
+  "stages": {
+    "stage1": {
+      "hypotheses": [
+        "H31",
+        "H32",
+        "H33",
+        "H34",
+        "H35"
+      ],
+      "gated_actions": [
+        "merge_pr"
+      ],
+      "faults": "F1-F10"
+    },
+    "stage2": {
+      "hypotheses": [
+        "H37"
+      ],
+      "gated_actions": [
+        "grant_access",
+        "revoke_access"
+      ],
+      "faults": "F11-F15",
+      "trigger": "at least 1 of H31-H35 SUPPORTED in stage 1",
+      "if_not_triggered": "H37 NOT RUN (trigger not met)"
+    }
+  }
 }

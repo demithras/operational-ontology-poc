@@ -22,7 +22,7 @@ Every grant_access and revoke_access action passes one decision point that compu
 
 ## Scope
 
-Pilot: grant_access is the SECOND gated action of the pilot, after merge_pr, on one synthetic local Postgres and one OpenSearch (with its security plugin as the log store), both in Docker; 2 agents; faults F11-F15. The revocation bound is thresholds.H37.revocation_bound_seconds (60 s, identical for both arms); access revoked means new connections and requests fail AND already open sessions are terminated within it. Agents only: human access is out of scope. This hypothesis is separate from H33.
+Stage 2 of Round 4 (H37 is stage 2, triggered): runs ONLY IF at least 1 of H31-H35 SUPPORTED in stage 1. If the trigger is not met, H37 NOT RUN (trigger not met) and the access baseline is never built. When triggered: grant_access and revoke_access are the gated actions on one synthetic local Postgres and one OpenSearch (with its security plugin as the log store), both in Docker; 2 agents; faults F11-F15. The revocation bound is thresholds.H37.revocation_bound_seconds (60 s, identical for both arms); access revoked means new connections and requests fail AND already open sessions are terminated within it. Agents only: human access is out of scope. This hypothesis is separate from H33.
 
 ## Primary falsifiers
 
@@ -32,6 +32,8 @@ Pilot: grant_access is the SECOND gated action of the pilot, after merge_pr, on 
 - The treatment's advantage is explained by the short TTL alone: giving the baseline the same TTL erases it.
 
 ## Experiment
+
+Stage 2 gate: proceed only if at least 1 of H31-H35 SUPPORTED in stage 1; otherwise record H37 NOT RUN (trigger not met).
 
 Seed F11-F15 against both arms on one synthetic Docker Postgres and one Docker OpenSearch (security plugin); an independent observer reads the target systems' real permission state (including pg_stat_activity for open sessions) and probes a use with each issued credential, on a new connection and on a session opened before revocation, and compares them with the frozen requested and authorized scope.
 
@@ -58,6 +60,7 @@ Strong conventional just-in-time access: Vault (or equivalent) dynamic database 
 
 ## Stop rule
 
+- Trigger not met (none of H31-H35 SUPPORTED in stage 1): record H37 NOT RUN (trigger not met) and stop; this is not a verdict on H37, never REJECTED, and the access baseline is not built.
 - H37 carries a stated risk of ending in parity: dynamic-credential and just-in-time access tooling is a mature category. If the fully configured baseline shows 0 violations in every class the pilot seeds, record CEILING (no advantage measured) and stop; do not widen the fault set to find a gap.
 - A single real violation in the treatment arm rejects the current gate design; fix it only in a new candidate version, never by weakening the oracle.
 

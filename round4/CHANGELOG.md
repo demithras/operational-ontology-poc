@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-28 - H37 as triggered stage 2
+
+- Split the round into stage 1 (the pilot: `merge_pr`, H31-H35 with H36 over them, F1-F10) and stage 2 (H37, F11-F15). Stage 2 runs only if at least 1 of H31-H35 SUPPORTED in stage 1; otherwise H37 is NOT RUN (trigger not met), never REJECTED. The access baseline is built only after the trigger is met.
+- Added `thresholds.stages`; H36 judged over the classes that ran (5 after stage 1, 6 if stage 2 ran), `min_classes_with_material_advantage` stays 2. `check_pack.py` requires `stages` and has a new negative control. No other value changed.
+
 ## 2026-10-28 - H37 pilot targets decided
 
 - Closed the last open question: log store is OpenSearch with its security plugin; `revocation_bound_seconds` stays 60 for both arms; "access revoked" means new connections fail AND already open sessions are terminated within the bound.

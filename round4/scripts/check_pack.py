@@ -41,6 +41,12 @@ H37_THRESHOLDS = {
     "revocation_bound_seconds": 60,
     "max_sessions_surviving_revocation": 0,
 }
+TRIGGER = "at least 1 of H31-H35 SUPPORTED in stage 1"
+STAGES = {
+    "stage1": {"hypotheses": ["H31", "H32", "H33", "H34", "H35"], "gated_actions": ["merge_pr"], "faults": "F1-F10"},
+    "stage2": {"hypotheses": ["H37"], "gated_actions": ["grant_access", "revoke_access"], "faults": "F11-F15",
+               "trigger": TRIGGER, "if_not_triggered": "H37 NOT RUN (trigger not met)"},
+}
 PIN = "4058fdd1ccbc94b4ae6286eeb5448f195a5b2aa7"
 # Built from parts so this file does not contain the strings it forbids elsewhere.
 FORBIDDEN = ["/" + "Users/", "@" + "gmail", "@" + "anthropic"]
@@ -104,10 +110,14 @@ def check_contracts(errors: list[str]) -> tuple[list[dict], dict]:
                 errors.append(f"H37 must mention '{needle}'")
         if "observer reads the grant record instead of the target system" not in " ".join(by_id["H37"]["evaluator"]["invalid_if"]):
             errors.append("H37 invalid_if must include the grant-record observer item")
+        if "stage 2" not in t or TRIGGER not in t or "NOT RUN (trigger not met)" not in t:
+            errors.append("H37 contract must state it is stage 2 with the trigger and NOT RUN (trigger not met)")
         if by_id["H37"]["upstream_dependencies"] != ["H23", "H24", "H28"]:
             errors.append("H37 upstream_dependencies must be H23, H24, H28")
     if "H36" in by_id:
         t = json.dumps(by_id["H36"])
+        if "5 classes" not in t or "stage 2 ran" not in t:
+            errors.append("H36 must state the two-reading rule (5 classes after stage 1, 6 if stage 2 ran)")
         if "6 classes" not in t or "CEILING" not in t:
             errors.append("H36 must judge 6 classes and handle CEILING")
         for needle in ("frontier", "parity", "REJECTED", "no advantage measured"):
@@ -173,6 +183,10 @@ def check_thresholds(errors: list[str], contracts: list[dict]) -> None:
         if c["id"] in ("H31", "H32", "H33", "H34", "H37"):
             if "thresholds.fault_sampling" not in json.dumps(c):
                 errors.append(f"{c['id']}: contract must reference thresholds.fault_sampling")
+    if thr.get("stages") != STAGES:
+        errors.append("thresholds.stages missing or not exactly the author-fixed stage lists and trigger text")
+    if thr.get("H36", {}).get("min_classes_with_material_advantage") != 2:
+        errors.append("thresholds.H36.min_classes_with_material_advantage must stay 2")
     if thr.get("H37") != H37_THRESHOLDS:
         errors.append("thresholds.H37 missing or not exactly the author-fixed values")
     for sec in ("headroom_rule",):
@@ -238,6 +252,9 @@ def check_text(errors: list[str]) -> None:
          "CODEOWNERS + required CI)?")
     if q not in flat:
         errors.append("README.md must contain the value question verbatim")
+    pilot = (ROOT / "docs" / "03_pilot_design.md").read_text()
+    if TRIGGER not in pilot or "NOT RUN (trigger not met)" not in pilot:
+        errors.append("docs/03_pilot_design.md must state the stage 2 trigger and NOT RUN (trigger not met)")
     fair = (ROOT / "baselines" / "FAIRNESS.md").read_text().lower()
     for phrase in ("beads", "branch protection", "codeowners", "required status checks", "required pull request reviews",
                    "dismiss-stale-approvals", "merge queue", "deploy environments", "audit log", "reconciliation script",
@@ -305,11 +322,15 @@ def self_test() -> int:
         p = root / "hypotheses" / "h37" / "contract.json"
         p.write_text(p.read_text().replace("pg_stat_activity", "x"))
 
+    def _drop_trigger(d):
+        d["stages"]["stage2"].pop("trigger")
+
     controls = {
         "remove headroom_rule": mutate_thr(lambda d: d.pop("headroom_rule")),
         "change headroom ceiling value": mutate_thr(lambda d: d["headroom_rule"].update(ceiling_when_baseline_at_least=0.9)),
         "null a threshold": mutate_thr(lambda d: d["H31"].update(max_double_claims_undetected=None)),
         "remove fault_sampling": mutate_thr(lambda d: d.pop("fault_sampling")),
+        "remove stages.stage2.trigger": mutate_thr(_drop_trigger),
         "remove H37 thresholds": mutate_thr(lambda d: d.pop("H37")),
         "drop conventional-stack rival from H31": mutate_contract("h31", lambda d: d.update(rivals=["a rival that is something else", "another different rival"])),
         "H35 support_if stops citing headroom_rule": mutate_contract("h35", lambda d: d["evaluator"].update(support_if=[s.replace("thresholds.headroom_rule", "thresholds.x") for s in d["evaluator"]["support_if"]])),
@@ -352,7 +373,7 @@ def main() -> int:
         for e in errors:
             print("-", e)
         return 1
-    print("PACK OK: H31-H37 contracts, model C1-C3/K1-K8/F1-F15, headroom_rule, thresholds, upstream pin and text rules validated")
+    print("PACK OK: stages (stage 1 H31-H35, stage 2 H37 triggered), H31-H37 contracts, model C1-C3/K1-K8/F1-F15, headroom_rule, thresholds, upstream pin and text rules validated")
     return 0
 
 

@@ -13,7 +13,7 @@ Against the whole conventional stack at equal engineering effort, the EOO govern
 - The conventional stack already does this: its safety and coordination equal the treatment's, and it is cheaper to set up and keep running.
 - H31-H35 and H37 gains are real but each can be extracted as a small script or setting on the conventional stack without the EOO pattern.
 - The treatment wins only by denying more legitimate work or costing more operator minutes and agent tokens than the frozen limits allow.
-- The pilot is too small (2 repos, 2 agents, 2 gated actions) to say anything about total value.
+- The pilot is too small (2 repos, 2 agents, 1 gated action in stage 1) to say anything about total value.
 
 ## Mechanism under test
 
@@ -37,6 +37,8 @@ Combine the H31-H35 and H37 pilot results with a recorded cost model (operator m
 5. Report a per-class benefit and cost table and a frontier; where both arms pass every gate write 'no advantage measured', not parity or a win.
 
 ## Classes and CEILING
+
+Two-reading rule: H36 is judged over the classes that actually ran, 5 classes (H31-H35) after stage 1 and 6 classes (H31-H35 and H37) if stage 2 ran; `thresholds.H36.min_classes_with_material_advantage` stays 2 in both readings. H36 is first reported after stage 1 and re-reported after stage 2 if it runs.
 
 H36 counts classes among the 6 of H31-H35 and H37 (`thresholds.H36.min_classes_with_material_advantage` = 2). Each class is judged through `thresholds.headroom_rule`. A class recorded as CEILING counts as neither an advantage nor a rejection. Access-grant costs (access latency, operator minutes for approvals and revocation, setup of the revocation script) sit on the frontier as separate axes.
 
